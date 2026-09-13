@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prototype — screens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#17140F; --card:#211D18; --line:#332C22; --off:#241F19;
+  --t1:#F5EFE8; --t2:#A89C8E; --t3:#6B6156;
+  --acc:#D85A30; --acc2:#F0997B; --on-acc:#1B0C05;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0C0A07;font-family:Inter,system-ui,sans-serif;color:var(--t1);
+     -webkit-font-smoothing:antialiased;padding:24px 16px 60px}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600}
+
+/* ---- harness ---- */
+.harness{max-width:1180px;margin:0 auto}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:22px;
+     background:#141109;border:1px solid #241F19;border-radius:12px;padding:10px 12px}
+.bar h1{font-size:13px;font-weight:600;color:var(--t2);margin-right:6px}
+.bar .sp{flex:1}
+.tg{display:flex;background:#0C0A07;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.tg button{background:none;border:0;color:var(--t3);font:inherit;font-size:11px;font-weight:500;
+           padding:6px 12px;cursor:pointer}
+.tg button[aria-pressed=true]{background:var(--acc);color:var(--on-acc)}
+.note{font-size:11px;color:var(--t3)}
+.grid{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+figure{margin:0}
+figcaption{font-size:11px;color:var(--t3);margin-top:8px;text-align:center;letter-spacing:.04em;
+           text-transform:uppercase}
+
+/* ---- phone ---- */
+.phone{width:330px;height:660px;background:var(--bg);border-radius:30px;overflow:hidden;
+       position:relative;border:1px solid #2A241C;display:flex;flex-direction:column}
+.status{height:26px;display:flex;align-items:center;justify-content:space-between;
+        padding:0 18px;font-size:10px;color:var(--t3);flex-shrink:0}
+.body{flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 16px 12px}
+.body::-webkit-scrollbar{width:0}
+
+/* ---- tabbar ---- */
+.tabs{display:flex;border-top:1px solid var(--line);flex-shrink:0;background:var(--bg)}
+.tabs button{flex:1;background:none;border:0;padding:9px 0 11px;cursor:pointer;color:var(--t3);
+             font:inherit;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabs button[aria-current=page]{color:var(--acc)}
+.tabs span{font-size:10px;font-weight:500}
+.tabs svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;
+          stroke-linecap:round;stroke-linejoin:round}
+
+/* ---- pieces ---- */
+h2.sc{font-size:23px;font-weight:600;letter-spacing:-.02em;margin:14px 0 16px}
+.stat{background:var(--card);border-radius:var(--r);padding:11px 8px;text-align:center}
+.stat .n{font-size:19px;display:block}
+.stat .l{font-size:10px;color:var(--t3);margin-top:3px;display:block}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.big{width:100%;background:var(--acc);color:var(--on-acc);border:0;border-radius:var(--r);
+     padding:14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.ghost{width:100%;background:var(--card);color:var(--t1);border:1px solid var(--line);
+       border-radius:var(--r);padding:13px;font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.listbtn{width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+         padding:13px;display:flex;align-items:center;justify-content:space-between;
+         color:var(--t1);font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.lbl{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin:20px 0 8px}
+.hrow{padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.hrow p{font-size:14px}
+.hrow small{font-size:12px;color:var(--t3);display:block;margin-top:2px}
+.search{width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+        padding:11px 12px 11px 34px;color:var(--t1);font:inherit;font-size:13px}
+.search::placeholder{color:var(--t3)}
+.searchwrap{position:relative}
+.searchwrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;
+                stroke:var(--t3);fill:none;stroke-width:2}
+.empty{text-align:center;padding:34px 18px}
+.empty .ico{width:46px;height:46px;margin:0 auto 14px;border-radius:50%;background:var(--card);
+            display:flex;align-items:center;justify-content:center}
+.empty .ico svg{width:22px;height:22px;stroke:var(--t3);fill:none;stroke-width:1.6}
+.empty h3{font-size:15px;font-weight:600;margin-bottom:5px}
+.empty p{font-size:12.5px;color:var(--t2);line-height:1.55}
+
+/* ---- body map ---- */
+.bodymap{width:100%;height:auto;display:block}
+.bodymap .muscle-segment path{fill:var(--off);stroke:var(--line);stroke-width:2;
+                              transition:fill .18s ease;cursor:pointer}
+.bodymap .muscle-segment:hover path{fill:#35291F}
+.bodymap .muscle-segment.on path{fill:var(--acc)}
+.bodymap .muscle-segment.on2 path{fill:var(--acc2)}
+.bodymap [aria-hidden=true]{fill:#2A241C}
+.flip{display:flex;justify-content:center;gap:6px;margin-bottom:6px}
+.flip button{background:var(--card);border:1px solid var(--line);color:var(--t3);font:inherit;
+             font-size:11px;font-weight:500;padding:5px 15px;border-radius:99px;cursor:pointer}
+.flip button[aria-pressed=true]{background:#33221A;border-color:var(--acc);color:var(--acc2)}
+.hint{text-align:center;font-size:11.5px;color:var(--t3);margin-top:8px}
+.hidden{display:none!important}
+
+/* ---- splash ---- */
+.splash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+        cursor:pointer}
+.mark{width:74px;height:74px;border-radius:20px;background:var(--acc);display:flex;
+      align-items:center;justify-content:center}
+.mark svg{width:38px;height:38px;stroke:var(--on-acc);fill:none;stroke-width:2.2;stroke-linecap:round}
+.wordmark{font-size:19px;font-weight:600;letter-spacing:-.01em}
+.tagline{font-size:12.5px;color:var(--t2)}
+.splash small{position:absolute;bottom:26px;font-size:10.5px;color:var(--t3);letter-spacing:.05em}
+@media (prefers-reduced-motion:no-preference){
+  .mark{animation:pop .5s cubic-bezier(.2,.9,.3,1.3) both}
+  .wordmark,.tagline{animation:fade .45s ease both .22s}
+}
+@keyframes pop{from{transform:scale(.82);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---- flow screens ---- */
+.hdr{display:flex;align-items:center;gap:8px;margin:10px 0 6px}
+.hdr h3{font-size:16px;font-weight:600;letter-spacing:-.01em;flex:1;outline:none}
+.back{background:none;border:0;color:var(--t2);font-size:22px;line-height:1;cursor:pointer;padding:0 2px}
+.pencil{color:var(--t3);font-size:12px}
+.info{width:24px;height:24px;flex-shrink:0;border-radius:50%;background:var(--card);
+  border:1px solid var(--line);color:var(--t2);font:inherit;font-size:12px;font-style:italic;
+  font-weight:600;cursor:pointer;line-height:1}
+.datechip{background:var(--card);border:1px solid var(--line);color:var(--t2);font:inherit;
+          font-size:11.5px;padding:5px 11px;border-radius:99px;cursor:pointer;margin-bottom:6px}
+.tpl{display:flex;align-items:center;justify-content:space-between;padding:12px 0;
+     border-bottom:1px solid var(--line);cursor:pointer}
+.tpl p{font-size:14px}
+.tpl small{font-size:11.5px;color:var(--t3);display:block;margin-top:2px}
+.tpl.sel p{color:var(--acc2)}
+.chev{color:var(--t3);font-size:16px}
+.acc{border-bottom:1px solid var(--line)}
+.acch{width:100%;background:none;border:0;color:var(--t1);font:inherit;font-size:14px;font-weight:500;
+      display:flex;justify-content:space-between;align-items:center;padding:12px 0;cursor:pointer}
+.accb{padding-bottom:4px}
+.sub{display:flex;align-items:center;justify-content:space-between;padding:9px 0 9px 14px;
+     font-size:13.5px;color:var(--t2);cursor:pointer;border-top:1px solid #201B15}
+.sub.flat{padding-left:0;font-size:14px;color:var(--t1);font-weight:500;padding:12px 0;
+          border-top:0;border-bottom:1px solid var(--line)}
+.tick{color:var(--acc);font-size:14px}
+.sub.done{color:var(--t1)}
+.chips{display:flex;gap:6px;margin:2px 0 12px}
+.chip{font-size:11px;color:var(--t2);background:var(--card);border:1px solid var(--line);
+      border-radius:99px;padding:4px 10px}
+.last{font-size:12px;color:var(--t3);margin-bottom:10px}
+.last b{color:var(--t1);font-weight:600}
+.sets{display:flex;flex-direction:column;gap:6px}
+.setrow{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);
+        border-radius:var(--r);padding:8px 9px}
+.setrow.done{border-color:#3E3226}
+.sn{width:16px;font-size:12px;color:var(--t3);flex-shrink:0}
+.in{width:46px;background:#191510;border:1px solid var(--line);border-radius:7px;color:var(--t1);
+    font:inherit;font-size:14px;font-weight:600;text-align:center;padding:6px 2px;
+    font-variant-numeric:tabular-nums}
+.in.wide{width:62px}
+.in.ghosted{color:var(--t3);font-weight:500}
+.u{font-size:11px;color:var(--t3);margin-right:2px}
+.ck{margin-left:auto;width:30px;height:30px;flex-shrink:0;border-radius:8px;background:#191510;
+    border:1px solid var(--line);color:var(--t3);font-size:14px;cursor:pointer}
+.ck.on{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
+.addw{background:none;border:1px dashed var(--t3);color:var(--t3);font:inherit;font-size:10.5px;
+      padding:4px 8px;border-radius:99px;cursor:pointer;white-space:nowrap}
+.addw.on{border:1px solid var(--acc);border-style:solid;color:var(--acc2);background:#33221A}
+.ghosthint{font-size:11px;color:var(--t3);margin-top:9px;line-height:1.5}
+.banner{display:flex;gap:8px;background:#33221A;border:1px solid var(--acc);border-radius:var(--r);
+        padding:9px 11px;margin-bottom:11px}
+.banner span{color:var(--acc2);font-size:14px}
+.banner p{font-size:11.5px;color:var(--acc2);line-height:1.5}
+.quick{display:flex;gap:6px;margin-top:10px}
+.quick button{flex:1;background:var(--card);border:1px solid var(--line);color:var(--t2);font:inherit;
+              font-size:11.5px;padding:7px 0;border-radius:8px;cursor:pointer}
+.exrow{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--line);
+       cursor:pointer}
+.glyph{width:42px;height:42px;flex-shrink:0;background:var(--card);border:1px solid var(--line);
+       border-radius:9px;display:flex;align-items:center;justify-content:center}
+.glyph svg{width:24px;height:24px;stroke:var(--acc2);fill:none;stroke-width:2;stroke-linecap:round}
+.exrow p{font-size:13.5px}
+.exrow small{font-size:11.5px;color:var(--t3);display:block;margin-top:2px}
+.mini .muscle-segment path{cursor:default}
+.state{font-size:10px;padding:2.5px 8px;border-radius:99px;margin-left:auto;flex-shrink:0}
+.state.todo{color:var(--t3);border:1px solid var(--line)}
+.state.doing{color:var(--acc2);background:#33221A;border:1px solid var(--acc)}
+.state.done{color:var(--acc);border:1px solid #3E3226}
+.mg{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
+.mg span{background:#33221A;color:var(--acc2);font-size:12px;padding:6px 11px;border-radius:8px;
+  display:inline-flex;align-items:center;gap:6px}
+.mg span.add{background:none;border:1px dashed var(--t3);color:var(--t3)}
+.fld{width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  color:var(--t1);font:inherit;font-size:14px;padding:11px 12px;margin-bottom:16px}
+.pick{display:flex;gap:7px;margin-bottom:7px}
+.pick button{background:var(--card);border:1px solid var(--line);color:var(--t2);font:inherit;
+  font-size:12.5px;padding:8px 15px;border-radius:8px;cursor:pointer}
+.pick button[aria-pressed=true]{background:#33221A;border-color:var(--acc);color:var(--acc2)}
+.helper{font-size:11px;color:var(--t3);line-height:1.55;margin-bottom:18px}
+.kcal{background:var(--card);border-radius:var(--r);padding:11px 12px;margin-bottom:16px}
+.kcal h4{font-size:12px;font-weight:600;margin-bottom:8px}
+.kcal .kr{display:flex;justify-content:space-between;font-size:11.5px;color:var(--t2);
+  padding:4px 0;border-bottom:1px solid #201B15}
+.kcal p{font-size:10.5px;color:var(--t3);margin-top:8px;line-height:1.5}
+.icobtn{background:none;border:0;color:var(--t3);font-size:15px;cursor:pointer;padding:2px 4px}
+.subcount{font-size:11px;color:var(--t3)}
+.danger{width:100%;background:none;border:1px solid #4A2A20;color:#E07A5F;border-radius:var(--r);
+  padding:11px;font:inherit;font-size:13px;cursor:pointer;margin-top:10px}
+
+.cel{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
+.celmark{width:62px;height:62px;border-radius:50%;background:var(--acc);display:flex;
+  align-items:center;justify-content:center;font-size:30px;color:var(--on-acc)}
+.celtitle{font-size:20px;font-weight:600;letter-spacing:-.02em}
+.celsub{font-size:13px;color:var(--t2)}
+.celstats{display:grid;grid-template-columns:1fr 1fr;gap:14px 22px;margin-top:6px}
+.celstats div{text-align:center}
+.celstats .n{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.celstats .l{font-size:10.5px;color:var(--t3);margin-top:2px}
+.share{display:flex;flex-direction:column;align-items:center;padding:16px 14px 18px;
+  background:var(--card);border-radius:14px;margin-top:6px}
+.eyebrow{font-size:10px;letter-spacing:.12em;color:var(--t3);text-transform:uppercase}
+.sharetitle{font-size:17px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;
+  gap:6px;margin:3px 0 10px}
+.pbpill{display:inline-flex;align-items:center;gap:5px;background:#33221A;border:1px solid var(--acc);
+  color:var(--acc2);font-size:11.5px;padding:4px 11px;border-radius:99px;margin-top:12px}
+.sharegrid{display:grid;grid-template-columns:1fr 1fr;gap:11px 20px;margin-top:14px;width:100%;max-width:210px}
+.sharegrid div{text-align:center}
+.sharegrid .n{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.sharegrid .l{font-size:10px;color:var(--t3);margin-top:1px}
+.sharemaps{display:flex;gap:12px;justify-content:center}
+.sharemaps .m{width:78px}
+.sharemaps .cap{font-size:9.5px;color:var(--t3);text-align:center;margin-top:2px}
+.foot{display:flex;gap:8px;margin-top:14px}
+.foot button{flex:1}
+.wordm{font-size:9.5px;color:var(--t3);letter-spacing:.1em;margin-top:12px}
+
+.hsum{display:flex;gap:6px;font-size:11.5px;color:var(--t3);margin:2px 0 14px;flex-wrap:wrap}
+.hsum b{color:var(--t1);font-weight:600;font-variant-numeric:tabular-nums}
+.hsess{padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.hsess .top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.hsess .dt{font-size:12.5px;color:var(--t1);font-weight:500}
+.hsess .ago{font-size:11px;color:var(--t3)}
+.hsess .pb{font-size:10px;color:var(--acc2);background:#33221A;border:1px solid var(--acc);
+  border-radius:99px;padding:1.5px 7px;margin-left:auto}
+.hsess .sets{flex-direction:row;flex-wrap:wrap;gap:5px}
+.pill{font-size:11.5px;color:var(--t2);background:var(--card);border-radius:6px;padding:3px 7px;
+  font-variant-numeric:tabular-nums}
+.pill.best{color:var(--acc2);background:#33221A}
+
+.hist{margin-bottom:11px}
+.histrow{display:flex;justify-content:space-between;gap:10px;padding:6px 0;
+  border-bottom:1px solid #201B15;font-size:12px}
+.histrow span:first-child{color:var(--t3);flex-shrink:0}
+.histrow span:last-child{color:var(--t2);font-variant-numeric:tabular-nums;text-align:right}
+.seemore{background:none;border:0;color:var(--acc2);font:inherit;font-size:11.5px;padding:7px 0;cursor:pointer}
+.legend{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--t2);margin-bottom:3px}
+.sw{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.howblk{background:var(--card);border-radius:var(--r);padding:11px 12px;margin:12px 0}
+.howblk h4{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;
+  font-weight:600;margin-bottom:3px}
+.howblk h4:not(:first-child){margin-top:10px}
+.howblk p{font-size:12px;color:var(--t1);line-height:1.55}
+.dual{display:flex;gap:12px;justify-content:center;margin:6px 0 10px}
+.dual figure{text-align:center}
+.dual .cap{font-size:10px;color:var(--t3);margin-top:3px}
+.dual .crop{width:118px;background:var(--card);border-radius:9px;padding:8px 6px}
+
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+</style></head><body>
+
+<div class="harness">
+<div class="bar">
+  <h1>Prototype</h1>
+  <div class="tg" role="group" aria-label="Data state">
+    <button id="b-new" aria-pressed="true">First launch</button>
+    <button id="b-old" aria-pressed="false">Returning user</button>
+  </div>
+  <span class="sp"></span>
+  <span class="note">Screens 1–22 · complete app flow</span>
+</div>
+
+<div class="grid">
+
+<figure>
+<div class="phone">
+  <div class="splash" id="splash" tabindex="0" role="button" aria-label="Continue to app">
+    <div class="mark"><svg viewBox="0 0 24 24"><path d="M4 12h16M7 8v8M10 6v12M14 6v12M17 8v8"/></svg></div>
+    <div style="text-align:center">
+      <p class="wordmark">[ App name ]</p>
+      <p class="tagline">Log a set. That's it.</p>
+    </div>
+    <small>TAP TO CONTINUE</small>
+  </div>
+</div>
+<figcaption>1 · Splash</figcaption>
+</figure>
+
+<figure>
+<div class="phone">
+  <div class="status"><span>9:41</span><span>▮▮▮</span></div>
+  <div class="body">
+    <h2 class="sc">Workout</h2>
+    <div id="w-new">
+      <div class="empty">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 12h16M7 8v8M17 8v8"/></svg></div>
+        <h3>Ready when you are</h3>
+        <p>Pick a template for a planned session, or go ad-hoc and add exercises as you find them.</p>
+      </div>
+    </div>
+    <div id="w-old" class="hidden">
+      <div class="listbtn" style="border-color:var(--acc);background:#33221A;margin-bottom:14px">
+        <span style="color:var(--acc2)">Resume · Push day</span>
+        <span class="num" style="font-size:12px;color:var(--acc2)">3 exercises</span>
+      </div>
+      <p class="lbl" style="margin-top:0">Last time</p>
+      <div class="hrow" style="border-top:1px solid var(--line)">
+        <p>Chest and triceps day</p><small>2 days ago · 6 exercises · 18 sets</small>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;margin-top:18px">
+      <button class="big">Start workout</button>
+      <button class="ghost">Ad-hoc workout</button>
+    </div>
+  </div>
+  __TABS_A__
+</div>
+<figcaption>2 · Workout</figcaption>
+</figure>
+
+<figure>
+<div class="phone">
+  <div class="status"><span>9:41</span><span>▮▮▮</span></div>
+  <div class="body">
+    <h2 class="sc">Muscles</h2>
+    <div class="searchwrap" style="margin-bottom:14px">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input class="search" placeholder="Search 260 exercises">
+    </div>
+    <div class="flip">
+      <button id="f-front" aria-pressed="true">Front</button>
+      <button id="f-back" aria-pressed="false">Back</button>
+    </div>
+    <div id="wrap-front"><svg viewBox="0 0 700 1324" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Full body front view diagram with anatomically traced, individually tappable muscle segments" id="svg-front" class="bodymap">
+  <title>Full body muscle diagram — traced from source artwork, chest and abs subdivided</title>
+  
+  <path aria-hidden="true" d="M338.0,45.0 L321.0,50.0 L297.0,79.0 L298.0,118.0 L303.0,119.0 L303.0,128.0 L294.0,132.0 L293.0,156.0 L297.0,169.0 L307.0,173.0 L310.0,226.0 L260.0,251.0 L248.0,263.0 L205.0,274.0 L186.0,293.0 L164.0,359.0 L145.0,383.0 L129.0,429.0 L122.0,432.0 L91.0,469.0 L70.0,509.0 L14.0,647.0 L12.0,698.0 L17.0,714.0 L25.0,714.0 L30.0,706.0 L36.0,705.0 L42.0,655.0 L45.0,674.0 L61.0,675.0 L65.0,643.0 L73.0,624.0 L70.0,606.0 L130.0,546.0 L171.0,473.0 L222.0,414.0 L255.0,501.0 L246.0,596.0 L225.0,702.0 L219.0,762.0 L221.0,843.0 L233.0,899.0 L227.0,952.0 L212.0,1015.0 L212.0,1069.0 L223.0,1164.0 L219.0,1196.0 L200.0,1230.0 L174.0,1256.0 L171.0,1275.0 L190.0,1289.0 L218.0,1292.0 L242.0,1272.0 L247.0,1255.0 L264.0,1241.0 L269.0,1140.0 L282.0,1089.0 L295.0,1058.0 L289.0,972.0 L311.0,931.0 L322.0,856.0 L348.0,773.0 L354.0,735.0 L361.0,779.0 L387.0,863.0 L396.0,930.0 L418.0,971.0 L413.0,1061.0 L425.0,1088.0 L439.0,1143.0 L444.0,1243.0 L462.0,1257.0 L465.0,1271.0 L483.0,1288.0 L502.0,1292.0 L525.0,1286.0 L536.0,1275.0 L537.0,1264.0 L495.0,1208.0 L485.0,1168.0 L496.0,1063.0 L496.0,1020.0 L490.0,979.0 L480.0,952.0 L475.0,897.0 L488.0,828.0 L488.0,751.0 L481.0,691.0 L459.0,580.0 L452.0,510.0 L457.0,483.0 L485.0,413.0 L536.0,473.0 L576.0,544.0 L638.0,606.0 L635.0,627.0 L643.0,645.0 L646.0,675.0 L661.0,676.0 L665.0,654.0 L671.0,704.0 L677.0,705.0 L683.0,714.0 L691.0,714.0 L696.0,695.0 L694.0,651.0 L631.0,494.0 L614.0,465.0 L579.0,428.0 L565.0,387.0 L544.0,360.0 L537.0,329.0 L519.0,289.0 L502.0,274.0 L459.0,263.0 L449.0,252.0 L398.0,226.0 L400.0,174.0 L411.0,168.0 L415.0,152.0 L414.0,133.0 L403.0,124.0 L407.0,96.0 L403.0,63.0 L379.0,48.0 Z" fill="#2e2e2e"/>
+  <g id="muscle-shoulders-front-delt" class="muscle-segment" data-muscle-group="shoulders" data-sub-muscle-group="front-delt" data-label="Front delt">
+    <path d="M286.0,272.0 L253.0,266.0 L225.0,271.0 L209.0,278.0 L197.0,288.0 L186.0,304.0 L168.0,358.0 L208.0,345.0 L234.0,321.0 L263.0,285.0 Z"/>
+    <path d="M421.0,271.0 L441.0,282.0 L479.0,327.0 L497.0,343.0 L540.0,358.0 L524.0,309.0 L515.0,293.0 L504.0,282.0 L488.0,273.0 L464.0,267.0 L449.0,266.0 Z"/>
+  </g>
+  <g id="muscle-back-upper" class="muscle-segment" data-muscle-group="back" data-sub-muscle-group="upper" data-label="Upper back &amp; traps">
+    <path d="M309.0,231.0 L297.0,241.0 L272.0,251.0 L255.0,262.0 L274.0,263.0 L293.0,269.0 L301.0,266.0 L309.0,256.0 Z"/>
+    <path d="M398.0,231.0 L399.0,258.0 L404.0,264.0 L415.0,269.0 L434.0,263.0 L452.0,262.0 L445.0,256.0 L409.0,240.0 Z"/>
+  </g>
+  <g id="muscle-biceps-biceps" class="muscle-segment" data-muscle-group="biceps" data-sub-muscle-group="biceps" data-label="Biceps">
+    <path d="M215.0,357.0 L186.0,356.0 L164.0,366.0 L155.0,377.0 L139.0,410.0 L131.0,438.0 L132.0,464.0 L141.0,474.0 L155.0,475.0 L170.0,467.0 L218.0,410.0 L224.0,395.0 L225.0,371.0 L222.0,363.0 Z"/>
+    <path d="M491.0,358.0 L484.0,367.0 L482.0,377.0 L484.0,398.0 L490.0,411.0 L539.0,468.0 L553.0,475.0 L567.0,474.0 L576.0,462.0 L577.0,441.0 L570.0,413.0 L554.0,379.0 L542.0,365.0 L533.0,360.0 L514.0,355.0 Z"/>
+  </g>
+  <g id="muscle-forearms-forearms" class="muscle-segment" data-muscle-group="forearms" data-sub-muscle-group="forearms" data-label="Forearm">
+    <path d="M127.0,435.0 L95.0,473.0 L74.0,513.0 L44.0,586.0 L47.0,595.0 L54.0,601.0 L67.0,601.0 L88.0,577.0 L121.0,548.0 L140.0,522.0 L153.0,495.0 L167.0,475.0 L155.0,480.0 L138.0,478.0 L127.0,463.0 Z"/>
+    <path d="M580.0,433.0 L582.0,459.0 L577.0,471.0 L564.0,480.0 L552.0,480.0 L540.0,474.0 L551.0,489.0 L568.0,523.0 L590.0,552.0 L622.0,579.0 L639.0,600.0 L652.0,602.0 L661.0,594.0 L663.0,584.0 L636.0,518.0 L615.0,476.0 Z"/>
+  </g>
+  <g id="muscle-obliques-obliques" class="muscle-segment" data-muscle-group="obliques" data-sub-muscle-group="obliques" data-label="Obliques">
+    <path d="M228.0,366.0 L230.0,389.0 L227.0,412.0 L239.0,447.0 L256.0,483.0 L259.0,497.0 L259.0,522.0 L252.0,580.0 L263.0,580.0 L274.0,576.0 L282.0,568.0 L290.0,549.0 L289.0,495.0 L297.0,438.0 L294.0,431.0 Z"/>
+    <path d="M479.0,367.0 L417.0,427.0 L411.0,437.0 L418.0,490.0 L418.0,551.0 L427.0,570.0 L445.0,580.0 L455.0,580.0 L448.0,501.0 L453.0,479.0 L468.0,448.0 L481.0,409.0 L478.0,391.0 Z"/>
+  </g>
+  <g id="muscle-obliques-serratus" class="muscle-segment" data-muscle-group="obliques" data-sub-muscle-group="obliques" data-label="Obliques">
+    <path d="M259.0,392.0 L294.0,424.0 L291.0,410.0 L298.0,399.0 L273.0,398.0 Z"/>
+    <path d="M449.0,392.0 L428.0,399.0 L409.0,399.0 L416.0,408.0 L413.0,425.0 Z"/>
+  </g>
+  <g id="muscle-quads-quads" class="muscle-segment" data-muscle-group="quads" data-sub-muscle-group="quads" data-label="Quads">
+    <path d="M252.0,585.0 L225.0,738.0 L225.0,839.0 L232.0,880.0 L239.0,900.0 L244.0,904.0 L261.0,902.0 L271.0,928.0 L276.0,933.0 L288.0,934.0 L300.0,923.0 L309.0,902.0 L320.0,843.0 L345.0,765.0 L350.0,715.0 L341.0,711.0 L333.0,701.0 L311.0,637.0 L301.0,619.0 L280.0,598.0 Z"/>
+    <path d="M456.0,585.0 L433.0,594.0 L409.0,616.0 L396.0,639.0 L376.0,699.0 L365.0,712.0 L358.0,715.0 L362.0,763.0 L385.0,834.0 L399.0,904.0 L412.0,929.0 L425.0,935.0 L436.0,929.0 L443.0,906.0 L447.0,902.0 L464.0,904.0 L469.0,899.0 L476.0,878.0 L484.0,824.0 L485.0,777.0 L481.0,723.0 Z"/>
+  </g>
+  <g id="silhouette-knee-tie-in" aria-hidden="true">
+    <path d="M237.0,904.0 L231.0,952.0 L240.0,958.0 L254.0,977.0 L270.0,979.0 L279.0,974.0 L292.0,959.0 L304.0,936.0 L310.0,912.0 L304.0,926.0 L296.0,935.0 L288.0,939.0 L278.0,939.0 L266.0,929.0 L258.0,906.0 L243.0,909.0 Z"/>
+    <path d="M471.0,904.0 L464.0,909.0 L449.0,906.0 L441.0,930.0 L429.0,939.0 L413.0,936.0 L402.0,923.0 L398.0,913.0 L408.0,946.0 L419.0,964.0 L432.0,976.0 L439.0,979.0 L452.0,978.0 L466.0,960.0 L476.0,953.0 Z"/>
+  </g>
+  <g id="muscle-calves-calves" class="muscle-segment" data-muscle-group="calves" data-sub-muscle-group="calves" data-label="Calves">
+    <path d="M230.0,957.0 L220.0,991.0 L216.0,1019.0 L216.0,1065.0 L227.0,1160.0 L223.0,1200.0 L204.0,1234.0 L183.0,1253.0 L175.0,1267.0 L175.0,1271.0 L187.0,1282.0 L194.0,1285.0 L202.0,1283.0 L211.0,1288.0 L218.0,1286.0 L226.0,1276.0 L238.0,1268.0 L243.0,1251.0 L256.0,1243.0 L260.0,1237.0 L259.0,1201.0 L263.0,1194.0 L262.0,1157.0 L265.0,1136.0 L278.0,1085.0 L291.0,1054.0 L285.0,975.0 L272.0,983.0 L258.0,984.0 L249.0,979.0 L238.0,963.0 Z"/>
+    <path d="M477.0,957.0 L461.0,977.0 L449.0,984.0 L435.0,983.0 L422.0,974.0 L417.0,1057.0 L429.0,1084.0 L443.0,1139.0 L446.0,1165.0 L444.0,1188.0 L449.0,1205.0 L448.0,1239.0 L466.0,1253.0 L468.0,1265.0 L490.0,1286.0 L498.0,1288.0 L506.0,1283.0 L513.0,1285.0 L521.0,1282.0 L533.0,1268.0 L524.0,1252.0 L506.0,1237.0 L485.0,1200.0 L481.0,1151.0 L491.0,1071.0 L492.0,1024.0 L486.0,983.0 Z"/>
+  </g>
+  <g id="muscle-chest-upper" class="muscle-segment" data-muscle-group="chest" data-sub-muscle-group="upper" data-label="Upper chest">
+    <path d="M351.0,312.7 L351.0,287.0 L342.0,276.0 L328.0,271.0 L302.0,271.0 L284.0,277.0 L269.0,286.0 L246.9,312.7 Z"/>
+    <path d="M357.0,287.0 L356.5,312.7 L460.9,312.7 L442.0,289.0 L423.0,277.0 L404.0,271.0 L379.0,271.0 L364.0,277.0 Z"/>
+  </g>
+  <g id="muscle-chest-mid" class="muscle-segment" data-muscle-group="chest" data-sub-muscle-group="mid" data-label="Mid chest">
+    <path d="M351.0,312.7 L246.9,312.7 L235.0,327.0 L217.0,344.0 L207.0,350.0 L219.3,354.3 L349.1,354.3 L351.0,350.0 Z"/>
+    <path d="M356.5,312.7 L356.0,344.0 L358.1,354.3 L489.3,354.3 L500.0,351.0 L470.0,324.0 L460.9,312.7 Z"/>
+  </g>
+  <g id="muscle-chest-lower" class="muscle-segment" data-muscle-group="chest" data-sub-muscle-group="lower" data-label="Lower chest">
+    <path d="M219.3,354.3 L224.0,356.0 L244.0,377.0 L265.0,390.0 L287.0,395.0 L313.0,391.0 L332.0,380.0 L342.0,370.0 L349.1,354.3 Z"/>
+    <path d="M358.1,354.3 L359.0,359.0 L370.0,375.0 L393.0,390.0 L416.0,395.0 L438.0,392.0 L460.0,380.0 L484.0,356.0 L489.3,354.3 Z"/>
+  </g>
+  <g id="muscle-abs-upper" class="muscle-segment" data-muscle-group="abs" data-sub-muscle-group="upper" data-label="Upper abs">
+    <path d="M333.0,389.0 L304.0,400.0 L296.0,410.0 L302.0,440.0 L301.0,458.0 L304.1,520.0 L404.0,520.0 L404.0,520.0 L406.0,434.0 L412.0,411.0 L405.0,401.0 L379.0,390.0 L362.0,389.0 L357.0,393.0 L356.0,398.0 L353.0,399.0 L348.0,390.0 Z"/>
+  </g>
+  <g id="muscle-abs-lower" class="muscle-segment" data-muscle-group="abs" data-sub-muscle-group="lower" data-label="Lower abs">
+    <path d="M304.1,520.0 L306.0,559.0 L313.0,593.0 L326.0,622.0 L344.0,645.0 L355.0,650.0 L361.0,647.0 L379.0,626.0 L391.0,602.0 L398.0,580.0 L404.0,520.0 L404.0,520.0 Z"/>
+    <path d="M297.0,472.0 L294.0,495.0 L296.0,542.0 L293.0,557.0 L286.0,571.0 L279.0,578.0 L264.0,584.0 L283.0,594.0 L303.0,614.0 L317.0,640.0 L336.0,697.0 L345.0,708.0 L359.0,710.0 L366.0,705.0 L375.0,689.0 L390.0,641.0 L399.0,622.0 L421.0,597.0 L443.0,584.0 L433.0,581.0 L422.0,571.0 L414.0,554.0 L412.0,544.0 L414.0,503.0 L410.0,474.0 L406.0,563.0 L396.0,603.0 L381.0,632.0 L365.0,650.0 L354.0,655.0 L344.0,651.0 L323.0,626.0 L313.0,606.0 L306.0,585.0 L301.0,557.0 Z"/>
+  </g>
+</svg>
+</div>
+    <div id="wrap-back" class="hidden"><svg viewBox="0 0 712 1324" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Full body back view diagram with anatomically traced, individually tappable muscle segments" id="svg-back" class="bodymap">
+  <title>Back view muscle diagram — traced from source artwork, corrected</title>
+  
+  <path aria-hidden="true" d="M340.0,31.0 L310.0,43.0 L299.0,55.0 L291.0,76.0 L295.0,116.0 L290.0,123.0 L294.0,154.0 L306.0,160.0 L307.0,212.0 L297.0,225.0 L260.0,238.0 L248.0,249.0 L232.0,249.0 L204.0,260.0 L175.0,288.0 L161.0,330.0 L135.0,362.0 L115.0,406.0 L111.0,425.0 L83.0,451.0 L56.0,497.0 L23.0,587.0 L10.0,667.0 L18.0,696.0 L32.0,708.0 L41.0,708.0 L47.0,696.0 L47.0,686.0 L41.0,677.0 L44.0,656.0 L49.0,654.0 L54.0,672.0 L68.0,671.0 L66.0,621.0 L59.0,603.0 L110.0,541.0 L162.0,456.0 L183.0,437.0 L215.0,390.0 L245.0,466.0 L249.0,509.0 L237.0,612.0 L222.0,670.0 L213.0,746.0 L214.0,827.0 L225.0,887.0 L217.0,943.0 L199.0,1011.0 L210.0,1184.0 L206.0,1207.0 L187.0,1227.0 L163.0,1241.0 L162.0,1252.0 L194.0,1263.0 L218.0,1277.0 L243.0,1277.0 L254.0,1266.0 L256.0,1185.0 L281.0,1088.0 L292.0,1064.0 L285.0,960.0 L308.0,917.0 L306.0,907.0 L346.0,744.0 L352.0,686.0 L359.0,752.0 L397.0,906.0 L395.0,915.0 L419.0,962.0 L412.0,1067.0 L423.0,1089.0 L447.0,1182.0 L449.0,1264.0 L458.0,1276.0 L480.0,1278.0 L541.0,1253.0 L540.0,1240.0 L518.0,1228.0 L498.0,1207.0 L493.0,1177.0 L505.0,1014.0 L499.0,981.0 L490.0,960.0 L479.0,887.0 L490.0,822.0 L491.0,750.0 L484.0,683.0 L467.0,613.0 L455.0,515.0 L459.0,464.0 L488.0,391.0 L519.0,435.0 L541.0,455.0 L541.0,461.0 L587.0,532.0 L645.0,602.0 L638.0,620.0 L636.0,671.0 L650.0,672.0 L655.0,654.0 L660.0,656.0 L662.0,678.0 L657.0,697.0 L662.0,700.0 L662.0,708.0 L671.0,708.0 L687.0,694.0 L694.0,651.0 L683.0,615.0 L681.0,587.0 L644.0,488.0 L616.0,445.0 L593.0,425.0 L570.0,364.0 L543.0,330.0 L529.0,288.0 L498.0,259.0 L471.0,249.0 L456.0,249.0 L443.0,238.0 L407.0,226.0 L397.0,213.0 L398.0,159.0 L408.0,156.0 L413.0,144.0 L413.0,119.0 L409.0,117.0 L413.0,86.0 L395.0,40.0 L383.0,33.0 Z" fill="#2e2e2e"/>
+  <g id="muscle-back-upper" class="muscle-segment" data-muscle-group="back" data-sub-muscle-group="upper" data-label="Upper back / traps">
+    <path d="M253.0,249.0 L271.0,255.0 L294.0,274.0 L332.0,269.0 L373.0,269.0 L410.0,274.0 L433.0,255.0 L451.0,249.0 L412.0,231.0 L377.0,227.0 L300.0,229.0 L264.0,242.0 Z"/>
+    <path d="M291.0,278.0 L319.0,336.0 L343.0,401.0 L350.0,411.0 L354.0,411.0 L362.0,397.0 L387.0,330.0 L413.0,278.0 L400.0,279.0 L355.0,273.0 L330.0,274.0 L303.0,279.0 Z"/>
+  </g>
+  <g id="muscle-shoulders-rear-delt" class="muscle-segment" data-muscle-group="shoulders" data-sub-muscle-group="rear-delt" data-label="Rear delt">
+    <path d="M279.0,268.0 L268.0,259.0 L252.0,253.0 L236.0,253.0 L208.0,264.0 L193.0,275.0 L179.0,292.0 L170.0,310.0 L165.0,329.0 L172.0,325.0 L205.0,321.0 L223.0,313.0 Z"/>
+    <path d="M425.0,268.0 L481.0,313.0 L499.0,321.0 L528.0,324.0 L539.0,329.0 L534.0,310.0 L525.0,292.0 L506.0,271.0 L494.0,263.0 L467.0,253.0 L451.0,253.0 L437.0,258.0 Z"/>
+  </g>
+  <g id="muscle-back-lats" class="muscle-segment" data-muscle-group="back" data-sub-muscle-group="lats" data-label="Lats">
+    <path d="M282.0,272.0 L219.0,320.0 L214.0,328.0 L221.0,372.0 L220.0,389.0 L230.0,421.0 L245.0,450.0 L252.0,479.0 L252.0,529.0 L244.0,586.0 L265.0,568.0 L288.0,557.0 L296.0,547.0 L299.0,493.0 L326.0,436.0 L333.0,406.0 L332.0,387.0 L326.0,366.0 L305.0,316.0 Z"/>
+    <path d="M422.0,272.0 L398.0,318.0 L375.0,374.0 L371.0,392.0 L371.0,411.0 L381.0,445.0 L405.0,495.0 L406.0,538.0 L410.0,552.0 L439.0,568.0 L460.0,587.0 L451.0,519.0 L452.0,476.0 L458.0,451.0 L473.0,422.0 L484.0,387.0 L483.0,368.0 L489.0,340.0 L489.0,324.0 Z"/>
+  </g>
+  <g id="muscle-back-lower" class="muscle-segment" data-muscle-group="back" data-sub-muscle-group="lower" data-label="Lower back">
+    <path d="M366.0,399.0 L362.0,409.0 L353.0,416.0 L344.0,412.0 L338.0,399.0 L337.0,415.0 L331.0,437.0 L304.0,494.0 L302.0,543.0 L297.0,555.0 L314.0,553.0 L330.0,557.0 L346.0,571.0 L352.0,585.0 L359.0,569.0 L369.0,560.0 L391.0,553.0 L407.0,555.0 L402.0,544.0 L400.0,495.0 L374.0,440.0 L367.0,416.0 Z"/>
+  </g>
+  <g id="muscle-triceps-triceps" class="muscle-segment" data-muscle-group="triceps" data-sub-muscle-group="triceps" data-label="Triceps">
+    <path d="M210.0,324.0 L175.0,329.0 L166.0,333.0 L151.0,348.0 L137.0,370.0 L119.0,410.0 L115.0,431.0 L137.0,429.0 L141.0,435.0 L142.0,451.0 L145.0,457.0 L161.0,450.0 L179.0,433.0 L215.0,379.0 L216.0,369.0 L209.0,334.0 Z"/>
+    <path d="M493.0,324.0 L494.0,340.0 L488.0,368.0 L489.0,381.0 L532.0,441.0 L549.0,454.0 L559.0,457.0 L563.0,434.0 L567.0,429.0 L589.0,430.0 L585.0,410.0 L566.0,368.0 L552.0,347.0 L539.0,334.0 L528.0,329.0 L508.0,328.0 Z"/>
+  </g>
+  <g id="muscle-forearms-forearms" class="muscle-segment" data-muscle-group="forearms" data-sub-muscle-group="forearms" data-label="Forearm">
+    <path d="M134.0,433.0 L114.0,436.0 L110.0,430.0 L91.0,450.0 L72.0,477.0 L58.0,506.0 L30.0,586.0 L38.0,599.0 L47.0,601.0 L57.0,597.0 L72.0,574.0 L114.0,526.0 L136.0,488.0 L158.0,457.0 L148.0,462.0 L140.0,459.0 Z"/>
+    <path d="M569.0,433.0 L565.0,457.0 L559.0,462.0 L545.0,457.0 L568.0,489.0 L591.0,528.0 L629.0,571.0 L645.0,595.0 L657.0,601.0 L666.0,599.0 L674.0,586.0 L649.0,514.0 L633.0,479.0 L616.0,454.0 L594.0,430.0 L589.0,436.0 Z"/>
+  </g>
+  <g id="muscle-glutes-glutes" class="muscle-segment" data-muscle-group="glutes" data-sub-muscle-group="glutes" data-label="Glutes">
+    <path d="M293.0,560.0 L280.0,566.0 L272.0,574.0 L266.0,586.0 L252.0,638.0 L254.0,666.0 L268.0,685.0 L281.0,692.0 L298.0,696.0 L333.0,696.0 L344.0,689.0 L349.0,676.0 L349.0,593.0 L347.0,584.0 L341.0,572.0 L326.0,561.0 L314.0,558.0 Z"/>
+    <path d="M406.0,559.0 L389.0,558.0 L373.0,563.0 L362.0,573.0 L356.0,587.0 L354.0,602.0 L355.0,679.0 L359.0,688.0 L372.0,696.0 L406.0,696.0 L426.0,691.0 L442.0,679.0 L451.0,660.0 L450.0,627.0 L436.0,581.0 L425.0,567.0 Z"/>
+  </g>
+  <g id="muscle-hamstrings-hamstrings" class="muscle-segment" data-muscle-group="hamstrings" data-sub-muscle-group="hamstrings" data-label="Hamstrings">
+    <path d="M268.0,572.0 L246.0,591.0 L241.0,602.0 L241.0,616.0 L230.0,654.0 L220.0,715.0 L217.0,750.0 L217.0,810.0 L228.0,881.0 L236.0,903.0 L244.0,909.0 L251.0,901.0 L261.0,877.0 L268.0,872.0 L271.0,878.0 L274.0,914.0 L279.0,922.0 L289.0,924.0 L297.0,916.0 L305.0,896.0 L316.0,840.0 L339.0,755.0 L347.0,692.0 L332.0,701.0 L291.0,700.0 L271.0,693.0 L255.0,678.0 L247.0,657.0 L247.0,637.0 L259.0,591.0 Z"/>
+    <path d="M437.0,573.0 L446.0,596.0 L457.0,642.0 L456.0,661.0 L449.0,678.0 L434.0,692.0 L412.0,700.0 L378.0,702.0 L365.0,699.0 L357.0,693.0 L363.0,748.0 L391.0,854.0 L399.0,898.0 L407.0,917.0 L415.0,924.0 L425.0,922.0 L429.0,915.0 L433.0,875.0 L436.0,872.0 L443.0,878.0 L457.0,907.0 L462.0,909.0 L468.0,902.0 L481.0,854.0 L487.0,805.0 L484.0,717.0 L473.0,650.0 L463.0,617.0 L463.0,602.0 L457.0,590.0 Z"/>
+  </g>
+  <g id="muscle-calves-calves" class="muscle-segment" data-muscle-group="calves" data-sub-muscle-group="calves" data-label="Calves">
+    <path d="M218.0,964.0 L211.0,978.0 L203.0,1015.0 L203.0,1046.0 L210.0,1079.0 L215.0,1085.0 L224.0,1086.0 L231.0,1079.0 L241.0,1059.0 L248.0,1054.0 L253.0,1061.0 L257.0,1085.0 L263.0,1090.0 L271.0,1090.0 L280.0,1081.0 L288.0,1060.0 L287.0,1021.0 L282.0,992.0 L275.0,983.0 L269.0,981.0 L254.0,987.0 L246.0,986.0 Z"/>
+    <path d="M486.0,964.0 L457.0,986.0 L449.0,987.0 L434.0,981.0 L423.0,989.0 L417.0,1018.0 L416.0,1063.0 L423.0,1080.0 L434.0,1090.0 L441.0,1090.0 L447.0,1084.0 L451.0,1059.0 L457.0,1054.0 L478.0,1085.0 L483.0,1087.0 L489.0,1085.0 L495.0,1075.0 L500.0,1052.0 L501.0,1018.0 L495.0,985.0 Z"/>
+  </g>
+</svg>
+</div>
+    <p class="hint">Tap a muscle to see its exercises</p>
+  </div>
+  __TABS_B__
+</div>
+<figcaption>3 · Muscles</figcaption>
+</figure>
+
+<figure>
+<div class="phone">
+  <div class="status"><span>9:41</span><span>▮▮▮</span></div>
+  <div class="body">
+    <h2 class="sc">Profile</h2>
+    <div class="row3">
+      <div class="stat"><span class="n num" id="s1">0</span><span class="l">Day streak</span></div>
+      <div class="stat"><span class="n num" id="s2">0</span><span class="l">Workouts</span></div>
+      <div class="stat"><span class="n num" id="s3">0</span><span class="l">Sets</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+      <button class="listbtn">My workout templates <span style="color:var(--t3)">›</span></button>
+      <button class="listbtn">Personal details <span style="color:var(--t3)">›</span></button>
+    </div>
+    <p class="lbl">History</p>
+    <div id="p-new">
+      <div class="empty" style="padding-top:14px">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z"/><path d="M9 10h6M9 14h4"/></svg></div>
+        <h3>No workouts yet</h3>
+        <p>Finish your first session and it'll show up here.</p>
+      </div>
+    </div>
+    <div id="p-old" class="hidden">
+      <div class="hrow" style="border-top:1px solid var(--line)">
+        <p>Chest and triceps day</p><small>Today · 6 exercises · 18 sets</small></div>
+      <div class="hrow"><p>Barbell curl</p><small>Yesterday · quick log</small></div>
+      <div class="hrow"><p>Leg day</p><small>3 days ago · 5 exercises · 21 sets</small></div>
+    </div>
+  </div>
+  __TABS_C__
+</div>
+<figcaption>4 · Profile</figcaption>
+</figure>
+
+<figure><div class="phone">
+<div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
+<div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Choose a template</h3></div><p class="lbl" style="margin-top:6px">Predefined</p><div class="tpl"><div><p>Push day</p><small>Chest, shoulders, triceps</small></div><span class="chev">&#8250;</span></div><div class="tpl"><div><p>Pull day</p><small>Back, biceps</small></div><span class="chev">&#8250;</span></div><div class="tpl"><div><p>Leg day</p><small>Quads, hamstrings, glutes, calves</small></div><span class="chev">&#8250;</span></div><div class="tpl sel"><div><p>Chest and triceps day</p><small>Chest, triceps</small></div><span class="chev">&#8250;</span></div><p class="lbl">Custom</p><div class="tpl"><div><p>Push day (mine)</p><small>Duplicated from Push day</small></div><span class="chev">&#8250;</span></div></div>
+__TABS_D__</div><figcaption>5 &middot; Template picker</figcaption></figure>
+<figure><div class="phone">
+<div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
+<div class="body"><div class="hdr"><button class="back">&#8249;</button><h3 contenteditable="true" spellcheck="false">Chest and triceps day</h3><span class="pencil">&#9998;</span></div><button class="datechip">Today</button><div id="mini-slot" style="display:flex;justify-content:center;margin:2px 0 6px"></div><div class="acc"><button class="acch"><span>Chest</span><span class="chev">&#8964;</span></button><div class="accb"><div class="sub done"><span>Upper chest</span><span class="tick">&#10003;</span></div><div class="sub done"><span>Mid chest</span><span class="tick">&#10003;</span></div><div class="sub"><span>Lower chest</span><span class="chev">&#8250;</span></div></div></div><div class="sub flat"><span>Triceps</span><span class="chev">&#8250;</span></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:20px"><button class="big">Finish workout</button><button class="ghost" style="color:var(--t2)">Discard workout</button></div></div>
+__TABS_E__</div><figcaption>6 &middot; Workout overview</figcaption></figure>
+<figure><div class="phone">
+<div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
+<div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Lower chest</h3></div><p class="ghosthint" style="margin:0 0 8px">9 exercises &mdash; pick whichever kit is free</p><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M4 16h24"/><path d="M7 11v10M10 9v14M22 9v14M25 11v10"/></svg></div><div><p>Decline barbell bench press</p><small>Barbell &middot; Last 60kg &times; 8</small></div></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M11 16h10"/><path d="M8 11v10M5 13v6M24 11v10M27 13v6"/></svg></div><div><p>Decline dumbbell press</p><small>Dumbbell &middot; Last 24kg &times; 10</small></div></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3"/><path d="M16 11v9M16 20l-5 6M16 20l5 6M9 14h14"/></svg></div><div><p>Chest dip</p><small>Bodyweight &middot; Last 12 reps</small></div></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M16 4v12"/><circle cx="16" cy="19" r="3"/><path d="M11 26h10"/></svg></div><div><p>High-to-low cable crossover</p><small>Cable &middot; Last 15kg &times; 12</small></div></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><rect x="6" y="6" width="20" height="20" rx="3"/><path d="M11 12h10M11 16h10M11 20h5"/></svg></div><div><p>Decline machine press</p><small>Machine &middot; not logged yet</small></div></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3"/><path d="M16 11v9M16 20l-5 6M16 20l5 6M9 14h14"/></svg></div><div><p>Hands-elevated push-up</p><small>Bodyweight &middot; not logged yet</small></div></div></div>
+__TABS_F__</div><figcaption>7 &middot; Exercise list</figcaption></figure>
+<figure><div class="phone">
+<div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
+<div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Decline barbell bench press</h3><button class="info" title="How to do it">i</button></div><div class="chips"><span class="chip">Barbell</span><span class="chip">Weight &times; reps</span></div><div class="sets"><div class="setrow done"><span class="sn num">1</span><input class="in num" value="60"><span class="u">kg</span><input class="in num" value="8"><span class="u">reps</span><button class="ck on">&#10003;</button></div><div class="setrow done"><span class="sn num">2</span><input class="in num" value="60"><span class="u">kg</span><input class="in num" value="8"><span class="u">reps</span><button class="ck on">&#10003;</button></div><div class="setrow"><span class="sn num">3</span><input class="in num ghosted" value="60"><span class="u">kg</span><input class="in num ghosted" value="8"><span class="u">reps</span><button class="ck">&#10003;</button></div></div><p class="ghosthint">Greyed values are guesses from last time &mdash; tap to change</p><button class="ghost" style="margin-top:12px">+ Add set</button><button class="big" style="margin-top:8px">Mark exercise done</button><p class="lbl">Recent</p><div class="histrow"><span>12 Jul</span><span>60&times;8 &middot; 60&times;8 &middot; 55&times;10</span></div><div class="histrow"><span>8 Jul</span><span>57.5&times;8 &middot; 57.5&times;7</span></div><button class="seemore">See all 11 sessions &#8250;</button></div>
+__TABS_G__</div><figcaption>8 &middot; Log sets &mdash; weighted</figcaption></figure>
+<figure><div class="phone">
+<div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
+<div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Pull-up</h3><button class="info" title="How to do it">i</button></div><div class="chips"><span class="chip">Bodyweight</span><span class="chip">Reps</span></div><div class="sets"><div class="setrow done"><span class="sn num">1</span><input class="in num wide" value="9"><span class="u">reps</span><button class="addw">+ weight</button><button class="ck on">&#10003;</button></div><div class="setrow done"><span class="sn num">2</span><input class="in num wide" value="7"><span class="u">reps</span><button class="addw on">+5 kg</button><button class="ck on">&#10003;</button></div><div class="setrow"><span class="sn num">3</span><input class="in num wide ghosted" value="7"><span class="u">reps</span><button class="addw">+ weight</button><button class="ck">&#10003;</button></div></div><p class="ghosthint">Added weight is optional &mdash; most sets never use it</p><button class="ghost" style="margin-top:12px">+ Add set</button><button class="big" style="margin-top:8px">Mark exercise done</button><p class="lbl">Recent</p><div class="histrow"><span>13 Jul</span><span>9 &middot; 8 &middot; 6 reps</span></div><div class="histrow"><span>9 Jul</span><span>+5kg &times; 6 &middot; 8 reps</span></div><button class="seemore">See all 21 sessions &#8250;</button></div>
+__TABS_H__</div><figcaption>9 &middot; Log sets &mdash; bodyweight</figcaption></figure>
+<figure><div class="phone">
+<div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
+<div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Assisted pull-up machine</h3><button class="info" title="How to do it">i</button></div><div class="chips"><span class="chip">Machine</span><span class="chip">Assist &times; reps</span></div><div class="banner"><span>&#8600;</span><p>Less assistance is better. Your record is the lightest assist you&rsquo;ve used.</p></div><div class="sets"><div class="setrow done"><span class="sn num">1</span><input class="in num" value="25"><span class="u">assist</span><input class="in num" value="8"><span class="u">reps</span><button class="ck on">&#10003;</button></div><div class="setrow"><span class="sn num">2</span><input class="in num ghosted" value="25"><span class="u">assist</span><input class="in num ghosted" value="8"><span class="u">reps</span><button class="ck">&#10003;</button></div></div><button class="ghost" style="margin-top:12px">+ Add set</button><button class="big" style="margin-top:8px">Mark exercise done</button><p class="lbl">Recent</p><div class="histrow"><span>11 Jul</span><span>25kg assist &times; 8</span></div><div class="histrow"><span>4 Jul</span><span>30kg assist &times; 7</span></div><button class="seemore">See all 6 sessions &#8250;</button></div>
+__TABS_I__</div><figcaption>10 &middot; Log sets &mdash; assisted</figcaption></figure>
+<figure><div class="phone">
+<div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
+<div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Plank</h3><button class="info" title="How to do it">i</button></div><div class="chips"><span class="chip">Bodyweight</span><span class="chip">Duration</span></div><div class="sets"><div class="setrow done"><span class="sn num">1</span><input class="in num wide" value="1:00"><button class="addw">+ weight</button><button class="ck on">&#10003;</button></div><div class="setrow"><span class="sn num">2</span><input class="in num wide ghosted" value="1:00"><button class="addw">+ weight</button><button class="ck">&#10003;</button></div></div><div class="quick"><button>30s</button><button>45s</button><button>60s</button><button>90s</button></div><p class="ghosthint">No stopwatch in V1 &mdash; type it or tap a preset</p><button class="ghost" style="margin-top:12px">+ Add set</button><button class="big" style="margin-top:8px">Mark exercise done</button><p class="lbl">Recent</p><div class="histrow"><span>12 Jul</span><span>1:00 &middot; 0:45 &middot; 0:45</span></div><div class="histrow"><span>8 Jul</span><span>0:50 &middot; 0:45</span></div><button class="seemore">See all 9 sessions &#8250;</button></div>
+__TABS_J__</div><figcaption>11 &middot; Log sets &mdash; timed</figcaption></figure>
+<figure><div class="phone">
+<div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
+<div class="body">
+<div class="hdr"><button class="back">&#8249;</button><h3>Decline barbell bench press</h3><button class="info" title="How to do it">i</button></div>
+<div class="dual"><figure><div class="crop" id="crop-front"></div><p class="cap">Front</p></figure>
+<figure><div class="crop" id="crop-back"></div><p class="cap">Back</p></figure></div>
+<div class="legend"><span class="sw" style="background:var(--acc)"></span>Primary: lower chest</div>
+<div class="legend" style="margin-bottom:9px"><span class="sw" style="background:var(--acc2)"></span>Secondary: triceps, front delt</div>
+<div class="chips"><span class="chip">Barbell</span><span class="chip">Weight &times; reps</span></div>
+<div class="howblk">
+<h4>Setup</h4><p>Decline bench at 15 to 30 degrees, legs secured. Grip 1.5x shoulder width. Have a spotter for unracking.</p>
+<h4>Posture</h4><p>Shoulder blades retracted, chest up, head supported.</p>
+<h4>Execution</h4><p>Unrack over the lower chest. Inhale and lower to the lower chest over 2 seconds, elbows at 45 degrees. Press up and exhale.</p>
+<h4>Common mistakes</h4><p>Sitting up quickly afterwards while blood is pooled in the head. Bouncing the bar off the ribs.</p>
+</div>
+<div class="row3" style="margin-bottom:14px">
+<div class="stat"><span class="n num" style="font-size:14px">62.5kg &times; 6</span><span class="l">Best</span></div>
+<div class="stat"><span class="n num" style="font-size:14px">60kg &times; 8</span><span class="l">Last</span></div>
+<div class="stat"><span class="n num" style="font-size:14px">11</span><span class="l">Times</span></div>
+</div>
+<p class="lbl" style="margin-top:0">Recent</p>
+<div class="histrow"><span>12 Jul</span><span>60&times;8 &middot; 60&times;8 &middot; 55&times;10</span></div>
+<div class="histrow"><span>8 Jul</span><span>57.5&times;8 &middot; 57.5&times;7</span></div>
+<button class="seemore">See all 11 sessions &#8250;</button>
+</div>
+__TABS_K__</div><figcaption>12 &middot; Exercise detail</figcaption></figure>
+<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Decline barbell bench press</h3></div><div class="hsum"><span>11 sessions</span>&middot;<span>best <b>62.5kg &times; 6</b></span>&middot;<span>first logged <b>2 Mar</b></span></div><div class="hsess"><div class="top"><span class="dt">12 Jul</span><span class="ago">3 days ago</span></div><div class="sets"><span class="pill">60&times;10</span><span class="pill">60&times;8</span><span class="pill">55&times;10</span></div></div><div class="hsess"><div class="top"><span class="dt">8 Jul</span><span class="ago">1 week ago</span></div><div class="sets"><span class="pill">57.5&times;8</span><span class="pill">57.5&times;7</span></div></div><div class="hsess"><div class="top"><span class="dt">1 Jul</span><span class="ago">2 weeks ago</span><span class="pb">&#9733; PB</span></div><div class="sets"><span class="pill best">62.5&times;6</span><span class="pill">57.5&times;8</span><span class="pill">55&times;8</span></div></div><div class="hsess"><div class="top"><span class="dt">24 Jun</span><span class="ago">3 weeks ago</span></div><div class="sets"><span class="pill">57.5&times;6</span><span class="pill">55&times;8</span></div></div><div class="hsess"><div class="top"><span class="dt">17 Jun</span><span class="ago">1 month ago</span><span class="pb">&#9733; PB</span></div><div class="sets"><span class="pill best">55&times;8</span><span class="pill">55&times;7</span><span class="pill">50&times;10</span></div></div><button class="seemore">See more &#8250;</button><p class="ghosthint">Tap any session to open the full workout it was part of.</p></div>__TABS_L__</div><figcaption>13 &middot; Exercise history</figcaption></figure>
+<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="cel"><div class="celmark">&#10003;</div><p class="celtitle">Workout saved</p><p class="celsub">Chest and triceps day</p><div class="celstats"><div><p class="n">18</p><p class="l">Sets</p></div><div><p class="n">6</p><p class="l">Exercises</p></div><div><p class="n">5</p><p class="l">Day streak</p></div><div><p class="n">78</p><p class="l">kcal</p></div></div><div class="pbpill">&#9733; 2 personal bests</div></div></div><figcaption>14 &middot; Celebration</figcaption></figure>
+<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3 style="font-size:15px">Summary</h3><button class="info" title="Share">&#8593;</button></div><div class="share"><p class="eyebrow">Today</p><p class="sharetitle" contenteditable="true" spellcheck="false">Chest and triceps day <span class="pencil">&#9998;</span></p><div class="sharemaps"><div><div class="m" id="sum-front"></div><p class="cap">Front</p></div><div><div class="m" id="sum-back"></div><p class="cap">Back</p></div></div><div class="pbpill">&#9733; 2 personal bests</div><div class="sharegrid"><div><p class="n">18</p><p class="l">Sets</p></div><div><p class="n">6</p><p class="l">Exercises</p></div><div><p class="n">5</p><p class="l">Day streak</p></div><div><p class="n">78</p><p class="l">kcal</p></div></div><p class="wordm">[ APP NAME ]</p></div><p class="lbl">What you did</p><div class="hsess"><div class="top"><span class="dt">Decline barbell bench press</span><span class="pb">&#9733; PB</span></div><div class="sets"><span class="pill best">62.5&times;6</span><span class="pill">60&times;8</span><span class="pill">60&times;8</span></div></div><div class="hsess"><div class="top"><span class="dt">Incline dumbbell press</span></div><div class="sets"><span class="pill">24&times;10</span><span class="pill">24&times;9</span><span class="pill">22&times;10</span></div></div><div class="hsess"><div class="top"><span class="dt">Cable rope pushdown</span><span class="pb">&#9733; PB</span></div><div class="sets"><span class="pill best">32&times;12</span><span class="pill">30&times;12</span></div></div><div class="foot"><button class="ghost">Edit</button><button class="big">Done</button></div></div>__TABS_M__</div><figcaption>15 &middot; Summary / share card</figcaption></figure>
+<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Add exercise</h3></div><div class="searchwrap" style="margin-bottom:14px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="search" value="curl"></div><p class="ghosthint" style="margin:0 0 8px">18 matches</p><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M4 16h24"/><path d="M7 11v10M10 9v14M22 9v14M25 11v10"/></svg></div><div><p>Barbell curl</p><small>Barbell &middot; Biceps &middot; Last 30kg &times; 10</small></div><button class="ck">+</button></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M11 16h10"/><path d="M8 11v10M5 13v6M24 11v10M27 13v6"/></svg></div><div><p>Dumbbell curl</p><small>Dumbbell &middot; Biceps &middot; Last 14kg &times; 12</small></div><button class="ck">+</button></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M11 16h10"/><path d="M8 11v10M5 13v6M24 11v10M27 13v6"/></svg></div><div><p>Hammer curl</p><small>Dumbbell &middot; Biceps, forearms</small></div><button class="ck">+</button></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M16 4v12"/><circle cx="16" cy="19" r="3"/><path d="M11 26h10"/></svg></div><div><p>Cable curl</p><small>Cable &middot; Biceps</small></div><button class="ck">+</button></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3"/><path d="M16 11v9M16 20l-5 6M16 20l5 6M9 14h14"/></svg></div><div><p>Nordic hamstring curl</p><small>Bodyweight &middot; Hamstrings</small></div><button class="ck">+</button></div></div>__TABS_N__</div><figcaption>16 &middot; Ad-hoc &mdash; add exercise</figcaption></figure>
+<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3 contenteditable="true" spellcheck="false" style="color:var(--t3)">Name this workout</h3><span class="pencil">&#9998;</span></div><button class="datechip">Today</button><div id="adhoc-map" style="display:flex;justify-content:center;margin:2px 0 10px"></div><p class="lbl" style="margin-top:0">This session</p><div class="exrow"><div style="flex:1"><p>Barbell curl</p><small>3 sets &middot; 30kg &times; 10</small></div><span class="state done">Done</span></div><div class="exrow"><div style="flex:1"><p>Hammer curl</p><small>1 set logged</small></div><span class="state doing">In progress</span></div><div class="exrow"><div style="flex:1"><p>Cable rope pushdown</p><small>not started</small></div><span class="state todo">To do</span></div><button class="ghost" style="margin-top:14px">+ Add exercise</button><button class="big" style="margin-top:8px">Finish workout</button><button class="ghost" style="margin-top:8px;color:var(--t2)">Discard workout</button></div>__TABS_O__</div><figcaption>17 &middot; Ad-hoc overview</figcaption></figure>
+<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Chest</h3></div><div id="chest-map" style="display:flex;justify-content:center;margin:2px 0 12px"></div><div class="exrow"><div style="flex:1"><p>Upper chest</p><small>11 exercises</small></div><span class="chev">&#8250;</span></div><div class="exrow"><div style="flex:1"><p>Mid chest</p><small>15 exercises</small></div><span class="chev">&#8250;</span></div><div class="exrow"><div style="flex:1"><p>Lower chest</p><small>9 exercises</small></div><span class="chev">&#8250;</span></div><p class="ghosthint">Full body, not a zoomed crop &mdash; same call as exercise detail.</p></div>__TABS_P__</div><figcaption>18 &middot; Sub-muscle groups</figcaption></figure>
+<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>My workout templates</h3></div><p class="lbl" style="margin-top:4px">Predefined</p><div class="tpl"><div><p>Push day</p><small>Chest, shoulders, triceps</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><div class="tpl"><div><p>Pull day</p><small>Back, biceps</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><div class="tpl"><div><p>Leg day</p><small>Quads, hamstrings, glutes, calves</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><div class="tpl"><div><p>Full body day</p><small>All major groups</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><div class="tpl"><div><p>Chest and triceps day</p><small>Chest, triceps</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><p class="lbl">Custom</p><div class="tpl"><div><p>Push day (mine)</p><small>Duplicated from Push day</small></div><button class="icobtn" title="Edit">&#9998;</button></div><button class="ghost" style="margin-top:16px">+ Create custom template</button><p class="ghosthint">Predefined templates can&rsquo;t be edited &mdash; duplicate one to make it yours.</p></div>__TABS_Q__</div><figcaption>19 &middot; My workout templates</figcaption></figure>
+<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Edit template</h3></div><p class="lbl" style="margin-top:4px">Name</p><input class="fld" value="Push day (mine)"><p class="lbl" style="margin-top:0">Muscle groups</p><div class="mg"><span>Chest &#215;</span><span>Shoulders &#215;</span><span>Triceps &#215;</span><span class="add">+ Add</span></div><p class="ghosthint" style="margin-top:-8px">Parent groups only. Sub-muscle groups are derived &mdash; picking Chest gives you upper, mid and lower.</p><button class="big" style="margin-top:16px">Save template</button><button class="danger">Delete template</button></div>__TABS_R__</div><figcaption>20 &middot; Template editor</figcaption></figure>
+<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Personal details</h3></div><p class="lbl" style="margin-top:4px">Gender (optional)</p><div class="pick"><button aria-pressed="true">Male</button><button>Female</button><button>Skip</button></div><p class="helper">Chooses which body diagram is used throughout the app. Nothing else.</p><p class="lbl" style="margin-top:0">Bodyweight (optional)</p><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><input class="fld num" style="width:84px;margin:0;text-align:center" value="70"><span class="u" style="font-size:13px">kg</span></div><p class="helper">Used only to estimate calories. Skip it and the calorie stat simply won&rsquo;t appear.</p><div class="kcal"><h4>How the calorie estimate works</h4><div class="kr"><span>1&ndash;9 sets</span><span>Light effort</span></div><div class="kr"><span>10&ndash;20 sets</span><span>Moderate effort</span></div><div class="kr" style="border:0"><span>21+ sets</span><span>Vigorous effort</span></div><p>Based on standard exercise-science averages for resistance training. Actual calories burned vary by person and effort.</p></div><button class="big">Save</button></div>__TABS_S__</div><figcaption>21 &middot; Personal details</figcaption></figure>
+<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Summary</h3><button class="info" title="Share">&#8593;</button></div><div class="share"><p class="eyebrow">Tue 8 Jul</p><p class="sharetitle">Leg day <span class="pencil">&#9998;</span></p><div class="sharemaps"><div><div class="m" id="past-front"></div><p class="cap">Front</p></div><div><div class="m" id="past-back"></div><p class="cap">Back</p></div></div><div class="sharegrid"><div><p class="n">21</p><p class="l">Sets</p></div><div><p class="n">5</p><p class="l">Exercises</p></div><div><p class="n">3</p><p class="l">Day streak</p></div><div><p class="n">96</p><p class="l">kcal</p></div></div><p class="wordm">[ APP NAME ]</p></div><p class="lbl">What you did</p><div class="hsess"><div class="top"><span class="dt">Barbell back squat</span></div><div class="sets"><span class="pill">80&times;8</span><span class="pill">80&times;8</span><span class="pill">75&times;10</span></div></div><div class="hsess"><div class="top"><span class="dt">Romanian deadlift</span></div><div class="sets"><span class="pill">70&times;10</span><span class="pill">70&times;10</span></div></div><div class="hsess"><div class="top"><span class="dt">Standing calf raise machine</span></div><div class="sets"><span class="pill">60&times;15</span><span class="pill">60&times;15</span></div></div><div class="foot"><button class="ghost">Edit</button><button class="ghost">Change date</button></div><button class="danger">Delete workout</button></div>__TABS_T__</div><figcaption>22 &middot; Session detail (past)</figcaption></figure>
+</div></div>
+
+<script>
+const TABS = (active) => `<nav class="tabs">
+ <button ${active==0?'aria-current="page"':''}><svg viewBox="0 0 24 24"><path d="M4 12h16M7 8v8M17 8v8"/></svg><span>Workout</span></button>
+ <button ${active==1?'aria-current="page"':''}><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M12 15l-3 6M12 15l3 6M7 10h10"/></svg><span>Muscles</span></button>
+ <button ${active==2?'aria-current="page"':''}><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg><span>Profile</span></button>
+</nav>`;
+document.querySelectorAll('.phone').forEach((p,i)=>{
+  const slot=[...p.childNodes].find(n=>n.nodeType===3&&n.textContent.includes('__TABS'));
+  if(slot) slot.replaceWith(document.createRange().createContextualFragment(TABS(i===2?1:i===3?2:[11,12,17].includes(i)?1:i>=18?2:0)));
+});
+
+/* data-state toggle */
+const $ = id => document.getElementById(id);
+const setState = (fresh)=>{
+  $('b-new').setAttribute('aria-pressed',fresh); $('b-old').setAttribute('aria-pressed',!fresh);
+  $('w-new').classList.toggle('hidden',!fresh); $('w-old').classList.toggle('hidden',fresh);
+  $('p-new').classList.toggle('hidden',!fresh); $('p-old').classList.toggle('hidden',fresh);
+  const v = fresh ? ['0','0','0'] : ['5','12','247'];
+  ['s1','s2','s3'].forEach((id,i)=>$(id).textContent=v[i]);
+};
+$('b-new').onclick=()=>setState(true);
+$('b-old').onclick=()=>setState(false);
+
+/* front / back */
+function flip(front){
+  $('f-front').setAttribute('aria-pressed',front); $('f-back').setAttribute('aria-pressed',!front);
+  $('wrap-front').classList.toggle('hidden',!front); $('wrap-back').classList.toggle('hidden',front);
+}
+$('f-front').onclick=()=>flip(true);
+$('f-back').onclick=()=>flip(false);
+
+/* tappable muscle segments */
+document.querySelectorAll('.bodymap .muscle-segment').forEach(g=>{
+  g.setAttribute('tabindex','0');
+  g.setAttribute('role','button');
+  g.setAttribute('aria-label', g.getAttribute('data-label')||'muscle');
+  const hit=()=>{
+    const on=g.classList.contains('on');
+    g.closest('svg').querySelectorAll('.on').forEach(x=>x.classList.remove('on'));
+    if(!on) g.classList.add('on');
+    const hint=g.closest('.body').querySelector('.hint');
+    hint.textContent = on ? 'Tap a muscle to see its exercises'
+                          : (g.getAttribute('data-label')||'') + ' — tap again to open';
+  };
+  g.addEventListener('click',hit);
+  g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();hit();}});
+});
+
+/* overview mini-map: real asset, chest lit */
+const mini=$('mini-slot');
+if(mini){
+  const c=$('svg-front').cloneNode(true);
+  c.removeAttribute('id'); c.classList.add('mini');
+  c.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+  c.querySelectorAll('[tabindex]').forEach(n=>{n.removeAttribute('tabindex');n.removeAttribute('role');});
+  c.querySelectorAll('[data-muscle-group="chest"]').forEach(n=>n.classList.add('on'));
+  c.style.maxWidth='108px';
+  mini.appendChild(c);
+}
+
+/* exercise detail: real diagrams, real crop values */
+function crop(slot,src,vb,prim,sec){
+  const host=$(slot); if(!host) return;
+  const c=$(src).cloneNode(true);
+  c.removeAttribute('id'); if(vb) c.setAttribute('viewBox',vb);
+  c.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+  c.querySelectorAll('[tabindex]').forEach(n=>{n.removeAttribute('tabindex');n.removeAttribute('role');});
+  c.classList.add('mini');
+  prim.forEach(q=>c.querySelectorAll(q).forEach(n=>n.classList.add('on')));
+  sec.forEach(q=>c.querySelectorAll(q).forEach(n=>n.classList.add('on2')));
+  host.appendChild(c);
+}
+crop('crop-front','svg-front',null,
+     ['[data-muscle-group="chest"][data-sub-muscle-group="lower"]'],
+     ['[data-sub-muscle-group="front-delt"]']);
+crop('crop-back','svg-back',null,[],['[data-muscle-group="triceps"]']);
+crop('sum-front','svg-front',null,
+     ['[data-muscle-group="chest"]'],['[data-sub-muscle-group="front-delt"]']);
+crop('sum-back','svg-back',null,['[data-muscle-group="triceps"]'],[]);
+crop('adhoc-map','svg-front',null,['[data-muscle-group="biceps"]'],['[data-muscle-group="forearms"]']);
+crop('chest-map','svg-front',null,['[data-muscle-group="chest"]'],[]);
+crop('past-front','svg-front',null,['[data-muscle-group="quads"]'],['[data-muscle-group="calves"]']);
+crop('past-back','svg-back',null,['[data-muscle-group="hamstrings"]','[data-muscle-group="glutes"]'],
+     ['[data-muscle-group="calves"]']);
+
+/* splash */
+$('splash').onclick=()=>$('splash').innerHTML='<p class="tagline">→ continues to Workout tab</p>';
+setState(true);
+</script></body></html>

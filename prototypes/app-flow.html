@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Interactive flow — log a workout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#17140F;--card:#211D18;--line:#332C22;--off:#241F19;--t1:#F5EFE8;--t2:#A89C8E;
+      --t3:#6B6156;--acc:#D85A30;--acc2:#F0997B;--on:#1B0C05;--r:10px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0B0907;font-family:Inter,system-ui,sans-serif;color:var(--t1);
+     -webkit-font-smoothing:antialiased;display:flex;flex-direction:column;align-items:center;
+     gap:16px;padding:26px 14px 50px}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.hint{max-width:352px;font-size:12px;color:#6B6156;line-height:1.6;text-align:center}
+.hint b{color:#A89C8E;font-weight:500}
+
+.phone{width:352px;height:716px;background:var(--bg);border-radius:32px;border:1px solid #2A241C;
+       overflow:hidden;display:flex;flex-direction:column;position:relative}
+.status{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;
+        font-size:10px;color:var(--t3);flex-shrink:0}
+.scroll{flex:1;overflow-y:auto;padding:2px 18px 16px}
+.scroll::-webkit-scrollbar{width:0}
+.tabs{display:flex;border-top:1px solid var(--line);flex-shrink:0}
+.tabs button{flex:1;background:none;border:0;padding:9px 0 11px;color:var(--t3);font:inherit;
+             cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabs button.on{color:var(--acc)}
+.tabs span{font-size:10px;font-weight:500}
+.tabs svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;
+          stroke-linecap:round;stroke-linejoin:round}
+
+h1{font-size:23px;font-weight:600;letter-spacing:-.02em;margin:14px 0 16px}
+.hdr{display:flex;align-items:center;gap:9px;margin:12px 0 10px}
+.hdr h2{font-size:16px;font-weight:600;flex:1;letter-spacing:-.01em}
+.back{background:none;border:0;color:var(--t2);font-size:23px;line-height:1;cursor:pointer;padding:0 3px}
+.big{width:100%;background:var(--acc);color:var(--on);border:0;border-radius:var(--r);padding:14px;
+     font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.big:disabled{opacity:.4;cursor:not-allowed}
+.ghost{width:100%;background:var(--card);color:var(--t1);border:1px solid var(--line);
+       border-radius:var(--r);padding:13px;font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.lbl{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin:18px 0 8px}
+.row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;
+     border-bottom:1px solid var(--line);cursor:pointer}
+.row p{font-size:14px}
+.row small{font-size:11.5px;color:var(--t3);display:block;margin-top:2px}
+.chev{color:var(--t3);font-size:17px}
+.tick{color:var(--acc);font-size:15px}
+
+.maps{display:flex;gap:12px;justify-content:center;margin:4px 0 8px}
+.maps figure{text-align:center}
+.maps .cap{font-size:10px;color:var(--t3);margin-top:2px}
+.bm{width:112px;height:auto;display:block}
+.bm .muscle-segment path{fill:var(--off);stroke:var(--line);stroke-width:2;transition:fill .3s ease}
+.bm .muscle-segment.p path{fill:var(--acc)}
+.bm .muscle-segment.s path{fill:var(--acc2)}
+.bm [aria-hidden=true]{fill:#2A241C}
+.datechip{background:var(--card);border:1px solid var(--line);color:var(--t2);font:inherit;
+          font-size:11.5px;padding:5px 11px;border-radius:99px;margin-bottom:8px;cursor:default}
+.acch{width:100%;background:none;border:0;color:var(--t1);font:inherit;font-size:14px;font-weight:500;
+      display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.sub{display:flex;align-items:center;justify-content:space-between;padding:10px 0 10px 14px;
+     font-size:13.5px;color:var(--t2);cursor:pointer;border-bottom:1px solid #201B15}
+.sub.done{color:var(--t1)}
+
+.glyph{width:42px;height:42px;flex-shrink:0;background:var(--card);border:1px solid var(--line);
+       border-radius:9px;display:flex;align-items:center;justify-content:center}
+.glyph svg{width:24px;height:24px;stroke:var(--acc2);fill:none;stroke-width:2;stroke-linecap:round}
+.exrow{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer}
+
+.chips{display:flex;gap:6px;margin:2px 0 12px}
+.chip{font-size:11px;color:var(--t2);background:var(--card);border:1px solid var(--line);
+      border-radius:99px;padding:4px 10px}
+.setrow{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);
+        border-radius:var(--r);padding:8px 9px;margin-bottom:6px}
+.setrow.ok{border-color:#3E3226}
+.sn{width:15px;font-size:12px;color:var(--t3);flex-shrink:0}
+.in{width:50px;background:#191510;border:1px solid var(--line);border-radius:7px;color:var(--t1);
+    font:inherit;font-size:14px;font-weight:600;text-align:center;padding:6px 2px;
+    font-variant-numeric:tabular-nums}
+.in.wide{width:66px}
+.in.ghost2{color:var(--t3);font-weight:500}
+.u{font-size:11px;color:var(--t3)}
+.ck{margin-left:auto;width:30px;height:30px;flex-shrink:0;border-radius:8px;background:#191510;
+    border:1px solid var(--line);color:var(--t3);font-size:14px;cursor:pointer}
+.ck.on{background:var(--acc);border-color:var(--acc);color:var(--on)}
+.note{font-size:11px;color:var(--t3);margin-top:8px;line-height:1.5}
+.hrow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #201B15;font-size:12px}
+.hrow span:first-child{color:var(--t3)}
+.hrow span:last-child{color:var(--t2);font-variant-numeric:tabular-nums}
+
+.cel{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:22px}
+.mark{width:64px;height:64px;border-radius:50%;background:var(--acc);color:var(--on);font-size:31px;
+      display:flex;align-items:center;justify-content:center}
+.cstats{display:grid;grid-template-columns:1fr 1fr;gap:14px 24px;margin-top:4px}
+.cstats div{text-align:center}
+.cstats .n{font-size:25px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.cstats .l{font-size:10.5px;color:var(--t3);margin-top:2px}
+.pbpill{display:inline-flex;align-items:center;gap:5px;background:#33221A;border:1px solid var(--acc);
+        color:var(--acc2);font-size:11.5px;padding:4px 12px;border-radius:99px}
+.splash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;cursor:pointer}
+.logo{width:74px;height:74px;border-radius:20px;background:var(--acc);display:flex;align-items:center;justify-content:center}
+.logo svg{width:38px;height:38px;stroke:var(--on);fill:none;stroke-width:2.2;stroke-linecap:round}
+.tap{position:absolute;bottom:28px;font-size:10.5px;color:var(--t3);letter-spacing:.06em}
+.hide{display:none!important}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+</style></head><body>
+
+<div class="phone">
+  <div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
+  <div class="scroll" id="view"></div>
+  <nav class="tabs" id="tabs"></nav>
+</div>
+<p class="hint" id="tip"></p>
+
+<div style="display:none"><svg viewBox="0 0 700 1324" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Full body front view diagram with anatomically traced, individually tappable muscle segments" id="src-front">
+  <title>Full body muscle diagram — traced from source artwork, chest and abs subdivided</title>
+  
+  <path aria-hidden="true" d="M338.0,45.0 L321.0,50.0 L297.0,79.0 L298.0,118.0 L303.0,119.0 L303.0,128.0 L294.0,132.0 L293.0,156.0 L297.0,169.0 L307.0,173.0 L310.0,226.0 L260.0,251.0 L248.0,263.0 L205.0,274.0 L186.0,293.0 L164.0,359.0 L145.0,383.0 L129.0,429.0 L122.0,432.0 L91.0,469.0 L70.0,509.0 L14.0,647.0 L12.0,698.0 L17.0,714.0 L25.0,714.0 L30.0,706.0 L36.0,705.0 L42.0,655.0 L45.0,674.0 L61.0,675.0 L65.0,643.0 L73.0,624.0 L70.0,606.0 L130.0,546.0 L171.0,473.0 L222.0,414.0 L255.0,501.0 L246.0,596.0 L225.0,702.0 L219.0,762.0 L221.0,843.0 L233.0,899.0 L227.0,952.0 L212.0,1015.0 L212.0,1069.0 L223.0,1164.0 L219.0,1196.0 L200.0,1230.0 L174.0,1256.0 L171.0,1275.0 L190.0,1289.0 L218.0,1292.0 L242.0,1272.0 L247.0,1255.0 L264.0,1241.0 L269.0,1140.0 L282.0,1089.0 L295.0,1058.0 L289.0,972.0 L311.0,931.0 L322.0,856.0 L348.0,773.0 L354.0,735.0 L361.0,779.0 L387.0,863.0 L396.0,930.0 L418.0,971.0 L413.0,1061.0 L425.0,1088.0 L439.0,1143.0 L444.0,1243.0 L462.0,1257.0 L465.0,1271.0 L483.0,1288.0 L502.0,1292.0 L525.0,1286.0 L536.0,1275.0 L537.0,1264.0 L495.0,1208.0 L485.0,1168.0 L496.0,1063.0 L496.0,1020.0 L490.0,979.0 L480.0,952.0 L475.0,897.0 L488.0,828.0 L488.0,751.0 L481.0,691.0 L459.0,580.0 L452.0,510.0 L457.0,483.0 L485.0,413.0 L536.0,473.0 L576.0,544.0 L638.0,606.0 L635.0,627.0 L643.0,645.0 L646.0,675.0 L661.0,676.0 L665.0,654.0 L671.0,704.0 L677.0,705.0 L683.0,714.0 L691.0,714.0 L696.0,695.0 L694.0,651.0 L631.0,494.0 L614.0,465.0 L579.0,428.0 L565.0,387.0 L544.0,360.0 L537.0,329.0 L519.0,289.0 L502.0,274.0 L459.0,263.0 L449.0,252.0 L398.0,226.0 L400.0,174.0 L411.0,168.0 L415.0,152.0 L414.0,133.0 L403.0,124.0 L407.0,96.0 L403.0,63.0 L379.0,48.0 Z" fill="#2e2e2e"/>
+  <g id="muscle-shoulders-front-delt" class="muscle-segment" data-muscle-group="shoulders" data-sub-muscle-group="front-delt" data-label="Front delt">
+    <path d="M286.0,272.0 L253.0,266.0 L225.0,271.0 L209.0,278.0 L197.0,288.0 L186.0,304.0 L168.0,358.0 L208.0,345.0 L234.0,321.0 L263.0,285.0 Z"/>
+    <path d="M421.0,271.0 L441.0,282.0 L479.0,327.0 L497.0,343.0 L540.0,358.0 L524.0,309.0 L515.0,293.0 L504.0,282.0 L488.0,273.0 L464.0,267.0 L449.0,266.0 Z"/>
+  </g>
+  <g id="muscle-back-upper" class="muscle-segment" data-muscle-group="back" data-sub-muscle-group="upper" data-label="Upper back &amp; traps">
+    <path d="M309.0,231.0 L297.0,241.0 L272.0,251.0 L255.0,262.0 L274.0,263.0 L293.0,269.0 L301.0,266.0 L309.0,256.0 Z"/>
+    <path d="M398.0,231.0 L399.0,258.0 L404.0,264.0 L415.0,269.0 L434.0,263.0 L452.0,262.0 L445.0,256.0 L409.0,240.0 Z"/>
+  </g>
+  <g id="muscle-biceps-biceps" class="muscle-segment" data-muscle-group="biceps" data-sub-muscle-group="biceps" data-label="Biceps">
+    <path d="M215.0,357.0 L186.0,356.0 L164.0,366.0 L155.0,377.0 L139.0,410.0 L131.0,438.0 L132.0,464.0 L141.0,474.0 L155.0,475.0 L170.0,467.0 L218.0,410.0 L224.0,395.0 L225.0,371.0 L222.0,363.0 Z"/>
+    <path d="M491.0,358.0 L484.0,367.0 L482.0,377.0 L484.0,398.0 L490.0,411.0 L539.0,468.0 L553.0,475.0 L567.0,474.0 L576.0,462.0 L577.0,441.0 L570.0,413.0 L554.0,379.0 L542.0,365.0 L533.0,360.0 L514.0,355.0 Z"/>
+  </g>
+  <g id="muscle-forearms-forearms" class="muscle-segment" data-muscle-group="forearms" data-sub-muscle-group="forearms" data-label="Forearm">
+    <path d="M127.0,435.0 L95.0,473.0 L74.0,513.0 L44.0,586.0 L47.0,595.0 L54.0,601.0 L67.0,601.0 L88.0,577.0 L121.0,548.0 L140.0,522.0 L153.0,495.0 L167.0,475.0 L155.0,480.0 L138.0,478.0 L127.0,463.0 Z"/>
+    <path d="M580.0,433.0 L582.0,459.0 L577.0,471.0 L564.0,480.0 L552.0,480.0 L540.0,474.0 L551.0,489.0 L568.0,523.0 L590.0,552.0 L622.0,579.0 L639.0,600.0 L652.0,602.0 L661.0,594.0 L663.0,584.0 L636.0,518.0 L615.0,476.0 Z"/>
+  </g>
+  <g id="muscle-obliques-obliques" class="muscle-segment" data-muscle-group="obliques" data-sub-muscle-group="obliques" data-label="Obliques">
+    <path d="M228.0,366.0 L230.0,389.0 L227.0,412.0 L239.0,447.0 L256.0,483.0 L259.0,497.0 L259.0,522.0 L252.0,580.0 L263.0,580.0 L274.0,576.0 L282.0,568.0 L290.0,549.0 L289.0,495.0 L297.0,438.0 L294.0,431.0 Z"/>
+    <path d="M479.0,367.0 L417.0,427.0 L411.0,437.0 L418.0,490.0 L418.0,551.0 L427.0,570.0 L445.0,580.0 L455.0,580.0 L448.0,501.0 L453.0,479.0 L468.0,448.0 L481.0,409.0 L478.0,391.0 Z"/>
+  </g>
+  <g id="muscle-obliques-serratus" class="muscle-segment" data-muscle-group="obliques" data-sub-muscle-group="obliques" data-label="Obliques">
+    <path d="M259.0,392.0 L294.0,424.0 L291.0,410.0 L298.0,399.0 L273.0,398.0 Z"/>
+    <path d="M449.0,392.0 L428.0,399.0 L409.0,399.0 L416.0,408.0 L413.0,425.0 Z"/>
+  </g>
+  <g id="muscle-quads-quads" class="muscle-segment" data-muscle-group="quads" data-sub-muscle-group="quads" data-label="Quads">
+    <path d="M252.0,585.0 L225.0,738.0 L225.0,839.0 L232.0,880.0 L239.0,900.0 L244.0,904.0 L261.0,902.0 L271.0,928.0 L276.0,933.0 L288.0,934.0 L300.0,923.0 L309.0,902.0 L320.0,843.0 L345.0,765.0 L350.0,715.0 L341.0,711.0 L333.0,701.0 L311.0,637.0 L301.0,619.0 L280.0,598.0 Z"/>
+    <path d="M456.0,585.0 L433.0,594.0 L409.0,616.0 L396.0,639.0 L376.0,699.0 L365.0,712.0 L358.0,715.0 L362.0,763.0 L385.0,834.0 L399.0,904.0 L412.0,929.0 L425.0,935.0 L436.0,929.0 L443.0,906.0 L447.0,902.0 L464.0,904.0 L469.0,899.0 L476.0,878.0 L484.0,824.0 L485.0,777.0 L481.0,723.0 Z"/>
+  </g>
+  <g id="silhouette-knee-tie-in" aria-hidden="true">
+    <path d="M237.0,904.0 L231.0,952.0 L240.0,958.0 L254.0,977.0 L270.0,979.0 L279.0,974.0 L292.0,959.0 L304.0,936.0 L310.0,912.0 L304.0,926.0 L296.0,935.0 L288.0,939.0 L278.0,939.0 L266.0,929.0 L258.0,906.0 L243.0,909.0 Z"/>
+    <path d="M471.0,904.0 L464.0,909.0 L449.0,906.0 L441.0,930.0 L429.0,939.0 L413.0,936.0 L402.0,923.0 L398.0,913.0 L408.0,946.0 L419.0,964.0 L432.0,976.0 L439.0,979.0 L452.0,978.0 L466.0,960.0 L476.0,953.0 Z"/>
+  </g>
+  <g id="muscle-calves-calves" class="muscle-segment" data-muscle-group="calves" data-sub-muscle-group="calves" data-label="Calves">
+    <path d="M230.0,957.0 L220.0,991.0 L216.0,1019.0 L216.0,1065.0 L227.0,1160.0 L223.0,1200.0 L204.0,1234.0 L183.0,1253.0 L175.0,1267.0 L175.0,1271.0 L187.0,1282.0 L194.0,1285.0 L202.0,1283.0 L211.0,1288.0 L218.0,1286.0 L226.0,1276.0 L238.0,1268.0 L243.0,1251.0 L256.0,1243.0 L260.0,1237.0 L259.0,1201.0 L263.0,1194.0 L262.0,1157.0 L265.0,1136.0 L278.0,1085.0 L291.0,1054.0 L285.0,975.0 L272.0,983.0 L258.0,984.0 L249.0,979.0 L238.0,963.0 Z"/>
+    <path d="M477.0,957.0 L461.0,977.0 L449.0,984.0 L435.0,983.0 L422.0,974.0 L417.0,1057.0 L429.0,1084.0 L443.0,1139.0 L446.0,1165.0 L444.0,1188.0 L449.0,1205.0 L448.0,1239.0 L466.0,1253.0 L468.0,1265.0 L490.0,1286.0 L498.0,1288.0 L506.0,1283.0 L513.0,1285.0 L521.0,1282.0 L533.0,1268.0 L524.0,1252.0 L506.0,1237.0 L485.0,1200.0 L481.0,1151.0 L491.0,1071.0 L492.0,1024.0 L486.0,983.0 Z"/>
+  </g>
+  <g id="muscle-chest-upper" class="muscle-segment" data-muscle-group="chest" data-sub-muscle-group="upper" data-label="Upper chest">
+    <path d="M351.0,312.7 L351.0,287.0 L342.0,276.0 L328.0,271.0 L302.0,271.0 L284.0,277.0 L269.0,286.0 L246.9,312.7 Z"/>
+    <path d="M357.0,287.0 L356.5,312.7 L460.9,312.7 L442.0,289.0 L423.0,277.0 L404.0,271.0 L379.0,271.0 L364.0,277.0 Z"/>
+  </g>
+  <g id="muscle-chest-mid" class="muscle-segment" data-muscle-group="chest" data-sub-muscle-group="mid" data-label="Mid chest">
+    <path d="M351.0,312.7 L246.9,312.7 L235.0,327.0 L217.0,344.0 L207.0,350.0 L219.3,354.3 L349.1,354.3 L351.0,350.0 Z"/>
+    <path d="M356.5,312.7 L356.0,344.0 L358.1,354.3 L489.3,354.3 L500.0,351.0 L470.0,324.0 L460.9,312.7 Z"/>
+  </g>
+  <g id="muscle-chest-lower" class="muscle-segment" data-muscle-group="chest" data-sub-muscle-group="lower" data-label="Lower chest">
+    <path d="M219.3,354.3 L224.0,356.0 L244.0,377.0 L265.0,390.0 L287.0,395.0 L313.0,391.0 L332.0,380.0 L342.0,370.0 L349.1,354.3 Z"/>
+    <path d="M358.1,354.3 L359.0,359.0 L370.0,375.0 L393.0,390.0 L416.0,395.0 L438.0,392.0 L460.0,380.0 L484.0,356.0 L489.3,354.3 Z"/>
+  </g>
+  <g id="muscle-abs-upper" class="muscle-segment" data-muscle-group="abs" data-sub-muscle-group="upper" data-label="Upper abs">
+    <path d="M333.0,389.0 L304.0,400.0 L296.0,410.0 L302.0,440.0 L301.0,458.0 L304.1,520.0 L404.0,520.0 L404.0,520.0 L406.0,434.0 L412.0,411.0 L405.0,401.0 L379.0,390.0 L362.0,389.0 L357.0,393.0 L356.0,398.0 L353.0,399.0 L348.0,390.0 Z"/>
+  </g>
+  <g id="muscle-abs-lower" class="muscle-segment" data-muscle-group="abs" data-sub-muscle-group="lower" data-label="Lower abs">
+    <path d="M304.1,520.0 L306.0,559.0 L313.0,593.0 L326.0,622.0 L344.0,645.0 L355.0,650.0 L361.0,647.0 L379.0,626.0 L391.0,602.0 L398.0,580.0 L404.0,520.0 L404.0,520.0 Z"/>
+    <path d="M297.0,472.0 L294.0,495.0 L296.0,542.0 L293.0,557.0 L286.0,571.0 L279.0,578.0 L264.0,584.0 L283.0,594.0 L303.0,614.0 L317.0,640.0 L336.0,697.0 L345.0,708.0 L359.0,710.0 L366.0,705.0 L375.0,689.0 L390.0,641.0 L399.0,622.0 L421.0,597.0 L443.0,584.0 L433.0,581.0 L422.0,571.0 L414.0,554.0 L412.0,544.0 L414.0,503.0 L410.0,474.0 L406.0,563.0 L396.0,603.0 L381.0,632.0 L365.0,650.0 L354.0,655.0 L344.0,651.0 L323.0,626.0 L313.0,606.0 L306.0,585.0 L301.0,557.0 Z"/>
+  </g>
+</svg>
+ <svg viewBox="0 0 712 1324" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Full body back view diagram with anatomically traced, individually tappable muscle segments" id="src-back">
+  <title>Back view muscle diagram — traced from source artwork, corrected</title>
+  
+  <path aria-hidden="true" d="M340.0,31.0 L310.0,43.0 L299.0,55.0 L291.0,76.0 L295.0,116.0 L290.0,123.0 L294.0,154.0 L306.0,160.0 L307.0,212.0 L297.0,225.0 L260.0,238.0 L248.0,249.0 L232.0,249.0 L204.0,260.0 L175.0,288.0 L161.0,330.0 L135.0,362.0 L115.0,406.0 L111.0,425.0 L83.0,451.0 L56.0,497.0 L23.0,587.0 L10.0,667.0 L18.0,696.0 L32.0,708.0 L41.0,708.0 L47.0,696.0 L47.0,686.0 L41.0,677.0 L44.0,656.0 L49.0,654.0 L54.0,672.0 L68.0,671.0 L66.0,621.0 L59.0,603.0 L110.0,541.0 L162.0,456.0 L183.0,437.0 L215.0,390.0 L245.0,466.0 L249.0,509.0 L237.0,612.0 L222.0,670.0 L213.0,746.0 L214.0,827.0 L225.0,887.0 L217.0,943.0 L199.0,1011.0 L210.0,1184.0 L206.0,1207.0 L187.0,1227.0 L163.0,1241.0 L162.0,1252.0 L194.0,1263.0 L218.0,1277.0 L243.0,1277.0 L254.0,1266.0 L256.0,1185.0 L281.0,1088.0 L292.0,1064.0 L285.0,960.0 L308.0,917.0 L306.0,907.0 L346.0,744.0 L352.0,686.0 L359.0,752.0 L397.0,906.0 L395.0,915.0 L419.0,962.0 L412.0,1067.0 L423.0,1089.0 L447.0,1182.0 L449.0,1264.0 L458.0,1276.0 L480.0,1278.0 L541.0,1253.0 L540.0,1240.0 L518.0,1228.0 L498.0,1207.0 L493.0,1177.0 L505.0,1014.0 L499.0,981.0 L490.0,960.0 L479.0,887.0 L490.0,822.0 L491.0,750.0 L484.0,683.0 L467.0,613.0 L455.0,515.0 L459.0,464.0 L488.0,391.0 L519.0,435.0 L541.0,455.0 L541.0,461.0 L587.0,532.0 L645.0,602.0 L638.0,620.0 L636.0,671.0 L650.0,672.0 L655.0,654.0 L660.0,656.0 L662.0,678.0 L657.0,697.0 L662.0,700.0 L662.0,708.0 L671.0,708.0 L687.0,694.0 L694.0,651.0 L683.0,615.0 L681.0,587.0 L644.0,488.0 L616.0,445.0 L593.0,425.0 L570.0,364.0 L543.0,330.0 L529.0,288.0 L498.0,259.0 L471.0,249.0 L456.0,249.0 L443.0,238.0 L407.0,226.0 L397.0,213.0 L398.0,159.0 L408.0,156.0 L413.0,144.0 L413.0,119.0 L409.0,117.0 L413.0,86.0 L395.0,40.0 L383.0,33.0 Z" fill="#2e2e2e"/>
+  <g id="muscle-back-upper" class="muscle-segment" data-muscle-group="back" data-sub-muscle-group="upper" data-label="Upper back / traps">
+    <path d="M253.0,249.0 L271.0,255.0 L294.0,274.0 L332.0,269.0 L373.0,269.0 L410.0,274.0 L433.0,255.0 L451.0,249.0 L412.0,231.0 L377.0,227.0 L300.0,229.0 L264.0,242.0 Z"/>
+    <path d="M291.0,278.0 L319.0,336.0 L343.0,401.0 L350.0,411.0 L354.0,411.0 L362.0,397.0 L387.0,330.0 L413.0,278.0 L400.0,279.0 L355.0,273.0 L330.0,274.0 L303.0,279.0 Z"/>
+  </g>
+  <g id="muscle-shoulders-rear-delt" class="muscle-segment" data-muscle-group="shoulders" data-sub-muscle-group="rear-delt" data-label="Rear delt">
+    <path d="M279.0,268.0 L268.0,259.0 L252.0,253.0 L236.0,253.0 L208.0,264.0 L193.0,275.0 L179.0,292.0 L170.0,310.0 L165.0,329.0 L172.0,325.0 L205.0,321.0 L223.0,313.0 Z"/>
+    <path d="M425.0,268.0 L481.0,313.0 L499.0,321.0 L528.0,324.0 L539.0,329.0 L534.0,310.0 L525.0,292.0 L506.0,271.0 L494.0,263.0 L467.0,253.0 L451.0,253.0 L437.0,258.0 Z"/>
+  </g>
+  <g id="muscle-back-lats" class="muscle-segment" data-muscle-group="back" data-sub-muscle-group="lats" data-label="Lats">
+    <path d="M282.0,272.0 L219.0,320.0 L214.0,328.0 L221.0,372.0 L220.0,389.0 L230.0,421.0 L245.0,450.0 L252.0,479.0 L252.0,529.0 L244.0,586.0 L265.0,568.0 L288.0,557.0 L296.0,547.0 L299.0,493.0 L326.0,436.0 L333.0,406.0 L332.0,387.0 L326.0,366.0 L305.0,316.0 Z"/>
+    <path d="M422.0,272.0 L398.0,318.0 L375.0,374.0 L371.0,392.0 L371.0,411.0 L381.0,445.0 L405.0,495.0 L406.0,538.0 L410.0,552.0 L439.0,568.0 L460.0,587.0 L451.0,519.0 L452.0,476.0 L458.0,451.0 L473.0,422.0 L484.0,387.0 L483.0,368.0 L489.0,340.0 L489.0,324.0 Z"/>
+  </g>
+  <g id="muscle-back-lower" class="muscle-segment" data-muscle-group="back" data-sub-muscle-group="lower" data-label="Lower back">
+    <path d="M366.0,399.0 L362.0,409.0 L353.0,416.0 L344.0,412.0 L338.0,399.0 L337.0,415.0 L331.0,437.0 L304.0,494.0 L302.0,543.0 L297.0,555.0 L314.0,553.0 L330.0,557.0 L346.0,571.0 L352.0,585.0 L359.0,569.0 L369.0,560.0 L391.0,553.0 L407.0,555.0 L402.0,544.0 L400.0,495.0 L374.0,440.0 L367.0,416.0 Z"/>
+  </g>
+  <g id="muscle-triceps-triceps" class="muscle-segment" data-muscle-group="triceps" data-sub-muscle-group="triceps" data-label="Triceps">
+    <path d="M210.0,324.0 L175.0,329.0 L166.0,333.0 L151.0,348.0 L137.0,370.0 L119.0,410.0 L115.0,431.0 L137.0,429.0 L141.0,435.0 L142.0,451.0 L145.0,457.0 L161.0,450.0 L179.0,433.0 L215.0,379.0 L216.0,369.0 L209.0,334.0 Z"/>
+    <path d="M493.0,324.0 L494.0,340.0 L488.0,368.0 L489.0,381.0 L532.0,441.0 L549.0,454.0 L559.0,457.0 L563.0,434.0 L567.0,429.0 L589.0,430.0 L585.0,410.0 L566.0,368.0 L552.0,347.0 L539.0,334.0 L528.0,329.0 L508.0,328.0 Z"/>
+  </g>
+  <g id="muscle-forearms-forearms" class="muscle-segment" data-muscle-group="forearms" data-sub-muscle-group="forearms" data-label="Forearm">
+    <path d="M134.0,433.0 L114.0,436.0 L110.0,430.0 L91.0,450.0 L72.0,477.0 L58.0,506.0 L30.0,586.0 L38.0,599.0 L47.0,601.0 L57.0,597.0 L72.0,574.0 L114.0,526.0 L136.0,488.0 L158.0,457.0 L148.0,462.0 L140.0,459.0 Z"/>
+    <path d="M569.0,433.0 L565.0,457.0 L559.0,462.0 L545.0,457.0 L568.0,489.0 L591.0,528.0 L629.0,571.0 L645.0,595.0 L657.0,601.0 L666.0,599.0 L674.0,586.0 L649.0,514.0 L633.0,479.0 L616.0,454.0 L594.0,430.0 L589.0,436.0 Z"/>
+  </g>
+  <g id="muscle-glutes-glutes" class="muscle-segment" data-muscle-group="glutes" data-sub-muscle-group="glutes" data-label="Glutes">
+    <path d="M293.0,560.0 L280.0,566.0 L272.0,574.0 L266.0,586.0 L252.0,638.0 L254.0,666.0 L268.0,685.0 L281.0,692.0 L298.0,696.0 L333.0,696.0 L344.0,689.0 L349.0,676.0 L349.0,593.0 L347.0,584.0 L341.0,572.0 L326.0,561.0 L314.0,558.0 Z"/>
+    <path d="M406.0,559.0 L389.0,558.0 L373.0,563.0 L362.0,573.0 L356.0,587.0 L354.0,602.0 L355.0,679.0 L359.0,688.0 L372.0,696.0 L406.0,696.0 L426.0,691.0 L442.0,679.0 L451.0,660.0 L450.0,627.0 L436.0,581.0 L425.0,567.0 Z"/>
+  </g>
+  <g id="muscle-hamstrings-hamstrings" class="muscle-segment" data-muscle-group="hamstrings" data-sub-muscle-group="hamstrings" data-label="Hamstrings">
+    <path d="M268.0,572.0 L246.0,591.0 L241.0,602.0 L241.0,616.0 L230.0,654.0 L220.0,715.0 L217.0,750.0 L217.0,810.0 L228.0,881.0 L236.0,903.0 L244.0,909.0 L251.0,901.0 L261.0,877.0 L268.0,872.0 L271.0,878.0 L274.0,914.0 L279.0,922.0 L289.0,924.0 L297.0,916.0 L305.0,896.0 L316.0,840.0 L339.0,755.0 L347.0,692.0 L332.0,701.0 L291.0,700.0 L271.0,693.0 L255.0,678.0 L247.0,657.0 L247.0,637.0 L259.0,591.0 Z"/>
+    <path d="M437.0,573.0 L446.0,596.0 L457.0,642.0 L456.0,661.0 L449.0,678.0 L434.0,692.0 L412.0,700.0 L378.0,702.0 L365.0,699.0 L357.0,693.0 L363.0,748.0 L391.0,854.0 L399.0,898.0 L407.0,917.0 L415.0,924.0 L425.0,922.0 L429.0,915.0 L433.0,875.0 L436.0,872.0 L443.0,878.0 L457.0,907.0 L462.0,909.0 L468.0,902.0 L481.0,854.0 L487.0,805.0 L484.0,717.0 L473.0,650.0 L463.0,617.0 L463.0,602.0 L457.0,590.0 Z"/>
+  </g>
+  <g id="muscle-calves-calves" class="muscle-segment" data-muscle-group="calves" data-sub-muscle-group="calves" data-label="Calves">
+    <path d="M218.0,964.0 L211.0,978.0 L203.0,1015.0 L203.0,1046.0 L210.0,1079.0 L215.0,1085.0 L224.0,1086.0 L231.0,1079.0 L241.0,1059.0 L248.0,1054.0 L253.0,1061.0 L257.0,1085.0 L263.0,1090.0 L271.0,1090.0 L280.0,1081.0 L288.0,1060.0 L287.0,1021.0 L282.0,992.0 L275.0,983.0 L269.0,981.0 L254.0,987.0 L246.0,986.0 Z"/>
+    <path d="M486.0,964.0 L457.0,986.0 L449.0,987.0 L434.0,981.0 L423.0,989.0 L417.0,1018.0 L416.0,1063.0 L423.0,1080.0 L434.0,1090.0 L441.0,1090.0 L447.0,1084.0 L451.0,1059.0 L457.0,1054.0 L478.0,1085.0 L483.0,1087.0 L489.0,1085.0 L495.0,1075.0 L500.0,1052.0 L501.0,1018.0 L495.0,985.0 Z"/>
+  </g>
+</svg>
+</div>
+
+<script>
+/* ---------- data ---------- */
+const EX = {
+ iby:{n:'Incline barbell bench press',e:'barbell',l:'weighted',p:['chest/upper'],s:['triceps/triceps','shoulders/front-delt']},
+ idp:{n:'Incline dumbbell press',e:'dumbbell',l:'weighted',p:['chest/upper'],s:['triceps/triceps','shoulders/front-delt']},
+ imp:{n:'Incline machine chest press',e:'machine',l:'weighted',p:['chest/upper'],s:['triceps/triceps']},
+ fep:{n:'Feet-elevated push-up',e:'bodyweight',l:'bodyweight',p:['chest/upper'],s:['triceps/triceps']},
+ bbp:{n:'Barbell bench press',e:'barbell',l:'weighted',p:['chest/mid'],s:['triceps/triceps','shoulders/front-delt']},
+ dbp:{n:'Dumbbell bench press',e:'dumbbell',l:'weighted',p:['chest/mid'],s:['triceps/triceps']},
+ mcp:{n:'Machine chest press',e:'machine',l:'weighted',p:['chest/mid'],s:['triceps/triceps']},
+ pu :{n:'Push-up',e:'bodyweight',l:'bodyweight',p:['chest/mid'],s:['triceps/triceps']},
+ ccm:{n:'Cable crossover (mid pulley)',e:'cable',l:'weighted',p:['chest/mid'],s:['shoulders/front-delt']},
+ dbb:{n:'Decline barbell bench press',e:'barbell',l:'weighted',p:['chest/lower'],s:['triceps/triceps']},
+ dip:{n:'Chest dip',e:'bodyweight',l:'bodyweight',p:['chest/lower'],s:['triceps/triceps']},
+ hlc:{n:'High-to-low cable crossover',e:'cable',l:'weighted',p:['chest/lower'],s:['shoulders/front-delt']},
+ crp:{n:'Cable rope pushdown',e:'cable',l:'weighted',p:['triceps/triceps'],s:[]},
+ skl:{n:'EZ-bar skull crusher',e:'barbell',l:'weighted',p:['triceps/triceps'],s:[]},
+ dmd:{n:'Diamond push-up',e:'bodyweight',l:'bodyweight',p:['triceps/triceps'],s:['chest/mid']},
+ btd:{n:'Bench triceps dip',e:'bodyweight',l:'bodyweight',p:['triceps/triceps'],s:['shoulders/front-delt']},
+};
+const SUBS = [
+ {id:'chest/upper', name:'Upper chest', parent:'Chest'},
+ {id:'chest/mid',   name:'Mid chest',   parent:'Chest'},
+ {id:'chest/lower', name:'Lower chest', parent:'Chest'},
+ {id:'triceps/triceps', name:'Triceps', parent:'Triceps', flat:true},
+];
+/* what the user did last time, so prefills and PBs are real */
+const LAST = {bbp:{w:57.5,r:8,txt:'57.5kg × 8'}, crp:{w:30,r:12,txt:'30kg × 12'},
+              idp:{w:22,r:10,txt:'22kg × 10'}, dip:{r:10,txt:'10 reps'}};
+const HIST = {bbp:[['9 Jul','57.5×8 · 57.5×7 · 55×8'],['5 Jul','55×8 · 55×8']],
+              crp:[['9 Jul','30×12 · 30×10'],['5 Jul','27.5×12']]};
+const GLYPH = {
+ barbell:'<path d="M4 16h24"/><path d="M7 11v10M10 9v14M22 9v14M25 11v10"/>',
+ dumbbell:'<path d="M11 16h10"/><path d="M8 11v10M5 13v6M24 11v10M27 13v6"/>',
+ machine:'<rect x="6" y="6" width="20" height="20" rx="3"/><path d="M11 12h10M11 16h10M11 20h5"/>',
+ cable:'<path d="M16 4v12"/><circle cx="16" cy="19" r="3"/><path d="M11 26h10"/>',
+ bodyweight:'<circle cx="16" cy="7" r="3"/><path d="M16 11v9M16 20l-5 6M16 20l5 6M9 14h14"/>',
+};
+
+/* ---------- state ---------- */
+let S, sub=null, cur=null;
+const reset = () => { S = {screen:'splash', session:null}; sub=null; cur=null; };
+reset();
+
+const ex = id => S.session.ex.find(e => e.id === id);
+const complete = (st, l) => st.ok && ((l==='bodyweight' ? st.r : st.r) > 0);
+const setsDone = () => !S.session ? 0 :
+  S.session.ex.reduce((n,e)=>n+e.sets.filter(s=>complete(s,EX[e.id].l)).length,0);
+const trained = () => !S.session ? [] :
+  [...new Set(S.session.ex.filter(e=>e.state==='done').flatMap(e=>EX[e.id].p))];
+const worked = () => { // everything touched, primary + secondary, for the map
+  if(!S.session) return {p:[],s:[]};
+  const done = S.session.ex.filter(e=>e.state==='done');
+  return {p:[...new Set(done.flatMap(e=>EX[e.id].p))],
+          s:[...new Set(done.flatMap(e=>EX[e.id].s))]};
+};
+const isPB = e => { const L=LAST[e.id]; if(!L) return false;
+  const best = e.sets.filter(s=>complete(s,EX[e.id].l))
+                     .reduce((b,s)=>!b||(s.w||0)>(b.w||0)||((s.w||0)===(b.w||0)&&s.r>(b.r||0))?s:b,null);
+  if(!best) return false;
+  return (best.w||0) > (L.w||0) || ((best.w||0)===(L.w||0) && best.r > L.r); };
+const pbCount = () => S.session.ex.filter(isPB).length;
+
+/* ---------- helpers ---------- */
+const el = (h) => { const d=document.createElement('div'); d.innerHTML=h; return d; };
+function bodyMap(srcId, w) {
+  const c = document.getElementById(srcId).cloneNode(true);
+  c.removeAttribute('id'); c.classList.add('bm');
+  c.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+  const W = worked();
+  W.p.forEach(m=>c.querySelectorAll(`[data-muscle-group="${m.split('/')[0]}"][data-sub-muscle-group="${m.split('/')[1]}"]`).forEach(n=>n.classList.add('p')));
+  W.s.forEach(m=>c.querySelectorAll(`[data-muscle-group="${m.split('/')[0]}"][data-sub-muscle-group="${m.split('/')[1]}"]`).forEach(n=>n.classList.add('s')));
+  return c.outerHTML;
+}
+const TIPS = {
+ splash:'Tap the screen to enter. <b>Everything here is live</b> — nothing is a picture.',
+ home:'Tap <b>Start workout</b>.',
+ templates:'Pick <b>Chest and triceps day</b>.',
+ overview:'Tap a muscle to see its exercises. Watch the diagram fill in as you mark exercises done — <b>primary muscles fill strong, secondary light</b>.',
+ exlist:'Equipment is the only thing that differs inside a muscle group, so the glyph carries it.',
+ log:'Edit the numbers, tick the sets. <b>Greyed values are guesses from last time.</b> A set only counts once ticked AND its field is above zero.',
+ celebrate:'', summary:''
+};
+
+/* ---------- screens ---------- */
+function render() {
+  const v = document.getElementById('view'), T = document.getElementById('tabs');
+  document.getElementById('tip').innerHTML = TIPS[S.screen] || '';
+  T.style.display = (S.screen==='splash'||S.screen==='celebrate') ? 'none' : 'flex';
+  T.innerHTML = ['Workout','Muscles','Profile'].map((n,i)=>
+    `<button class="${i===0?'on':''}"><svg viewBox="0 0 24 24">${
+      i===0?'<path d="M4 12h16M7 8v8M17 8v8"/>':
+      i===1?'<circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M12 15l-3 6M12 15l3 6M7 10h10"/>':
+            '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/>'
+    }</svg><span>${n}</span></button>`).join('');
+
+  v.className = 'scroll';
+  v.innerHTML = ({splash:vSplash, home:vHome, templates:vTemplates, overview:vOverview,
+                  exlist:vExlist, log:vLog, celebrate:vCel, summary:vSummary})[S.screen]();
+  wire(v);
+  v.scrollTop = 0;
+}
+
+const vSplash = () => `<div class="splash" id="go-home">
+  <div class="logo"><svg viewBox="0 0 24 24"><path d="M4 12h16M7 8v8M10 6v12M14 6v12M17 8v8"/></svg></div>
+  <div style="text-align:center"><p style="font-size:19px;font-weight:600">[ App name ]</p>
+  <p style="font-size:12.5px;color:var(--t2);margin-top:3px">Log a set. That's it.</p></div>
+  <span class="tap">TAP TO CONTINUE</span></div>`;
+
+const vHome = () => `<h1>Workout</h1>
+  <div style="text-align:center;padding:24px 14px 26px">
+    <p style="font-size:15px;font-weight:600;margin-bottom:5px">Ready when you are</p>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.55">Pick a template for a planned session, or go ad-hoc.</p></div>
+  <button class="big" id="go-templates">Start workout</button>
+  <button class="ghost" style="margin-top:9px">Ad-hoc workout</button>`;
+
+const vTemplates = () => `<div class="hdr"><button class="back" data-go="home">&#8249;</button><h2>Choose a template</h2></div>
+  <p class="lbl" style="margin-top:4px">Predefined</p>
+  ${[['Push day','Chest, shoulders, triceps',0],['Pull day','Back, biceps',0],
+     ['Leg day','Quads, hamstrings, glutes, calves',0],['Chest and triceps day','Chest, triceps',1]]
+    .map(([n,d,live])=>`<div class="row" ${live?'id="go-overview"':''} style="${live?'':'opacity:.45'}">
+      <div><p ${live?'style="color:var(--acc2)"':''}>${n}</p><small>${d}</small></div><span class="chev">&#8250;</span></div>`).join('')}`;
+
+function vOverview() {
+  const t = trained();
+  return `<div class="hdr"><button class="back" data-go="templates">&#8249;</button><h2>Chest and triceps day</h2></div>
+  <button class="datechip">Today</button>
+  <div class="maps"><figure>${bodyMap('src-front')}<p class="cap">Front</p></figure>
+    <figure>${bodyMap('src-back')}<p class="cap">Back</p></figure></div>
+  <div class="acch"><span>Chest</span><span class="chev">&#8964;</span></div>
+  ${SUBS.filter(s=>!s.flat).map(s=>`<div class="sub ${t.includes(s.id)?'done':''}" data-sub="${s.id}">
+      <span>${s.name}</span>${t.includes(s.id)?'<span class="tick">&#10003;</span>':'<span class="chev">&#8250;</span>'}</div>`).join('')}
+  ${SUBS.filter(s=>s.flat).map(s=>`<div class="acch" data-sub="${s.id}" style="cursor:pointer">
+      <span>${s.name}</span>${t.includes(s.id)?'<span class="tick">&#10003;</span>':'<span class="chev">&#8250;</span>'}</div>`).join('')}
+  <div style="margin-top:20px">
+    <button class="big" id="go-finish" ${setsDone()?'':'disabled'}>Finish workout</button>
+    ${setsDone()?'':'<p class="note">Log at least one set to finish — an empty session is never saved.</p>'}
+    <button class="ghost" style="margin-top:8px;color:var(--t2)" data-go="home">Discard workout</button></div>`;
+}
+
+function vExlist() {
+  const meta = SUBS.find(s=>s.id===sub);
+  const list = Object.entries(EX).filter(([,x])=>x.p.includes(sub));
+  return `<div class="hdr"><button class="back" data-go="overview">&#8249;</button><h2>${meta.name}</h2></div>
+  <p class="note" style="margin:0 0 8px">${list.length} exercises — pick whichever kit is free</p>
+  ${list.map(([id,x])=>{
+    const done = S.session.ex.find(e=>e.id===id);
+    return `<div class="exrow" data-ex="${id}">
+      <div class="glyph"><svg viewBox="0 0 32 32">${GLYPH[x.e]}</svg></div>
+      <div style="flex:1"><p>${x.n}</p><small>${x.e[0].toUpperCase()+x.e.slice(1)}${
+        LAST[id]?' · Last '+LAST[id].txt:''}</small></div>
+      ${done?`<span class="tick">${done.state==='done'?'&#10003;':'&#8226;'}</span>`:'<span class="chev">&#8250;</span>'}</div>`;
+  }).join('')}`;
+}
+
+function vLog() {
+  const x = EX[cur], e = ex(cur), L = LAST[cur], bw = x.l==='bodyweight';
+  return `<div class="hdr"><button class="back" data-go="exlist">&#8249;</button><h2>${x.n}</h2></div>
+  <div class="chips"><span class="chip">${x.e[0].toUpperCase()+x.e.slice(1)}</span>
+    <span class="chip">${bw?'Reps':'Weight × reps'}</span></div>
+  <div id="sets">${e.sets.map((st,i)=>`
+    <div class="setrow ${complete(st,x.l)?'ok':''}"><span class="sn num">${i+1}</span>
+      ${bw?'':`<input class="in num ${st.touched?'':'ghost2'}" data-i="${i}" data-f="w" value="${st.w}"><span class="u">kg</span>`}
+      <input class="in num ${bw?'wide ':''}${st.touched?'':'ghost2'}" data-i="${i}" data-f="r" value="${st.r}"><span class="u">reps</span>
+      <button class="ck ${st.ok?'on':''}" data-tick="${i}">&#10003;</button></div>`).join('')}</div>
+  <p class="note">Greyed values are guesses from last time — tap to change.</p>
+  <button class="ghost" style="margin-top:11px" id="add-set">+ Add set</button>
+  <button class="big" style="margin-top:8px" id="mark-done" ${e.sets.some(s=>complete(s,x.l))?'':'disabled'}>
+    ${e.state==='done'?'Done &#10003;':'Mark exercise done'}</button>
+  ${HIST[cur]?`<p class="lbl">Recent</p>${HIST[cur].map(([d,s])=>
+      `<div class="hrow"><span>${d}</span><span>${s}</span></div>`).join('')}`:''}`;
+}
+
+const vCel = () => { const pb = pbCount(); return `<div class="cel">
+  <div class="mark">&#10003;</div>
+  <p style="font-size:20px;font-weight:600;letter-spacing:-.02em">Workout saved</p>
+  <p style="font-size:13px;color:var(--t2)">Chest and triceps day</p>
+  <div class="cstats">
+    <div><p class="n">${setsDone()}</p><p class="l">Sets</p></div>
+    <div><p class="n">${S.session.ex.filter(e=>e.state==='done').length}</p><p class="l">Exercises</p></div>
+    <div><p class="n">1</p><p class="l">Day streak</p></div>
+    <div><p class="n">${Math.round(setsDone()*42.5/60*(setsDone()<10?3.5:5)*3.5*70/200)}</p><p class="l">kcal</p></div></div>
+  ${pb?`<div class="pbpill">&#9733; ${pb} personal best${pb>1?'s':''}</div>`:''}
+  <button class="ghost" style="width:auto;padding:10px 22px;margin-top:10px" id="go-summary">See summary</button>
+</div>`; };
+
+function vSummary() {
+  const pb = pbCount();
+  return `<div class="hdr"><button class="back" data-go="home">&#8249;</button><h2>Summary</h2></div>
+  <div style="background:var(--card);border-radius:14px;padding:16px 14px;display:flex;
+       flex-direction:column;align-items:center">
+    <p style="font-size:10px;letter-spacing:.12em;color:var(--t3);text-transform:uppercase">Today</p>
+    <p style="font-size:17px;font-weight:600;margin:3px 0 10px">Chest and triceps day</p>
+    <div class="maps"><figure>${bodyMap('src-front')}<p class="cap">Front</p></figure>
+      <figure>${bodyMap('src-back')}<p class="cap">Back</p></figure></div>
+    ${pb?`<div class="pbpill" style="margin-top:12px">&#9733; ${pb} personal best${pb>1?'s':''}</div>`:''}
+    <div class="cstats" style="margin-top:14px">
+      <div><p class="n" style="font-size:19px">${setsDone()}</p><p class="l">Sets</p></div>
+      <div><p class="n" style="font-size:19px">${S.session.ex.filter(e=>e.state==='done').length}</p><p class="l">Exercises</p></div></div>
+    <p style="font-size:9.5px;color:var(--t3);letter-spacing:.1em;margin-top:12px">[ APP NAME ]</p></div>
+  <p class="lbl">What you did</p>
+  ${S.session.ex.filter(e=>e.sets.some(s=>complete(s,EX[e.id].l))).map(e=>`
+    <div style="padding:9px 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+        <span style="font-size:12.5px;font-weight:500">${EX[e.id].n}</span>
+        ${isPB(e)?'<span class="pbpill" style="font-size:10px;padding:1px 8px">&#9733; PB</span>':''}</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">${e.sets.filter(s=>complete(s,EX[e.id].l))
+        .map(s=>`<span style="font-size:11.5px;color:var(--t2);background:var(--card);border-radius:6px;
+          padding:3px 7px" class="num">${EX[e.id].l==='bodyweight'?s.r+' reps':s.w+'×'+s.r}</span>`).join('')}</div></div>`).join('')}
+  <button class="big" style="margin-top:16px" id="restart">Start again</button>`;
+}
+
+/* ---------- interactions ---------- */
+function wire(v) {
+  const on = (sel, fn) => v.querySelectorAll(sel).forEach(n => n.onclick = fn);
+  const nav = s => { S.screen = s; render(); };
+
+  on('#go-home', ()=>nav('home'));
+  on('#go-templates', ()=>nav('templates'));
+  on('[data-go]', e => nav(e.currentTarget.dataset.go));
+  on('#go-overview', ()=>{ S.session = {ex:[]}; nav('overview'); });
+  on('[data-sub]', e => { sub = e.currentTarget.dataset.sub; nav('exlist'); });
+  on('[data-ex]', e => {
+    cur = e.currentTarget.dataset.ex;
+    if (!ex(cur)) {
+      const L = LAST[cur], bw = EX[cur].l==='bodyweight';
+      S.session.ex.push({id:cur, state:'in_progress',
+        sets:[{w: L? L.w : (bw?0:20), r: L? L.r : 8, ok:false, touched:false}]});
+    }
+    nav('log');
+  });
+  on('[data-tick]', e => {
+    const st = ex(cur).sets[+e.currentTarget.dataset.tick];
+    if (!st.ok && !(st.r > 0)) { e.currentTarget.animate(
+      [{transform:'translateX(0)'},{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'translateX(0)'}],160); return; }
+    st.ok = !st.ok; render();
+  });
+  on('#add-set', () => {
+    const s = ex(cur).sets, last = s[s.length-1];
+    s.push({w:last.w, r:last.r, ok:false, touched:false}); render();
+  });
+  on('#mark-done', () => { ex(cur).state='done'; nav('overview'); });
+  on('#go-finish', ()=>nav('celebrate'));
+  on('#go-summary', ()=>nav('summary'));
+  on('#restart', ()=>{ reset(); render(); });
+
+  v.querySelectorAll('.in').forEach(inp => {
+    inp.oninput = () => {
+      const st = ex(cur).sets[+inp.dataset.i];
+      st[inp.dataset.f] = parseFloat(inp.value) || 0;
+      st.touched = true; inp.classList.remove('ghost2');
+      const btn = v.querySelector('#mark-done');
+      if (btn) btn.disabled = !ex(cur).sets.some(s=>complete(s,EX[cur].l));
+    };
+  });
+}
+render();
+</script></body></html>

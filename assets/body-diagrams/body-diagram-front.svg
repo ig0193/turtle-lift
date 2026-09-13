@@ -1,0 +1,88 @@
+<svg viewBox="0 0 700 1324" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Full body front view diagram with anatomically traced, individually tappable muscle segments">
+  <title>Full body muscle diagram — traced from source artwork, chest and abs subdivided</title>
+  <desc>
+    Traced from a full-body line-art reference using connected-component analysis (each
+    muscle in the source was already drawn as its own enclosed shape, bounded by outline
+    strokes). Chest and abs were further split into upper/mid/lower (chest) and upper/lower
+    (abs) via polygon clipping, since the source art drew each as one undivided shape.
+
+    Labeling notes:
+    - High confidence, matched directly to a shape in the source art: shoulders (front delt),
+      biceps, forearms, obliques, chest (all 3 bands), abs (upper/lower), quads, calves.
+    - Folded into a neighbouring canonical group because they are not part of the app's defined
+      muscle taxonomy: traps -> re-tagged to back/upper ("Upper back &amp; traps"), matching the back view, since
+      the same muscle should not sit under a different parent depending on viewing angle;
+      serratus -> grouped under obliques. The
+      serratus shape keeps its own element id so it can still be rendered as a distinct visual
+      piece, but carries data-sub-muscle-group="obliques", so querying or tapping it behaves
+      exactly like the obliques region. NOTE: a data-sub-muscle-group value may therefore match
+      more than one &lt;g&gt; in this file -- always select ALL matches, never the first one.
+    - Decorative, non-interactive, excluded entirely: head, hair, neck, hands, fingertips, and
+      the knee/quad tie-in shape below the quad (id="silhouette-knee-tie-in"). The knee tie-in
+      is not a canonical muscle group; it renders as plain body silhouette. This matches the
+      same correction already applied in body-diagram-back.svg, body-diagram-front-female.svg
+      and body-diagram-back-female.svg.
+    - Not present as separate shapes in this source art and therefore not included as their own
+      segments: side/rear delts, triceps, hamstrings, glutes, lats/back (this is a front-view
+      illustration only -- these would need a back-view counterpart).
+    - Canonical sub-muscle groups exposed by this file (12, identical to the female front view):
+      chest upper/mid/lower, abs upper/lower, obliques, biceps, forearms, quads, calves,
+      shoulders front-delt, shoulders traps.
+  </desc>
+  <path aria-hidden="true" d="M338.0,45.0 L321.0,50.0 L297.0,79.0 L298.0,118.0 L303.0,119.0 L303.0,128.0 L294.0,132.0 L293.0,156.0 L297.0,169.0 L307.0,173.0 L310.0,226.0 L260.0,251.0 L248.0,263.0 L205.0,274.0 L186.0,293.0 L164.0,359.0 L145.0,383.0 L129.0,429.0 L122.0,432.0 L91.0,469.0 L70.0,509.0 L14.0,647.0 L12.0,698.0 L17.0,714.0 L25.0,714.0 L30.0,706.0 L36.0,705.0 L42.0,655.0 L45.0,674.0 L61.0,675.0 L65.0,643.0 L73.0,624.0 L70.0,606.0 L130.0,546.0 L171.0,473.0 L222.0,414.0 L255.0,501.0 L246.0,596.0 L225.0,702.0 L219.0,762.0 L221.0,843.0 L233.0,899.0 L227.0,952.0 L212.0,1015.0 L212.0,1069.0 L223.0,1164.0 L219.0,1196.0 L200.0,1230.0 L174.0,1256.0 L171.0,1275.0 L190.0,1289.0 L218.0,1292.0 L242.0,1272.0 L247.0,1255.0 L264.0,1241.0 L269.0,1140.0 L282.0,1089.0 L295.0,1058.0 L289.0,972.0 L311.0,931.0 L322.0,856.0 L348.0,773.0 L354.0,735.0 L361.0,779.0 L387.0,863.0 L396.0,930.0 L418.0,971.0 L413.0,1061.0 L425.0,1088.0 L439.0,1143.0 L444.0,1243.0 L462.0,1257.0 L465.0,1271.0 L483.0,1288.0 L502.0,1292.0 L525.0,1286.0 L536.0,1275.0 L537.0,1264.0 L495.0,1208.0 L485.0,1168.0 L496.0,1063.0 L496.0,1020.0 L490.0,979.0 L480.0,952.0 L475.0,897.0 L488.0,828.0 L488.0,751.0 L481.0,691.0 L459.0,580.0 L452.0,510.0 L457.0,483.0 L485.0,413.0 L536.0,473.0 L576.0,544.0 L638.0,606.0 L635.0,627.0 L643.0,645.0 L646.0,675.0 L661.0,676.0 L665.0,654.0 L671.0,704.0 L677.0,705.0 L683.0,714.0 L691.0,714.0 L696.0,695.0 L694.0,651.0 L631.0,494.0 L614.0,465.0 L579.0,428.0 L565.0,387.0 L544.0,360.0 L537.0,329.0 L519.0,289.0 L502.0,274.0 L459.0,263.0 L449.0,252.0 L398.0,226.0 L400.0,174.0 L411.0,168.0 L415.0,152.0 L414.0,133.0 L403.0,124.0 L407.0,96.0 L403.0,63.0 L379.0,48.0 Z" fill="#2e2e2e"/>
+  <g id="muscle-shoulders-front-delt" class="muscle-segment" data-muscle-group="shoulders" data-sub-muscle-group="front-delt" data-label="Front delt" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M286.0,272.0 L253.0,266.0 L225.0,271.0 L209.0,278.0 L197.0,288.0 L186.0,304.0 L168.0,358.0 L208.0,345.0 L234.0,321.0 L263.0,285.0 Z"/>
+    <path d="M421.0,271.0 L441.0,282.0 L479.0,327.0 L497.0,343.0 L540.0,358.0 L524.0,309.0 L515.0,293.0 L504.0,282.0 L488.0,273.0 L464.0,267.0 L449.0,266.0 Z"/>
+  </g>
+  <g id="muscle-back-upper" class="muscle-segment" data-muscle-group="back" data-sub-muscle-group="upper" data-label="Upper back &amp; traps" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M309.0,231.0 L297.0,241.0 L272.0,251.0 L255.0,262.0 L274.0,263.0 L293.0,269.0 L301.0,266.0 L309.0,256.0 Z"/>
+    <path d="M398.0,231.0 L399.0,258.0 L404.0,264.0 L415.0,269.0 L434.0,263.0 L452.0,262.0 L445.0,256.0 L409.0,240.0 Z"/>
+  </g>
+  <g id="muscle-biceps-biceps" class="muscle-segment" data-muscle-group="biceps" data-sub-muscle-group="biceps" data-label="Biceps" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M215.0,357.0 L186.0,356.0 L164.0,366.0 L155.0,377.0 L139.0,410.0 L131.0,438.0 L132.0,464.0 L141.0,474.0 L155.0,475.0 L170.0,467.0 L218.0,410.0 L224.0,395.0 L225.0,371.0 L222.0,363.0 Z"/>
+    <path d="M491.0,358.0 L484.0,367.0 L482.0,377.0 L484.0,398.0 L490.0,411.0 L539.0,468.0 L553.0,475.0 L567.0,474.0 L576.0,462.0 L577.0,441.0 L570.0,413.0 L554.0,379.0 L542.0,365.0 L533.0,360.0 L514.0,355.0 Z"/>
+  </g>
+  <g id="muscle-forearms-forearms" class="muscle-segment" data-muscle-group="forearms" data-sub-muscle-group="forearms" data-label="Forearm" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M127.0,435.0 L95.0,473.0 L74.0,513.0 L44.0,586.0 L47.0,595.0 L54.0,601.0 L67.0,601.0 L88.0,577.0 L121.0,548.0 L140.0,522.0 L153.0,495.0 L167.0,475.0 L155.0,480.0 L138.0,478.0 L127.0,463.0 Z"/>
+    <path d="M580.0,433.0 L582.0,459.0 L577.0,471.0 L564.0,480.0 L552.0,480.0 L540.0,474.0 L551.0,489.0 L568.0,523.0 L590.0,552.0 L622.0,579.0 L639.0,600.0 L652.0,602.0 L661.0,594.0 L663.0,584.0 L636.0,518.0 L615.0,476.0 Z"/>
+  </g>
+  <g id="muscle-obliques-obliques" class="muscle-segment" data-muscle-group="obliques" data-sub-muscle-group="obliques" data-label="Obliques" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M228.0,366.0 L230.0,389.0 L227.0,412.0 L239.0,447.0 L256.0,483.0 L259.0,497.0 L259.0,522.0 L252.0,580.0 L263.0,580.0 L274.0,576.0 L282.0,568.0 L290.0,549.0 L289.0,495.0 L297.0,438.0 L294.0,431.0 Z"/>
+    <path d="M479.0,367.0 L417.0,427.0 L411.0,437.0 L418.0,490.0 L418.0,551.0 L427.0,570.0 L445.0,580.0 L455.0,580.0 L448.0,501.0 L453.0,479.0 L468.0,448.0 L481.0,409.0 L478.0,391.0 Z"/>
+  </g>
+  <g id="muscle-obliques-serratus" class="muscle-segment" data-muscle-group="obliques" data-sub-muscle-group="obliques" data-label="Obliques" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M259.0,392.0 L294.0,424.0 L291.0,410.0 L298.0,399.0 L273.0,398.0 Z"/>
+    <path d="M449.0,392.0 L428.0,399.0 L409.0,399.0 L416.0,408.0 L413.0,425.0 Z"/>
+  </g>
+  <g id="muscle-quads-quads" class="muscle-segment" data-muscle-group="quads" data-sub-muscle-group="quads" data-label="Quads" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M252.0,585.0 L225.0,738.0 L225.0,839.0 L232.0,880.0 L239.0,900.0 L244.0,904.0 L261.0,902.0 L271.0,928.0 L276.0,933.0 L288.0,934.0 L300.0,923.0 L309.0,902.0 L320.0,843.0 L345.0,765.0 L350.0,715.0 L341.0,711.0 L333.0,701.0 L311.0,637.0 L301.0,619.0 L280.0,598.0 Z"/>
+    <path d="M456.0,585.0 L433.0,594.0 L409.0,616.0 L396.0,639.0 L376.0,699.0 L365.0,712.0 L358.0,715.0 L362.0,763.0 L385.0,834.0 L399.0,904.0 L412.0,929.0 L425.0,935.0 L436.0,929.0 L443.0,906.0 L447.0,902.0 L464.0,904.0 L469.0,899.0 L476.0,878.0 L484.0,824.0 L485.0,777.0 L481.0,723.0 Z"/>
+  </g>
+  <g id="silhouette-knee-tie-in" aria-hidden="true" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M237.0,904.0 L231.0,952.0 L240.0,958.0 L254.0,977.0 L270.0,979.0 L279.0,974.0 L292.0,959.0 L304.0,936.0 L310.0,912.0 L304.0,926.0 L296.0,935.0 L288.0,939.0 L278.0,939.0 L266.0,929.0 L258.0,906.0 L243.0,909.0 Z"/>
+    <path d="M471.0,904.0 L464.0,909.0 L449.0,906.0 L441.0,930.0 L429.0,939.0 L413.0,936.0 L402.0,923.0 L398.0,913.0 L408.0,946.0 L419.0,964.0 L432.0,976.0 L439.0,979.0 L452.0,978.0 L466.0,960.0 L476.0,953.0 Z"/>
+  </g>
+  <g id="muscle-calves-calves" class="muscle-segment" data-muscle-group="calves" data-sub-muscle-group="calves" data-label="Calves" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M230.0,957.0 L220.0,991.0 L216.0,1019.0 L216.0,1065.0 L227.0,1160.0 L223.0,1200.0 L204.0,1234.0 L183.0,1253.0 L175.0,1267.0 L175.0,1271.0 L187.0,1282.0 L194.0,1285.0 L202.0,1283.0 L211.0,1288.0 L218.0,1286.0 L226.0,1276.0 L238.0,1268.0 L243.0,1251.0 L256.0,1243.0 L260.0,1237.0 L259.0,1201.0 L263.0,1194.0 L262.0,1157.0 L265.0,1136.0 L278.0,1085.0 L291.0,1054.0 L285.0,975.0 L272.0,983.0 L258.0,984.0 L249.0,979.0 L238.0,963.0 Z"/>
+    <path d="M477.0,957.0 L461.0,977.0 L449.0,984.0 L435.0,983.0 L422.0,974.0 L417.0,1057.0 L429.0,1084.0 L443.0,1139.0 L446.0,1165.0 L444.0,1188.0 L449.0,1205.0 L448.0,1239.0 L466.0,1253.0 L468.0,1265.0 L490.0,1286.0 L498.0,1288.0 L506.0,1283.0 L513.0,1285.0 L521.0,1282.0 L533.0,1268.0 L524.0,1252.0 L506.0,1237.0 L485.0,1200.0 L481.0,1151.0 L491.0,1071.0 L492.0,1024.0 L486.0,983.0 Z"/>
+  </g>
+  <g id="muscle-chest-upper" class="muscle-segment" data-muscle-group="chest" data-sub-muscle-group="upper" data-label="Upper chest" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M351.0,312.7 L351.0,287.0 L342.0,276.0 L328.0,271.0 L302.0,271.0 L284.0,277.0 L269.0,286.0 L246.9,312.7 Z"/>
+    <path d="M357.0,287.0 L356.5,312.7 L460.9,312.7 L442.0,289.0 L423.0,277.0 L404.0,271.0 L379.0,271.0 L364.0,277.0 Z"/>
+  </g>
+  <g id="muscle-chest-mid" class="muscle-segment" data-muscle-group="chest" data-sub-muscle-group="mid" data-label="Mid chest" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M351.0,312.7 L246.9,312.7 L235.0,327.0 L217.0,344.0 L207.0,350.0 L219.3,354.3 L349.1,354.3 L351.0,350.0 Z"/>
+    <path d="M356.5,312.7 L356.0,344.0 L358.1,354.3 L489.3,354.3 L500.0,351.0 L470.0,324.0 L460.9,312.7 Z"/>
+  </g>
+  <g id="muscle-chest-lower" class="muscle-segment" data-muscle-group="chest" data-sub-muscle-group="lower" data-label="Lower chest" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M219.3,354.3 L224.0,356.0 L244.0,377.0 L265.0,390.0 L287.0,395.0 L313.0,391.0 L332.0,380.0 L342.0,370.0 L349.1,354.3 Z"/>
+    <path d="M358.1,354.3 L359.0,359.0 L370.0,375.0 L393.0,390.0 L416.0,395.0 L438.0,392.0 L460.0,380.0 L484.0,356.0 L489.3,354.3 Z"/>
+  </g>
+  <g id="muscle-abs-upper" class="muscle-segment" data-muscle-group="abs" data-sub-muscle-group="upper" data-label="Upper abs" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M333.0,389.0 L304.0,400.0 L296.0,410.0 L302.0,440.0 L301.0,458.0 L304.1,520.0 L404.0,520.0 L404.0,520.0 L406.0,434.0 L412.0,411.0 L405.0,401.0 L379.0,390.0 L362.0,389.0 L357.0,393.0 L356.0,398.0 L353.0,399.0 L348.0,390.0 Z"/>
+  </g>
+  <g id="muscle-abs-lower" class="muscle-segment" data-muscle-group="abs" data-sub-muscle-group="lower" data-label="Lower abs" fill="none" stroke="#555" stroke-width="2.5">
+    <path d="M304.1,520.0 L306.0,559.0 L313.0,593.0 L326.0,622.0 L344.0,645.0 L355.0,650.0 L361.0,647.0 L379.0,626.0 L391.0,602.0 L398.0,580.0 L404.0,520.0 L404.0,520.0 Z"/>
+    <path d="M297.0,472.0 L294.0,495.0 L296.0,542.0 L293.0,557.0 L286.0,571.0 L279.0,578.0 L264.0,584.0 L283.0,594.0 L303.0,614.0 L317.0,640.0 L336.0,697.0 L345.0,708.0 L359.0,710.0 L366.0,705.0 L375.0,689.0 L390.0,641.0 L399.0,622.0 L421.0,597.0 L443.0,584.0 L433.0,581.0 L422.0,571.0 L414.0,554.0 L412.0,544.0 L414.0,503.0 L410.0,474.0 L406.0,563.0 L396.0,603.0 L381.0,632.0 L365.0,650.0 L354.0,655.0 L344.0,651.0 L323.0,626.0 L313.0,606.0 L306.0,585.0 L301.0,557.0 Z"/>
+  </g>
+</svg>

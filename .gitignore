@@ -1,0 +1,32 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.vscode/
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+*.jks
+*.keystore
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/ephemeral/
+**/*.mode1v3
+**/*.pbxuser
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generator scratch
+__pycache__/
+*.pyc
