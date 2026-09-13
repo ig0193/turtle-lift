@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  # Every branch, not just main. A hand-edit to generated output lands on a
+  # feature branch first, and that is where it should be caught -- gating only
+  # main means the check runs after the damage is already shared.
+  push:
+  pull_request:
+
+jobs:
+  generated-data:
+    # The shipped data is generated. CI proves it still regenerates byte-for-byte
+    # from its sources, so a hand-edit to the output cannot slip through.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Muscle taxonomy (self-validating generator)
+        working-directory: assets/body-diagrams
+        run: python3 generate_muscle_taxonomy.py
+
+      - name: Body paths
+        working-directory: assets/body-diagrams
+        run: python3 generate_body_paths.py
+
+      - name: Exercise library
+        working-directory: assets/exercises
+        run: python3 validate_exercise_library.py ../body-diagrams .
+
+      - name: Fail if any generated file drifted
+        run: git diff --exit-code
+
+      # The check below is not redundant with the one in the `flutter` job.
+      # That one compares the two *committed* copies; this one runs after the
+      # generators have rewritten assets/, so it proves lib/ matches freshly
+      # generated output -- not merely that two stale copies agree.
+      - name: Generated Dart in lib/ matches freshly generated assets/
+        run: tool/sync_generated.sh --check
+
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Generated Dart in lib/ matches assets/
+        run: tool/sync_generated.sh --check
+
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build apk --debug
