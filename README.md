@@ -8,8 +8,8 @@ Log a set. That's it.
 
 ## What this repo currently is
 
-**Specification, validated data and prototypes.** No Flutter code yet. Everything here
-exists so the build can start without re-deciding anything.
+**Specification, validated data, prototypes, and an empty Flutter app scaffold.** No
+screens yet. Everything here exists so the build can start without re-deciding anything.
 
 | Path | What |
 |---|---|
@@ -20,6 +20,8 @@ exists so the build can start without re-deciding anything.
 | `assets/body-diagrams/` | 4 traced SVGs, muscle taxonomy, and the diagrams as Dart point data. |
 | `assets/exercises/` | 260 exercises with setup / posture / execution / common mistakes. |
 | `prototypes/` | Three browser prototypes. Open them; nothing to install. |
+| `lib/` | Flutter app. Theme, the generated data as Dart, and a placeholder screen. |
+| `tool/sync_generated.sh` | Copies generated Dart from `assets/` into `lib/`; `--check` fails on drift. |
 
 ## The shape of it
 
@@ -47,12 +49,41 @@ cd assets/exercises      && python3 validate_exercise_library.py   # 260 exercis
 Never hand-edit `muscle_taxonomy.*`, `body_paths.dart`, `exercises.json` or
 `exercises.csv`. Edit the generator source and re-run.
 
-Wire all three into CI.
+All three run in CI (`.github/workflows/ci.yml`), which then fails on any diff.
 
 ## Getting started
 
 ```bash
-flutter create --org dev.indresh --project-name turtle_lift .
+flutter pub get
+flutter run                                  # iOS simulator or Android emulator
+flutter test
+flutter analyze
+```
+
+Builds:
+
+```bash
+flutter build apk --debug                    # Android
+flutter build ios --simulator --no-codesign  # iOS, no signing needed
+```
+
+Riverpod for state, Drift (SQLite) for storage — decided in session 1, see `CLAUDE.md`.
+Bundle id is `dev.indresh.turtle_lift` (Android) / `dev.indresh.turtleLift` (iOS).
+It is permanent from the first store upload, including internal test tracks.
+
+iOS needs the iOS platform support installed in Xcode (Settings > Components, or
+`xcodebuild -downloadPlatform iOS`). CocoaPods is **not** required — there is no
+Podfile, and Xcode integrates Flutter's plugins through a local Swift package
+(`Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage`).
+
+Note on the SQLite native library: `sqlite3_flutter_libs` resolves to `0.7.0+eol`,
+a stub that ships **no native code** ("Not used anymore, update to version 3.x of
+package:sqlite3 instead"). The real native library comes from `sqlite3` 3.6.0 via a
+Dart **build hook** (`hook/`), not a platform plugin folder. That is why no plugin
+needs a `Package.swift` — but it also means Drift's storage path depends on build
+hooks working, which is worth confirming on a real device before relying on it.
+
+```bash
 claude                 # then: "read CLAUDE.md and docs/00-build-spec.md"
 ```
 

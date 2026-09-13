@@ -41,6 +41,16 @@ match `muscle_taxonomy.dart` exactly. Cache the built `Path` objects rather than
 rebuilding them each frame. Do not add an SVG rendering package — you do not
 need one, and it would give you back an opaque picture you cannot recolour.
 
+**The app bar is pinned on every screen.** Build screens with `AppScreen`
+(`lib/src/ui/app_screen.dart`) — `.root` for a tab root, `.pushed` for anything
+on the stack. The header is the `Scaffold.appBar`, so it sits outside the body
+and cannot scroll; the body *is* the scrollable. Never put a title row inside
+the scroll view, and never use `SliverAppBar` with `floating`, `snap` or a
+collapsing `expandedHeight` — a header that hides on scroll is not pinned.
+`test/app_screen_test.dart` holds the rule. This is a **deliberate override of
+the prototypes**, which render `.hdr` / `.l0h` inside `.scroll`; they have been
+corrected to `position: sticky` to match, but the Dart widget is the reference.
+
 **Nothing is stored that can be derived.** Streak, set and exercise counts,
 personal bests, per-session PB count, calorie estimate, the `trained` tick, and
 the resolved session title are all computed on read. Sessions are editable and
@@ -76,13 +86,44 @@ are reviewed copy.
 6. Muscles tab.
 7. Profile tab.
 
+## Decided in session 1
+
+- **State: Riverpod** (`flutter_riverpod`, no codegen). Everything user-visible is
+  derived on read, so derived values are computed providers that invalidate
+  themselves — no manual refresh path to forget when a session is edited.
+- **Storage: Drift over SQLite** (`drift` + `drift_flutter`). Relational shape
+  matches Session → SessionExercise → SetEntry, and per-exercise history stays a
+  query rather than a full-table scan in Dart. Codegen via `build_runner`.
+- **iOS integrates plugins through Swift Package Manager, not CocoaPods.** CocoaPods
+  cannot install on the system Ruby here. Nothing to do — just do not add a
+  plugin that ships no `Package.swift`.
+- Generated Dart (`muscle_taxonomy.dart`, `body_paths.dart`) is copied into
+  `lib/src/data/generated/` by `tool/sync_generated.sh`, because Dart can only
+  import from `lib/`. Both copies are generated output: edit the generator, re-run
+  it, then re-run the sync. `tool/sync_generated.sh --check` guards this in CI.
+- `lib/main.dart` currently renders a placeholder `SetupCheckScreen` that counts
+  the shipped data. Delete it when the workout tab lands. The data it reads lives
+  in `lib/src/data/`, not in `main.dart`, so deleting the screen takes nothing
+  with it.
+- **Bundle id: `dev.indresh.turtle_lift` (Android) / `dev.indresh.turtleLift` (iOS).**
+  The casing differs because that is what each platform's tooling produces from one
+  `--org dev.indresh`, which is the org `README.md` specified from the start. It is
+  **permanent from the first store upload, including internal test tracks** — the
+  scaffold had shipped `com.example.*`, which Play rejects outright, and it was
+  corrected before any upload.
+- **Destructive actions use `#C4553A`,** the eleventh palette colour (`00` §12,
+  `01` §Usage rules). `#D85A30` could not carry "delete": it means "active / this
+  has been worked" *"wherever it appears"*, so a delete confirmation painted in it
+  reads as approval. `test/theme_palette_test.dart` fails on any colour outside §12.
+
 ## Still undecided — ask, don't guess
 
 - App display name (splash and share card use a placeholder).
 - Whether the ad-hoc overview and the template overview are one widget with a
   variant flag or two separate widgets.
-- State management and local database choice. Not specced deliberately — decide
-  in session 1 and record the choice here.
+- Typeface. The prototypes use Inter; the app currently uses the platform default.
+  If Inter is chosen it must be **bundled as an asset** — the app is offline and
+  must not fetch a font at runtime. Genuinely open: do not bundle it without asking.
 
 ## Out of scope for V1 — do not build
 
@@ -96,3 +137,20 @@ never a body diagram, and it must never react to inactivity. Orientation per sur
 (standing vs horizontal), whether it appears on the set-logging screen, and exact sizing
 are all deliberately left open in the brief. Settle them against running screens, with
 the user, at the end.
+
+## Agent skills
+
+### Issue tracker
+
+Local markdown under `.scratch/<feature>/`, not GitHub Issues — and `.scratch/` is
+gitignored, so tickets stay local. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical roles, unchanged, written as a `Status:` line in each issue file.
+See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. Neither exists yet;
+that is expected. See `docs/agents/domain.md`.
