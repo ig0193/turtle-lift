@@ -1,0 +1,344 @@
+{
+  "parents": {
+    "chest": {
+      "label": "Chest",
+      "subs": [
+        "upper",
+        "mid",
+        "lower"
+      ]
+    },
+    "back": {
+      "label": "Back",
+      "subs": [
+        "upper",
+        "lats",
+        "lower"
+      ]
+    },
+    "shoulders": {
+      "label": "Shoulders",
+      "subs": [
+        "front-delt",
+        "side-delt",
+        "rear-delt"
+      ]
+    },
+    "biceps": {
+      "label": "Biceps",
+      "subs": [
+        "biceps"
+      ]
+    },
+    "triceps": {
+      "label": "Triceps",
+      "subs": [
+        "triceps"
+      ]
+    },
+    "forearms": {
+      "label": "Forearms",
+      "subs": [
+        "forearms"
+      ]
+    },
+    "abs": {
+      "label": "Abs",
+      "subs": [
+        "upper",
+        "lower"
+      ]
+    },
+    "obliques": {
+      "label": "Obliques",
+      "subs": [
+        "obliques"
+      ]
+    },
+    "quads": {
+      "label": "Quads",
+      "subs": [
+        "quads"
+      ]
+    },
+    "hamstrings": {
+      "label": "Hamstrings",
+      "subs": [
+        "hamstrings"
+      ]
+    },
+    "glutes": {
+      "label": "Glutes",
+      "subs": [
+        "glutes"
+      ]
+    },
+    "calves": {
+      "label": "Calves",
+      "subs": [
+        "calves"
+      ]
+    }
+  },
+  "subMuscleGroups": {
+    "chest/upper": {
+      "group": "chest",
+      "groupLabel": "Chest",
+      "sub": "upper",
+      "label": "Upper chest",
+      "segments": [
+        {
+          "view": "front",
+          "segment": "chest/upper"
+        }
+      ],
+      "note": null
+    },
+    "chest/mid": {
+      "group": "chest",
+      "groupLabel": "Chest",
+      "sub": "mid",
+      "label": "Mid chest",
+      "segments": [
+        {
+          "view": "front",
+          "segment": "chest/mid"
+        }
+      ],
+      "note": null
+    },
+    "chest/lower": {
+      "group": "chest",
+      "groupLabel": "Chest",
+      "sub": "lower",
+      "label": "Lower chest",
+      "segments": [
+        {
+          "view": "front",
+          "segment": "chest/lower"
+        }
+      ],
+      "note": null
+    },
+    "back/upper": {
+      "group": "back",
+      "groupLabel": "Back",
+      "sub": "upper",
+      "label": "Upper back & traps",
+      "segments": [
+        {
+          "view": "front",
+          "segment": "back/upper"
+        },
+        {
+          "view": "back",
+          "segment": "back/upper"
+        }
+      ],
+      "note": null
+    },
+    "back/lats": {
+      "group": "back",
+      "groupLabel": "Back",
+      "sub": "lats",
+      "label": "Lats",
+      "segments": [
+        {
+          "view": "back",
+          "segment": "back/lats"
+        }
+      ],
+      "note": null
+    },
+    "back/lower": {
+      "group": "back",
+      "groupLabel": "Back",
+      "sub": "lower",
+      "label": "Lower back",
+      "segments": [
+        {
+          "view": "back",
+          "segment": "back/lower"
+        }
+      ],
+      "note": null
+    },
+    "shoulders/front-delt": {
+      "group": "shoulders",
+      "groupLabel": "Shoulders",
+      "sub": "front-delt",
+      "label": "Front delt",
+      "segments": [
+        {
+          "view": "front",
+          "segment": "shoulders/front-delt"
+        }
+      ],
+      "note": null
+    },
+    "shoulders/side-delt": {
+      "group": "shoulders",
+      "groupLabel": "Shoulders",
+      "sub": "side-delt",
+      "label": "Side delt",
+      "segments": [
+        {
+          "view": "front",
+          "segment": "shoulders/front-delt"
+        }
+      ],
+      "note": "no artwork of its own; shares another segment"
+    },
+    "shoulders/rear-delt": {
+      "group": "shoulders",
+      "groupLabel": "Shoulders",
+      "sub": "rear-delt",
+      "label": "Rear delt",
+      "segments": [
+        {
+          "view": "back",
+          "segment": "shoulders/rear-delt"
+        }
+      ],
+      "note": null
+    },
+    "biceps/biceps": {
+      "group": "biceps",
+      "groupLabel": "Biceps",
+      "sub": "biceps",
+      "label": "Biceps",
+      "segments": [
+        {
+          "view": "front",
+          "segment": "biceps/biceps"
+        }
+      ],
+      "note": null
+    },
+    "triceps/triceps": {
+      "group": "triceps",
+      "groupLabel": "Triceps",
+      "sub": "triceps",
+      "label": "Triceps",
+      "segments": [
+        {
+          "view": "back",
+          "segment": "triceps/triceps"
+        }
+      ],
+      "note": null
+    },
+    "forearms/forearms": {
+      "group": "forearms",
+      "groupLabel": "Forearms",
+      "sub": "forearms",
+      "label": "Forearms",
+      "segments": [
+        {
+          "view": "front",
+          "segment": "forearms/forearms"
+        },
+        {
+          "view": "back",
+          "segment": "forearms/forearms"
+        }
+      ],
+      "note": null
+    },
+    "abs/upper": {
+      "group": "abs",
+      "groupLabel": "Abs",
+      "sub": "upper",
+      "label": "Upper abs",
+      "segments": [
+        {
+          "view": "front",
+          "segment": "abs/upper"
+        }
+      ],
+      "note": null
+    },
+    "abs/lower": {
+      "group": "abs",
+      "groupLabel": "Abs",
+      "sub": "lower",
+      "label": "Lower abs",
+      "segments": [
+        {
+          "view": "front",
+          "segment": "abs/lower"
+        }
+      ],
+      "note": null
+    },
+    "obliques/obliques": {
+      "group": "obliques",
+      "groupLabel": "Obliques",
+      "sub": "obliques",
+      "label": "Obliques",
+      "segments": [
+        {
+          "view": "front",
+          "segment": "obliques/obliques"
+        }
+      ],
+      "note": null
+    },
+    "quads/quads": {
+      "group": "quads",
+      "groupLabel": "Quads",
+      "sub": "quads",
+      "label": "Quads",
+      "segments": [
+        {
+          "view": "front",
+          "segment": "quads/quads"
+        }
+      ],
+      "note": null
+    },
+    "hamstrings/hamstrings": {
+      "group": "hamstrings",
+      "groupLabel": "Hamstrings",
+      "sub": "hamstrings",
+      "label": "Hamstrings",
+      "segments": [
+        {
+          "view": "back",
+          "segment": "hamstrings/hamstrings"
+        }
+      ],
+      "note": null
+    },
+    "glutes/glutes": {
+      "group": "glutes",
+      "groupLabel": "Glutes",
+      "sub": "glutes",
+      "label": "Glutes",
+      "segments": [
+        {
+          "view": "back",
+          "segment": "glutes/glutes"
+        }
+      ],
+      "note": null
+    },
+    "calves/calves": {
+      "group": "calves",
+      "groupLabel": "Calves",
+      "sub": "calves",
+      "label": "Calves",
+      "segments": [
+        {
+          "view": "front",
+          "segment": "calves/calves"
+        },
+        {
+          "view": "back",
+          "segment": "calves/calves"
+        }
+      ],
+      "note": null
+    }
+  }
+}

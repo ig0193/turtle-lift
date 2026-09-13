@@ -1,0 +1,4187 @@
+[
+  {
+    "id": "barbell-bench-press",
+    "name": "Barbell bench press",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "chest/lower",
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Flat bench, eyes under the bar. Grip roughly 1.5x shoulder width. Feet flat, planted wide.",
+    "posture": "Shoulder blades pinched back and down into the bench. Chest up, slight natural arch in the lower back. Glutes stay in contact with the bench.",
+    "execution": "Unrack and hold over the upper chest. Inhale, lower to mid-chest in about 2 seconds with elbows at 45 degrees to the torso. Touch lightly, press up and exhale through the top half.",
+    "commonMistakes": "Flaring elbows to 90 degrees, which strains the shoulder. Bouncing the bar off the chest. Lifting the hips off the bench."
+  },
+  {
+    "id": "dumbbell-bench-press",
+    "name": "Dumbbell bench press",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "chest/lower",
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Flat bench. Sit with dumbbells on your thighs, then kick them up one at a time as you lie back.",
+    "posture": "Shoulder blades retracted, chest up, feet flat and driving into the floor.",
+    "execution": "Start with dumbbells above the chest, palms forward. Inhale and lower to chest level over 2 seconds, elbows at 45 degrees. Press up and slightly together, exhaling.",
+    "commonMistakes": "Clashing the dumbbells together at the top, which drops the tension. Dropping too deep and overstretching the shoulder."
+  },
+  {
+    "id": "machine-chest-press",
+    "name": "Machine chest press",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Adjust the seat so the handles sit level with your mid-chest. Feet flat on the floor.",
+    "posture": "Back and head against the pad, shoulder blades pulled back, chest up.",
+    "execution": "Inhale, press the handles forward until the arms are almost straight without locking out. Exhale on the press, return over 2 seconds under control.",
+    "commonMistakes": "Setting the seat too high, which turns it into a shoulder press. Letting the shoulders roll forward at the end of the push."
+  },
+  {
+    "id": "smith-machine-bench-press",
+    "name": "Smith machine bench press",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Flat bench positioned so the bar path lines up with your mid-chest. Grip 1.5x shoulder width.",
+    "posture": "Shoulder blades retracted and down, chest up, feet planted.",
+    "execution": "Unrack with a wrist twist. Inhale and lower to mid-chest over 2 seconds, elbows at 45 degrees. Press up and exhale.",
+    "commonMistakes": "Placing the bench too far forward so the fixed bar path hits the neck. Relying on the fixed path and letting the shoulders go loose."
+  },
+  {
+    "id": "push-up",
+    "name": "Push-up",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps",
+      "abs/upper"
+    ],
+    "setup": "Hands flat on the floor just wider than the shoulders, at chest level. Legs straight, feet hip width.",
+    "posture": "Body in one straight line from head to heels. Core braced, glutes squeezed, neck neutral with eyes on the floor a foot ahead.",
+    "execution": "Inhale and lower until the chest is roughly a fist's height from the floor, elbows at 45 degrees. Press up and exhale.",
+    "commonMistakes": "Hips sagging or piling up. Flaring elbows straight out to the sides. Only going halfway down."
+  },
+  {
+    "id": "wide-grip-push-up",
+    "name": "Wide-grip push-up",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Hands flat on the floor, roughly twice shoulder width, at chest level.",
+    "posture": "Straight line from head to heels, core braced, glutes tight.",
+    "execution": "Inhale and lower under control until the chest is just off the floor. Press up and exhale. Range of motion is shorter than a standard push-up.",
+    "commonMistakes": "Going too wide, which stresses the shoulder joint for very little extra chest work. Letting the hips drop."
+  },
+  {
+    "id": "cable-chest-press",
+    "name": "Cable chest press",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Pulleys set at chest height. Grab both handles, step forward into a split stance for stability.",
+    "posture": "Chest up, shoulders back and down, core braced, front knee softly bent.",
+    "execution": "Inhale, press both handles forward and slightly together until the arms are nearly straight. Exhale on the press, return slowly to a light stretch.",
+    "commonMistakes": "Standing square with feet level, which makes you unstable. Letting the cables yank the arms back too fast."
+  },
+  {
+    "id": "pec-deck-machine",
+    "name": "Pec deck machine",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "shoulders/front-delt"
+    ],
+    "setup": "Set the seat so the handles are at chest height. Sit back with elbows on the pads or hands on the grips.",
+    "posture": "Back flat against the pad, chest up, shoulder blades pulled back.",
+    "execution": "Inhale, bring the pads together in front of the chest in a hugging arc. Squeeze for a beat, exhale, then return over 2 seconds to a stretch.",
+    "commonMistakes": "Setting the start position so wide that the shoulders overstretch. Shrugging the shoulders up during the squeeze."
+  },
+  {
+    "id": "dumbbell-fly",
+    "name": "Dumbbell fly",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "shoulders/front-delt"
+    ],
+    "setup": "Flat bench, one dumbbell in each hand pressed above the chest, palms facing each other.",
+    "posture": "Shoulder blades retracted, chest up, feet planted.",
+    "execution": "Keep a fixed 10 to 15 degree bend in the elbows. Inhale and open the arms in a wide arc until you feel a chest stretch, roughly level with the bench. Exhale and hug back up.",
+    "commonMistakes": "Bending and straightening the elbows, which turns it into a press. Going too deep and straining the shoulder. Using far too much weight."
+  },
+  {
+    "id": "cable-crossover-mid-pulley",
+    "name": "Cable crossover (mid pulley)",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "shoulders/front-delt"
+    ],
+    "setup": "Both pulleys at chest height. A handle in each hand, step forward into a split stance.",
+    "posture": "Chest up, shoulders down, slight forward lean from the hips, core braced.",
+    "execution": "Fixed slight elbow bend. Inhale, then bring the hands together in front of the chest in a wide arc and exhale. Squeeze for a beat, return slowly to a stretch.",
+    "commonMistakes": "Turning it into a press by bending the elbows. Standing too far back so tension disappears at the finish."
+  },
+  {
+    "id": "barbell-floor-press",
+    "name": "Barbell floor press",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "shoulders/front-delt"
+    ],
+    "setup": "Lie on the floor inside a rack, bar set low. Knees bent, feet flat. Grip 1.5x shoulder width.",
+    "posture": "Shoulder blades pinched, chest up, glutes and upper back pressed into the floor.",
+    "execution": "Inhale, lower until the upper arms rest lightly on the floor, elbows at 45 degrees. Pause for one second, press up and exhale.",
+    "commonMistakes": "Bouncing the elbows off the floor. Letting the elbows flare wide at the bottom."
+  },
+  {
+    "id": "dumbbell-floor-press",
+    "name": "Dumbbell floor press",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "shoulders/front-delt"
+    ],
+    "setup": "Lie flat on the floor with a dumbbell in each hand, knees bent, feet flat.",
+    "posture": "Shoulder blades pulled back into the floor, chest up, core braced.",
+    "execution": "Inhale and lower until the triceps touch the floor, elbows at 45 degrees. Pause one second, press up and exhale.",
+    "commonMistakes": "Slamming the elbows down. Letting the dumbbells drift toward the head instead of staying over the chest."
+  },
+  {
+    "id": "kettlebell-floor-press",
+    "name": "Kettlebell floor press",
+    "equipment": "kettlebell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "shoulders/front-delt"
+    ],
+    "setup": "Lie on the floor with a kettlebell in each hand, bells resting on the back of the forearms. Knees bent.",
+    "posture": "Wrists straight and stacked over the elbows, shoulder blades pinched, core braced.",
+    "execution": "Inhale and lower until the triceps touch the floor. Pause one second, press up and exhale.",
+    "commonMistakes": "Letting the wrists bend back under the bell. Allowing the bells to bang the forearms on the way down."
+  },
+  {
+    "id": "resistance-band-chest-press",
+    "name": "Resistance band chest press",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Anchor the band at chest height behind you. A handle in each hand, step forward into a split stance until there is tension.",
+    "posture": "Chest up, shoulders back and down, core braced.",
+    "execution": "Inhale, press both handles forward and slightly together, exhaling. Squeeze the chest at full extension, then return over 2 seconds against the band.",
+    "commonMistakes": "Letting the band snap the arms back. Standing too close to the anchor, leaving no tension at the start."
+  },
+  {
+    "id": "plate-press-svend-press",
+    "name": "Plate press (Svend press)",
+    "equipment": "other",
+    "loadType": "weighted",
+    "primary": [
+      "chest/mid"
+    ],
+    "secondary": [
+      "shoulders/front-delt"
+    ],
+    "setup": "Stand tall holding a weight plate flat between both palms at chest height, fingers pointing forward.",
+    "posture": "Chest up, shoulders back and down, core braced, feet shoulder width.",
+    "execution": "Squeeze the palms hard into the plate throughout. Inhale, press the plate straight out until the arms are nearly straight, exhaling. Return slowly, keeping the squeeze.",
+    "commonMistakes": "Loosening the inward squeeze, which is the entire point of the movement. Letting the plate drift down or up instead of straight out."
+  },
+  {
+    "id": "incline-barbell-bench-press",
+    "name": "Incline barbell bench press",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/upper"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Bench set to 30 degrees. Eyes under the bar, grip 1.5x shoulder width, feet flat.",
+    "posture": "Shoulder blades retracted and down, chest up, hips on the bench.",
+    "execution": "Unrack over the upper chest. Inhale and lower to just below the collarbone over 2 seconds, elbows at 45 degrees. Press up and exhale.",
+    "commonMistakes": "Setting the bench above 45 degrees, which shifts the work to the front delts. Bouncing the bar off the chest."
+  },
+  {
+    "id": "incline-dumbbell-press",
+    "name": "Incline dumbbell press",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/upper"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Bench at 30 degrees. Sit with dumbbells on the thighs and kick them up as you lie back.",
+    "posture": "Shoulder blades pinched back, chest up, feet flat and driving into the floor.",
+    "execution": "Start with the dumbbells above the upper chest. Inhale and lower to chest level over 2 seconds, elbows at 45 degrees. Press up and slightly in, exhaling.",
+    "commonMistakes": "Bench angle too steep, turning it into a shoulder press. Banging the dumbbells together at the top."
+  },
+  {
+    "id": "incline-machine-chest-press",
+    "name": "Incline machine chest press",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "chest/upper"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Adjust the seat so the handles line up with your upper chest, just below the collarbone.",
+    "posture": "Back and head flat against the pad, shoulder blades back, chest up.",
+    "execution": "Inhale, press the handles up and forward until nearly straight without locking out. Exhale on the press, return over 2 seconds.",
+    "commonMistakes": "Seat set too low, which drags the work down to the mid-chest. Shoulders rolling forward at lockout."
+  },
+  {
+    "id": "incline-smith-machine-press",
+    "name": "Incline smith machine press",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "chest/upper"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Bench at 30 degrees under the bar, positioned so the fixed path meets your upper chest.",
+    "posture": "Shoulder blades retracted, chest up, feet planted flat.",
+    "execution": "Unrack with a wrist twist. Inhale and lower to the upper chest over 2 seconds, elbows at 45 degrees. Press and exhale.",
+    "commonMistakes": "Misplacing the bench so the bar path hits the throat or the belly. Letting the fixed path do the stabilising while the shoulders go slack."
+  },
+  {
+    "id": "incline-dumbbell-fly",
+    "name": "Incline dumbbell fly",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/upper"
+    ],
+    "secondary": [
+      "shoulders/front-delt"
+    ],
+    "setup": "Bench at 30 degrees. Dumbbells pressed above the upper chest, palms facing each other.",
+    "posture": "Shoulder blades pulled back, chest up, feet flat.",
+    "execution": "Hold a fixed 10 to 15 degree elbow bend. Inhale and open the arms wide until you feel a stretch across the upper chest. Exhale and hug back up.",
+    "commonMistakes": "Straightening and re-bending the elbows. Dropping the arms far below bench level and stressing the shoulder."
+  },
+  {
+    "id": "low-to-high-cable-crossover",
+    "name": "Low-to-high cable crossover",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "chest/upper"
+    ],
+    "secondary": [
+      "shoulders/front-delt"
+    ],
+    "setup": "Both pulleys at the lowest setting. A handle in each hand, step forward into a split stance.",
+    "posture": "Chest up, shoulders back and down, slight forward lean, core braced.",
+    "execution": "Fixed slight elbow bend. Inhale, then sweep the hands up and together to about chin height, exhaling. Squeeze for a beat and lower slowly.",
+    "commonMistakes": "Shrugging at the top so the traps take over. Bending the elbows and turning it into a press."
+  },
+  {
+    "id": "feet-elevated-push-up",
+    "name": "Feet-elevated push-up",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "chest/upper"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Feet on a bench or box roughly 30 to 60cm high. Hands flat on the floor just wider than the shoulders.",
+    "posture": "Straight line from head to heels, core braced hard, glutes squeezed, neck neutral.",
+    "execution": "Inhale and lower until the chest is a fist's height off the floor, elbows at 45 degrees. Press up and exhale.",
+    "commonMistakes": "Letting the hips sag as the elevation makes it harder. Going too high too soon, which wrecks the line."
+  },
+  {
+    "id": "incline-cable-press",
+    "name": "Incline cable press",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "chest/upper"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Incline bench at 30 degrees set between two pulleys, both at the lowest setting. A handle in each hand.",
+    "posture": "Shoulder blades back, chest up, feet flat.",
+    "execution": "Inhale, press both handles up and slightly together over the upper chest, exhaling. Return over 2 seconds to a stretch.",
+    "commonMistakes": "Placing the bench too far forward so the cables pull from the wrong angle. Letting the handles drift apart at the top."
+  },
+  {
+    "id": "reverse-grip-bench-press",
+    "name": "Reverse-grip bench press",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/upper"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "shoulders/front-delt"
+    ],
+    "setup": "Flat bench, hands underhand at shoulder width. Have a spotter help unrack, since the grip is awkward.",
+    "posture": "Shoulder blades retracted, chest up, wrists straight and stacked over the elbows.",
+    "execution": "Inhale and lower to the lower chest with elbows tucked close to the ribs. Press up and exhale, driving toward the upper chest.",
+    "commonMistakes": "Loose wrists under an underhand grip. Unracking alone, which is the riskiest moment of this lift."
+  },
+  {
+    "id": "landmine-press",
+    "name": "Landmine press",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/upper"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "One end of a barbell in a landmine sleeve or a corner. Hold the free end at shoulder height in one or both hands.",
+    "posture": "Half-kneeling or standing tall, chest up, core braced, hips square to the bar.",
+    "execution": "Inhale, press the bar up and forward along its arc until the arm is nearly straight, exhaling. Lower over 2 seconds.",
+    "commonMistakes": "Leaning back to help the press. Letting the hips twist toward the working arm."
+  },
+  {
+    "id": "incline-band-press",
+    "name": "Incline band press",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "chest/upper"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Anchor the band behind an incline bench set to 30 degrees, at roughly bench height. A handle in each hand.",
+    "posture": "Shoulder blades back, chest up, feet flat.",
+    "execution": "Inhale, press up and slightly together over the upper chest, exhaling at the top where band tension peaks. Return over 2 seconds.",
+    "commonMistakes": "Letting the band snap the arms back. Anchoring too high so the resistance pulls straight down."
+  },
+  {
+    "id": "decline-barbell-bench-press",
+    "name": "Decline barbell bench press",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/lower"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "shoulders/front-delt"
+    ],
+    "setup": "Decline bench at 15 to 30 degrees, legs secured. Grip 1.5x shoulder width. Have a spotter for unracking.",
+    "posture": "Shoulder blades retracted, chest up, head supported.",
+    "execution": "Unrack over the lower chest. Inhale and lower to the lower chest over 2 seconds, elbows at 45 degrees. Press up and exhale.",
+    "commonMistakes": "Sitting up quickly afterwards while blood is pooled in the head. Bouncing the bar off the ribs."
+  },
+  {
+    "id": "decline-dumbbell-press",
+    "name": "Decline dumbbell press",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/lower"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "shoulders/front-delt"
+    ],
+    "setup": "Decline bench at 15 to 30 degrees, legs hooked. Dumbbells passed up or kicked into place.",
+    "posture": "Shoulder blades pinched, chest up, head supported on the bench.",
+    "execution": "Start above the lower chest. Inhale and lower to chest level over 2 seconds, elbows at 45 degrees. Press up and slightly in, exhaling.",
+    "commonMistakes": "Getting into position without help, which is where most decline injuries happen. Letting the dumbbells drift toward the head."
+  },
+  {
+    "id": "chest-dip",
+    "name": "Chest dip",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "chest/lower"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "shoulders/front-delt"
+    ],
+    "setup": "Parallel bars, hands at your sides. Push up to a supported start with arms straight.",
+    "posture": "Lean the torso forward about 30 degrees and keep it there. Chest up, shoulders down away from the ears, ankles crossed behind.",
+    "execution": "Inhale and lower until the upper arms are roughly parallel to the floor, elbows flaring slightly out. Press up and exhale, keeping the forward lean.",
+    "commonMistakes": "Going deeper than shoulder comfort allows. Drifting upright mid-rep, which turns it into a triceps dip. Shrugging at the bottom."
+  },
+  {
+    "id": "assisted-chest-dip-machine",
+    "name": "Assisted chest dip machine",
+    "equipment": "machine",
+    "loadType": "assisted",
+    "primary": [
+      "chest/lower"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "shoulders/front-delt"
+    ],
+    "setup": "Set the assistance weight, then kneel or stand on the pad with hands on the parallel bars.",
+    "posture": "Torso leaned forward about 30 degrees, chest up, shoulders pulled down away from the ears.",
+    "execution": "Inhale and lower until the upper arms are parallel to the floor. Press up and exhale. Remember: lower assistance weight means you are getting stronger.",
+    "commonMistakes": "Bouncing off the pad for momentum. Letting the torso drift upright and shifting the work to the triceps."
+  },
+  {
+    "id": "high-to-low-cable-crossover",
+    "name": "High-to-low cable crossover",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "chest/lower"
+    ],
+    "secondary": [
+      "shoulders/front-delt"
+    ],
+    "setup": "Both pulleys at the highest setting. A handle in each hand, step forward into a split stance.",
+    "posture": "Chest up, shoulders back and down, slight forward lean from the hips, core braced.",
+    "execution": "Fixed slight elbow bend. Inhale, sweep the hands down and together in front of the hips, exhaling. Squeeze a beat, return slowly to a stretch.",
+    "commonMistakes": "Bending the elbows into a pressdown, which makes it a triceps move. Standing too upright so the arc gets flat."
+  },
+  {
+    "id": "decline-machine-press",
+    "name": "Decline machine press",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "chest/lower"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "shoulders/front-delt"
+    ],
+    "setup": "Set the seat so the handles sit level with your lower chest. Feet flat.",
+    "posture": "Back flat against the pad, shoulder blades back, chest up.",
+    "execution": "Inhale, press the handles forward and slightly down until nearly straight. Exhale on the press, return over 2 seconds.",
+    "commonMistakes": "Seat too high, which turns it into a flat press. Locking the elbows hard at the end."
+  },
+  {
+    "id": "hands-elevated-push-up",
+    "name": "Hands-elevated push-up",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "chest/lower"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "shoulders/front-delt"
+    ],
+    "setup": "Hands on a bench or box roughly 30 to 60cm high, just wider than the shoulders. Feet on the floor, legs straight.",
+    "posture": "Straight line from head to heels, core braced, glutes squeezed.",
+    "execution": "Inhale and lower until the chest is just off the bench edge, elbows at 45 degrees. Press up and exhale.",
+    "commonMistakes": "Letting the hips pike up because the movement is easier. Choosing a surface that slides or tips."
+  },
+  {
+    "id": "decline-dumbbell-fly",
+    "name": "Decline dumbbell fly",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "chest/lower"
+    ],
+    "secondary": [
+      "shoulders/front-delt"
+    ],
+    "setup": "Decline bench at 15 to 30 degrees, legs hooked. Dumbbells pressed above the lower chest, palms facing.",
+    "posture": "Shoulder blades retracted, chest up, head supported.",
+    "execution": "Fixed 10 to 15 degree elbow bend. Inhale and open the arms wide to a chest stretch. Exhale and hug back up over the lower chest.",
+    "commonMistakes": "Going too heavy on a movement with a long lever. Dropping the arms far past bench level."
+  },
+  {
+    "id": "decline-smith-machine-press",
+    "name": "Decline smith machine press",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "chest/lower"
+    ],
+    "secondary": [
+      "triceps/triceps"
+    ],
+    "setup": "Decline bench at 15 to 30 degrees under the bar, lined up so the fixed path meets the lower chest. Legs secured.",
+    "posture": "Shoulder blades pinched, chest up, head supported.",
+    "execution": "Unrack with a wrist twist. Inhale and lower to the lower chest over 2 seconds, elbows at 45 degrees. Press and exhale.",
+    "commonMistakes": "Misaligning the bench so the fixed path lands on the ribs or throat. Rushing to sit up at the end of the set."
+  },
+  {
+    "id": "pull-up",
+    "name": "Pull-up",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "back/lats"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "back/upper",
+      "forearms/forearms",
+      "shoulders/rear-delt"
+    ],
+    "setup": "Overhand grip on a fixed bar, hands roughly 1.5x shoulder width. Hang with arms straight, ankles crossed behind.",
+    "posture": "Chest up and proud, shoulders pulled down away from the ears before the first inch of movement. Ribs down, core braced so the legs don't swing.",
+    "execution": "Exhale and drive the elbows down and back until the chin clears the bar. Lower over 2 to 3 seconds to a full hang, inhaling.",
+    "commonMistakes": "Kipping and swinging for momentum. Stopping halfway down instead of reaching a full hang. Shrugging into the ears at the bottom."
+  },
+  {
+    "id": "chin-up",
+    "name": "Chin-up",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "back/lats"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "back/upper",
+      "forearms/forearms"
+    ],
+    "setup": "Underhand grip on a fixed bar, hands about shoulder width. Hang with arms straight, ankles crossed.",
+    "posture": "Chest up, shoulders pulled down away from the ears, ribs down, core braced.",
+    "execution": "Exhale and pull the elbows down toward the ribs until the chin clears the bar. Lower over 2 to 3 seconds to a full hang, inhaling.",
+    "commonMistakes": "Swinging the legs to generate momentum. Cutting the bottom short. Letting the elbows drift far forward, which turns it into a curl."
+  },
+  {
+    "id": "assisted-pull-up-machine",
+    "name": "Assisted pull-up machine",
+    "equipment": "machine",
+    "loadType": "assisted",
+    "primary": [
+      "back/lats"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "back/upper",
+      "forearms/forearms"
+    ],
+    "setup": "Set the assistance weight, then kneel or stand on the pad and take an overhand grip 1.5x shoulder width.",
+    "posture": "Chest up, shoulders pulled down away from the ears, core braced so the pad doesn't bounce.",
+    "execution": "Exhale and drive the elbows down and back until the chin clears the bar. Lower over 2 to 3 seconds. Less assistance weight means you are getting stronger.",
+    "commonMistakes": "Bouncing off the pad at the bottom. Using so much assistance that the back barely works."
+  },
+  {
+    "id": "lat-pulldown",
+    "name": "Lat pulldown",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "back/upper",
+      "forearms/forearms"
+    ],
+    "setup": "Set the thigh pad snug. Overhand grip roughly 1.5x shoulder width. Sit with arms straight overhead.",
+    "posture": "Chest up, slight backward lean of about 15 degrees, shoulders down, core braced.",
+    "execution": "Exhale and pull the bar to the upper chest, driving the elbows down and back. Squeeze for a beat, return over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Leaning back 45 degrees and turning it into a row. Pulling the bar behind the neck, which stresses the shoulder. Yanking with the arms instead of the elbows."
+  },
+  {
+    "id": "close-grip-lat-pulldown",
+    "name": "Close-grip lat pulldown",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "back/upper",
+      "forearms/forearms"
+    ],
+    "setup": "Attach a V-handle or take a narrow neutral grip. Thigh pad snug, arms straight overhead.",
+    "posture": "Chest up, slight 15 degree lean back, shoulders pulled down, core braced.",
+    "execution": "Exhale and pull the handle to the upper chest, elbows driving straight down along the ribs. Squeeze, return over 2 to 3 seconds.",
+    "commonMistakes": "Rocking the torso to move heavier weight. Stopping short of a full overhead stretch."
+  },
+  {
+    "id": "wide-grip-lat-pulldown",
+    "name": "Wide-grip lat pulldown",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "back/upper",
+      "shoulders/rear-delt"
+    ],
+    "setup": "Overhand grip roughly 2x shoulder width. Thigh pad snug, arms straight overhead.",
+    "posture": "Chest up, slight 15 degree lean back, shoulders down away from the ears.",
+    "execution": "Exhale and pull the bar to the collarbone, elbows flaring down and out. Squeeze, return over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Going so wide the range of motion collapses. Pulling behind the neck. Shrugging at the top of the return."
+  },
+  {
+    "id": "straight-arm-pulldown",
+    "name": "Straight-arm pulldown",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "abs/upper"
+    ],
+    "setup": "Straight bar or rope on a high pulley. Stand a step back, arms straight out in front at shoulder height.",
+    "posture": "Hinge forward about 15 degrees at the hips, chest up, core braced, knees softly bent.",
+    "execution": "Keep the elbows locked in a fixed slight bend. Exhale and sweep the bar down in an arc to the thighs. Squeeze the lats a beat, return slowly, inhaling.",
+    "commonMistakes": "Bending the elbows, which turns it into a triceps pushdown. Standing too upright so the arc is short."
+  },
+  {
+    "id": "barbell-bent-over-row",
+    "name": "Barbell bent-over row",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats",
+      "back/upper"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "shoulders/rear-delt",
+      "back/lower",
+      "forearms/forearms"
+    ],
+    "setup": "Bar on the floor or in a rack. Overhand grip just wider than shoulder width, feet hip width.",
+    "posture": "Hinge at the hips to about 45 degrees, back flat, chest up, ribs down, core braced hard. Knees softly bent.",
+    "execution": "Inhale and brace. Pull the bar to the lower ribs, elbows driving back at 45 degrees. Exhale at the top, lower over 2 seconds.",
+    "commonMistakes": "Rounding the lower back, which is the main injury risk here. Standing up as you pull. Using the legs to jerk the bar."
+  },
+  {
+    "id": "pendlay-row",
+    "name": "Pendlay row",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats",
+      "back/upper"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "shoulders/rear-delt",
+      "back/lower"
+    ],
+    "setup": "Bar on the floor. Overhand grip just wider than shoulder width, torso roughly parallel to the floor.",
+    "posture": "Flat back, chest up, core braced hard, hips higher than the knees.",
+    "execution": "Inhale and brace. Explosively pull the bar to the lower ribs. Exhale, then return it fully to the floor and reset before each rep.",
+    "commonMistakes": "Letting the torso rise as you pull, which defeats the point. Rounding the back to reach the floor between reps."
+  },
+  {
+    "id": "single-arm-dumbbell-row",
+    "name": "Single-arm dumbbell row",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "back/upper",
+      "shoulders/rear-delt",
+      "forearms/forearms"
+    ],
+    "setup": "One knee and one hand on a bench, opposite foot planted. Dumbbell hanging at arm's length.",
+    "posture": "Back flat and roughly parallel to the floor, chest up, hips square, core braced.",
+    "execution": "Inhale, pull the dumbbell to the hip, elbow driving back close to the ribs. Exhale at the top, lower over 2 to 3 seconds to a full stretch.",
+    "commonMistakes": "Twisting the torso open to lift heavier. Yanking with the arm instead of leading with the elbow."
+  },
+  {
+    "id": "seated-cable-row",
+    "name": "Seated cable row",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats",
+      "back/upper"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "shoulders/rear-delt",
+      "forearms/forearms"
+    ],
+    "setup": "Feet on the platform, knees softly bent. Grab the handle and sit up tall with arms straight.",
+    "posture": "Chest up, shoulders back and down, spine neutral, core braced. Torso stays upright throughout.",
+    "execution": "Exhale and pull the handle to the navel, elbows driving straight back along the ribs. Squeeze a beat, return over 2 to 3 seconds, inhaling to a stretch.",
+    "commonMistakes": "Rocking the torso back and forth to move weight. Rounding the back at the stretch. Shrugging the shoulders on the pull."
+  },
+  {
+    "id": "t-bar-row",
+    "name": "T-bar row",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats",
+      "back/upper"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "shoulders/rear-delt",
+      "back/lower"
+    ],
+    "setup": "Straddle the bar, chest pad set if the machine has one. Take a neutral grip on the handles.",
+    "posture": "Hinge to about 45 degrees, back flat, chest up, core braced, knees softly bent.",
+    "execution": "Inhale and brace. Pull the handles to the lower ribs, elbows back at 45 degrees. Exhale at the top, lower over 2 seconds to a full stretch.",
+    "commonMistakes": "Jerking upright with the hips on every rep. Rounding the lower back under a heavy load."
+  },
+  {
+    "id": "chest-supported-machine-row",
+    "name": "Chest-supported machine row",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats",
+      "back/upper"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "shoulders/rear-delt"
+    ],
+    "setup": "Set the chest pad so the handles reach comfortably with arms straight. Feet flat.",
+    "posture": "Chest pressed into the pad, shoulders back and down, core lightly braced.",
+    "execution": "Exhale and pull the handles back, elbows driving toward the hips. Squeeze a beat, return over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Pushing the chest off the pad to gain leverage. Shrugging at the top of the pull."
+  },
+  {
+    "id": "inverted-row",
+    "name": "Inverted row",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "back/lats",
+      "back/upper"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "shoulders/rear-delt",
+      "abs/upper"
+    ],
+    "setup": "Bar in a rack at roughly hip height. Hang underneath with an overhand grip 1.5x shoulder width, heels on the floor.",
+    "posture": "Straight line from head to heels, glutes squeezed, core braced, chest up.",
+    "execution": "Exhale and pull the chest to the bar, elbows driving back at 45 degrees. Lower over 2 to 3 seconds, inhaling. Lower the bar to make it harder.",
+    "commonMistakes": "Hips sagging toward the floor. Only pulling halfway up. Craning the neck to touch the bar first."
+  },
+  {
+    "id": "dumbbell-pullover",
+    "name": "Dumbbell pullover",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats"
+    ],
+    "secondary": [
+      "chest/mid",
+      "triceps/triceps"
+    ],
+    "setup": "Lie flat on a bench, or across it with the upper back supported. Hold one dumbbell over the chest with both palms under the top plate.",
+    "posture": "Ribs down, core braced, feet planted. Hips stay level with the bench.",
+    "execution": "Fixed slight elbow bend. Inhale and lower the dumbbell in an arc behind the head until you feel a lat and ribcage stretch. Exhale and pull it back over the chest.",
+    "commonMistakes": "Letting the hips drop to chase more range. Bending the elbows heavily, which turns it into a triceps move."
+  },
+  {
+    "id": "kettlebell-row",
+    "name": "Kettlebell row",
+    "equipment": "kettlebell",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "back/upper",
+      "forearms/forearms"
+    ],
+    "setup": "One knee and one hand on a bench, opposite foot planted. Kettlebell hanging at arm's length.",
+    "posture": "Back flat and roughly parallel to the floor, chest up, hips square, core braced.",
+    "execution": "Inhale, pull the bell to the hip with the elbow tight to the ribs. Exhale at the top, lower over 2 to 3 seconds to a full stretch.",
+    "commonMistakes": "Rotating the torso to help the lift. Letting the wrist bend under the bell."
+  },
+  {
+    "id": "resistance-band-lat-pulldown",
+    "name": "Resistance band lat pulldown",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "back/upper"
+    ],
+    "setup": "Anchor the band overhead. Kneel or sit facing the anchor, a handle in each hand, arms straight up.",
+    "posture": "Chest up, shoulders down, slight 15 degree lean back, core braced.",
+    "execution": "Exhale and pull the handles down to shoulder level, elbows driving down and back. Squeeze a beat, return over 2 to 3 seconds against the band.",
+    "commonMistakes": "Letting the band snap the arms back up. Kneeling too far from the anchor so there is no stretch at the top."
+  },
+  {
+    "id": "meadows-row",
+    "name": "Meadows row",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "back/upper",
+      "shoulders/rear-delt"
+    ],
+    "setup": "One end of a barbell in a landmine sleeve or corner. Stand side-on, stagger the stance, and grip the free end overhand.",
+    "posture": "Hinge at the hips with a flat back, chest up, free hand braced on the knee, core tight.",
+    "execution": "Inhale, pull the bar up toward the hip with the elbow high and back. Exhale at the top, lower over 2 to 3 seconds to a full stretch.",
+    "commonMistakes": "Twisting the torso to add reach. Rounding the back under a heavy loaded end."
+  },
+  {
+    "id": "machine-pullover",
+    "name": "Machine pullover",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "back/lats"
+    ],
+    "secondary": [
+      "triceps/triceps"
+    ],
+    "setup": "Set the seat so the shoulders line up with the machine's pivot. Secure the lap belt if there is one.",
+    "posture": "Back flat against the pad, chest up, core braced.",
+    "execution": "Inhale at the top stretch. Pull the handles down in an arc toward the thighs, exhaling. Squeeze the lats a beat, return over 2 to 3 seconds.",
+    "commonMistakes": "Cutting the top stretch short. Pushing with the arms instead of driving from the lats."
+  },
+  {
+    "id": "barbell-shrug",
+    "name": "Barbell shrug",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Bar held in front of the thighs, overhand grip just wider than the hips. Feet hip width.",
+    "posture": "Stand tall, chest up, shoulders back, arms completely straight, core braced. Chin tucked slightly.",
+    "execution": "Exhale and lift the shoulders straight up toward the ears as high as possible. Hold one second at the top, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Rolling the shoulders in circles, which does nothing extra and grinds the joint. Bending the elbows. Bouncing at the bottom."
+  },
+  {
+    "id": "dumbbell-shrug",
+    "name": "Dumbbell shrug",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "A dumbbell in each hand at your sides, palms facing in. Feet hip width.",
+    "posture": "Stand tall, chest up, arms straight, core braced, chin slightly tucked.",
+    "execution": "Exhale and lift the shoulders straight up toward the ears. Hold one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Rolling the shoulders. Leaning forward or back to add momentum."
+  },
+  {
+    "id": "machine-shrug",
+    "name": "Machine shrug",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Set the handles so you can stand tall with arms straight. Feet flat and shoulder width.",
+    "posture": "Stand tall, chest up, arms straight, core braced.",
+    "execution": "Exhale and shrug the shoulders straight up. Hold one second, lower over 2 seconds under control, inhaling.",
+    "commonMistakes": "Bending the knees to bounce the weight up. Cutting the range short at the top."
+  },
+  {
+    "id": "cable-shrug",
+    "name": "Cable shrug",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Straight bar on a low pulley, overhand grip. Step back until the cable is taut. Feet hip width.",
+    "posture": "Stand tall, chest up, arms straight, core braced, slight backward lean to counter the cable.",
+    "execution": "Exhale and shrug straight up. Hold one second, lower over 2 seconds against the cable, inhaling.",
+    "commonMistakes": "Leaning too far back and turning it into an upright row. Letting the cable drag the shoulders down fast."
+  },
+  {
+    "id": "trap-bar-shrug",
+    "name": "Trap bar shrug",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Stand inside a trap bar, grip the neutral handles, and stand up to a tall position.",
+    "posture": "Chest up, shoulders back, arms straight, core braced. The neutral grip keeps the load beside you.",
+    "execution": "Exhale and shrug straight up. Hold one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Bending the elbows. Using leg drive to bounce the bar."
+  },
+  {
+    "id": "kettlebell-shrug",
+    "name": "Kettlebell shrug",
+    "equipment": "kettlebell",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "A kettlebell in each hand at your sides, arms straight. Feet hip width.",
+    "posture": "Stand tall, chest up, core braced, wrists straight.",
+    "execution": "Exhale and shrug the shoulders straight up. Hold one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Rolling the shoulders. Letting the bells swing forward and back."
+  },
+  {
+    "id": "face-pull",
+    "name": "Face pull",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper",
+      "shoulders/rear-delt"
+    ],
+    "secondary": [
+      "biceps/biceps"
+    ],
+    "setup": "Rope attachment on a pulley set just above head height. Grip both rope ends with thumbs pointing back. Step back until taut.",
+    "posture": "Split stance, chest up, core braced, slight lean back. Shoulders down away from the ears.",
+    "execution": "Exhale and pull the rope toward your forehead, splitting the hands wide and driving the elbows high and back. Squeeze a beat, return over 2 seconds, inhaling.",
+    "commonMistakes": "Setting the pulley too low, which turns it into a row. Letting the elbows drop below shoulder height. Using so much weight the torso rocks."
+  },
+  {
+    "id": "barbell-upright-row",
+    "name": "Barbell upright row",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper",
+      "shoulders/side-delt"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "forearms/forearms"
+    ],
+    "setup": "Bar in front of the thighs, overhand grip at roughly shoulder width. Wider is kinder to the shoulders than narrow.",
+    "posture": "Stand tall, chest up, core braced, shoulders back.",
+    "execution": "Exhale and pull the bar up along the body, leading with the elbows, stopping when the upper arms reach shoulder height. Lower over 2 seconds, inhaling.",
+    "commonMistakes": "Pulling above shoulder height with a narrow grip, which pinches the shoulder. Leaning back to heave the bar. Stop the movement if it pinches."
+  },
+  {
+    "id": "dumbbell-upright-row",
+    "name": "Dumbbell upright row",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper",
+      "shoulders/side-delt"
+    ],
+    "secondary": [
+      "biceps/biceps",
+      "forearms/forearms"
+    ],
+    "setup": "A dumbbell in each hand in front of the thighs, palms facing the body. Feet hip width.",
+    "posture": "Stand tall, chest up, core braced, shoulders back and down.",
+    "execution": "Exhale and pull the dumbbells up along the body, elbows leading, stopping at shoulder height. Lower over 2 seconds, inhaling.",
+    "commonMistakes": "Going above shoulder height. Swinging the torso. Letting the wrists bend sharply at the top."
+  },
+  {
+    "id": "cable-upright-row",
+    "name": "Cable upright row",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper",
+      "shoulders/side-delt"
+    ],
+    "secondary": [
+      "biceps/biceps"
+    ],
+    "setup": "Straight bar on a low pulley, overhand grip at shoulder width. Stand close so the cable runs vertically.",
+    "posture": "Stand tall, chest up, core braced, shoulders back.",
+    "execution": "Exhale and pull the bar up along the body, elbows leading, stopping at shoulder height. Lower over 2 seconds, inhaling.",
+    "commonMistakes": "Standing too far from the pulley so the cable pulls forward. Shrugging hard at the top."
+  },
+  {
+    "id": "chest-supported-dumbbell-row",
+    "name": "Chest-supported dumbbell row",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper"
+    ],
+    "secondary": [
+      "back/lats",
+      "biceps/biceps",
+      "shoulders/rear-delt"
+    ],
+    "setup": "Incline bench at 30 to 45 degrees. Lie chest-down with a dumbbell in each hand hanging straight down.",
+    "posture": "Chest pressed into the pad, head neutral, shoulders down, core lightly braced.",
+    "execution": "Exhale and row both dumbbells toward the hips, elbows driving back and close. Squeeze a beat, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Lifting the chest off the pad. Flaring the elbows straight out, which shifts work to the rear delts only."
+  },
+  {
+    "id": "seal-row",
+    "name": "Seal row",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper"
+    ],
+    "secondary": [
+      "back/lats",
+      "biceps/biceps",
+      "shoulders/rear-delt"
+    ],
+    "setup": "Lie chest-down on a bench raised high enough that the bar clears the floor. Grip the bar with arms hanging straight.",
+    "posture": "Chest and hips on the bench throughout, head neutral, core lightly braced.",
+    "execution": "Exhale and row the bar to the lower ribs, elbows driving back. Squeeze a beat, lower over 2 to 3 seconds to a full stretch, inhaling.",
+    "commonMistakes": "Lifting the chest off the bench to cheat, which is the whole reason this variation exists. Bouncing the bar off the floor."
+  },
+  {
+    "id": "prone-y-raise",
+    "name": "Prone Y-raise",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper"
+    ],
+    "secondary": [
+      "shoulders/rear-delt"
+    ],
+    "setup": "Incline bench at 30 degrees. Lie chest-down holding light dumbbells, arms hanging straight down.",
+    "posture": "Chest on the pad, head neutral, shoulders pulled down away from the ears.",
+    "execution": "Thumbs up. Exhale and raise both arms out and up into a Y shape until level with the ears. Hold one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Going too heavy, which turns it into a shrug. Shrugging the shoulders up instead of keeping them down."
+  },
+  {
+    "id": "farmer-s-carry",
+    "name": "Farmer's carry",
+    "equipment": "dumbbell",
+    "loadType": "timed",
+    "primary": [
+      "back/upper",
+      "forearms/forearms"
+    ],
+    "secondary": [
+      "abs/upper",
+      "obliques/obliques"
+    ],
+    "setup": "A heavy dumbbell in each hand at your sides, palms facing in. Stand tall before moving.",
+    "posture": "Chest up, shoulders back and down, ribs stacked over the hips, core braced hard. Head neutral, eyes forward.",
+    "execution": "Walk at a steady controlled pace for the set duration. Breathe in a shallow rhythm rather than holding your breath. Set the weights down deliberately.",
+    "commonMistakes": "Leaning back or to one side. Shrugging the shoulders up. Holding the breath for the whole carry."
+  },
+  {
+    "id": "band-pull-apart",
+    "name": "Band pull-apart",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "back/upper",
+      "shoulders/rear-delt"
+    ],
+    "secondary": [],
+    "setup": "Hold a light band with both hands, arms straight out in front at shoulder height, hands shoulder width.",
+    "posture": "Stand tall, chest up, ribs down, shoulders back and down, core braced.",
+    "execution": "Exhale and pull the band apart until the arms are out to the sides, squeezing the shoulder blades together. Hold one second, return over 2 seconds, inhaling.",
+    "commonMistakes": "Bending the elbows. Letting the band snap back. Using a band so heavy the shoulders shrug up."
+  },
+  {
+    "id": "back-extension",
+    "name": "Back extension",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "back/lower"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Set the hip pad just below the hip bones so the hips can hinge freely. Ankles secured, feet on the platform.",
+    "posture": "Spine neutral from head to tail, chest up, core braced, arms crossed on the chest.",
+    "execution": "Inhale and lower by hinging at the hips until you feel a hamstring stretch, roughly 60 to 90 degrees. Exhale and rise until the body is straight.",
+    "commonMistakes": "Hyperextending past a straight line at the top, which compresses the lower back. Rounding the spine on the way down instead of hinging."
+  },
+  {
+    "id": "machine-back-extension",
+    "name": "Machine back extension",
+    "equipment": "machine",
+    "loadType": "bodyweight",
+    "primary": [
+      "back/lower"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Set the seat and pad so the pad sits across the upper back and the pivot lines up with your hips.",
+    "posture": "Chest up, spine neutral, core braced, feet flat.",
+    "execution": "Inhale, then push back against the pad to a straight torso, exhaling. Pause one second, return over 2 to 3 seconds under control.",
+    "commonMistakes": "Slamming back into full extension. Letting the weight stack drop and yank you forward."
+  },
+  {
+    "id": "conventional-deadlift",
+    "name": "Conventional deadlift",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/lower",
+      "hamstrings/hamstrings",
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "back/upper",
+      "back/lats",
+      "quads/quads",
+      "forearms/forearms"
+    ],
+    "setup": "Bar over mid-foot, roughly 2cm from the shins. Feet hip width. Hinge and grip just outside the legs.",
+    "posture": "Chest up, flat back, shoulders slightly ahead of the bar, hips higher than the knees, lats squeezed as if holding paper under the armpits. Core braced hard.",
+    "execution": "Inhale and brace. Push the floor away with the legs, keeping the bar dragging up the shins. Stand tall, exhale at the top. Hinge back down under control.",
+    "commonMistakes": "Rounding the lower back, which is the main injury risk. Letting the hips shoot up first so it becomes a stiff-leg pull. Leaning back at the top."
+  },
+  {
+    "id": "trap-bar-deadlift",
+    "name": "Trap bar deadlift",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/lower",
+      "quads/quads",
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings",
+      "back/upper",
+      "forearms/forearms"
+    ],
+    "setup": "Stand inside the trap bar, feet hip width, centred between the handles. Hinge and take the neutral grip.",
+    "posture": "Chest up, flat back, hips slightly higher than the knees, shoulders down, core braced hard.",
+    "execution": "Inhale and brace. Push the floor away and stand tall, exhaling at the top. Hinge back down under control, touching the plates lightly.",
+    "commonMistakes": "Standing too far forward or back inside the frame. Rounding the back. Jerking the bar off the floor."
+  },
+  {
+    "id": "barbell-good-morning",
+    "name": "Barbell good morning",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/lower",
+      "hamstrings/hamstrings"
+    ],
+    "secondary": [
+      "glutes/glutes"
+    ],
+    "setup": "Bar racked across the upper back as in a squat. Feet hip to shoulder width. Start light, this one punishes ego.",
+    "posture": "Chest up, flat back, core braced hard, knees softly bent and held there.",
+    "execution": "Inhale and brace. Hinge at the hips, pushing them straight back, until the torso reaches roughly 45 to 70 degrees or the hamstrings stop you. Exhale as you drive the hips forward to stand.",
+    "commonMistakes": "Bending the knees more as you descend, which turns it into a squat. Rounding the back. Going far heavier than the hamstrings can control."
+  },
+  {
+    "id": "rack-pull",
+    "name": "Rack pull",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "back/lower",
+      "back/upper"
+    ],
+    "secondary": [
+      "back/lats",
+      "glutes/glutes",
+      "forearms/forearms"
+    ],
+    "setup": "Bar set on rack pins at roughly knee height. Feet hip width, grip just outside the legs.",
+    "posture": "Chest up, flat back, shoulders over or slightly behind the bar, lats engaged, core braced hard.",
+    "execution": "Inhale and brace. Drive the hips forward and stand tall, exhaling at the top. Lower under control back to the pins and let it settle before the next rep.",
+    "commonMistakes": "Loading far more than you can control because the range is short. Yanking off the pins. Leaning back at lockout."
+  },
+  {
+    "id": "reverse-hyperextension",
+    "name": "Reverse hyperextension",
+    "equipment": "machine",
+    "loadType": "bodyweight",
+    "primary": [
+      "back/lower"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Lie chest-down on the machine, hips at the edge of the pad, ankles behind the roller. Grip the handles.",
+    "posture": "Chest and ribs on the pad, core braced, spine neutral, head in line with the torso.",
+    "execution": "Inhale at the bottom. Exhale and raise the legs until they are level with the torso, squeezing the glutes. Lower over 2 to 3 seconds.",
+    "commonMistakes": "Swinging the legs and using momentum. Lifting past horizontal into lower-back hyperextension."
+  },
+  {
+    "id": "superman",
+    "name": "Superman",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "back/lower"
+    ],
+    "secondary": [
+      "glutes/glutes"
+    ],
+    "setup": "Lie face down on the floor, arms extended overhead, legs straight, forehead resting down.",
+    "posture": "Neck neutral, core lightly engaged, hips pressed into the floor.",
+    "execution": "Exhale and lift the arms, chest and legs a few inches off the floor at the same time. Hold for 2 seconds, lower slowly and inhale.",
+    "commonMistakes": "Cranking the neck up to look forward. Lifting so high the lower back pinches."
+  },
+  {
+    "id": "bird-dog",
+    "name": "Bird dog",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "back/lower"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "abs/upper"
+    ],
+    "setup": "On all fours, hands under the shoulders and knees under the hips. Spine neutral.",
+    "posture": "Flat back like a tabletop, core braced, hips level, neck in line with the spine.",
+    "execution": "Exhale and extend the right arm forward and the left leg back until both are level with the torso. Hold 2 seconds, return slowly, inhale, then switch sides.",
+    "commonMistakes": "Letting the hips rotate open as the leg lifts. Lifting the limbs above shoulder or hip height and arching the lower back."
+  },
+  {
+    "id": "barbell-overhead-press",
+    "name": "Barbell overhead press",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "shoulders/side-delt",
+      "triceps/triceps",
+      "back/upper",
+      "abs/upper"
+    ],
+    "setup": "Bar racked at upper-chest height. Grip just outside shoulder width, elbows slightly in front of the bar. Feet hip width.",
+    "posture": "Stand tall, ribs down, glutes and core braced hard so the lower back doesn't arch. Chest up, chin tucked back out of the bar path.",
+    "execution": "Inhale and brace. Press the bar straight up past the face, then push the head slightly forward once it clears. Exhale at lockout with the bar over mid-foot. Lower to the collarbone over 2 seconds.",
+    "commonMistakes": "Leaning back into a standing incline press. Pressing around the face instead of tucking the chin. Letting the ribs flare and the lower back arch."
+  },
+  {
+    "id": "seated-dumbbell-shoulder-press",
+    "name": "Seated dumbbell shoulder press",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "shoulders/side-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Upright bench with the back pad near vertical. Dumbbells at shoulder height, palms forward, elbows at about 45 degrees to the torso.",
+    "posture": "Back against the pad, ribs down, core braced, feet flat and driving into the floor.",
+    "execution": "Inhale, press the dumbbells up and slightly together until the arms are nearly straight. Exhale at the top, lower over 2 seconds to ear height.",
+    "commonMistakes": "Clanging the dumbbells together at the top. Flaring the elbows straight out to 90 degrees. Arching the lower back off the pad."
+  },
+  {
+    "id": "standing-dumbbell-shoulder-press",
+    "name": "Standing dumbbell shoulder press",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "shoulders/side-delt",
+      "triceps/triceps",
+      "abs/upper"
+    ],
+    "setup": "Dumbbells at shoulder height, palms forward, elbows at about 45 degrees. Feet hip width.",
+    "posture": "Stand tall, ribs down, glutes and core braced hard, chest up.",
+    "execution": "Inhale and brace. Press up and slightly together until the arms are nearly straight, exhaling. Lower over 2 seconds to ear height.",
+    "commonMistakes": "Using a leg dip to start the press, which makes it a push press. Leaning back as the set gets hard."
+  },
+  {
+    "id": "machine-shoulder-press",
+    "name": "Machine shoulder press",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "shoulders/side-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Set the seat so the handles sit at roughly shoulder or ear height. Feet flat.",
+    "posture": "Back against the pad, ribs down, core braced, chest up.",
+    "execution": "Inhale, press the handles up until the arms are nearly straight without locking hard. Exhale on the press, lower over 2 to 3 seconds.",
+    "commonMistakes": "Seat set too low, which forces an awkward overhead angle. Slamming into lockout."
+  },
+  {
+    "id": "smith-machine-shoulder-press",
+    "name": "Smith machine shoulder press",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "shoulders/side-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Bench set upright under the bar so the fixed path runs just in front of the face. Grip just outside shoulder width.",
+    "posture": "Back against the pad, ribs down, core braced, chin tucked out of the bar path.",
+    "execution": "Unrack with a wrist twist. Inhale, press straight up to nearly locked, exhaling. Lower to chin height over 2 seconds.",
+    "commonMistakes": "Placing the bench so the bar path scrapes the nose. Letting the fixed path do the stabilising while the core goes slack."
+  },
+  {
+    "id": "arnold-press",
+    "name": "Arnold press",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "shoulders/side-delt",
+      "triceps/triceps"
+    ],
+    "setup": "Seated upright. Start with dumbbells at chest height, palms facing you, elbows tucked in front.",
+    "posture": "Back against the pad, ribs down, core braced, chest up.",
+    "execution": "Inhale. As you press up, rotate the palms outward so they face forward at the top. Exhale at lockout. Reverse the rotation on the way down over 2 to 3 seconds.",
+    "commonMistakes": "Rushing the rotation so it happens all at once at the top. Using heavy weight, which makes the rotation jerky and hard on the shoulder."
+  },
+  {
+    "id": "push-press",
+    "name": "Push press",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "shoulders/side-delt",
+      "triceps/triceps",
+      "quads/quads"
+    ],
+    "setup": "Bar racked on the front delts at collarbone height, grip just outside shoulder width. Feet hip width.",
+    "posture": "Chest up, ribs down, core braced hard, weight through the mid-foot.",
+    "execution": "Inhale and brace. Dip the knees about 10cm, then drive explosively through the legs and press the bar overhead, exhaling at lockout. Lower to the shoulders under control.",
+    "commonMistakes": "Dipping too deep, which turns it into a squat. Letting the chest fall forward during the dip. Leaning back at lockout."
+  },
+  {
+    "id": "dumbbell-front-raise",
+    "name": "Dumbbell front raise",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "shoulders/side-delt"
+    ],
+    "setup": "A dumbbell in each hand in front of the thighs, palms facing the body. Feet hip width.",
+    "posture": "Stand tall, chest up, ribs down, core braced, shoulders back and down.",
+    "execution": "Fixed slight elbow bend. Exhale and raise one or both arms forward to shoulder height, no higher. Hold one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Swinging the torso to throw the weight up. Going above shoulder height, where the traps take over."
+  },
+  {
+    "id": "barbell-front-raise",
+    "name": "Barbell front raise",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "shoulders/side-delt"
+    ],
+    "setup": "Bar held in front of the thighs, overhand grip at shoulder width. Feet hip width.",
+    "posture": "Stand tall, chest up, ribs down, core braced hard, glutes squeezed.",
+    "execution": "Fixed slight elbow bend. Exhale and raise the bar forward to shoulder height. Hold one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Leaning back to counterbalance the bar. Using momentum from the hips."
+  },
+  {
+    "id": "cable-front-raise",
+    "name": "Cable front raise",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "shoulders/side-delt"
+    ],
+    "setup": "Straight bar or single handle on a low pulley behind you. Step forward until the cable is taut.",
+    "posture": "Stand tall, chest up, ribs down, core braced, slight forward lean to counter the cable.",
+    "execution": "Fixed slight elbow bend. Exhale and raise the handle forward to shoulder height. Hold one second, lower over 2 to 3 seconds against the cable.",
+    "commonMistakes": "Letting the cable drag the arm down fast. Rocking the torso to start each rep."
+  },
+  {
+    "id": "plate-front-raise",
+    "name": "Plate front raise",
+    "equipment": "other",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "shoulders/side-delt"
+    ],
+    "setup": "Hold a weight plate at the 3 and 9 o'clock positions with both hands, in front of the thighs.",
+    "posture": "Stand tall, chest up, ribs down, core braced, shoulders back.",
+    "execution": "Fixed slight elbow bend. Exhale and raise the plate forward to shoulder height. Hold one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Raising above shoulder height. Leaning back as the plate gets further from the body."
+  },
+  {
+    "id": "landmine-shoulder-press",
+    "name": "Landmine shoulder press",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "abs/upper"
+    ],
+    "setup": "One barbell end in a landmine sleeve or corner. Hold the free end at shoulder height, half-kneeling or standing.",
+    "posture": "Chest up, ribs down, hips square, core braced hard. Torso stays vertical.",
+    "execution": "Inhale, press the bar up and forward along its natural arc until the arm is nearly straight, exhaling. Lower over 2 to 3 seconds.",
+    "commonMistakes": "Leaning back to help. Letting the hips rotate toward the pressing arm."
+  },
+  {
+    "id": "pike-push-up",
+    "name": "Pike push-up",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "shoulders/side-delt"
+    ],
+    "setup": "Hands flat on the floor slightly wider than the shoulders, feet walked in so the hips are high and the body forms an inverted V.",
+    "posture": "Hips high, back flat, core braced, head between the arms and neck neutral.",
+    "execution": "Inhale and lower until the crown of the head is just off the floor, elbows at 45 degrees. Press up and exhale.",
+    "commonMistakes": "Letting the hips drop so it becomes a regular push-up. Banging the head on the floor. Flaring the elbows straight out."
+  },
+  {
+    "id": "kettlebell-overhead-press",
+    "name": "Kettlebell overhead press",
+    "equipment": "kettlebell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "triceps/triceps",
+      "abs/upper"
+    ],
+    "setup": "Clean one kettlebell to the rack position at the shoulder, bell resting on the back of the forearm, elbow tucked.",
+    "posture": "Stand tall, ribs down, glutes and core braced, wrist straight and stacked over the elbow.",
+    "execution": "Inhale and brace. Press the bell up, letting the palm rotate to face forward at lockout, exhaling. Lower over 2 to 3 seconds to the rack.",
+    "commonMistakes": "Letting the wrist bend back under the bell. Leaning away from the working side."
+  },
+  {
+    "id": "band-overhead-press",
+    "name": "Band overhead press",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/front-delt"
+    ],
+    "secondary": [
+      "triceps/triceps"
+    ],
+    "setup": "Stand on the middle of the band, a handle in each hand at shoulder height, palms forward.",
+    "posture": "Stand tall, ribs down, core and glutes braced, chest up.",
+    "execution": "Inhale, press up until the arms are nearly straight, exhaling at the top where band tension peaks. Lower over 2 to 3 seconds against the band.",
+    "commonMistakes": "Letting the band snap the arms down. Arching the lower back as tension increases near lockout."
+  },
+  {
+    "id": "dumbbell-lateral-raise",
+    "name": "Dumbbell lateral raise",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/side-delt"
+    ],
+    "secondary": [
+      "back/upper"
+    ],
+    "setup": "A light dumbbell in each hand at your sides, palms facing in. Feet hip width.",
+    "posture": "Stand tall, chest up, ribs down, shoulders pulled down away from the ears, core braced.",
+    "execution": "Fixed slight elbow bend. Exhale and raise the arms out to the sides to shoulder height, leading with the elbows. Hold one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Swinging the torso to heave the weights up. Going above shoulder height, which hands the work to the traps. Shrugging as you lift."
+  },
+  {
+    "id": "seated-dumbbell-lateral-raise",
+    "name": "Seated dumbbell lateral raise",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/side-delt"
+    ],
+    "secondary": [],
+    "setup": "Sit on the end of a bench, feet flat, a dumbbell in each hand at your sides.",
+    "posture": "Sit tall, chest up, shoulders down away from the ears, core braced. Seated position removes the option to swing.",
+    "execution": "Fixed slight elbow bend. Exhale and raise the arms out to shoulder height. Hold one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Leaning the torso back to cheat. Shrugging at the top."
+  },
+  {
+    "id": "cable-lateral-raise",
+    "name": "Cable lateral raise",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/side-delt"
+    ],
+    "secondary": [
+      "back/upper"
+    ],
+    "setup": "Single handle on the lowest pulley. Stand side-on, take the handle in the far hand across the body.",
+    "posture": "Stand tall, chest up, shoulders down, core braced, free hand on the frame for balance.",
+    "execution": "Fixed slight elbow bend. Exhale and raise the arm out to shoulder height. Hold one second, lower over 2 to 3 seconds against the cable.",
+    "commonMistakes": "Letting the cable pull the arm down fast. Leaning away from the machine to gain leverage."
+  },
+  {
+    "id": "leaning-cable-lateral-raise",
+    "name": "Leaning cable lateral raise",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/side-delt"
+    ],
+    "secondary": [],
+    "setup": "Grip the machine upright with one hand and lean away so the body tilts about 20 degrees. Handle from the low pulley in the far hand.",
+    "posture": "Body in a straight line from the anchoring hand to the feet, core braced, shoulder pulled down.",
+    "execution": "Fixed slight elbow bend. Exhale and raise the arm out to shoulder height. Hold one second, lower over 2 to 3 seconds.",
+    "commonMistakes": "Swinging the whole body in and out from the upright. Shrugging at the top of the raise."
+  },
+  {
+    "id": "machine-lateral-raise",
+    "name": "Machine lateral raise",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/side-delt"
+    ],
+    "secondary": [],
+    "setup": "Set the seat so the shoulder joints line up with the machine's pivot points. Arms against the pads.",
+    "posture": "Sit tall, back against the pad, chest up, shoulders down away from the ears.",
+    "execution": "Exhale and press the pads out and up to shoulder height, leading with the elbows. Hold one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Seat set too high or low so the pivot misses the shoulder. Shrugging into the pads."
+  },
+  {
+    "id": "band-lateral-raise",
+    "name": "Band lateral raise",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/side-delt"
+    ],
+    "secondary": [],
+    "setup": "Stand on the middle of a light band, a handle in each hand at your sides.",
+    "posture": "Stand tall, chest up, shoulders down, core braced.",
+    "execution": "Fixed slight elbow bend. Exhale and raise the arms out to shoulder height where tension peaks. Hold one second, lower over 2 to 3 seconds.",
+    "commonMistakes": "Using a band so heavy the last few degrees force a shrug. Letting the band snap the arms down."
+  },
+  {
+    "id": "kettlebell-lateral-raise",
+    "name": "Kettlebell lateral raise",
+    "equipment": "kettlebell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/side-delt"
+    ],
+    "secondary": [],
+    "setup": "A light kettlebell in each hand at your sides, bells hanging below the handles.",
+    "posture": "Stand tall, chest up, shoulders down, core braced, wrists straight.",
+    "execution": "Fixed slight elbow bend. Exhale and raise the arms out to shoulder height. Hold one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Letting the bells swing forward. Going heavier than the offset load allows and shrugging."
+  },
+  {
+    "id": "plate-lateral-raise",
+    "name": "Plate lateral raise",
+    "equipment": "other",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/side-delt"
+    ],
+    "secondary": [],
+    "setup": "A light plate in each hand held by the rim, arms at your sides.",
+    "posture": "Stand tall, chest up, shoulders down away from the ears, core braced.",
+    "execution": "Fixed slight elbow bend. Exhale and raise the arms out to shoulder height. Hold one second, lower over 2 to 3 seconds.",
+    "commonMistakes": "Gripping so hard the forearms fatigue first. Raising above shoulder height."
+  },
+  {
+    "id": "lu-raise",
+    "name": "Lu raise",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/side-delt"
+    ],
+    "secondary": [
+      "back/upper",
+      "shoulders/front-delt"
+    ],
+    "setup": "Very light dumbbells at your sides, palms facing in. Feet hip width. Start lighter than you think.",
+    "posture": "Stand tall, chest up, ribs down, core braced hard, shoulders down.",
+    "execution": "Exhale and sweep the arms out and all the way overhead until the dumbbells nearly touch above the head. Lower over 3 seconds along the same path, inhaling.",
+    "commonMistakes": "Using anything but very light weight. Arching the lower back as the arms pass overhead. Rushing the lowering phase."
+  },
+  {
+    "id": "cable-y-raise",
+    "name": "Cable Y-raise",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/side-delt"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "back/upper"
+    ],
+    "setup": "Two low pulleys, handles crossed so the left hand takes the right cable and vice versa. Step back until taut.",
+    "posture": "Stand tall, chest up, ribs down, core braced, shoulders pulled down.",
+    "execution": "Thumbs up. Exhale and sweep both arms out and up into a Y at about 45 degrees above the shoulders. Hold one second, lower over 2 to 3 seconds.",
+    "commonMistakes": "Shrugging the shoulders up into the ears. Using enough weight that the torso leans back."
+  },
+  {
+    "id": "barbell-overhead-carry",
+    "name": "Barbell overhead carry",
+    "equipment": "barbell",
+    "loadType": "timed",
+    "primary": [
+      "shoulders/side-delt"
+    ],
+    "secondary": [
+      "abs/upper",
+      "back/upper"
+    ],
+    "setup": "Press a light barbell overhead with a grip just outside shoulder width. Lock the arms before you move.",
+    "posture": "Arms locked straight with the bar over mid-foot, ribs down, glutes and core braced hard, chest up, eyes forward.",
+    "execution": "Walk at a slow controlled pace for the set duration, breathing shallow and steady. Lower the bar carefully to the rack or shoulders at the end.",
+    "commonMistakes": "Letting the ribs flare and the bar drift behind the head. Holding the breath. Starting heavier than you can control overhead."
+  },
+  {
+    "id": "bent-over-dumbbell-reverse-fly",
+    "name": "Bent-over dumbbell reverse fly",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/rear-delt"
+    ],
+    "secondary": [
+      "back/upper"
+    ],
+    "setup": "A light dumbbell in each hand. Hinge at the hips until the torso is roughly parallel to the floor, arms hanging straight down.",
+    "posture": "Flat back, chest up, core braced, knees softly bent, head in line with the spine.",
+    "execution": "Fixed slight elbow bend. Exhale and raise the arms out to the sides until level with the torso, squeezing the shoulder blades. Lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Standing up as you raise. Using heavy weight so the movement becomes a row. Rounding the lower back."
+  },
+  {
+    "id": "chest-supported-dumbbell-reverse-fly",
+    "name": "Chest-supported dumbbell reverse fly",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/rear-delt"
+    ],
+    "secondary": [
+      "back/upper"
+    ],
+    "setup": "Incline bench at 30 to 45 degrees. Lie chest-down with light dumbbells hanging straight down.",
+    "posture": "Chest on the pad, head neutral, shoulders pulled down away from the ears.",
+    "execution": "Fixed slight elbow bend. Exhale and raise the arms out to the sides to shoulder level. Hold one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Lifting the chest off the pad. Bending the elbows and rowing instead of flying."
+  },
+  {
+    "id": "reverse-pec-deck",
+    "name": "Reverse pec deck",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/rear-delt"
+    ],
+    "secondary": [
+      "back/upper"
+    ],
+    "setup": "Turn to face the pec deck's back pad. Set the handles so the arms start straight out in front at shoulder height.",
+    "posture": "Chest against the pad, sit tall, shoulders down away from the ears, core lightly braced.",
+    "execution": "Fixed slight elbow bend. Exhale and sweep the handles out and back until level with the torso. Squeeze one second, return over 2 to 3 seconds.",
+    "commonMistakes": "Setting the start too far back, which overstretches the shoulder. Shrugging during the squeeze."
+  },
+  {
+    "id": "machine-rear-delt-fly",
+    "name": "Machine rear delt fly",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/rear-delt"
+    ],
+    "secondary": [
+      "back/upper"
+    ],
+    "setup": "Set the seat so the handles sit at shoulder height with the chest against the pad.",
+    "posture": "Chest on the pad, sit tall, shoulders pulled down, core lightly braced.",
+    "execution": "Exhale and drive the handles back in a wide arc until level with the torso. Squeeze one second, return over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Pushing the chest off the pad for leverage. Bending the elbows into a row."
+  },
+  {
+    "id": "cable-reverse-fly",
+    "name": "Cable reverse fly",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/rear-delt"
+    ],
+    "secondary": [
+      "back/upper"
+    ],
+    "setup": "Two pulleys at shoulder height, cables crossed so each hand takes the opposite cable. Step back until taut.",
+    "posture": "Stand tall or hinge slightly, chest up, shoulders down, core braced, split stance for stability.",
+    "execution": "Fixed slight elbow bend. Exhale and sweep the arms out and back in a wide arc. Squeeze one second, return over 2 to 3 seconds.",
+    "commonMistakes": "Letting the cables pull the arms forward fast. Bending the elbows and turning it into a row."
+  },
+  {
+    "id": "reverse-cable-crossover",
+    "name": "Reverse cable crossover",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/rear-delt"
+    ],
+    "secondary": [
+      "back/upper"
+    ],
+    "setup": "Two pulleys at shoulder height, handles crossed in front. Step back until there is tension, feet in a split stance.",
+    "posture": "Chest up, shoulders down away from the ears, core braced, torso still.",
+    "execution": "Fixed slight elbow bend. Exhale and pull the arms apart and back until level with the torso. Squeeze one second, return over 2 to 3 seconds.",
+    "commonMistakes": "Twisting the torso to add range. Shrugging at the end of the pull."
+  },
+  {
+    "id": "rear-delt-cable-row-to-neck",
+    "name": "Rear delt cable row to neck",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/rear-delt"
+    ],
+    "secondary": [
+      "back/upper",
+      "biceps/biceps"
+    ],
+    "setup": "Rope on a pulley set at upper-chest height. Grip both ends, step back until taut, split stance.",
+    "posture": "Chest up, shoulders down, core braced, slight lean back.",
+    "execution": "Exhale and pull the rope toward the neck with the elbows high and flared out to the sides. Squeeze one second, return over 2 to 3 seconds.",
+    "commonMistakes": "Dropping the elbows, which turns it into a normal row. Using enough weight that the torso rocks back."
+  },
+  {
+    "id": "prone-incline-rear-delt-raise",
+    "name": "Prone incline rear delt raise",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/rear-delt"
+    ],
+    "secondary": [
+      "back/upper"
+    ],
+    "setup": "Incline bench at 30 degrees. Lie chest-down with light dumbbells hanging straight down, palms facing back.",
+    "posture": "Chest on the pad, head neutral, shoulders pulled down.",
+    "execution": "Fixed slight elbow bend. Exhale and raise the arms straight out to the sides to shoulder level. Hold one second, lower over 2 to 3 seconds.",
+    "commonMistakes": "Going heavy and swinging. Letting the arms drift back toward the hips instead of straight out."
+  },
+  {
+    "id": "band-reverse-fly",
+    "name": "Band reverse fly",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/rear-delt"
+    ],
+    "secondary": [
+      "back/upper"
+    ],
+    "setup": "Hold a band with both hands, arms straight out in front at shoulder height, hands roughly shoulder width.",
+    "posture": "Stand tall, chest up, ribs down, shoulders down, core braced.",
+    "execution": "Fixed slight elbow bend. Exhale and pull the arms out and back until wide, squeezing the shoulder blades. Hold one second, return over 2 seconds.",
+    "commonMistakes": "Bending the elbows. Letting the band snap back. Shrugging as the tension rises."
+  },
+  {
+    "id": "kettlebell-high-pull",
+    "name": "Kettlebell high pull",
+    "equipment": "kettlebell",
+    "loadType": "weighted",
+    "primary": [
+      "shoulders/rear-delt",
+      "back/upper"
+    ],
+    "secondary": [
+      "biceps/biceps"
+    ],
+    "setup": "One kettlebell on the floor between the feet, stance slightly wider than the hips. Hinge and grip the handle.",
+    "posture": "Flat back, chest up, core braced, shoulders down.",
+    "execution": "Hinge and swing the bell back, then drive the hips forward explosively. As it rises, pull the elbow high and back to chest height, exhaling. Let it swing back down and inhale.",
+    "commonMistakes": "Pulling with the arm instead of driving from the hips. Letting the bell get ahead of the elbow. Rounding the back at the bottom of the swing."
+  },
+  {
+    "id": "barbell-curl",
+    "name": "Barbell curl",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Bar held at arm's length in front of the thighs, underhand grip at shoulder width. Feet hip width.",
+    "posture": "Stand tall, chest up, shoulders back and down, elbows pinned to the sides of the ribs, core braced.",
+    "execution": "Exhale and curl the bar up to chest height, keeping the elbows fixed in place. Squeeze one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Swinging the torso and using the lower back. Letting the elbows drift forward, which brings in the front delts. Dropping the bar fast."
+  },
+  {
+    "id": "ez-bar-curl",
+    "name": "EZ-bar curl",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "EZ bar at arm's length, hands on the angled sections at shoulder width, palms up.",
+    "posture": "Stand tall, chest up, elbows pinned to the ribs, core braced. The angled grip is easier on the wrists.",
+    "execution": "Exhale and curl to chest height with the elbows fixed. Squeeze one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Rocking the torso. Elbows travelling forward at the top."
+  },
+  {
+    "id": "dumbbell-curl",
+    "name": "Dumbbell curl",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "A dumbbell in each hand at arm's length, palms facing forward. Feet hip width.",
+    "posture": "Stand tall, chest up, shoulders back, elbows pinned to the ribs, core braced.",
+    "execution": "Exhale and curl both dumbbells to shoulder height. Squeeze one second, lower over 2 to 3 seconds to full arm extension, inhaling.",
+    "commonMistakes": "Swinging the weights up. Stopping short of full extension at the bottom, which cuts the range."
+  },
+  {
+    "id": "alternating-dumbbell-curl",
+    "name": "Alternating dumbbell curl",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "A dumbbell in each hand at arm's length, palms facing in. Feet hip width.",
+    "posture": "Stand tall, chest up, elbows pinned to the ribs, core braced, torso completely still.",
+    "execution": "Exhale and curl one dumbbell up, rotating the palm to face up as it rises. Squeeze one second, lower over 2 to 3 seconds, then switch.",
+    "commonMistakes": "Leaning side to side with each rep. Starting the next arm before the first has fully lowered."
+  },
+  {
+    "id": "hammer-curl",
+    "name": "Hammer curl",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps",
+      "forearms/forearms"
+    ],
+    "secondary": [],
+    "setup": "A dumbbell in each hand at arm's length, palms facing in toward the thighs. Feet hip width.",
+    "posture": "Stand tall, chest up, elbows pinned to the ribs, wrists straight, core braced.",
+    "execution": "Keep the palms facing in throughout. Exhale and curl to shoulder height. Squeeze one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Letting the palms rotate up, which turns it into a normal curl. Swinging the torso."
+  },
+  {
+    "id": "incline-dumbbell-curl",
+    "name": "Incline dumbbell curl",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Bench set to about 60 degrees. Sit back with a dumbbell in each hand, arms hanging straight down behind the torso line.",
+    "posture": "Back against the pad, chest up, shoulders back, upper arms hanging still throughout.",
+    "execution": "Exhale and curl both dumbbells up without letting the elbows travel forward. Squeeze one second, lower over 2 to 3 seconds to a full stretch.",
+    "commonMistakes": "Letting the elbows swing forward, which removes the stretch that makes this variation useful. Lifting the shoulders off the pad."
+  },
+  {
+    "id": "concentration-curl",
+    "name": "Concentration curl",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Sit on a bench, feet wide. Rest the back of the working upper arm against the inside of the same-side thigh, dumbbell hanging.",
+    "posture": "Torso leaned forward with a flat back, chest up, upper arm locked against the thigh.",
+    "execution": "Exhale and curl the dumbbell up toward the opposite shoulder. Squeeze one second, lower over 2 to 3 seconds to full extension, inhaling.",
+    "commonMistakes": "Pushing with the leg to help the curl. Rounding the back over the working arm."
+  },
+  {
+    "id": "spider-curl",
+    "name": "Spider curl",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Incline bench at about 45 degrees. Lie chest-down with arms hanging straight down over the top edge.",
+    "posture": "Chest on the pad, head neutral, upper arms perpendicular to the floor and locked there.",
+    "execution": "Exhale and curl the weight up toward the shoulders. Squeeze one second, lower over 2 to 3 seconds to a full stretch, inhaling.",
+    "commonMistakes": "Lifting the chest off the pad. Letting the upper arms swing back on the descent."
+  },
+  {
+    "id": "zottman-curl",
+    "name": "Zottman curl",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps",
+      "forearms/forearms"
+    ],
+    "secondary": [],
+    "setup": "A dumbbell in each hand at arm's length, palms facing forward. Feet hip width.",
+    "posture": "Stand tall, chest up, elbows pinned to the ribs, core braced.",
+    "execution": "Exhale and curl up with palms up. At the top, rotate the palms to face down, then lower over 3 seconds in that overhand position. Rotate back at the bottom.",
+    "commonMistakes": "Rushing the overhand descent, which is the part that trains the forearms. Going too heavy to control the rotation."
+  },
+  {
+    "id": "preacher-curl",
+    "name": "Preacher curl",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Set the preacher bench so the top of the pad sits under the armpits. EZ bar or barbell, underhand grip at shoulder width.",
+    "posture": "Chest against the pad, shoulders down, upper arms flat on the pad throughout.",
+    "execution": "Exhale and curl the bar up to chest height. Squeeze one second, lower over 3 seconds until the arms are almost straight, inhaling.",
+    "commonMistakes": "Letting the arms snap straight at the bottom under load, which strains the elbow. Lifting the armpits off the pad."
+  },
+  {
+    "id": "machine-preacher-curl",
+    "name": "Machine preacher curl",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Set the seat so the upper arms rest flat on the pad with the elbows level with the pivot. Grip the handles.",
+    "posture": "Chest against the pad, shoulders down, upper arms flat throughout.",
+    "execution": "Exhale and curl the handles up. Squeeze one second, lower over 3 seconds to nearly straight arms, inhaling.",
+    "commonMistakes": "Elbows misaligned with the pivot. Slamming the stack down at the bottom."
+  },
+  {
+    "id": "cable-curl",
+    "name": "Cable curl",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Straight or EZ bar on the lowest pulley. Stand a step back, arms hanging straight, underhand grip at shoulder width.",
+    "posture": "Stand tall, chest up, elbows pinned to the ribs, core braced, slight forward lean to counter the cable.",
+    "execution": "Exhale and curl the bar to chest height. Squeeze one second, lower over 2 to 3 seconds against constant cable tension.",
+    "commonMistakes": "Letting the cable drag the arms straight fast. Stepping so far back that the elbows get pulled behind the torso."
+  },
+  {
+    "id": "cable-rope-hammer-curl",
+    "name": "Cable rope hammer curl",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps",
+      "forearms/forearms"
+    ],
+    "secondary": [],
+    "setup": "Rope on the lowest pulley. Stand a step back, a rope end in each hand, palms facing in.",
+    "posture": "Stand tall, chest up, elbows pinned to the ribs, wrists straight, core braced.",
+    "execution": "Keep the palms facing each other throughout. Exhale and curl up to shoulder height, spreading the rope ends slightly at the top. Lower over 2 to 3 seconds.",
+    "commonMistakes": "Rotating the palms up. Letting the elbows drift forward as fatigue sets in."
+  },
+  {
+    "id": "bayesian-cable-curl",
+    "name": "Bayesian cable curl",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Single handle on the lowest pulley. Face away from the machine and step forward so the arm hangs behind the torso line.",
+    "posture": "Stand tall in a split stance, chest up, upper arm fixed behind the body, core braced.",
+    "execution": "Exhale and curl the handle up without letting the elbow travel forward. Squeeze one second, lower over 3 seconds to a deep stretch, inhaling.",
+    "commonMistakes": "Letting the elbow swing forward, which removes the behind-the-body stretch. Standing too close so there is no tension at the bottom."
+  },
+  {
+    "id": "drag-curl",
+    "name": "Drag curl",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Bar at arm's length in front of the thighs, underhand grip at shoulder width.",
+    "posture": "Stand tall, chest up, shoulders back and down, core braced.",
+    "execution": "Drag the bar straight up the front of the body, letting the elbows travel backward rather than staying pinned. Exhale on the way up, lower over 2 to 3 seconds along the same path.",
+    "commonMistakes": "Letting the bar swing away from the body, which makes it a normal curl. Using heavy weight, since the range here is short."
+  },
+  {
+    "id": "21s-barbell-curl",
+    "name": "21s barbell curl",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Bar at arm's length, underhand grip at shoulder width. Feet hip width.",
+    "posture": "Stand tall, chest up, elbows pinned to the ribs, core braced.",
+    "execution": "Do 7 reps from the bottom to halfway, then 7 from halfway to the top, then 7 full-range reps. Exhale on each lift, breathe steadily throughout. Use lighter weight than a normal curl.",
+    "commonMistakes": "Using your usual curl weight and failing halfway through. Swinging the torso once the burn arrives."
+  },
+  {
+    "id": "kettlebell-curl",
+    "name": "Kettlebell curl",
+    "equipment": "kettlebell",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "A kettlebell in each hand at arm's length, palms forward, bells hanging below the handles.",
+    "posture": "Stand tall, chest up, elbows pinned to the ribs, wrists straight, core braced.",
+    "execution": "Exhale and curl to shoulder height. Squeeze one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Letting the wrists bend back under the offset weight. Swinging the bells up."
+  },
+  {
+    "id": "band-curl",
+    "name": "Band curl",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "biceps/biceps"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Stand on the middle of the band, a handle in each hand at arm's length, palms forward.",
+    "posture": "Stand tall, chest up, elbows pinned to the ribs, core braced.",
+    "execution": "Exhale and curl up to shoulder height where band tension peaks. Squeeze one second, lower over 2 to 3 seconds against the band.",
+    "commonMistakes": "Letting the band snap the arms straight. Leaning back as tension increases near the top."
+  },
+  {
+    "id": "cable-pushdown-straight-bar",
+    "name": "Cable pushdown (straight bar)",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [],
+    "setup": "Straight bar on a high pulley set at upper-chest height. Overhand grip at shoulder width. Step back half a pace.",
+    "posture": "Stand tall with a slight 10 degree forward lean, chest up, elbows pinned to the sides of the ribs, core braced.",
+    "execution": "Exhale and push the bar down until the arms are straight, keeping the elbows fixed. Squeeze one second, return over 2 to 3 seconds until the forearms reach about 90 degrees.",
+    "commonMistakes": "Letting the elbows drift forward and away from the ribs. Leaning the whole bodyweight onto the bar. Shrugging the shoulders on the push."
+  },
+  {
+    "id": "cable-rope-pushdown",
+    "name": "Cable rope pushdown",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [],
+    "setup": "Rope on a high pulley at upper-chest height. Grip both ends with palms facing in. Step back half a pace.",
+    "posture": "Stand tall with a slight forward lean, chest up, elbows pinned to the ribs, core braced.",
+    "execution": "Exhale and push down, spreading the rope ends apart at the bottom for an extra squeeze. Hold one second, return over 2 to 3 seconds.",
+    "commonMistakes": "Elbows flaring out and forward. Turning it into a shoulder push by leaning in."
+  },
+  {
+    "id": "reverse-grip-cable-pushdown",
+    "name": "Reverse-grip cable pushdown",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [],
+    "setup": "Straight bar on a high pulley, underhand grip at shoulder width. Step back half a pace.",
+    "posture": "Stand tall, slight forward lean, elbows pinned to the ribs, wrists straight and firm, core braced.",
+    "execution": "Exhale and push the bar down to straight arms. Squeeze one second, return over 2 to 3 seconds. Use lighter weight than the overhand version.",
+    "commonMistakes": "Using overhand-grip weight and losing the wrists. Letting the elbows travel forward."
+  },
+  {
+    "id": "overhead-cable-triceps-extension",
+    "name": "Overhead cable triceps extension",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [],
+    "setup": "Rope on the lowest pulley. Face away from the machine, rope behind the head, elbows pointing forward and up.",
+    "posture": "Split stance, chest up, ribs down, core braced hard so the lower back doesn't arch. Upper arms stay beside the ears.",
+    "execution": "Exhale and extend the arms overhead until straight, keeping the elbows in place. Squeeze one second, lower over 2 to 3 seconds to a deep stretch, inhaling.",
+    "commonMistakes": "Letting the elbows flare wide. Arching the lower back as the arms extend. Dropping the upper arms forward."
+  },
+  {
+    "id": "cable-triceps-kickback",
+    "name": "Cable triceps kickback",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [],
+    "setup": "Single handle on the lowest pulley. Hinge forward until the torso is roughly parallel to the floor, upper arm tucked against the ribs.",
+    "posture": "Flat back, chest up, core braced, upper arm locked in place parallel to the floor.",
+    "execution": "Exhale and extend the forearm back until the arm is straight. Squeeze one second, return over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Letting the upper arm drop or swing. Standing up as you extend."
+  },
+  {
+    "id": "ez-bar-skull-crusher",
+    "name": "EZ-bar skull crusher",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [],
+    "setup": "Lie flat on a bench, EZ bar held over the chest with an overhand grip on the angled sections, arms straight.",
+    "posture": "Shoulder blades on the bench, ribs down, core braced, upper arms angled slightly back so tension stays on the triceps.",
+    "execution": "Inhale and lower the bar toward the forehead or just behind the head by bending only at the elbows. Stop just short of contact, then extend and exhale.",
+    "commonMistakes": "Flaring the elbows wide, which strains them. Moving the upper arms instead of hinging only at the elbow. Going too heavy on a joint-sensitive move."
+  },
+  {
+    "id": "close-grip-bench-press",
+    "name": "Close-grip bench press",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [
+      "chest/mid",
+      "shoulders/front-delt"
+    ],
+    "setup": "Flat bench, overhand grip at roughly shoulder width. Not narrower, which just hurts the wrists.",
+    "posture": "Shoulder blades retracted, chest up, feet flat, elbows tucked to about 20 degrees from the torso.",
+    "execution": "Inhale and lower the bar to the lower chest with the elbows tucked close. Press up and exhale, driving through the triceps.",
+    "commonMistakes": "Gripping so narrow the wrists bend painfully. Flaring the elbows, which turns it back into a chest press."
+  },
+  {
+    "id": "jm-press",
+    "name": "JM press",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [
+      "chest/mid"
+    ],
+    "setup": "Flat bench, barbell with an overhand grip at shoulder width, bar held over the chest.",
+    "posture": "Shoulder blades retracted, chest up, feet flat, elbows tucked. Start very light, this is a technical lift.",
+    "execution": "Inhale and lower the bar toward the upper chest and throat by bending the elbows and letting the upper arms travel slightly back. Stop just above the collarbone, then press and exhale.",
+    "commonMistakes": "Treating it as a close-grip bench, which loses the point. Going heavy before the groove is learned, with the bar tracking near the throat."
+  },
+  {
+    "id": "dumbbell-overhead-triceps-extension",
+    "name": "Dumbbell overhead triceps extension",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [],
+    "setup": "Sit or stand holding one dumbbell with both hands, pressed overhead. Palms cupping the top plate.",
+    "posture": "Chest up, ribs down, core braced hard, upper arms beside the ears and locked there.",
+    "execution": "Inhale and lower the dumbbell behind the head by bending only the elbows, until you feel a triceps stretch. Exhale and extend back up.",
+    "commonMistakes": "Letting the elbows flare wide. Arching the lower back to help. Moving the upper arms instead of hinging at the elbow."
+  },
+  {
+    "id": "single-arm-dumbbell-overhead-extension",
+    "name": "Single-arm dumbbell overhead extension",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [],
+    "setup": "Sit or stand with one dumbbell pressed overhead in one hand, palm facing forward.",
+    "posture": "Chest up, ribs down, core braced, upper arm beside the ear. Free hand can support the working elbow.",
+    "execution": "Inhale and lower the dumbbell behind the head by bending the elbow. Exhale and extend back to straight over 2 seconds.",
+    "commonMistakes": "Letting the torso lean away from the working arm. Elbow drifting outward."
+  },
+  {
+    "id": "lying-dumbbell-triceps-extension",
+    "name": "Lying dumbbell triceps extension",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [],
+    "setup": "Lie flat on a bench with a dumbbell in each hand pressed above the chest, palms facing in.",
+    "posture": "Shoulder blades on the bench, ribs down, core braced, upper arms angled slightly back.",
+    "execution": "Inhale and lower the dumbbells toward the ears by bending only the elbows. Exhale and extend back up over the chest.",
+    "commonMistakes": "Flaring the elbows out. Letting the upper arms swing back and turning it into a pullover."
+  },
+  {
+    "id": "dumbbell-triceps-kickback",
+    "name": "Dumbbell triceps kickback",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [],
+    "setup": "One knee and hand on a bench, or hinged forward standing. Dumbbell in hand, upper arm tucked against the ribs and parallel to the floor.",
+    "posture": "Flat back, chest up, core braced, upper arm locked in place.",
+    "execution": "Exhale and extend the forearm back until the arm is straight. Squeeze one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Swinging the dumbbell back with momentum. Letting the upper arm drop below parallel."
+  },
+  {
+    "id": "machine-triceps-extension",
+    "name": "Machine triceps extension",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [],
+    "setup": "Set the seat so the elbows line up with the machine's pivot and rest on the pad.",
+    "posture": "Back against the pad, chest up, elbows fixed on the pad throughout, core lightly braced.",
+    "execution": "Exhale and extend the arms until straight. Squeeze one second, return over 2 to 3 seconds under control.",
+    "commonMistakes": "Elbows sliding off the pad. Slamming the stack down between reps."
+  },
+  {
+    "id": "assisted-triceps-dip-machine",
+    "name": "Assisted triceps dip machine",
+    "equipment": "machine",
+    "loadType": "assisted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [
+      "chest/lower",
+      "shoulders/front-delt"
+    ],
+    "setup": "Set the assistance weight, kneel or stand on the pad, hands on the parallel bars.",
+    "posture": "Torso upright and vertical, chest up, shoulders down away from the ears, elbows tucked close to the ribs.",
+    "execution": "Inhale and lower until the upper arms are roughly parallel to the floor. Press up and exhale. Less assistance weight means you are getting stronger.",
+    "commonMistakes": "Leaning the torso forward, which shifts the work to the chest. Bouncing off the pad."
+  },
+  {
+    "id": "bench-triceps-dip",
+    "name": "Bench triceps dip",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [
+      "shoulders/front-delt",
+      "chest/lower"
+    ],
+    "setup": "Sit on a bench, hands gripping the edge beside the hips. Slide the hips forward off the bench, legs out in front.",
+    "posture": "Torso upright and close to the bench, chest up, shoulders pulled down away from the ears, elbows pointing straight back.",
+    "execution": "Inhale and lower until the elbows reach about 90 degrees. Press up and exhale. Stop if the front of the shoulder pinches.",
+    "commonMistakes": "Dropping far below 90 degrees, which strains the shoulder. Letting the hips drift away from the bench. Flaring the elbows out."
+  },
+  {
+    "id": "parallel-bar-dip-upright",
+    "name": "Parallel bar dip (upright)",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [
+      "chest/lower",
+      "shoulders/front-delt"
+    ],
+    "setup": "Parallel bars, hands at your sides. Push up to a supported start with the arms straight.",
+    "posture": "Torso vertical, chest up, shoulders pulled down away from the ears, elbows tucked close to the ribs, ankles crossed.",
+    "execution": "Inhale and lower until the upper arms are roughly parallel to the floor, keeping the torso upright. Press up and exhale.",
+    "commonMistakes": "Leaning forward, which turns it into a chest dip. Going deeper than shoulder comfort allows. Shrugging at the bottom."
+  },
+  {
+    "id": "diamond-push-up",
+    "name": "Diamond push-up",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [
+      "chest/mid",
+      "shoulders/front-delt"
+    ],
+    "setup": "Hands flat on the floor under the chest, index fingers and thumbs touching to form a triangle.",
+    "posture": "Straight line from head to heels, core braced, glutes squeezed, elbows tracking back close to the ribs.",
+    "execution": "Inhale and lower until the chest touches the hands. Press up and exhale.",
+    "commonMistakes": "Flaring the elbows straight out, which is hard on the wrists and elbows. Hips sagging as the movement gets tough."
+  },
+  {
+    "id": "kettlebell-overhead-extension",
+    "name": "Kettlebell overhead extension",
+    "equipment": "kettlebell",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [],
+    "setup": "Hold one kettlebell with both hands by the horns, pressed overhead, bell hanging behind the head.",
+    "posture": "Chest up, ribs down, core braced hard, upper arms beside the ears, wrists straight.",
+    "execution": "Inhale and lower the bell behind the head by bending only the elbows. Exhale and extend back up over 2 seconds.",
+    "commonMistakes": "Letting the wrists bend back. Arching the lower back as the bell drops behind."
+  },
+  {
+    "id": "band-triceps-pushdown",
+    "name": "Band triceps pushdown",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "triceps/triceps"
+    ],
+    "secondary": [],
+    "setup": "Anchor a band overhead. Grip both ends, elbows pinned to the ribs, forearms at about 90 degrees.",
+    "posture": "Stand tall, slight forward lean, chest up, elbows fixed at the sides, core braced.",
+    "execution": "Exhale and push down to straight arms where band tension peaks. Squeeze one second, return over 2 to 3 seconds against the band.",
+    "commonMistakes": "Letting the band pull the forearms up fast. Elbows drifting forward as tension increases."
+  },
+  {
+    "id": "barbell-wrist-curl",
+    "name": "Barbell wrist curl",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "forearms/forearms"
+    ],
+    "secondary": [],
+    "setup": "Sit on a bench, forearms resting on the thighs, wrists just past the knees, palms up. Bar held loosely.",
+    "posture": "Sit tall with a flat back, forearms flat and still on the thighs throughout.",
+    "execution": "Let the bar roll to the fingertips, then exhale and curl it up by closing the fingers and flexing the wrist. Squeeze one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Lifting the forearms off the thighs. Using so much weight the wrists can't complete the range."
+  },
+  {
+    "id": "barbell-reverse-wrist-curl",
+    "name": "Barbell reverse wrist curl",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "forearms/forearms"
+    ],
+    "secondary": [],
+    "setup": "Sit on a bench, forearms on the thighs, wrists just past the knees, palms facing down. Bar held overhand.",
+    "posture": "Sit tall with a flat back, forearms flat and still throughout.",
+    "execution": "Exhale and lift the back of the hands upward as far as they will go. Squeeze one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Going as heavy as the palms-up version, which the wrist extensors cannot handle. Lifting the forearms off the thighs."
+  },
+  {
+    "id": "behind-the-back-barbell-wrist-curl",
+    "name": "Behind-the-back barbell wrist curl",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "forearms/forearms"
+    ],
+    "secondary": [],
+    "setup": "Stand with a barbell held behind the back at arm's length, palms facing back, grip at hip width.",
+    "posture": "Stand tall, chest up, shoulders back and down, arms straight and still.",
+    "execution": "Let the bar roll to the fingertips, then exhale and curl it up by flexing the wrists. Squeeze one second, lower over 2 seconds.",
+    "commonMistakes": "Bending the elbows to help. Letting the bar roll out of the fingers entirely."
+  },
+  {
+    "id": "ez-bar-reverse-curl",
+    "name": "EZ-bar reverse curl",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "forearms/forearms"
+    ],
+    "secondary": [
+      "biceps/biceps"
+    ],
+    "setup": "EZ bar held at arm's length in front of the thighs, overhand grip on the angled sections.",
+    "posture": "Stand tall, chest up, elbows pinned to the ribs, wrists straight and locked, core braced.",
+    "execution": "Exhale and curl the bar up to chest height with the palms staying down. Squeeze one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Using normal curl weight, which the overhand grip cannot support. Letting the wrists collapse backward."
+  },
+  {
+    "id": "dumbbell-wrist-curl",
+    "name": "Dumbbell wrist curl",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "forearms/forearms"
+    ],
+    "secondary": [],
+    "setup": "Sit on a bench, one forearm resting on the thigh, wrist just past the knee, palm up. Dumbbell held loosely.",
+    "posture": "Sit tall with a flat back, forearm flat and still on the thigh.",
+    "execution": "Let the dumbbell roll to the fingertips, then exhale and curl it up by closing the fingers and flexing the wrist. Lower over 2 seconds.",
+    "commonMistakes": "Lifting the forearm off the thigh. Skipping the fingertip roll, which halves the range."
+  },
+  {
+    "id": "dumbbell-reverse-wrist-curl",
+    "name": "Dumbbell reverse wrist curl",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "forearms/forearms"
+    ],
+    "secondary": [],
+    "setup": "Sit on a bench, one forearm on the thigh, wrist just past the knee, palm facing down.",
+    "posture": "Sit tall with a flat back, forearm flat and still.",
+    "execution": "Exhale and lift the back of the hand upward as far as it will go. Squeeze one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Going too heavy for the small extensor muscles. Rotating the forearm to cheat the movement."
+  },
+  {
+    "id": "cable-wrist-curl",
+    "name": "Cable wrist curl",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "forearms/forearms"
+    ],
+    "secondary": [],
+    "setup": "Straight bar on the lowest pulley. Kneel or sit with the forearms resting on a bench, wrists past the edge, palms up.",
+    "posture": "Forearms flat and still on the bench, back flat, shoulders relaxed.",
+    "execution": "Exhale and curl the bar up by flexing the wrists against constant cable tension. Squeeze one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Lifting the forearms off the bench. Positioning so far from the pulley that the cable pulls at an angle."
+  },
+  {
+    "id": "kettlebell-farmer-hold",
+    "name": "Kettlebell farmer hold",
+    "equipment": "kettlebell",
+    "loadType": "timed",
+    "primary": [
+      "forearms/forearms"
+    ],
+    "secondary": [
+      "back/upper"
+    ],
+    "setup": "A heavy kettlebell in each hand at your sides, arms straight. Stand tall before starting the clock.",
+    "posture": "Chest up, shoulders back and down, ribs stacked over the hips, core braced hard, wrists straight.",
+    "execution": "Hold still for the set duration, gripping hard. Breathe in a shallow steady rhythm rather than holding your breath. Set the bells down deliberately.",
+    "commonMistakes": "Shrugging the shoulders up. Letting the bells drift forward. Holding the breath for the whole set."
+  },
+  {
+    "id": "dead-hang",
+    "name": "Dead hang",
+    "equipment": "bodyweight",
+    "loadType": "timed",
+    "primary": [
+      "forearms/forearms"
+    ],
+    "secondary": [
+      "back/lats",
+      "back/upper"
+    ],
+    "setup": "Grip a pull-up bar overhand at roughly shoulder width. Step off and let the body hang.",
+    "posture": "Arms straight, shoulders active and pulled slightly down rather than fully loose. Ribs down, core lightly braced so the legs don't swing.",
+    "execution": "Hang for the set duration, gripping hard. Breathe slow and steady. Step down under control rather than dropping.",
+    "commonMistakes": "Hanging completely limp with shoulders in the ears. Swinging. Dropping off the bar from height."
+  },
+  {
+    "id": "plate-pinch-hold",
+    "name": "Plate pinch hold",
+    "equipment": "other",
+    "loadType": "timed",
+    "primary": [
+      "forearms/forearms"
+    ],
+    "secondary": [],
+    "setup": "Stand holding one or two smooth weight plates pinched between the thumb and fingers, arms at your sides.",
+    "posture": "Stand tall, chest up, shoulders back and down, arms straight and still.",
+    "execution": "Pinch hard and hold for the set duration. Breathe steadily. Set the plates down under control before the grip fully fails.",
+    "commonMistakes": "Letting the plates slip and drop on your feet. Holding to complete failure over a bare floor."
+  },
+  {
+    "id": "wrist-roller",
+    "name": "Wrist roller",
+    "equipment": "other",
+    "loadType": "timed",
+    "primary": [
+      "forearms/forearms"
+    ],
+    "secondary": [],
+    "setup": "Hold the roller bar out in front at shoulder height with both hands, weight hanging from the cord.",
+    "posture": "Stand tall, chest up, arms straight out in front and held level, core braced.",
+    "execution": "Roll the cord up by alternating wrist flexion hand over hand, then reverse it down slowly. Breathe steadily throughout, don't hold your breath.",
+    "commonMistakes": "Letting the arms drop as the shoulders fatigue. Letting the weight unwind fast instead of lowering it under control."
+  },
+  {
+    "id": "band-wrist-extension",
+    "name": "Band wrist extension",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "forearms/forearms"
+    ],
+    "secondary": [],
+    "setup": "Loop a light band around the fingers of one hand, other end anchored or held. Forearm resting on a thigh or bench, palm down.",
+    "posture": "Forearm flat and still, wrist just past the edge, shoulders relaxed.",
+    "execution": "Exhale and open the fingers and extend the wrist upward against the band. Hold one second, return over 2 seconds, inhaling.",
+    "commonMistakes": "Using a band so heavy the forearm lifts to help. Rushing the return."
+  },
+  {
+    "id": "machine-gripper",
+    "name": "Machine gripper",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "forearms/forearms"
+    ],
+    "secondary": [],
+    "setup": "Set the handle spacing so the hand can open comfortably at the start. Grip with the whole hand.",
+    "posture": "Sit or stand tall, wrist straight and in line with the forearm, shoulder relaxed.",
+    "execution": "Exhale and squeeze the handle fully closed. Hold one second, open slowly over 2 seconds, inhaling.",
+    "commonMistakes": "Letting the wrist bend to add leverage. Snapping the handle open on the return."
+  },
+  {
+    "id": "crunch",
+    "name": "Crunch",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/upper"
+    ],
+    "secondary": [],
+    "setup": "Lie on your back, knees bent at about 90 degrees, feet flat. Hands lightly behind the ears or crossed on the chest.",
+    "posture": "Lower back stays in contact with the floor, chin a fist's width from the chest, neck relaxed.",
+    "execution": "Exhale and curl the shoulder blades off the floor by rounding the upper spine, about 30 degrees of movement. Hold one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Pulling on the neck with the hands. Trying to sit all the way up, which brings in the hip flexors. Yanking up with momentum."
+  },
+  {
+    "id": "sit-up",
+    "name": "Sit-up",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/upper"
+    ],
+    "secondary": [
+      "abs/lower"
+    ],
+    "setup": "Lie on your back, knees bent, feet flat and anchored or not. Arms crossed on the chest.",
+    "posture": "Chin a fist's width from the chest, spine rounding smoothly rather than hinging in one block.",
+    "execution": "Exhale and curl up one vertebra at a time until the torso is upright. Lower over 2 to 3 seconds, inhaling, rolling down through the spine.",
+    "commonMistakes": "Hooking the feet and yanking up with the hip flexors. Flinging the arms forward for momentum. Slamming back down."
+  },
+  {
+    "id": "decline-sit-up",
+    "name": "Decline sit-up",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/upper"
+    ],
+    "secondary": [
+      "abs/lower"
+    ],
+    "setup": "Set the decline bench to 15 to 30 degrees. Hook the ankles under the pads, arms crossed on the chest.",
+    "posture": "Chin a fist's width from the chest, core braced, spine rounding smoothly.",
+    "execution": "Exhale and curl up until the torso is upright. Lower over 2 to 3 seconds, inhaling, and stop just before the shoulders touch down.",
+    "commonMistakes": "Starting at too steep a decline. Free-falling backward between reps. Pulling on the neck."
+  },
+  {
+    "id": "toe-touch-crunch",
+    "name": "Toe-touch crunch",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/upper"
+    ],
+    "secondary": [],
+    "setup": "Lie on your back with the legs straight up toward the ceiling, arms reaching up toward the feet.",
+    "posture": "Lower back pressed into the floor, legs held vertical and still, neck relaxed.",
+    "execution": "Exhale and curl the shoulder blades off the floor, reaching the hands toward the toes. Hold one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Swinging the arms up for momentum. Letting the legs drop forward to meet the hands."
+  },
+  {
+    "id": "plank",
+    "name": "Plank",
+    "equipment": "bodyweight",
+    "loadType": "timed",
+    "primary": [
+      "abs/upper"
+    ],
+    "secondary": [
+      "abs/lower",
+      "obliques/obliques"
+    ],
+    "setup": "Forearms on the floor, elbows directly under the shoulders, hands facing forward. Legs straight, feet hip width.",
+    "posture": "Straight line from head to heels. Glutes squeezed, ribs pulled down, core braced hard, neck neutral with eyes on the floor.",
+    "execution": "Hold for the set duration. Breathe shallow and steady through the nose. Stop the set when the hips start to drop rather than grinding out sloppy time.",
+    "commonMistakes": "Hips sagging toward the floor, which loads the lower back. Piking the hips up to make it easier. Holding the breath."
+  },
+  {
+    "id": "v-up",
+    "name": "V-up",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/upper",
+      "abs/lower"
+    ],
+    "secondary": [],
+    "setup": "Lie flat on your back, arms extended overhead, legs straight.",
+    "posture": "Lower back pressed toward the floor at the start, core braced, neck neutral.",
+    "execution": "Exhale and lift the arms and legs at the same time, folding at the hips to meet over the middle. Hold one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Bending the knees to make the lever shorter. Slamming the legs and shoulders down between reps."
+  },
+  {
+    "id": "cable-crunch",
+    "name": "Cable crunch",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "abs/upper"
+    ],
+    "secondary": [
+      "obliques/obliques"
+    ],
+    "setup": "Rope on a high pulley. Kneel facing the machine, rope held beside the ears, elbows tucked.",
+    "posture": "Hips fixed in place, chest up at the start, hands locked beside the head throughout.",
+    "execution": "Exhale and crunch down by rounding the upper spine, bringing the elbows toward the thighs. Squeeze one second, return over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Hinging at the hips instead of rounding the spine, which turns it into a pulldown. Letting the hands drift away from the head."
+  },
+  {
+    "id": "machine-crunch",
+    "name": "Machine crunch",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "abs/upper"
+    ],
+    "secondary": [],
+    "setup": "Set the seat and pad so the pivot lines up with your waist. Grip the handles.",
+    "posture": "Back against the pad, chest up at the start, core braced, feet secured.",
+    "execution": "Exhale and crunch forward by rounding the spine. Squeeze one second, return over 2 to 3 seconds under control.",
+    "commonMistakes": "Pulling with the arms instead of the abs. Letting the stack slam down between reps."
+  },
+  {
+    "id": "weighted-dumbbell-crunch",
+    "name": "Weighted dumbbell crunch",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "abs/upper"
+    ],
+    "secondary": [],
+    "setup": "Lie on your back, knees bent, feet flat. Hold one dumbbell against the chest or just above it.",
+    "posture": "Lower back on the floor, chin a fist's width from the chest, neck relaxed.",
+    "execution": "Exhale and curl the shoulder blades off the floor about 30 degrees. Hold one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Using the dumbbell's momentum to swing up. Adding weight before a bodyweight crunch is clean."
+  },
+  {
+    "id": "ab-wheel-rollout",
+    "name": "Ab wheel rollout",
+    "equipment": "other",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/upper"
+    ],
+    "secondary": [
+      "abs/lower",
+      "back/lower"
+    ],
+    "setup": "Kneel on a mat with the wheel under the shoulders, hands gripping the handles. Start from your knees, not your feet.",
+    "posture": "Ribs pulled down, glutes squeezed, lower back flat and locked. This position must not change during the rep.",
+    "execution": "Inhale and roll forward as far as you can hold a flat back, then exhale and pull back to the start. Stop well short of full extension at first.",
+    "commonMistakes": "Letting the lower back arch as you extend, which is the main injury risk. Rolling out further than you can pull back from."
+  },
+  {
+    "id": "stability-ball-crunch",
+    "name": "Stability ball crunch",
+    "equipment": "other",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/upper"
+    ],
+    "secondary": [],
+    "setup": "Sit on the ball then walk the feet forward until the lower back is supported on the ball. Feet flat, hip width.",
+    "posture": "Hips level, core braced, chin a fist's width from the chest, neck relaxed.",
+    "execution": "Exhale and curl the shoulder blades up by rounding the spine. Hold one second, lower over 2 seconds into a slight backward stretch, inhaling.",
+    "commonMistakes": "Letting the hips drop so the ball rolls. Using such a big range that the lower back overextends at the bottom."
+  },
+  {
+    "id": "hanging-leg-raise",
+    "name": "Hanging leg raise",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/lower"
+    ],
+    "secondary": [
+      "forearms/forearms",
+      "obliques/obliques"
+    ],
+    "setup": "Hang from a pull-up bar with an overhand grip at shoulder width, legs straight, body still.",
+    "posture": "Shoulders pulled down away from the ears, ribs down, core braced hard so the body doesn't swing.",
+    "execution": "Exhale and raise the straight legs until they reach at least hip height, tilting the pelvis up at the top. Lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Swinging and using momentum. Only raising the legs by hinging at the hip without tilting the pelvis. Dropping the legs fast."
+  },
+  {
+    "id": "hanging-knee-raise",
+    "name": "Hanging knee raise",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/lower"
+    ],
+    "secondary": [
+      "forearms/forearms"
+    ],
+    "setup": "Hang from a pull-up bar with an overhand grip at shoulder width, legs together.",
+    "posture": "Shoulders pulled down away from the ears, ribs down, core braced so the body stays still.",
+    "execution": "Exhale and raise the knees toward the chest, curling the pelvis up at the top. Lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Kipping the legs up with a body swing. Stopping at 90 degrees without the pelvic tilt, which skips the abs."
+  },
+  {
+    "id": "captain-s-chair-knee-raise",
+    "name": "Captain's chair knee raise",
+    "equipment": "machine",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/lower"
+    ],
+    "secondary": [],
+    "setup": "Forearms on the pads, hands gripping the handles, back against the pad. Legs hanging straight.",
+    "posture": "Back flat against the pad, shoulders down away from the ears, core braced.",
+    "execution": "Exhale and raise the knees toward the chest, curling the pelvis up at the top. Lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Swinging the legs up. Arching the back off the pad. Stopping short of the pelvic tilt."
+  },
+  {
+    "id": "lying-leg-raise",
+    "name": "Lying leg raise",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/lower"
+    ],
+    "secondary": [],
+    "setup": "Lie flat on your back, legs straight and together, hands under the hips or beside them for support.",
+    "posture": "Lower back pressed into the floor throughout. If it lifts, that is your range limit. Neck relaxed.",
+    "execution": "Exhale and raise the straight legs to about 90 degrees. Lower over 2 to 3 seconds, inhaling, stopping before the lower back peels off the floor.",
+    "commonMistakes": "Letting the lower back arch on the way down, which is where injuries happen. Dropping the legs fast. Bending the knees to cheat."
+  },
+  {
+    "id": "reverse-crunch",
+    "name": "Reverse crunch",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/lower"
+    ],
+    "secondary": [],
+    "setup": "Lie flat on your back, knees bent at about 90 degrees, arms flat at your sides.",
+    "posture": "Lower back pressed into the floor, neck relaxed, upper body still.",
+    "execution": "Exhale and curl the pelvis up off the floor, bringing the knees toward the chest. Hold one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Swinging the legs to generate lift. Pushing off the floor with the hands. Simply pulling the knees in without lifting the pelvis."
+  },
+  {
+    "id": "cable-reverse-crunch",
+    "name": "Cable reverse crunch",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "abs/lower"
+    ],
+    "secondary": [],
+    "setup": "Ankle straps or a rope on a low pulley. Lie on your back with the feet toward the machine, knees bent at 90 degrees.",
+    "posture": "Lower back pressed into the floor, upper body anchored by gripping something overhead.",
+    "execution": "Exhale and curl the pelvis up off the floor against the cable, knees toward the chest. Hold one second, lower over 2 to 3 seconds.",
+    "commonMistakes": "Letting the cable pull the legs straight fast. Arching the lower back at the bottom."
+  },
+  {
+    "id": "flutter-kick",
+    "name": "Flutter kick",
+    "equipment": "bodyweight",
+    "loadType": "timed",
+    "primary": [
+      "abs/lower"
+    ],
+    "secondary": [],
+    "setup": "Lie flat on your back, legs straight, hands under the hips for support. Lift the heels about 15cm off the floor.",
+    "posture": "Lower back pressed into the floor throughout, neck relaxed, shoulders down.",
+    "execution": "Alternate small rapid kicks, one leg up and one down, staying within about 30cm of the floor. Hold for the set duration, breathing shallow and steady.",
+    "commonMistakes": "Letting the lower back arch off the floor as fatigue sets in. Kicking so high the abs disengage."
+  },
+  {
+    "id": "scissor-kick",
+    "name": "Scissor kick",
+    "equipment": "bodyweight",
+    "loadType": "timed",
+    "primary": [
+      "abs/lower"
+    ],
+    "secondary": [],
+    "setup": "Lie flat on your back, legs straight, hands under the hips. Lift both heels about 15cm off the floor.",
+    "posture": "Lower back pressed into the floor, neck relaxed, core braced.",
+    "execution": "Cross one leg over the other, then switch, in a steady scissoring rhythm for the set duration. Breathe shallow and steady rather than holding your breath.",
+    "commonMistakes": "Lower back arching off the floor. Going so fast the movement becomes a flail."
+  },
+  {
+    "id": "mountain-climber",
+    "name": "Mountain climber",
+    "equipment": "bodyweight",
+    "loadType": "timed",
+    "primary": [
+      "abs/lower"
+    ],
+    "secondary": [
+      "obliques/obliques",
+      "shoulders/front-delt"
+    ],
+    "setup": "Start in a push-up position, hands under the shoulders, body in a straight line.",
+    "posture": "Hips level and low, shoulders stacked over the wrists, core braced, neck neutral.",
+    "execution": "Drive one knee toward the chest, then switch legs in a steady running rhythm for the set duration. Breathe in a continuous rhythm, don't hold your breath.",
+    "commonMistakes": "Letting the hips bounce up and down. Shoulders drifting behind the wrists. Going so fast the form collapses."
+  },
+  {
+    "id": "dead-bug",
+    "name": "Dead bug",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/lower"
+    ],
+    "secondary": [
+      "abs/upper"
+    ],
+    "setup": "Lie on your back with arms straight up over the shoulders and knees bent at 90 degrees over the hips.",
+    "posture": "Lower back pressed flat into the floor throughout. This contact is the entire exercise. Ribs down, neck relaxed.",
+    "execution": "Exhale and slowly extend the right arm overhead and the left leg straight out, stopping before the lower back lifts. Inhale and return, then switch sides.",
+    "commonMistakes": "Letting the lower back arch as the limbs extend. Moving fast. Extending further than the core can hold."
+  },
+  {
+    "id": "dragon-flag",
+    "name": "Dragon flag",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "abs/lower"
+    ],
+    "secondary": [
+      "abs/upper"
+    ],
+    "setup": "Lie on a bench and grip it firmly behind your head. Only attempt this once hanging leg raises are easy.",
+    "posture": "Body held in one rigid straight line from shoulders to toes, core braced extremely hard, shoulders pinned to the bench.",
+    "execution": "Exhale and lift the whole body up so it pivots on the upper back. Inhale and lower slowly over 3 to 5 seconds, keeping the line, stopping before the hips sag.",
+    "commonMistakes": "Attempting it before the core is ready, which strains the lower back badly. Piking at the hips. Dropping fast on the way down."
+  },
+  {
+    "id": "russian-twist",
+    "name": "Russian twist",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "obliques/obliques"
+    ],
+    "secondary": [
+      "abs/upper"
+    ],
+    "setup": "Sit on the floor, knees bent, heels lightly touching down or lifted. Lean back to about 45 degrees.",
+    "posture": "Flat back with the chest up, not rounded. Core braced hard, shoulders down.",
+    "execution": "Exhale as you rotate the torso to one side, leading with the shoulders rather than just the arms. Inhale back through centre, then rotate to the other side.",
+    "commonMistakes": "Rounding the lower back at 45 degrees. Just swinging the arms while the torso stays square. Going fast enough to lose control."
+  },
+  {
+    "id": "weighted-russian-twist",
+    "name": "Weighted Russian twist",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "obliques/obliques"
+    ],
+    "secondary": [
+      "abs/upper"
+    ],
+    "setup": "Sit on the floor, knees bent, leaning back to about 45 degrees. Hold one dumbbell with both hands at the chest.",
+    "posture": "Flat back, chest up, core braced hard. Add weight only once the bodyweight version is clean.",
+    "execution": "Exhale and rotate the torso to one side, moving the weight with the chest rather than the arms. Inhale through centre, then rotate the other way.",
+    "commonMistakes": "Letting the back round under load. Swinging the weight with the arms alone."
+  },
+  {
+    "id": "side-plank",
+    "name": "Side plank",
+    "equipment": "bodyweight",
+    "loadType": "timed",
+    "primary": [
+      "obliques/obliques"
+    ],
+    "secondary": [
+      "abs/upper"
+    ],
+    "setup": "Lie on one side, forearm on the floor with the elbow directly under the shoulder. Legs stacked, feet together.",
+    "posture": "Straight line from head to feet, hips lifted and level, top shoulder stacked over the bottom, neck neutral.",
+    "execution": "Lift the hips and hold for the set duration. Breathe shallow and steady. Lower under control and switch sides.",
+    "commonMistakes": "Hips sinking toward the floor. Rotating the chest toward the floor. Elbow drifting out of line with the shoulder."
+  },
+  {
+    "id": "bicycle-crunch",
+    "name": "Bicycle crunch",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "obliques/obliques"
+    ],
+    "secondary": [
+      "abs/upper",
+      "abs/lower"
+    ],
+    "setup": "Lie on your back, hands lightly behind the ears, knees bent and lifted over the hips.",
+    "posture": "Lower back pressed into the floor, chin a fist's width from the chest, elbows kept wide.",
+    "execution": "Exhale and bring one elbow toward the opposite knee while extending the other leg straight. Inhale and switch in a steady controlled rhythm.",
+    "commonMistakes": "Pulling on the neck with the hands. Racing through reps so the rotation disappears. Letting the lower back lift off the floor."
+  },
+  {
+    "id": "hanging-oblique-knee-raise",
+    "name": "Hanging oblique knee raise",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "obliques/obliques"
+    ],
+    "secondary": [
+      "abs/lower",
+      "forearms/forearms"
+    ],
+    "setup": "Hang from a pull-up bar with an overhand grip at shoulder width, legs together.",
+    "posture": "Shoulders pulled down away from the ears, ribs down, core braced so the body doesn't swing.",
+    "execution": "Exhale and raise the knees toward one shoulder, twisting at the waist at the top. Lower over 2 to 3 seconds, inhaling, then alternate sides.",
+    "commonMistakes": "Swinging the body to throw the knees across. Twisting only at the hips without lifting the pelvis."
+  },
+  {
+    "id": "cable-woodchopper",
+    "name": "Cable woodchopper",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "obliques/obliques"
+    ],
+    "secondary": [
+      "abs/upper"
+    ],
+    "setup": "Set the pulley high with a single handle. Stand side-on, feet slightly wider than the hips, grip with both hands.",
+    "posture": "Chest up, flat back, core braced, knees softly bent. Hips pivot with the movement rather than staying locked.",
+    "execution": "Exhale and pull the handle down and across the body toward the opposite hip, rotating through the torso and letting the back heel turn. Return over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Rotating from the lower back rather than through the hips and mid-back. Using only the arms. Standing too upright."
+  },
+  {
+    "id": "pallof-press",
+    "name": "Pallof press",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "obliques/obliques"
+    ],
+    "secondary": [
+      "abs/upper"
+    ],
+    "setup": "Set the pulley at chest height with a single handle. Stand side-on, grip with both hands at the sternum, step out until taut.",
+    "posture": "Feet shoulder width, knees softly bent, chest up, ribs down, core braced hard. Hips and shoulders square and locked.",
+    "execution": "Exhale and press the handle straight out from the chest, resisting the cable's pull to rotate you. Hold 2 seconds, return over 2 seconds, inhaling.",
+    "commonMistakes": "Letting the torso rotate toward the machine, which defeats the whole point. Going so heavy that the hips twist."
+  },
+  {
+    "id": "cable-side-bend",
+    "name": "Cable side bend",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "obliques/obliques"
+    ],
+    "secondary": [],
+    "setup": "Single handle on the lowest pulley. Stand side-on and grip it with the near hand, arm straight at your side.",
+    "posture": "Stand tall, chest up, feet hip width, free hand on the hip or behind the head. Movement happens only in the frontal plane.",
+    "execution": "Inhale and let the cable draw you into a side bend. Exhale and pull back up to tall by contracting the opposite side. Hold one second at the top.",
+    "commonMistakes": "Bending forward or twisting instead of bending directly sideways. Using so much weight the whole torso leans."
+  },
+  {
+    "id": "dumbbell-side-bend",
+    "name": "Dumbbell side bend",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "obliques/obliques"
+    ],
+    "secondary": [],
+    "setup": "A dumbbell in one hand at your side, arm straight. Free hand on the hip or behind the head. Feet hip width.",
+    "posture": "Stand tall, chest up, shoulders level, movement strictly sideways with no forward lean or twist.",
+    "execution": "Inhale and lower the dumbbell down the side of the leg. Exhale and pull back up to tall, squeezing the opposite side. Hold one second.",
+    "commonMistakes": "Holding a dumbbell in each hand, which cancels the resistance out entirely. Twisting the torso as you bend."
+  },
+  {
+    "id": "suitcase-carry",
+    "name": "Suitcase carry",
+    "equipment": "dumbbell",
+    "loadType": "timed",
+    "primary": [
+      "obliques/obliques"
+    ],
+    "secondary": [
+      "forearms/forearms",
+      "back/upper"
+    ],
+    "setup": "One heavy dumbbell in one hand at your side. Stand tall before moving.",
+    "posture": "Shoulders and hips level and square, ribs stacked over the hips, core braced hard on both sides. Do not lean away from the load.",
+    "execution": "Walk at a steady controlled pace for the set duration, resisting the pull to one side. Breathe shallow and steady. Switch hands for the next set.",
+    "commonMistakes": "Leaning away from the weight, which removes the entire training effect. Shrugging the loaded shoulder up. Holding the breath."
+  },
+  {
+    "id": "landmine-rotation",
+    "name": "Landmine rotation",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "obliques/obliques"
+    ],
+    "secondary": [
+      "abs/upper",
+      "shoulders/front-delt"
+    ],
+    "setup": "One barbell end in a landmine sleeve. Hold the free end with both hands at chest height, arms extended.",
+    "posture": "Feet slightly wider than the hips, chest up, core braced. Hips pivot with the rotation, back heel free to turn.",
+    "execution": "Exhale and sweep the bar in an arc from one hip to the other, rotating through the hips and mid-back. Control the return over 2 seconds, inhaling.",
+    "commonMistakes": "Keeping the feet locked flat so the lower back absorbs the twist. Letting the bar drop rather than controlling the arc."
+  },
+  {
+    "id": "machine-torso-rotation",
+    "name": "Machine torso rotation",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "obliques/obliques"
+    ],
+    "secondary": [],
+    "setup": "Set the seat and pad so the chest and legs are secured and the torso can rotate freely.",
+    "posture": "Sit tall, chest up, hips locked in place by the pads, core braced.",
+    "execution": "Exhale and rotate the torso to one side under control. Hold one second, return over 2 to 3 seconds, inhaling. Complete all reps, then switch sides.",
+    "commonMistakes": "Using a range far beyond comfortable rotation. Letting the weight stack snap you back to centre."
+  },
+  {
+    "id": "barbell-back-squat",
+    "name": "Barbell back squat",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "hamstrings/hamstrings",
+      "back/lower",
+      "abs/upper"
+    ],
+    "setup": "Bar racked at upper-chest height, resting across the upper traps. Grip just outside the shoulders. Unrack and step back two paces, feet shoulder width, toes turned out 15 to 30 degrees.",
+    "posture": "Chest up, ribs down, upper back tight, core braced hard as if about to be punched. Weight through the mid-foot, knees tracking over the toes.",
+    "execution": "Inhale and brace. Sit down and slightly back until the hip crease drops below the knee, or as low as you can hold a flat back. Drive through the whole foot to stand, exhaling past the hardest point.",
+    "commonMistakes": "Knees caving inward. Rounding the lower back at the bottom, the so-called butt wink. Rising with the hips first so the torso folds forward."
+  },
+  {
+    "id": "barbell-front-squat",
+    "name": "Barbell front squat",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "abs/upper",
+      "back/upper"
+    ],
+    "setup": "Bar racked across the front delts and collarbone, elbows driven high so the upper arms are parallel to the floor. Feet shoulder width, toes out 15 degrees.",
+    "posture": "Elbows up throughout, chest tall and vertical, ribs down, core braced hard. The torso stays far more upright than in a back squat.",
+    "execution": "Inhale and brace. Squat straight down until the hip crease passes below the knee. Drive up through the mid-foot, exhaling, keeping the elbows high the whole way.",
+    "commonMistakes": "Letting the elbows drop, which dumps the bar forward. Leaning the torso forward like a back squat. Gripping so tight the wrists strain instead of resting the bar on the shoulders."
+  },
+  {
+    "id": "box-squat",
+    "name": "Box squat",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads",
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Set a box or bench so that sitting on it puts the thighs at or just below parallel. Bar on the upper traps, feet shoulder width or slightly wider.",
+    "posture": "Chest up, ribs down, core braced hard, shins close to vertical as you sit back.",
+    "execution": "Inhale and brace. Sit back onto the box under control, pause for one second without relaxing. Drive up through the mid-foot and exhale.",
+    "commonMistakes": "Flopping onto the box and bouncing off it, which loads the spine. Relaxing the core during the pause."
+  },
+  {
+    "id": "zercher-squat",
+    "name": "Zercher squat",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "abs/upper",
+      "back/upper"
+    ],
+    "setup": "Bar cradled in the crooks of both elbows, held against the body. Use a pad or sleeve, this is uncomfortable. Feet shoulder width, toes out slightly.",
+    "posture": "Chest up and very tall, elbows tucked in, upper back tight, core braced extremely hard. Start far lighter than your back squat.",
+    "execution": "Inhale and brace. Squat straight down between the knees until the elbows are inside the thighs. Drive up through the mid-foot and exhale.",
+    "commonMistakes": "Loading it like a back squat, which the arms and upper back cannot hold. Rounding forward as the bar drags the torso down."
+  },
+  {
+    "id": "landmine-squat",
+    "name": "Landmine squat",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "abs/upper"
+    ],
+    "setup": "One barbell end in a landmine sleeve. Hold the free end at chest height with both hands. Feet shoulder width, toes out slightly.",
+    "posture": "Chest up, torso upright, core braced. The bar's arc naturally counterbalances you and keeps the torso vertical.",
+    "execution": "Inhale, squat down until the thighs are at least parallel, letting the bar travel along its arc. Drive up through the mid-foot and exhale.",
+    "commonMistakes": "Letting the bar drift away from the chest. Standing too close or too far so the arc fights you."
+  },
+  {
+    "id": "goblet-squat",
+    "name": "Goblet squat",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "abs/upper"
+    ],
+    "setup": "Hold one dumbbell vertically against the chest, cupping the top end with both hands. Feet shoulder width, toes out 15 degrees.",
+    "posture": "Chest up, elbows tucked in, torso upright, core braced. The front load helps keep you vertical.",
+    "execution": "Inhale, squat down until the elbows brush the inside of the knees. Pause briefly, drive up through the mid-foot and exhale.",
+    "commonMistakes": "Letting the dumbbell drift away from the chest. Rounding the upper back as the weight pulls forward."
+  },
+  {
+    "id": "kettlebell-goblet-squat",
+    "name": "Kettlebell goblet squat",
+    "equipment": "kettlebell",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "abs/upper"
+    ],
+    "setup": "Hold one kettlebell by the horns at chest height, bell resting against the sternum. Feet shoulder width, toes out slightly.",
+    "posture": "Chest up, elbows tucked, torso upright, core braced, wrists straight.",
+    "execution": "Inhale, squat down until the elbows brush the inside of the knees. Drive up through the mid-foot and exhale.",
+    "commonMistakes": "Letting the bell pull the chest down. Letting the heels lift off the floor."
+  },
+  {
+    "id": "leg-press",
+    "name": "Leg press",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Sit with the back and hips flat against the pad. Feet on the platform at shoulder width, mid-height, toes turned out slightly.",
+    "posture": "Lower back and hips glued to the pad throughout. This contact is non-negotiable. Head back, core braced.",
+    "execution": "Release the safeties. Inhale and lower the platform until the knees reach about 90 degrees or just before the hips start to curl off the pad. Press up and exhale, stopping just short of locking the knees.",
+    "commonMistakes": "Going so deep the lower back rounds off the pad, which is the main injury risk. Snapping the knees into full lockout. Letting the knees cave inward."
+  },
+  {
+    "id": "hack-squat-machine",
+    "name": "Hack squat machine",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [
+      "glutes/glutes"
+    ],
+    "setup": "Shoulders under the pads, back flat against the backrest. Feet shoulder width, mid-platform, toes out slightly.",
+    "posture": "Back and hips flat against the pad, chest up, core braced, knees tracking over the toes.",
+    "execution": "Release the safeties. Inhale and lower until the thighs are at least parallel. Drive up through the mid-foot and exhale, stopping just short of lockout.",
+    "commonMistakes": "Placing the feet too low, which grinds the knees. Letting the hips curl off the pad at the bottom."
+  },
+  {
+    "id": "smith-machine-squat",
+    "name": "Smith machine squat",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [
+      "glutes/glutes"
+    ],
+    "setup": "Bar on the upper traps. Feet slightly ahead of the bar line, shoulder width, toes out 15 degrees.",
+    "posture": "Chest up, ribs down, core braced. The fixed bar path means foot placement determines everything.",
+    "execution": "Unrack with a wrist twist. Inhale and squat down until the thighs are at least parallel. Drive up and exhale.",
+    "commonMistakes": "Feet placed directly under the bar, which forces the knees far forward. Relying on the machine and letting the core go slack."
+  },
+  {
+    "id": "belt-squat",
+    "name": "Belt squat",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [
+      "glutes/glutes"
+    ],
+    "setup": "Attach the belt around the hips, load hanging between the legs. Feet shoulder width on the platform, toes out slightly.",
+    "posture": "Chest up, torso tall, core braced. The spine carries no load, which is the whole point.",
+    "execution": "Inhale and squat down until the thighs are at least parallel. Drive up through the mid-foot and exhale.",
+    "commonMistakes": "Letting the belt ride up onto the waist rather than sitting on the hips. Leaning on the handles to pull yourself up."
+  },
+  {
+    "id": "leg-extension",
+    "name": "Leg extension",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [],
+    "setup": "Set the seat so the knees line up with the machine's pivot, and the ankle pad rests just above the feet.",
+    "posture": "Back flat against the pad, hands on the handles, thighs pressed into the seat, core lightly braced.",
+    "execution": "Exhale and extend the knees until the legs are straight. Squeeze one second at the top, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Swinging the weight up with a hip thrust. Letting the stack crash down between reps. Setting the pivot out of line with the knee."
+  },
+  {
+    "id": "bulgarian-split-squat",
+    "name": "Bulgarian split squat",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads",
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Stand about a stride in front of a bench. Place the top of the rear foot on it. Front foot far enough forward that the knee stays over the mid-foot at the bottom.",
+    "posture": "Chest up, torso slightly forward, hips square, core braced. Weight through the front heel and mid-foot.",
+    "execution": "Inhale and lower until the front thigh is parallel to the floor and the back knee is just off the ground. Drive up through the front foot and exhale.",
+    "commonMistakes": "Front foot too close, forcing the knee far past the toes. Pushing off the back foot. Letting the hips rotate open."
+  },
+  {
+    "id": "split-squat",
+    "name": "Split squat",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads",
+      "glutes/glutes"
+    ],
+    "secondary": [],
+    "setup": "Step into a split stance, front foot flat and rear heel lifted, feet about a stride apart and hip width laterally.",
+    "posture": "Chest up, torso upright, hips square, core braced. Both knees track over the toes.",
+    "execution": "Inhale and lower straight down until the back knee is just off the floor and the front thigh is parallel. Drive up through the front heel and exhale.",
+    "commonMistakes": "Stepping the feet onto a tightrope line, which destroys balance. Pushing mainly off the back foot."
+  },
+  {
+    "id": "walking-lunge",
+    "name": "Walking lunge",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads",
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings",
+      "calves/calves"
+    ],
+    "setup": "Stand tall holding a dumbbell in each hand at your sides. Feet hip width.",
+    "posture": "Chest up, torso upright, shoulders back, core braced, eyes forward.",
+    "execution": "Inhale and step forward about a stride, lowering until the back knee is just off the floor and the front thigh is parallel. Exhale and drive through the front heel to step directly into the next lunge.",
+    "commonMistakes": "Taking a short step so the front knee shoots past the toes. Letting the torso pitch forward. Letting the front knee cave inward."
+  },
+  {
+    "id": "reverse-lunge",
+    "name": "Reverse lunge",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads",
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Stand tall with a dumbbell in each hand at your sides. Feet hip width.",
+    "posture": "Chest up, torso upright, hips square, core braced.",
+    "execution": "Inhale and step backward about a stride, lowering until the back knee is just off the floor. Drive through the front heel to return to standing, exhaling.",
+    "commonMistakes": "Stepping back onto a narrow line and losing balance. Letting the front heel lift as you drive up."
+  },
+  {
+    "id": "step-up",
+    "name": "Step-up",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads",
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "calves/calves"
+    ],
+    "setup": "Set a box or bench at a height that puts the thigh roughly parallel when the foot is on it. Dumbbell in each hand.",
+    "posture": "Chest up, torso upright, core braced, whole working foot flat on the box.",
+    "execution": "Exhale and drive through the working heel to stand up on the box, keeping the trailing leg passive. Lower over 2 to 3 seconds under control, inhaling.",
+    "commonMistakes": "Pushing off the floor with the trailing leg. Choosing a box so high the hip has to twist. Dropping back down uncontrolled."
+  },
+  {
+    "id": "bodyweight-squat",
+    "name": "Bodyweight squat",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [
+      "glutes/glutes"
+    ],
+    "setup": "Stand with feet shoulder width, toes turned out 15 degrees. Arms out in front for balance.",
+    "posture": "Chest up, ribs down, core braced, weight through the mid-foot, knees tracking over the toes.",
+    "execution": "Inhale and sit down and back until the thighs are at least parallel. Drive up through the whole foot and exhale.",
+    "commonMistakes": "Heels lifting off the floor. Knees caving inward. Rounding the lower back at the bottom."
+  },
+  {
+    "id": "pistol-squat",
+    "name": "Pistol squat",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "abs/upper"
+    ],
+    "setup": "Stand on one leg, other leg extended straight out in front. Arms forward for balance. Build up with a box or support first.",
+    "posture": "Chest up, core braced hard, working foot flat with the whole sole down, knee tracking over the toes.",
+    "execution": "Inhale and lower slowly on one leg until the hamstring meets the calf, keeping the free leg off the floor. Drive up through the whole foot and exhale.",
+    "commonMistakes": "Attempting it before you have the ankle mobility, so the heel lifts. Collapsing into the bottom rather than lowering under control."
+  },
+  {
+    "id": "sissy-squat",
+    "name": "Sissy squat",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [],
+    "setup": "Stand tall, holding a support with one hand. Feet hip width, heels raised or on a small plate.",
+    "posture": "Body held in a straight line from knees to head as you descend. Hips stay extended, core braced hard.",
+    "execution": "Inhale and lean back, letting the knees travel forward while the hips stay open, lowering until the thighs are near the calves. Drive up by extending the knees, exhaling.",
+    "commonMistakes": "Bending at the hips, which turns it into a normal squat. Going far deeper than the knees are conditioned for."
+  },
+  {
+    "id": "wall-sit",
+    "name": "Wall sit",
+    "equipment": "bodyweight",
+    "loadType": "timed",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [],
+    "setup": "Stand with your back flat against a wall, then walk the feet out and slide down until the thighs are parallel to the floor.",
+    "posture": "Back flat against the wall, knees directly over the ankles at 90 degrees, chest up, core braced. Hands off the thighs.",
+    "execution": "Hold the position for the set duration. Breathe steadily through the nose rather than holding your breath.",
+    "commonMistakes": "Resting the hands on the thighs to take load off. Sliding up as fatigue sets in. Letting the knees drift past the toes."
+  },
+  {
+    "id": "band-squat",
+    "name": "Band squat",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "quads/quads"
+    ],
+    "secondary": [
+      "glutes/glutes"
+    ],
+    "setup": "Stand on the middle of a band, feet shoulder width, and bring the top over the shoulders or hold at chest height.",
+    "posture": "Chest up, ribs down, core braced, knees tracking over the toes.",
+    "execution": "Inhale and squat down until the thighs are at least parallel. Drive up through the mid-foot and exhale at the top, where band tension is highest.",
+    "commonMistakes": "Letting the band pull the torso forward. Cutting the depth short because the top is the hardest part."
+  },
+  {
+    "id": "lying-leg-curl",
+    "name": "Lying leg curl",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "hamstrings/hamstrings"
+    ],
+    "secondary": [
+      "calves/calves"
+    ],
+    "setup": "Lie face down with the knees just past the edge of the pad and the ankle roller sitting just above the heels.",
+    "posture": "Hips pressed into the pad throughout, chest down, hands on the handles, neck neutral.",
+    "execution": "Exhale and curl the heels toward the glutes as far as they will go. Squeeze one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Lifting the hips off the pad to swing the weight up, which is the most common fault here. Letting the stack drop fast."
+  },
+  {
+    "id": "seated-leg-curl",
+    "name": "Seated leg curl",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "hamstrings/hamstrings"
+    ],
+    "secondary": [
+      "calves/calves"
+    ],
+    "setup": "Set the back pad so the knees line up with the pivot. Lap pad snug over the thighs, ankle roller just above the heels.",
+    "posture": "Back flat against the pad, hips pinned by the lap pad, core lightly braced.",
+    "execution": "Exhale and curl the heels down and back as far as they will go. Squeeze one second, return over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Sliding forward out of the seat. Not tightening the lap pad, so the hips lift on every rep."
+  },
+  {
+    "id": "standing-leg-curl",
+    "name": "Standing leg curl",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "hamstrings/hamstrings"
+    ],
+    "secondary": [],
+    "setup": "Stand facing the machine, one leg against the roller just above the heel, hands on the handles.",
+    "posture": "Stand tall, hips square, working thigh pressed against the pad, core braced.",
+    "execution": "Exhale and curl the heel toward the glute. Squeeze one second, lower over 2 to 3 seconds, inhaling. Complete all reps, then switch legs.",
+    "commonMistakes": "Swinging the hip forward to help. Letting the torso lean back as the weight rises."
+  },
+  {
+    "id": "glute-ham-raise",
+    "name": "Glute-ham raise",
+    "equipment": "machine",
+    "loadType": "bodyweight",
+    "primary": [
+      "hamstrings/hamstrings"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "back/lower"
+    ],
+    "setup": "Set the foot plate and pad so the thighs rest on the pad and the ankles are secured. Start from a kneeling upright position.",
+    "posture": "Straight line from knees to head throughout. Hips extended, glutes squeezed, core braced hard.",
+    "execution": "Inhale and lower slowly over 3 to 5 seconds, keeping the body in one line. Exhale and pull back up using the hamstrings. Use your hands on the floor to assist early on.",
+    "commonMistakes": "Bending at the hips on the way down. Attempting unassisted before the hamstrings can control the descent, which strains them badly."
+  },
+  {
+    "id": "barbell-romanian-deadlift",
+    "name": "Barbell Romanian deadlift",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "hamstrings/hamstrings"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "back/lower",
+      "forearms/forearms"
+    ],
+    "setup": "Start standing tall with the bar at arm's length against the thighs, overhand grip just outside the legs. Feet hip width.",
+    "posture": "Chest up, flat back, shoulders back, lats engaged, core braced hard. Knees held at a soft fixed 15 degree bend.",
+    "execution": "Inhale and brace. Push the hips straight back, sliding the bar down the thighs until you feel a strong hamstring stretch, usually around mid-shin. Drive the hips forward to stand, exhaling.",
+    "commonMistakes": "Turning it into a squat by bending the knees further as you descend. Rounding the lower back to chase depth. Letting the bar drift away from the legs."
+  },
+  {
+    "id": "stiff-leg-deadlift",
+    "name": "Stiff-leg deadlift",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "hamstrings/hamstrings"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "back/lower"
+    ],
+    "setup": "Bar on the floor. Feet hip width, overhand grip just outside the legs. Legs stay nearly straight throughout.",
+    "posture": "Chest up, flat back, shoulders back, core braced hard. Knees almost locked but not hyperextended.",
+    "execution": "Inhale and brace. Hinge at the hips to lower the bar toward the floor with near-straight legs, stopping where the back would round. Drive the hips forward to stand, exhaling.",
+    "commonMistakes": "Rounding the lower back to touch the floor. Locking the knees hard. Loading it like a conventional deadlift."
+  },
+  {
+    "id": "dumbbell-romanian-deadlift",
+    "name": "Dumbbell Romanian deadlift",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "hamstrings/hamstrings"
+    ],
+    "secondary": [
+      "glutes/glutes",
+      "back/lower"
+    ],
+    "setup": "Stand tall with a dumbbell in each hand in front of the thighs, palms facing the body. Feet hip width.",
+    "posture": "Chest up, flat back, shoulders back, core braced. Knees at a soft fixed 15 degree bend.",
+    "execution": "Inhale and brace. Push the hips back, lowering the dumbbells down the front of the legs until you feel a hamstring stretch. Drive the hips forward to stand, exhaling.",
+    "commonMistakes": "Letting the dumbbells drift forward away from the legs. Squatting instead of hinging."
+  },
+  {
+    "id": "single-leg-romanian-deadlift",
+    "name": "Single-leg Romanian deadlift",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "hamstrings/hamstrings",
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "back/lower"
+    ],
+    "setup": "Stand on one leg with a dumbbell in the opposite hand. Soft 15 degree bend in the standing knee.",
+    "posture": "Hips square and level throughout, flat back, chest up, core braced. The rear leg extends behind as a counterweight.",
+    "execution": "Inhale and hinge forward at the hip, lowering the dumbbell toward the floor while the free leg rises behind. Stop at a hamstring stretch, then drive the hip forward to stand, exhaling.",
+    "commonMistakes": "Letting the hip of the free leg rotate open toward the ceiling. Rounding the back. Bending the standing knee to reach lower."
+  },
+  {
+    "id": "kettlebell-swing",
+    "name": "Kettlebell swing",
+    "equipment": "kettlebell",
+    "loadType": "weighted",
+    "primary": [
+      "hamstrings/hamstrings",
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "back/lower",
+      "abs/upper"
+    ],
+    "setup": "Kettlebell on the floor about a foot in front of you. Feet slightly wider than the hips. Hinge and grip the handle with both hands, then hike it back between the legs.",
+    "posture": "Flat back, chest up, shoulders down and packed, core braced hard. This is a hip hinge, never a squat.",
+    "execution": "Snap the hips forward explosively so the bell floats up to chest height, exhaling sharply and squeezing the glutes. Let it swing back between the legs as you inhale and hinge.",
+    "commonMistakes": "Squatting the bell up instead of hinging. Lifting with the arms and shoulders. Hyperextending the lower back at the top."
+  },
+  {
+    "id": "nordic-hamstring-curl",
+    "name": "Nordic hamstring curl",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "hamstrings/hamstrings"
+    ],
+    "secondary": [
+      "glutes/glutes"
+    ],
+    "setup": "Kneel on a pad with the ankles anchored under a bar or held by a partner. Body upright, arms crossed or ready to catch.",
+    "posture": "Straight line from knees to head throughout. Hips extended, glutes squeezed hard, core braced.",
+    "execution": "Inhale and lower as slowly as possible, resisting all the way, keeping the body in one line. Catch yourself with the hands and push back up. Exhale on the way up.",
+    "commonMistakes": "Attempting full unassisted reps too early, which commonly causes hamstring strains. Bending at the hips instead of holding the line. Dropping fast."
+  },
+  {
+    "id": "stability-ball-hamstring-curl",
+    "name": "Stability ball hamstring curl",
+    "equipment": "other",
+    "loadType": "bodyweight",
+    "primary": [
+      "hamstrings/hamstrings"
+    ],
+    "secondary": [
+      "glutes/glutes"
+    ],
+    "setup": "Lie on your back with the heels on top of a stability ball, legs straight, arms flat at your sides.",
+    "posture": "Lift the hips so the body forms a straight line from shoulders to heels. Glutes squeezed, core braced, hips held high throughout.",
+    "execution": "Exhale and pull the heels toward the glutes, rolling the ball in and keeping the hips lifted. Squeeze one second, extend back over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Letting the hips drop as the ball rolls in. Rushing so the ball wobbles out of control."
+  },
+  {
+    "id": "band-leg-curl",
+    "name": "Band leg curl",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "hamstrings/hamstrings"
+    ],
+    "secondary": [],
+    "setup": "Anchor the band at floor level. Lie face down and loop the other end around one ankle. Scoot forward until there is tension.",
+    "posture": "Hips pressed into the floor, chest down, core braced, neck neutral.",
+    "execution": "Exhale and curl the heel toward the glute against the band. Squeeze one second, lower over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Lifting the hips to help. Letting the band snap the leg straight."
+  },
+  {
+    "id": "barbell-hip-thrust",
+    "name": "Barbell hip thrust",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Sit on the floor with the upper back against a bench edge, just below the shoulder blades. Barbell across the hips with a pad. Feet flat, shins vertical at the top.",
+    "posture": "Ribs pulled down, chin tucked with eyes on the horizon throughout, core braced. Bench contact at the shoulder blades, not the neck.",
+    "execution": "Inhale, drive through the heels and lift the hips until the torso is parallel to the floor. Squeeze the glutes hard for one second and exhale. Lower over 2 to 3 seconds.",
+    "commonMistakes": "Hyperextending the lower back at the top instead of stopping at parallel. Letting the chin and ribs flare up. Pushing through the toes."
+  },
+  {
+    "id": "sumo-deadlift",
+    "name": "Sumo deadlift",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "glutes/glutes",
+      "quads/quads"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings",
+      "back/lower",
+      "forearms/forearms"
+    ],
+    "setup": "Bar over mid-foot. Take a wide stance with the toes turned out 30 to 45 degrees. Hinge down and grip inside the legs at shoulder width.",
+    "posture": "Chest up, flat back, hips lower than in a conventional pull, shoulders over the bar, knees pushed out over the toes, core braced hard.",
+    "execution": "Inhale and brace. Push the floor apart with the feet and stand tall, keeping the bar against the legs. Exhale at the top, then hinge back down under control.",
+    "commonMistakes": "Letting the knees cave inward. Rounding the lower back. Jerking the bar off the floor before the slack is pulled out."
+  },
+  {
+    "id": "machine-hip-thrust",
+    "name": "Machine hip thrust",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Set the seat and lap pad so the pad sits across the hips, not the belly. Feet flat on the platform, shins vertical at the top.",
+    "posture": "Back against the pad, ribs down, chin tucked, core braced.",
+    "execution": "Inhale, drive through the heels to extend the hips fully. Squeeze the glutes one second and exhale. Lower over 2 to 3 seconds under control.",
+    "commonMistakes": "Pad sitting on the stomach instead of the hip crease. Arching the lower back to gain extra range."
+  },
+  {
+    "id": "smith-machine-hip-thrust",
+    "name": "Smith machine hip thrust",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Bench set beside the bar, upper back against it just below the shoulder blades. Bar across the hips with a pad. Feet flat, shins vertical at the top.",
+    "posture": "Ribs down, chin tucked, core braced, shoulder blades on the bench.",
+    "execution": "Unrack with a wrist twist. Inhale, drive through the heels until the torso is parallel to the floor, exhaling. Squeeze one second, lower over 2 to 3 seconds.",
+    "commonMistakes": "Placing the bench so the fixed bar path doesn't line up over the hips. Hyperextending the lower back at the top."
+  },
+  {
+    "id": "machine-glute-kickback",
+    "name": "Machine glute kickback",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Set the pad and chest support. Place one foot against the pad or footplate, hands on the handles.",
+    "posture": "Chest against the pad, hips square, ribs down, core braced. The torso does not move.",
+    "execution": "Exhale and drive the working leg back and up until the hip is fully extended. Squeeze one second, return over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Arching the lower back to gain extra range. Rotating the hip open as the leg goes back."
+  },
+  {
+    "id": "hip-abduction-machine",
+    "name": "Hip abduction machine",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [],
+    "setup": "Set the pads against the outside of the thighs, knees bent, back flat against the seat.",
+    "posture": "Back against the pad, chest up, core lightly braced. Lean slightly forward to bias the upper glutes.",
+    "execution": "Exhale and press the knees apart against the pads as far as they go. Squeeze one second, return over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Letting the stack snap the legs back together. Rocking the torso side to side to push heavier."
+  },
+  {
+    "id": "cable-glute-kickback",
+    "name": "Cable glute kickback",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Ankle strap on the lowest pulley. Face the machine, hold the frame, working leg strapped and slightly forward.",
+    "posture": "Chest up, hips square, ribs down, core braced. Slight forward lean from the hips, torso still.",
+    "execution": "Exhale and drive the leg back and up until the hip is fully extended. Squeeze one second, return over 2 to 3 seconds, inhaling.",
+    "commonMistakes": "Arching the lower back rather than extending the hip. Swinging the leg with momentum."
+  },
+  {
+    "id": "cable-pull-through",
+    "name": "Cable pull-through",
+    "equipment": "cable",
+    "loadType": "weighted",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings",
+      "back/lower"
+    ],
+    "setup": "Rope on the lowest pulley. Face away from the machine, reach between the legs and grip both ends. Step forward until taut, feet shoulder width.",
+    "posture": "Chest up, flat back, core braced, knees at a soft fixed bend.",
+    "execution": "Inhale and push the hips straight back, letting the rope travel between the legs until you feel a hamstring stretch. Drive the hips forward to stand and squeeze the glutes, exhaling.",
+    "commonMistakes": "Squatting down instead of hinging back. Pulling with the arms rather than driving with the hips. Hyperextending the lower back at the top."
+  },
+  {
+    "id": "glute-bridge",
+    "name": "Glute bridge",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Lie on your back, knees bent, feet flat and hip width, heels about a hand's length from the glutes. Arms flat at your sides.",
+    "posture": "Ribs pulled down, chin tucked, core braced, lower back neutral rather than arched.",
+    "execution": "Exhale and drive through the heels to lift the hips until the body forms a straight line from knees to shoulders. Squeeze one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Arching the lower back to lift higher instead of stopping at a straight line. Pushing through the toes. Letting the knees fall apart."
+  },
+  {
+    "id": "single-leg-glute-bridge",
+    "name": "Single-leg glute bridge",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "hamstrings/hamstrings"
+    ],
+    "setup": "Lie on your back, one knee bent with the foot flat, the other leg extended straight or knee hugged to the chest.",
+    "posture": "Hips level and square throughout, ribs down, core braced, chin tucked.",
+    "execution": "Exhale and drive through the working heel to lift the hips until the body forms a straight line. Squeeze one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Letting the free-leg hip drop, which lets the strong side take over. Arching the lower back to gain height."
+  },
+  {
+    "id": "frog-pump",
+    "name": "Frog pump",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [],
+    "setup": "Lie on your back, soles of the feet pressed together, knees fallen out wide, heels drawn toward the glutes.",
+    "posture": "Ribs down, core braced, chin tucked, lower back neutral.",
+    "execution": "Exhale and drive through the outer edges of the feet to lift the hips. Squeeze the glutes hard for one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Arching the lower back to lift higher. Letting the knees drift back together."
+  },
+  {
+    "id": "donkey-kick",
+    "name": "Donkey kick",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [],
+    "setup": "On all fours, hands under the shoulders and knees under the hips. Spine neutral.",
+    "posture": "Flat back like a tabletop, hips level and square, core braced, neck in line with the spine.",
+    "execution": "Exhale and drive one heel toward the ceiling, keeping the knee bent at 90 degrees, until the thigh is level with the torso. Squeeze one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Arching the lower back to kick higher. Letting the hip rotate open. Swinging the leg with momentum."
+  },
+  {
+    "id": "fire-hydrant",
+    "name": "Fire hydrant",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [],
+    "setup": "On all fours, hands under the shoulders and knees under the hips.",
+    "posture": "Flat back, hips level, core braced, weight evenly spread so the torso doesn't lean.",
+    "execution": "Exhale and lift one knee out to the side, keeping it bent at 90 degrees, until the thigh is roughly parallel to the floor. Squeeze one second, lower over 2 seconds, inhaling.",
+    "commonMistakes": "Leaning the torso away to lift the leg higher. Rotating the hips instead of moving only at the working hip."
+  },
+  {
+    "id": "curtsy-lunge",
+    "name": "Curtsy lunge",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [
+      "quads/quads"
+    ],
+    "setup": "Stand tall with a dumbbell in each hand at your sides. Feet hip width.",
+    "posture": "Chest up, torso upright, hips as square as possible, core braced.",
+    "execution": "Inhale and step one foot back and diagonally behind the other, lowering until the front thigh is near parallel. Drive through the front heel to return, exhaling.",
+    "commonMistakes": "Crossing so far behind that the knee twists. Letting the torso rotate with the step. Letting the front knee cave inward."
+  },
+  {
+    "id": "kettlebell-sumo-squat",
+    "name": "Kettlebell sumo squat",
+    "equipment": "kettlebell",
+    "loadType": "weighted",
+    "primary": [
+      "glutes/glutes",
+      "quads/quads"
+    ],
+    "secondary": [],
+    "setup": "Stand with feet wider than shoulder width, toes turned out 30 to 45 degrees. Hold one kettlebell by the horns at chest height or hanging between the legs.",
+    "posture": "Chest up, torso upright, core braced, knees pushed out to track over the toes.",
+    "execution": "Inhale and squat straight down until the thighs are at least parallel. Drive up through the heels and squeeze the glutes at the top, exhaling.",
+    "commonMistakes": "Letting the knees cave inward. Leaning forward as the bell pulls down."
+  },
+  {
+    "id": "banded-lateral-walk",
+    "name": "Banded lateral walk",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "glutes/glutes"
+    ],
+    "secondary": [],
+    "setup": "Loop a band around the legs just above the knees or around the ankles. Feet hip width, quarter-squat position.",
+    "posture": "Chest up, hips low in a quarter squat, core braced, feet pointing straight ahead throughout.",
+    "execution": "Step sideways against the band, keeping constant tension and never letting the feet come fully together. Breathe steadily. Take the set number of steps each way.",
+    "commonMistakes": "Standing up tall between steps, which kills the tension. Letting the feet turn outward. Letting the trailing foot snap in."
+  },
+  {
+    "id": "standing-calf-raise-machine",
+    "name": "Standing calf raise machine",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "calves/calves"
+    ],
+    "secondary": [],
+    "setup": "Shoulders under the pads, balls of the feet on the platform edge, heels hanging free. Feet hip width, toes pointing straight ahead.",
+    "posture": "Stand tall, knees almost straight with a soft bend, chest up, core braced.",
+    "execution": "Inhale and lower the heels below the platform until you feel a deep calf stretch. Hold one second. Exhale and press up onto the toes as high as possible, squeezing one second at the top.",
+    "commonMistakes": "Bouncing through short reps with no stretch or squeeze. Bending the knees to bounce the weight. Rushing, which is the most common calf mistake."
+  },
+  {
+    "id": "seated-calf-raise-machine",
+    "name": "Seated calf raise machine",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "calves/calves"
+    ],
+    "secondary": [],
+    "setup": "Sit with the balls of the feet on the platform, pads snug across the lower thighs just above the knees.",
+    "posture": "Sit tall, back straight, core lightly braced, knees bent at 90 degrees. This angle biases the soleus.",
+    "execution": "Inhale and lower the heels for a deep stretch, hold one second. Exhale and press up as high as possible, squeezing one second at the top.",
+    "commonMistakes": "Short bouncy reps. Setting the pad on the kneecap rather than the lower thigh."
+  },
+  {
+    "id": "donkey-calf-raise",
+    "name": "Donkey calf raise",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "calves/calves"
+    ],
+    "secondary": [],
+    "setup": "Balls of the feet on a raised platform, hinged forward at the hips with the torso roughly parallel to the floor and the pad across the hips.",
+    "posture": "Flat back, chest up, core braced, knees almost straight.",
+    "execution": "Inhale and lower the heels for a deep stretch, hold one second. Exhale and press up as high as possible, squeezing one second.",
+    "commonMistakes": "Rounding the lower back in the hinged position. Bouncing without a full stretch."
+  },
+  {
+    "id": "leg-press-calf-raise",
+    "name": "Leg press calf raise",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "calves/calves"
+    ],
+    "secondary": [],
+    "setup": "Sit in the leg press with only the balls of the feet on the bottom edge of the platform, heels hanging off.",
+    "posture": "Back and hips flat against the pad, legs almost straight with a soft knee bend. Keep the safeties engaged.",
+    "execution": "Inhale and let the platform push the toes back into a deep stretch, hold one second. Exhale and press up as far as the ankles allow, squeezing one second.",
+    "commonMistakes": "Letting the feet slip off the platform, which is genuinely dangerous under load. Bending the knees to press the weight."
+  },
+  {
+    "id": "smith-machine-calf-raise",
+    "name": "Smith machine calf raise",
+    "equipment": "machine",
+    "loadType": "weighted",
+    "primary": [
+      "calves/calves"
+    ],
+    "secondary": [],
+    "setup": "Bar on the upper traps, balls of the feet on a raised block or plate, heels hanging free.",
+    "posture": "Stand tall, knees almost straight, chest up, core braced.",
+    "execution": "Inhale and lower the heels for a deep stretch, hold one second. Exhale and press up as high as possible, squeezing one second at the top.",
+    "commonMistakes": "Bouncing rapidly through a short range. Letting the block slide out from under the feet."
+  },
+  {
+    "id": "barbell-standing-calf-raise",
+    "name": "Barbell standing calf raise",
+    "equipment": "barbell",
+    "loadType": "weighted",
+    "primary": [
+      "calves/calves"
+    ],
+    "secondary": [],
+    "setup": "Bar on the upper traps as in a squat. Balls of the feet on a raised block, heels hanging free. Feet hip width.",
+    "posture": "Stand tall, knees almost straight, chest up, core braced hard for balance.",
+    "execution": "Inhale and lower the heels for a stretch, hold one second. Exhale and press up onto the toes, squeezing one second.",
+    "commonMistakes": "Wobbling because balance is the limiting factor rather than the calves. Bouncing without a full range."
+  },
+  {
+    "id": "dumbbell-standing-calf-raise",
+    "name": "Dumbbell standing calf raise",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "calves/calves"
+    ],
+    "secondary": [],
+    "setup": "A dumbbell in each hand at your sides. Balls of the feet on a raised block, heels hanging free.",
+    "posture": "Stand tall, chest up, knees almost straight, core braced.",
+    "execution": "Inhale and lower the heels for a deep stretch, hold one second. Exhale and press up as high as possible, squeezing one second.",
+    "commonMistakes": "Rushing the reps. Bending the knees to bounce the dumbbells up."
+  },
+  {
+    "id": "single-leg-dumbbell-calf-raise",
+    "name": "Single-leg dumbbell calf raise",
+    "equipment": "dumbbell",
+    "loadType": "weighted",
+    "primary": [
+      "calves/calves"
+    ],
+    "secondary": [],
+    "setup": "One dumbbell in the same-side hand, other hand on a support. Ball of the working foot on a raised block, other foot lifted.",
+    "posture": "Stand tall, working knee almost straight, hips level, core braced.",
+    "execution": "Inhale and lower the heel for a deep stretch, hold one second. Exhale and press up as high as possible, squeezing one second. Complete all reps, then switch.",
+    "commonMistakes": "Pulling on the support to help. Bending the knee to bounce."
+  },
+  {
+    "id": "bodyweight-calf-raise",
+    "name": "Bodyweight calf raise",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "calves/calves"
+    ],
+    "secondary": [],
+    "setup": "Stand with the balls of the feet on a step or raised edge, heels hanging free. Hand on a wall for balance.",
+    "posture": "Stand tall, knees almost straight, chest up, core braced.",
+    "execution": "Inhale and lower the heels for a deep stretch, hold one second. Exhale and press up as high as possible, squeezing one second at the top.",
+    "commonMistakes": "Doing fast bouncy reps on flat ground with no stretch. Rushing through high rep counts."
+  },
+  {
+    "id": "single-leg-bodyweight-calf-raise",
+    "name": "Single-leg bodyweight calf raise",
+    "equipment": "bodyweight",
+    "loadType": "bodyweight",
+    "primary": [
+      "calves/calves"
+    ],
+    "secondary": [],
+    "setup": "Ball of one foot on a step, other foot lifted behind. Fingertips on a wall for balance only.",
+    "posture": "Stand tall, working knee almost straight, hips level, core braced.",
+    "execution": "Inhale and lower the heel for a deep stretch, hold one second. Exhale and press up as high as possible, squeezing one second. Complete all reps, then switch.",
+    "commonMistakes": "Leaning on the wall to take load off. Cutting the stretch short at the bottom."
+  },
+  {
+    "id": "band-calf-raise",
+    "name": "Band calf raise",
+    "equipment": "bands",
+    "loadType": "weighted",
+    "primary": [
+      "calves/calves"
+    ],
+    "secondary": [],
+    "setup": "Sit with the legs extended and loop a band around the balls of the feet, holding both ends. Or stand on the band and hold the handles.",
+    "posture": "Sit or stand tall, back straight, knees almost straight, core braced.",
+    "execution": "Exhale and point the toes away against the band as far as they go, squeezing one second. Return over 2 to 3 seconds into a stretch, inhaling.",
+    "commonMistakes": "Letting the band snap the feet back. Using so little tension there is no real resistance at the top."
+  },
+  {
+    "id": "jump-rope",
+    "name": "Jump rope",
+    "equipment": "other",
+    "loadType": "timed",
+    "primary": [
+      "calves/calves"
+    ],
+    "secondary": [],
+    "setup": "Rope length checked by standing on the middle, handles reaching roughly to the armpits. Feet together, rope behind the heels.",
+    "posture": "Stand tall, chest up, elbows tucked close to the ribs, core braced, eyes forward. Wrists do the turning, not the arms.",
+    "execution": "Jump about 2cm off the floor, landing softly on the balls of the feet with soft knees. Keep a steady rhythm for the set duration, breathing continuously.",
+    "commonMistakes": "Jumping far higher than needed, which tires you out fast. Landing flat-footed or on the heels. Swinging from the shoulders instead of the wrists."
+  }
+]

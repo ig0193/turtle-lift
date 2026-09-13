@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PROTOTYPE — workout session state model</title>
+<style>
+:root{--bg:#12100C;--panel:#1B1813;--line:#302A21;--t1:#F5EFE8;--t2:#A89C8E;--t3:#6B6156;
+      --acc:#D85A30;--acc2:#F0997B;--ok:#7FB069;--bad:#E0655F}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t1);font:15px/1.6 -apple-system,'Segoe UI',Roboto,sans-serif;
+     padding:28px 18px 70px}
+.wrap{max-width:1080px;margin:0 auto}
+h1{font-size:22px;font-weight:600;letter-spacing:-.02em}
+.q{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--acc);
+   border-radius:8px;padding:14px 16px;margin:14px 0 24px}
+.q b{color:var(--acc2)}
+.q p{font-size:13.5px;color:var(--t2);margin-top:6px}
+.cols{display:grid;grid-template-columns:minmax(330px,1fr) minmax(330px,1.1fr);gap:20px;align-items:start}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--t3);margin-bottom:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:15px;margin-bottom:18px}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:4px 12px;font-size:13.5px}
+.kv dt{color:var(--t3)}
+.kv dd{font-variant-numeric:tabular-nums}
+.hr{height:1px;background:var(--line);margin:13px 0}
+button{font:inherit;cursor:pointer;border-radius:7px;border:1px solid var(--line);
+       background:#241F18;color:var(--t1);padding:7px 11px;font-size:12.5px}
+button:hover:not(:disabled){border-color:var(--acc);color:var(--acc2)}
+button:disabled{opacity:.32;cursor:not-allowed}
+button.go{background:var(--acc);border-color:var(--acc);color:#180B04;font-weight:600}
+button.go:hover{color:#180B04}
+.btns{display:flex;flex-wrap:wrap;gap:7px}
+.grp{margin-bottom:13px}
+.grp>span{display:block;font-size:11px;color:var(--t3);margin-bottom:6px;
+          text-transform:uppercase;letter-spacing:.07em}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:13px}
+.tabs button[aria-selected=true]{background:var(--acc);border-color:var(--acc);color:#180B04;font-weight:600}
+.step{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line)}
+.step:last-child{border:0}
+.step .n{width:20px;height:20px;border-radius:50%;background:#241F18;color:var(--t3);font-size:11px;
+         display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:3px}
+.step.done .n{background:var(--ok);color:#0C0A07}
+.step.now .n{background:var(--acc);color:#180B04}
+.step p{font-size:12.5px;color:var(--t2);flex:1}
+.step button{flex-shrink:0}
+.desc{font-size:13px;color:var(--t2);margin-bottom:12px}
+.log{font-size:12px;font-family:ui-monospace,Menlo,monospace;color:var(--t2);max-height:210px;
+     overflow-y:auto;line-height:1.75}
+.log b{color:var(--acc2);font-weight:500}
+.log .w{color:var(--bad)}
+.log .g{color:var(--ok)}
+.sess{font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--line)}
+.sess:last-child{border:0}
+.sess .d{color:var(--t3)}
+.pb{color:var(--acc2);font-size:11px}
+.big{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.row{display:flex;gap:22px}
+.row div p:last-child{font-size:11px;color:var(--t3)}
+.tag{font-size:10.5px;padding:1.5px 7px;border-radius:99px;border:1px solid var(--line);color:var(--t3)}
+.tag.on{border-color:var(--acc);color:var(--acc2)}
+.warn{background:#2A1512;border:1px solid #5C2A22;color:#F0A79F;border-radius:7px;padding:9px 11px;
+      font-size:12.5px;margin-top:10px}
+</style></head><body><div class="wrap">
+
+<h1>PROTOTYPE — workout session state model</h1>
+<div class="q">
+<b>The question:</b> does the session model hold up when driven end to end, given that
+<i>nothing derived is stored</i>? Streak, personal bests, the “trained” ticks and the
+session title are all recomputed on read. That is elegant on paper. This demo pushes it
+through the cases that are hard to reason about: four load types, an abandoned session, a
+backdated workout that rewrites an earlier one’s history, and an assisted lift where a
+smaller number is the record.
+<p>Throwaway. In-memory only — refresh wipes everything. The logic lives in one pure module
+at the top of the source and is meant to be lifted into Dart; the page is a shell.</p>
+</div>
+
+<div class="cols">
+<div>
+  <h2>Current state</h2>
+  <div class="card">
+    <div class="row" style="margin-bottom:13px">
+      <div><p class="big" id="v-streak">0</p><p>Day streak</p></div>
+      <div><p class="big" id="v-sessions">0</p><p>Workouts</p></div>
+      <div><p class="big" id="v-sets">0</p><p>Sets</p></div>
+    </div>
+    <dl class="kv">
+      <dt>Today is</dt><dd id="v-today">—</dd>
+      <dt>Active session</dt><dd id="v-active">none</dd>
+      <dt>Session date</dt><dd id="v-date">—</dd>
+      <dt>Title shown as</dt><dd id="v-title">—</dd>
+      <dt>Muscles ticked</dt><dd id="v-trained">—</dd>
+    </dl>
+    <div class="hr"></div>
+    <h2 style="margin-bottom:7px">Exercises in this session</h2>
+    <div id="v-ex" style="font-size:12.5px;color:var(--t3)">none</div>
+  </div>
+
+  <h2>History</h2>
+  <div class="card"><div id="v-hist" style="color:var(--t3);font-size:12.5px">No workouts yet.</div></div>
+
+  <h2>What just happened</h2>
+  <div class="card"><div class="log" id="v-log"></div></div>
+</div>
+
+<div>
+  <h2>Guided walkthroughs</h2>
+  <div class="card">
+    <div class="tabs" id="tabs"></div>
+    <p class="desc" id="sc-desc"></p>
+    <div id="sc-steps"></div>
+  </div>
+
+  <h2>Free play</h2>
+  <div class="card" id="free"></div>
+</div>
+</div>
+
+<script>
+/* ──────────────────────────────────────────────────────────────────────────
+   PURE MODULE — no DOM in here. This is the bit meant to survive the
+   prototype and be rewritten in Dart. (state, action) => state, plus
+   derivations that read a session list and compute everything on the fly.
+   ────────────────────────────────────────────────────────────────────────── */
+const Gym = (() => {
+
+  const EX = {
+    bench:    {name:'Barbell bench press',   load:'weighted',   primary:['chest/mid'],    secondary:['triceps','shoulders/front-delt']},
+    incline:  {name:'Incline dumbbell press',load:'weighted',   primary:['chest/upper'],  secondary:['triceps']},
+    pushdown: {name:'Cable rope pushdown',   load:'weighted',   primary:['triceps'],      secondary:[]},
+    pullup:   {name:'Pull-up',               load:'bodyweight', primary:['back/lats'],    secondary:['biceps']},
+    apullup:  {name:'Assisted pull-up machine',load:'assisted', primary:['back/lats'],    secondary:['biceps']},
+    plank:    {name:'Plank',                 load:'timed',      primary:['abs/upper'],    secondary:['obliques']},
+    squat:    {name:'Barbell back squat',    load:'weighted',   primary:['quads'],        secondary:['glutes']},
+    curl:     {name:'Barbell curl',          load:'weighted',   primary:['biceps'],       secondary:[]},
+  };
+
+  const TEMPLATES = {
+    push: {name:'Push day', groups:['chest','shoulders','triceps']},
+    pull: {name:'Pull day', groups:['back','biceps']},
+    legs: {name:'Leg day',  groups:['quads','hamstrings','glutes','calves']},
+  };
+
+  const parentOf = m => m.split('/')[0];
+  const day = d => new Date(d + 'T00:00:00Z').getTime() / 86400000;
+  const gap = (a, b) => Math.abs(day(b) - day(a));
+  const addDays = (d, n) => new Date((day(d) + n) * 86400000).toISOString().slice(0, 10);
+
+  /* ---- what counts as a completed set, per load type ---- */
+  const requiredField = load => load === 'timed' ? 'durationSec' : 'reps';
+  const isComplete = (set, load) => !!set.ticked && (set[requiredField(load)] || 0) > 0;
+
+  /* ---- the progression metric, compared lexicographically ---- */
+  function metric(set, load) {
+    if (load === 'weighted')   return [set.weightKg   || 0, set.reps || 0];
+    if (load === 'bodyweight') return [set.addedKg    || 0, set.reps || 0];
+    if (load === 'assisted')   return [-(set.assistKg || 0), set.reps || 0];   // inverted
+    return [set.weightKg || 0, set.durationSec || 0];
+  }
+  const better = (a, b) => !b ? true : a[0] !== b[0] ? a[0] > b[0] : a[1] > b[1];
+
+  function bestInSession(session, exId) {
+    const e = session.exercises.find(x => x.exId === exId);
+    if (!e) return null;
+    const load = EX[exId].load;
+    return e.sets.filter(s => isComplete(s, load)).map(s => metric(s, load))
+            .reduce((best, m) => better(m, best) ? m : best, null);
+  }
+
+  function bestBefore(sessions, exId, beforeDate) {
+    return sessions.filter(s => s.performedOn < beforeDate)
+      .map(s => bestInSession(s, exId))
+      .filter(Boolean)
+      .reduce((best, m) => better(m, best) ? m : best, null);
+  }
+
+  /* ---- derivations: all read-only over the session list ---- */
+
+  // Streak: workout days in a row where no gap exceeded 3 days. Decays against
+  // `asOf`, not just against the stored data.
+  function streakAsOf(sessions, asOf) {
+    const dates = [...new Set(sessions.filter(s => s.performedOn <= asOf).map(s => s.performedOn))]
+                    .sort().reverse();
+    if (!dates.length || gap(dates[0], asOf) > 3) return 0;
+    let n = 1;
+    for (let i = 1; i < dates.length; i++) {
+      if (gap(dates[i], dates[i - 1]) <= 3) n++; else break;
+    }
+    return n;
+  }
+
+  // Which exercises in this session beat the user's previous best. Per exercise,
+  // not per set. Requires a prior session of that exercise — a first-ever
+  // occurrence is trivially the max and must not count.
+  function pbExercises(sessions, session) {
+    return session.exercises.filter(e => {
+      const now = bestInSession(session, e.exId);
+      if (!now) return false;
+      const prior = bestBefore(sessions, e.exId, session.performedOn);
+      if (!prior) return false;                  // first ever: no badge
+      return better(now, prior);                 // strictly greater
+    }).map(e => e.exId);
+  }
+
+  // A sub-muscle group is trained when at least one exercise marked DONE lists
+  // it as PRIMARY. Secondary muscles never tick.
+  const trained = session =>
+    [...new Set(session.exercises.filter(e => e.state === 'done')
+                                 .flatMap(e => EX[e.exId].primary))];
+
+  const completedSets = session =>
+    session.exercises.reduce((n, e) => n + e.sets.filter(s => isComplete(s, EX[e.exId].load)).length, 0);
+
+  // title → template name → single exercise → primary muscles trained
+  function title(session) {
+    if (session.title) return session.title;
+    if (session.templateId) return TEMPLATES[session.templateId].name;
+    if (session.exercises.length === 1) return EX[session.exercises[0].exId].name;
+    const p = [...new Set(session.exercises.flatMap(e => EX[e.exId].primary.map(parentOf)))];
+    return p.length ? p.join(', ') : 'Untitled';
+  }
+
+  /* ---- reducer ---- */
+  const init = () => ({ today: '2026-07-12', active: null, history: [], seq: 1, notes: [] });
+  const note = (s, text, kind) => ({ ...s, notes: [...s.notes, { text, kind }] });
+
+  const newSession = (s, templateId) => ({
+    id: s.seq, templateId, title: '', performedOn: s.today,
+    loggedAt: s.today + 'T10:00', exercises: [],
+  });
+
+  function closeActive(s) {
+    // Auto-save the abandoned session if it has real work in it; otherwise drop it.
+    if (!s.active) return { s, msg: null };
+    const n = completedSets(s.active);
+    if (n === 0) return { s: { ...s, active: null }, msg: ['Empty session discarded silently — 0 completed sets, so it never reaches history.', 'w'] };
+    return {
+      s: { ...s, active: null, history: [...s.history, s.active] },
+      msg: [`Auto-saved “${title(s.active)}” under ${s.active.performedOn} (its own date, not today).`, 'g'],
+    };
+  }
+
+  function reducer(state, action) {
+    const a = action;
+    switch (a.type) {
+
+      case 'START': {
+        const { s, msg } = closeActive(state);
+        let next = msg ? note(s, msg[0], msg[1]) : s;
+        next = { ...next, active: newSession(next, a.templateId), seq: next.seq + 1 };
+        return note(next, `Started ${a.templateId ? TEMPLATES[a.templateId].name : 'an ad-hoc workout'}.`);
+      }
+
+      case 'ADD_EXERCISE': {
+        if (!state.active) return note(state, 'No active session.', 'w');
+        const tpl = state.active.templateId;
+        if (tpl) {
+          const allowed = TEMPLATES[tpl].groups;
+          const ok = EX[a.exId].primary.every(m => allowed.includes(parentOf(m)));
+          if (!ok) return note(state, `Refused: ${EX[a.exId].name} is outside ${TEMPLATES[tpl].name}. Templates are locked to their own muscle groups.`, 'w');
+        }
+        if (state.active.exercises.some(e => e.exId === a.exId)) return note(state, 'Already in this session.', 'w');
+        const active = { ...state.active, exercises: [...state.active.exercises, { exId: a.exId, state: 'not_started', sets: [] }] };
+        return note({ ...state, active }, `Added ${EX[a.exId].name}.`);
+      }
+
+      case 'LOG_SET': {
+        if (!state.active) return note(state, 'No active session.', 'w');
+        const exercises = state.active.exercises.map(e =>
+          e.exId !== a.exId ? e : { ...e, state: 'in_progress', sets: [...e.sets, { ...a.set, ticked: true }] });
+        const load = EX[a.exId].load;
+        const set = { ...a.set, ticked: true };
+        const ok = isComplete(set, load);
+        const next = note({ ...state, active: { ...state.active, exercises } },
+          `Logged ${EX[a.exId].name}: ${fmt(set, load)}${ok ? '' : ' — NOT counted, required field is 0'}`, ok ? null : 'w');
+        return next;
+      }
+
+      case 'MARK_DONE': {
+        if (!state.active) return note(state, 'No active session.', 'w');
+        const exercises = state.active.exercises.map(e => e.exId !== a.exId ? e : { ...e, state: 'done' });
+        const s2 = { ...state, active: { ...state.active, exercises } };
+        return note(s2, `Marked ${EX[a.exId].name} done → ticks ${EX[a.exId].primary.join(', ')} (primary only).`);
+      }
+
+      case 'FINISH': {
+        if (!state.active) return note(state, 'No active session.', 'w');
+        const n = completedSets(state.active);
+        if (n === 0) return note({ ...state, active: null }, 'Finished with 0 completed sets → discarded, not saved. An empty session would otherwise count toward the streak.', 'w');
+        const saved = state.active;
+        const s2 = { ...state, active: null, history: [...state.history, saved] };
+        const pbs = pbExercises(s2.history, saved);
+        return note(s2, `Saved “${title(saved)}” — ${n} sets${pbs.length ? `, ${pbs.length} personal best${pbs.length > 1 ? 's' : ''}` : ', no PBs'}.`, 'g');
+      }
+
+      case 'DISCARD':
+        return state.active ? note({ ...state, active: null }, 'Discarded. Nothing saved.', 'w')
+                            : note(state, 'No active session.', 'w');
+
+      case 'SET_DATE':
+        if (!state.active) return note(state, 'No active session.', 'w');
+        return note({ ...state, active: { ...state.active, performedOn: a.date } },
+          `Session date set to ${a.date}.`);
+
+      case 'SET_TITLE':
+        if (!state.active) return note(state, 'No active session.', 'w');
+        return note({ ...state, active: { ...state.active, title: a.title } }, `Title set to “${a.title}”.`);
+
+      case 'ADVANCE':
+        return note({ ...state, today: addDays(state.today, a.n) },
+          `Time passes — today is now ${addDays(state.today, a.n)}.`);
+
+      case 'SEED': {  // drop a finished session straight into history
+        const sess = { id: state.seq, templateId: a.templateId || null, title: '',
+                       performedOn: a.date, loggedAt: a.date + 'T10:00',
+                       exercises: a.exercises.map(e => ({ exId: e.exId, state: 'done',
+                         sets: e.sets.map(s => ({ ...s, ticked: true })) })) };
+        const s2 = { ...state, history: [...state.history, sess], seq: state.seq + 1 };
+        const pbs = pbExercises(s2.history, sess);
+        return note(s2, `Backdated a session to ${a.date}${pbs.length ? ' — it sets a PB' : ''}.`, 'g');
+      }
+
+      case 'RESET':
+        return note(init(), 'Reset to a clean slate.');
+
+      default: return state;
+    }
+  }
+
+  function fmt(set, load) {
+    if (load === 'weighted')   return `${set.weightKg}kg × ${set.reps}`;
+    if (load === 'bodyweight') return set.addedKg ? `+${set.addedKg}kg × ${set.reps}` : `${set.reps} reps`;
+    if (load === 'assisted')   return `${set.assistKg}kg assist × ${set.reps}`;
+    return set.weightKg ? `${set.weightKg}kg × ${set.durationSec}s` : `${set.durationSec}s`;
+  }
+
+  return { EX, TEMPLATES, init, reducer, fmt, isComplete,
+           derive: { streakAsOf, pbExercises, trained, completedSets, title, bestInSession } };
+})();
+
+/* ──────────────────────────────────────────────────────────────────────────
+   THROWAWAY PAGE — everything below is shell. It only ever calls into Gym.
+   ────────────────────────────────────────────────────────────────────────── */
+let S = Gym.init();
+const $ = id => document.getElementById(id);
+
+function go(action) { S = Gym.reducer(S, action); render(); }
+
+const FREE = [
+  ['Start a workout', [
+    ['Start Push day',   {type:'START', templateId:'push'}],
+    ['Start Pull day',   {type:'START', templateId:'pull'}],
+    ['Start Leg day',    {type:'START', templateId:'legs'}],
+    ['Start ad-hoc',     {type:'START', templateId:null}],
+  ]],
+  ['Add an exercise', [
+    ['Bench press',      {type:'ADD_EXERCISE', exId:'bench'}],
+    ['Rope pushdown',    {type:'ADD_EXERCISE', exId:'pushdown'}],
+    ['Pull-up',          {type:'ADD_EXERCISE', exId:'pullup'}],
+    ['Assisted pull-up', {type:'ADD_EXERCISE', exId:'apullup'}],
+    ['Plank',            {type:'ADD_EXERCISE', exId:'plank'}],
+    ['Barbell curl',     {type:'ADD_EXERCISE', exId:'curl'}],
+    ['Back squat',       {type:'ADD_EXERCISE', exId:'squat'}],
+  ]],
+  ['Log a set', [
+    ['Bench 60kg × 8',        {type:'LOG_SET', exId:'bench',    set:{weightKg:60, reps:8}}],
+    ['Bench 65kg × 6',        {type:'LOG_SET', exId:'bench',    set:{weightKg:65, reps:6}}],
+    ['Bench 60kg × 0 reps',   {type:'LOG_SET', exId:'bench',    set:{weightKg:60, reps:0}}],
+    ['Pull-up 9 reps',        {type:'LOG_SET', exId:'pullup',   set:{reps:9}}],
+    ['Pull-up +5kg × 6',      {type:'LOG_SET', exId:'pullup',   set:{addedKg:5, reps:6}}],
+    ['Assisted 30kg × 8',     {type:'LOG_SET', exId:'apullup',  set:{assistKg:30, reps:8}}],
+    ['Assisted 25kg × 8',     {type:'LOG_SET', exId:'apullup',  set:{assistKg:25, reps:8}}],
+    ['Plank 60s',             {type:'LOG_SET', exId:'plank',    set:{durationSec:60}}],
+    ['Pushdown 32kg × 12',    {type:'LOG_SET', exId:'pushdown', set:{weightKg:32, reps:12}}],
+  ]],
+  ['Finish the session', [
+    ['Mark bench done',   {type:'MARK_DONE', exId:'bench'}],
+    ['Mark pull-up done', {type:'MARK_DONE', exId:'pullup'}],
+    ['Mark plank done',   {type:'MARK_DONE', exId:'plank'}],
+    ['Finish workout',    {type:'FINISH'}],
+    ['Discard workout',   {type:'DISCARD'}],
+  ]],
+  ['Mess with time', [
+    ['Next day',        {type:'ADVANCE', n:1}],
+    ['Skip 3 days',     {type:'ADVANCE', n:3}],
+    ['Skip 5 days',     {type:'ADVANCE', n:5}],
+    ['Reset everything',{type:'RESET'}],
+  ]],
+];
+
+const SCENARIOS = [
+{ name:'Happy path',
+  desc:'The ordinary case. Log a template session, mark exercises done, finish. Watch the muscle ticks appear from PRIMARY muscles only — triceps stays unticked after a bench press even though the bench works it.',
+  steps:[
+    ['Start Push day',            {type:'RESET'}],
+    ['…actually start it',        {type:'START', templateId:'push'}],
+    ['Add bench press',           {type:'ADD_EXERCISE', exId:'bench'}],
+    ['Log 60kg × 8',              {type:'LOG_SET', exId:'bench', set:{weightKg:60, reps:8}}],
+    ['Log 60kg × 8 again',        {type:'LOG_SET', exId:'bench', set:{weightKg:60, reps:8}}],
+    ['Mark bench done ← watch the ticks', {type:'MARK_DONE', exId:'bench'}],
+    ['Finish workout',            {type:'FINISH'}],
+  ]},
+{ name:'Four load types',
+  desc:'One session with a weighted, a bodyweight, an assisted and a timed exercise. Each stores different fields and each has a different “what counts as complete”. The third set has 0 reps deliberately — it should not count.',
+  steps:[
+    ['Clean slate',           {type:'RESET'}],
+    ['Start ad-hoc',          {type:'START', templateId:null}],
+    ['Add bench (weighted)',  {type:'ADD_EXERCISE', exId:'bench'}],
+    ['Log 60kg × 8',          {type:'LOG_SET', exId:'bench', set:{weightKg:60, reps:8}}],
+    ['Add pull-up (bodyweight)', {type:'ADD_EXERCISE', exId:'pullup'}],
+    ['Log 9 reps',            {type:'LOG_SET', exId:'pullup', set:{reps:9}}],
+    ['Add plank (timed)',     {type:'ADD_EXERCISE', exId:'plank'}],
+    ['Log 60 seconds',        {type:'LOG_SET', exId:'plank', set:{durationSec:60}}],
+    ['Log a 0-rep bench set ← should NOT count', {type:'LOG_SET', exId:'bench', set:{weightKg:60, reps:0}}],
+    ['Finish — count the sets', {type:'FINISH'}],
+  ]},
+{ name:'Nothing logged',
+  desc:'Start a workout, log nothing, tap Finish. It must vanish rather than save, otherwise an empty session would count toward the streak — contradicting the “at least one completed set” rule.',
+  steps:[
+    ['Clean slate',      {type:'RESET'}],
+    ['Start Push day',   {type:'START', templateId:'push'}],
+    ['Add bench press',  {type:'ADD_EXERCISE', exId:'bench'}],
+    ['Finish it anyway', {type:'FINISH'}],
+  ]},
+{ name:'Walked out mid-session',
+  desc:'The awkward one. Log part of a Push day, never finish it, come back two days later and start a Leg day. The old session must auto-save under ITS OWN date, not today — otherwise Monday’s work files as Wednesday and the streak lies.',
+  steps:[
+    ['Clean slate',                     {type:'RESET'}],
+    ['Start Push day',                  {type:'START', templateId:'push'}],
+    ['Add bench press',                 {type:'ADD_EXERCISE', exId:'bench'}],
+    ['Log 60kg × 8',                    {type:'LOG_SET', exId:'bench', set:{weightKg:60, reps:8}}],
+    ['Walk out. Two days pass.',        {type:'ADVANCE', n:2}],
+    ['Start Leg day ← watch the auto-save', {type:'START', templateId:'legs'}],
+  ]},
+{ name:'Streak tolerance',
+  desc:'Three days of slack, so Friday → Monday survives. Build a Mon/Wed/Fri week, then let four days pass and watch it collapse to zero without anything being written to storage.',
+  steps:[
+    ['Clean slate',              {type:'RESET'}],
+    ['Workout on Mon 6 Jul',     {type:'SEED', date:'2026-07-06', exercises:[{exId:'bench', sets:[{weightKg:60, reps:8}]}]}],
+    ['Workout on Wed 8 Jul',     {type:'SEED', date:'2026-07-08', exercises:[{exId:'bench', sets:[{weightKg:60, reps:8}]}]}],
+    ['Workout on Fri 10 Jul ← 3 in a row', {type:'SEED', date:'2026-07-10', exercises:[{exId:'bench', sets:[{weightKg:62, reps:8}]}]}],
+    ['Mon 13 Jul — 3-day gap, survives', {type:'ADVANCE', n:1}],
+    ['Let 4 more days pass ← streak dies', {type:'ADVANCE', n:4}],
+  ]},
+{ name:'Backdating rewrites history',
+  desc:'The case that justifies deriving instead of storing. Log a heavy bench today, and it is a personal best. Then remember a heavier session from last week and backdate it. Today’s PB should silently stop being a PB — and it does, because nothing was ever written down.',
+  steps:[
+    ['Clean slate',                  {type:'RESET'}],
+    ['A 60kg session on 6 Jul',      {type:'SEED', date:'2026-07-06', exercises:[{exId:'bench', sets:[{weightKg:60, reps:8}]}]}],
+    ['Today: bench 65kg ← a PB',     {type:'SEED', date:'2026-07-12', exercises:[{exId:'bench', sets:[{weightKg:65, reps:8}]}]}],
+    ['Now backdate a 70kg session to 8 Jul', {type:'SEED', date:'2026-07-08', exercises:[{exId:'bench', sets:[{weightKg:70, reps:8}]}]}],
+    ['Look at 12 Jul in History ← the badge is gone', {type:'ADVANCE', n:0}],
+  ]},
+{ name:'Assisted is backwards',
+  desc:'The only place in the app where a smaller number is the record. 30kg of assistance, then 25kg — less help, so that IS a personal best. Then 35kg, which is more help, and must not be.',
+  steps:[
+    ['Clean slate',                  {type:'RESET'}],
+    ['6 Jul: 30kg assist × 8',       {type:'SEED', date:'2026-07-06', exercises:[{exId:'apullup', sets:[{assistKg:30, reps:8}]}]}],
+    ['9 Jul: 25kg assist ← less help, PB', {type:'SEED', date:'2026-07-09', exercises:[{exId:'apullup', sets:[{assistKg:25, reps:8}]}]}],
+    ['12 Jul: 35kg assist ← more help, no PB', {type:'SEED', date:'2026-07-12', exercises:[{exId:'apullup', sets:[{assistKg:35, reps:8}]}]}],
+  ]},
+{ name:'Something illegal',
+  desc:'Templates are locked to their own muscle groups. On a Push day, try to add a barbell curl. It should be refused — if you want curls, that is what the ad-hoc path is for.',
+  steps:[
+    ['Clean slate',                   {type:'RESET'}],
+    ['Start Push day',                {type:'START', templateId:'push'}],
+    ['Add bench press ← allowed',     {type:'ADD_EXERCISE', exId:'bench'}],
+    ['Add barbell curl ← refused',    {type:'ADD_EXERCISE', exId:'curl'}],
+    ['Start ad-hoc instead',          {type:'START', templateId:null}],
+    ['Add barbell curl ← now fine',   {type:'ADD_EXERCISE', exId:'curl'}],
+  ]},
+];
+
+let tab = 0, step = 0;
+
+function render() {
+  const D = Gym.derive;
+  $('v-streak').textContent   = D.streakAsOf(S.history, S.today);
+  $('v-sessions').textContent = S.history.length;
+  $('v-sets').textContent     = S.history.reduce((n, s) => n + D.completedSets(s), 0);
+  $('v-today').textContent    = S.today;
+
+  const a = S.active;
+  $('v-active').textContent = a ? `#${a.id} · ${a.templateId ? Gym.TEMPLATES[a.templateId].name : 'ad-hoc'}` : 'none';
+  $('v-date').textContent   = a ? a.performedOn + (a.performedOn !== S.today ? '  (backdated)' : '') : '—';
+  $('v-title').textContent  = a ? D.title(a) + (a.title ? '' : '  (fallback)') : '—';
+  $('v-trained').textContent = a ? (D.trained(a).join(', ') || 'none yet') : '—';
+
+  $('v-ex').innerHTML = !a || !a.exercises.length ? 'none'
+    : a.exercises.map(e => {
+        const load = Gym.EX[e.exId].load;
+        const sets = e.sets.map(s =>
+          `<span class="tag ${Gym.isComplete(s, load) ? 'on' : ''}">${Gym.fmt(s, load)}</span>`).join(' ');
+        return `<div style="padding:5px 0"><b style="color:var(--t1)">${Gym.EX[e.exId].name}</b>
+                <span class="tag">${load}</span> <span class="tag ${e.state === 'done' ? 'on' : ''}">${e.state}</span>
+                <div style="margin-top:4px">${sets || '<i>no sets</i>'}</div></div>`;
+      }).join('');
+
+  $('v-hist').innerHTML = !S.history.length ? 'No workouts yet.'
+    : [...S.history].reverse().map(s => {
+        const pbs = D.pbExercises(S.history, s);
+        return `<div class="sess"><b>${D.title(s)}</b>
+          ${pbs.length ? `<span class="pb">★ ${pbs.length} PB</span>` : ''}
+          <div class="d">${s.performedOn} · ${D.completedSets(s)} sets · streak that day: ${D.streakAsOf(S.history, s.performedOn)}</div></div>`;
+      }).join('');
+
+  $('v-log').innerHTML = S.notes.slice(-14).reverse()
+    .map(n => `<div class="${n.kind || ''}">${n.kind === 'w' ? '⚠ ' : n.kind === 'g' ? '✓ ' : '· '}${n.text}</div>`).join('');
+
+  $('free').innerHTML = FREE.map(([g, items]) =>
+    `<div class="grp"><span>${g}</span><div class="btns">${
+      items.map((it, i) => `<button data-g="${g}" data-i="${i}">${it[0]}</button>`).join('')
+    }</div></div>`).join('');
+  $('free').querySelectorAll('button').forEach(b => {
+    b.onclick = () => go(FREE.find(f => f[0] === b.dataset.g)[1][+b.dataset.i][1]);
+  });
+
+  $('tabs').innerHTML = SCENARIOS.map((s, i) =>
+    `<button role="tab" aria-selected="${i === tab}" data-t="${i}">${s.name}</button>`).join('');
+  $('tabs').querySelectorAll('button').forEach(b => {
+    b.onclick = () => { tab = +b.dataset.t; step = 0; render(); };
+  });
+  $('sc-desc').textContent = SCENARIOS[tab].desc;
+  $('sc-steps').innerHTML = SCENARIOS[tab].steps.map(([label], i) =>
+    `<div class="step ${i < step ? 'done' : i === step ? 'now' : ''}">
+       <span class="n">${i < step ? '✓' : i + 1}</span><p>${label}</p>
+       <button data-s="${i}" ${i === step ? 'class="go"' : ''} ${i === step ? '' : 'disabled'}>Run</button>
+     </div>`).join('');
+  $('sc-steps').querySelectorAll('button').forEach(b => {
+    b.onclick = () => { go(SCENARIOS[tab].steps[+b.dataset.s][1]); step++; render(); };
+  });
+}
+render();
+</script></div></body></html>
