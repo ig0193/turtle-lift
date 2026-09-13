@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Page background, docs/00-build-spec.md §12. Keep in sync with AppPalette.pageBackground. -->
+    <color name="page_background">#17140F</color>
+</resources>

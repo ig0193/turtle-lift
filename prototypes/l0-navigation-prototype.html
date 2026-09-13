@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PROTOTYPE — L0 navigation</title>
+<!--
+  THROWAWAY PROTOTYPE. Not production code, not a design system.
+
+  Question: does the revised L0 navigation shape feel right on a phone?
+
+  Three variants of the whole navigation model, switchable from the floating bar
+  (or the left/right arrow keys), reload-stable via the URL hash:
+
+    A  Revised      tabs = Workout · Muscles · History, Profile is a header icon,
+                    tab bar only on L0, an open session takes over the Workout tab.
+    B  Spec-as-written   tabs = Workout · Muscles · Profile, tab bar visible everywhere
+                    except splash/celebration, an open session shows a Resume card.
+    C  Revised + in-flow browse   as A, but the mid-session "Add exercise" screen can
+                    browse by muscle — the open question left by A hiding the Muscles tab.
+
+  Body diagrams are deliberately a labelled placeholder, not a simplified figure:
+  docs/00 §5 forbids any body figure other than the four traced SVGs, and this
+  prototype is about navigation, not anatomy.
+-->
+<!-- No external resources on purpose: this file must work offline and over AirDrop. -->
+<style>
+:root{--bg:#17140F;--card:#211D18;--line:#332C22;--off:#241F19;--t1:#F5EFE8;--t2:#A89C8E;
+      --t3:#6B6156;--acc:#D85A30;--acc2:#F0997B;--on:#1B0C05;--r:10px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#0B0907;color:var(--t1);
+     font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,sans-serif;
+     -webkit-font-smoothing:antialiased;display:flex;flex-direction:column;align-items:center;
+     justify-content:center;min-height:100vh;padding:20px 12px 96px}
+.phone{width:360px;height:740px;max-height:calc(100vh - 116px);background:var(--bg);
+       border-radius:30px;border:1px solid #2A241C;overflow:hidden;display:flex;
+       flex-direction:column;position:relative}
+@media (max-width:430px){
+  body{padding:0 0 72px;display:block}
+  .phone{width:100%;height:calc(100vh - 72px);max-height:none;border-radius:0;border:0}
+}
+.status{height:26px;display:flex;align-items:center;justify-content:space-between;
+        padding:0 18px;font-size:10px;color:var(--t3);flex-shrink:0}
+.scroll{flex:1;overflow-y:auto;padding:0 18px 18px}
+.scroll::-webkit-scrollbar{width:0}
+
+/* ---- L0 header (title + profile icon) ---- */
+/* Pinned header. The header is a sibling of the scroll body in the app
+   (Scaffold.appBar); here it lives inside .scroll, so sticky + a full-bleed
+   opaque background reproduces the same behaviour: content scrolls under
+   a header that stays put. */
+.l0h{display:flex;align-items:center;justify-content:space-between;
+     position:sticky;top:0;z-index:20;background:var(--bg);
+     margin:0 -18px 14px;padding:10px 18px 0}
+.l0h h1{font-size:24px;font-weight:600;letter-spacing:-.02em}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--card);
+        border:1px solid var(--line);color:var(--t2);cursor:pointer;display:flex;
+        align-items:center;justify-content:center;flex-shrink:0}
+.avatar svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;
+            stroke-linecap:round;stroke-linejoin:round}
+.avatar:active{border-color:var(--acc);color:var(--acc)}
+
+/* ---- pushed header ---- */
+.hdr{display:flex;align-items:center;gap:8px;min-height:34px;
+     position:sticky;top:0;z-index:20;background:var(--bg);
+     margin:0 -18px 12px;padding:10px 18px 0}
+.hdr h2{font-size:16px;font-weight:600;flex:1;letter-spacing:-.01em}
+.back{background:none;border:0;color:var(--t2);font-size:24px;line-height:1;
+      cursor:pointer;padding:0 6px 0 0}
+.iconbtn{background:none;border:0;color:var(--t3);font-size:15px;cursor:pointer;padding:4px}
+
+/* ---- tab bar ---- */
+.tabs{display:flex;border-top:1px solid var(--line);flex-shrink:0;background:var(--bg)}
+.tabs button{flex:1;background:none;border:0;padding:9px 0 max(11px,env(safe-area-inset-bottom));
+             color:var(--t3);font:inherit;cursor:pointer;display:flex;flex-direction:column;
+             align-items:center;gap:3px}
+.tabs button.on{color:var(--acc)}
+.tabs span{font-size:10px;font-weight:500}
+.tabs svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;
+          stroke-linecap:round;stroke-linejoin:round}
+
+/* ---- controls ---- */
+.big{width:100%;background:var(--acc);color:var(--on);border:0;border-radius:var(--r);
+     padding:14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:9px}
+.big:disabled{opacity:.35;cursor:not-allowed}
+.ghost{width:100%;background:var(--card);color:var(--t1);border:1px solid var(--line);
+       border-radius:var(--r);padding:13px;font:inherit;font-size:14px;font-weight:500;
+       cursor:pointer;margin-bottom:9px}
+.danger{width:100%;background:none;color:#C4553A;border:1px solid #3A2118;
+        border-radius:var(--r);padding:12px;font:inherit;font-size:13px;cursor:pointer;margin-top:6px}
+.lbl{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin:20px 0 8px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 0;
+     border-bottom:1px solid var(--line);cursor:pointer;text-align:left;width:100%;
+     background:none;border-left:0;border-right:0;border-top:0;color:var(--t1);font:inherit}
+.row p{font-size:14px;font-weight:500}
+.row small{font-size:11.5px;color:var(--t3);display:block;margin-top:3px;font-weight:400}
+.chev{color:var(--t3);font-size:17px;flex-shrink:0}
+.tick{color:var(--acc);font-size:14px;flex-shrink:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+      padding:14px;margin-bottom:9px}
+.card.hot{border-color:var(--acc)}
+.eyebrow{font-size:10.5px;color:var(--acc2);text-transform:uppercase;letter-spacing:.08em;
+         margin-bottom:5px;font-weight:600}
+.muted{font-size:12.5px;color:var(--t3);line-height:1.6}
+.empty{text-align:center;padding:42px 10px;color:var(--t3);font-size:13px;line-height:1.7}
+.chip{display:inline-block;background:var(--off);border:1px solid var(--line);border-radius:99px;
+      padding:3px 9px;font-size:11px;color:var(--t2);margin:0 5px 5px 0}
+.chip.acc{border-color:var(--acc);color:var(--acc2)}
+.fld{width:100%;background:var(--off);border:1px solid var(--line);border-radius:8px;
+     padding:11px;color:var(--t1);font:inherit;font-size:14px;margin-bottom:9px}
+.fld::placeholder{color:var(--t3)}
+.diag{background:var(--off);border:1px dashed var(--line);border-radius:var(--r);
+      padding:26px 10px;text-align:center;color:var(--t3);font-size:11px;line-height:1.6;
+      margin-bottom:10px}
+.stats{display:flex;gap:8px;margin-bottom:10px}
+.stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+      padding:12px 6px;text-align:center}
+.stat b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em}
+.stat span{font-size:10px;color:var(--t3)}
+.hero{background:linear-gradient(180deg,#2A1A10,var(--card));border:1px solid var(--acc);
+      border-radius:var(--r);padding:18px;text-align:center;margin-bottom:10px}
+.hero b{display:block;font-size:30px;font-weight:700;color:var(--acc2);letter-spacing:-.02em}
+.hero span{font-size:12px;color:var(--t2)}
+.setrow{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.setrow .n{width:20px;font-size:11.5px;color:var(--t3);flex-shrink:0}
+.setrow .fld{margin:0;text-align:center}
+.setrow .u{font-size:11.5px;color:var(--t3);flex-shrink:0}
+.setrow button{background:var(--off);border:1px solid var(--line);border-radius:8px;
+               width:38px;height:40px;color:var(--t3);font-size:15px;cursor:pointer;flex-shrink:0}
+.setrow button.done{border-color:var(--acc);color:var(--acc)}
+.pill{display:inline-block;background:var(--off);border:1px solid var(--line);border-radius:99px;
+      padding:3px 9px;font-size:11.5px;color:var(--t2);margin:0 5px 5px 0;
+      font-variant-numeric:tabular-nums}
+.seg{display:flex;gap:6px;margin-bottom:12px}
+.seg button{flex:1;background:var(--off);border:1px solid var(--line);border-radius:8px;
+            padding:9px;color:var(--t3);font:inherit;font-size:12.5px;cursor:pointer}
+.seg button.on{border-color:var(--acc);color:var(--acc);background:#2A1A10}
+.toast{position:absolute;left:16px;right:16px;bottom:74px;background:var(--card);
+       border:1px solid var(--acc);border-radius:9px;padding:11px 13px;font-size:12.5px;
+       color:var(--acc2);opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.show{opacity:1}
+.splash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+        gap:7px;cursor:pointer}
+.splash .mark{width:64px;height:64px;border-radius:18px;background:var(--acc);
+              display:flex;align-items:center;justify-content:center;font-size:31px;margin-bottom:8px}
+.splash h1{font-size:20px;font-weight:600}
+.splash p{font-size:13px;color:var(--t3)}
+.splash .tap{font-size:10px;color:var(--t3);letter-spacing:.16em;margin-top:22px}
+.celeb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+       gap:9px;padding:24px;text-align:center}
+.celeb .big{margin-top:22px}
+
+/* ---- variant switcher (prototype chrome, deliberately not app-styled) ---- */
+.sw{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:99;display:flex;
+    align-items:center;gap:2px;background:#F5EFE8;color:#17140F;border-radius:99px;
+    padding:5px;box-shadow:0 6px 26px rgba(0,0,0,.6);font-size:12.5px;font-weight:600}
+.sw button{background:none;border:0;font:inherit;font-size:16px;cursor:pointer;color:#17140F;
+           width:30px;height:30px;border-radius:50%;line-height:1}
+.sw button:active{background:#00000018}
+.sw .name{padding:0 9px;white-space:nowrap;max-width:62vw;overflow:hidden;text-overflow:ellipsis}
+.sw .k{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;
+       border-radius:50%;background:#D85A30;color:#fff;font-size:11px;margin-right:6px;
+       vertical-align:-4px}
+.rule{position:fixed;bottom:54px;left:50%;transform:translateX(-50%);z-index:99;
+      font-size:10.5px;color:#6B6156;background:#0B0907;padding:3px 10px;border-radius:99px;
+      white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis}
+</style></head>
+<body>
+
+<div class="phone" id="phone"></div>
+<div class="rule" id="rule"></div>
+<div class="sw">
+  <button id="prev" aria-label="Previous variant">‹</button>
+  <span class="name" id="vname"></span>
+  <button id="next" aria-label="Next variant">›</button>
+</div>
+
+<script>
+/* ============================ variants ============================ */
+const VARIANTS = {
+  A: { name:'Revised',
+       tabs:['Workout','Muscles','History'],
+       tabsOnlyAtL0:true, profileInHeader:true, sessionTakesOverTab:true, browseInFlow:false,
+       rule:'Tab bar only on L0 · Profile in header · session takes over the Workout tab' },
+  B: { name:'Spec as written',
+       tabs:['Workout','Muscles','Profile'],
+       tabsOnlyAtL0:false, profileInHeader:false, sessionTakesOverTab:false, browseInFlow:false,
+       rule:'Tabs everywhere except splash/celebration · Resume card · Profile is a tab' },
+  C: { name:'Revised + in-flow browse',
+       tabs:['Workout','Muscles','History'],
+       tabsOnlyAtL0:true, profileInHeader:true, sessionTakesOverTab:true, browseInFlow:true,
+       rule:'As A, plus muscle browsing inside the mid-session Add exercise screen' },
+};
+const KEYS = Object.keys(VARIANTS);
+
+/* ============================ data ============================ */
+const EX = {
+  bench:{ name:'Decline barbell bench press', eq:'Barbell', load:'weighted', mg:'chest', sub:'Lower chest', last:'60kg × 10' },
+  fly:  { name:'Cable crossover',             eq:'Cable',   load:'weighted', mg:'chest', sub:'Mid chest',   last:'15kg × 12' },
+  push: { name:'Push-up',                     eq:'Bodyweight', load:'bodyweight', mg:'chest', sub:'Mid chest', last:'× 20' },
+  pull: { name:'Pull-up',                     eq:'Bodyweight', load:'bodyweight', mg:'back', sub:'Upper back', last:'× 8' },
+  apull:{ name:'Assisted pull-up machine',    eq:'Machine', load:'assisted', mg:'back', sub:'Upper back', last:'25kg assist × 8' },
+  plank:{ name:'Plank',                       eq:'Bodyweight', load:'timed', mg:'abs', sub:'Core', last:'60s' },
+  tri:  { name:'Rope pushdown',               eq:'Cable',   load:'weighted', mg:'triceps', sub:'Triceps', last:'25kg × 12' },
+};
+const MUSCLES = [
+  {id:'chest', name:'Chest',    subs:['Upper chest','Mid chest','Lower chest']},
+  {id:'back',  name:'Back',     subs:['Upper back','Lats','Lower back']},
+  {id:'abs',   name:'Abs',      subs:['Core','Obliques']},
+  {id:'triceps',name:'Triceps', subs:['Triceps']},
+  {id:'legs',  name:'Legs',     subs:['Quads','Hamstrings','Calves']},
+];
+const SEED_HISTORY = [
+  {date:'Tue 8 Jul', title:'Leg day',  sets:21, ex:5, pbs:2},
+  {date:'Sun 6 Jul', title:'Push day', sets:16, ex:4, pbs:0},
+  {date:'Fri 4 Jul', title:'Pull day', sets:18, ex:4, pbs:1},
+];
+
+/* ============================ state ============================ */
+let V = 'A';
+try { V = (location.hash.match(/variant=([ABC])/) || [])[1] || 'A'; } catch(e){}
+let S;
+function reset(){
+  S = {
+    booted:false,
+    tab:0,
+    stack:[],            // [{screen, arg}] — empty means we are at an L0 tab root
+    session:null,        // {title, template, exercises:[{key,sets:[],done}]}
+    history:SEED_HISTORY.slice(),
+    toast:'',
+  };
+}
+reset();
+
+const cfg = () => VARIANTS[V];
+const top = () => S.stack[S.stack.length-1] || null;
+const go = (screen,arg) => { S.stack.push({screen,arg}); render(); };
+const back = () => { S.stack.pop(); render(); };
+const rootTo = () => { S.stack = []; render(); };
+function toast(msg){
+  S.toast = msg; render();
+  setTimeout(()=>{ S.toast=''; render(); }, 2100);
+}
+
+/* session helpers */
+function startSession(template){
+  S.session = {
+    title: template ? template.name : '',
+    template: template ? template.name : null,
+    exercises: (template ? template.ex : []).map(k=>({key:k,sets:[],done:false})),
+  };
+}
+const totalSets = () => !S.session ? 0 :
+  S.session.exercises.reduce((n,e)=>n+e.sets.filter(s=>s.done).length,0);
+const doneCount = () => !S.session ? 0 : S.session.exercises.filter(e=>e.done).length;
+
+const TEMPLATES = [
+  {name:'Chest and triceps day', ex:['bench','fly','tri'], mg:['Chest','Triceps']},
+  {name:'Pull day',              ex:['pull','apull'],      mg:['Back','Biceps']},
+  {name:'Core',                  ex:['plank'],             mg:['Abs']},
+];
+
+/* ============================ icons ============================ */
+const ICON = {
+  Workout:'<path d="M4 12h16M7 8v8M17 8v8"/>',
+  Muscles:'<circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M12 15l-3 6M12 15l3 6M7 10h10"/>',
+  History:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
+  Profile:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/>',
+};
+const personIcon = '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>';
+
+/* ============================ chrome ============================ */
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function l0Header(title){
+  const av = cfg().profileInHeader
+    ? `<button class="avatar" data-act="profile" aria-label="Profile">${personIcon}</button>` : '';
+  return `<div class="l0h"><h1>${esc(title)}</h1>${av}</div>`;
+}
+function pushHeader(title, right){
+  return `<div class="hdr"><button class="back" data-act="back">‹</button>
+          <h2>${esc(title)}</h2>${right||''}</div>`;
+}
+function showTabs(){
+  if(!S.booted) return false;
+  const t = top();
+  if(t && (t.screen==='celebrate')) return false;
+  if(cfg().tabsOnlyAtL0) return S.stack.length===0;
+  return true;                       // variant B: tabs everywhere post-splash except celebration
+}
+function tabBar(){
+  if(!showTabs()) return '';
+  return `<nav class="tabs">${cfg().tabs.map((n,i)=>
+    `<button class="${i===S.tab?'on':''}" data-act="tab" data-i="${i}">
+       <svg viewBox="0 0 24 24">${ICON[n]}</svg><span>${n}</span></button>`).join('')}</nav>`;
+}
+
+/* ============================ L0 screens ============================ */
+function tabRoot(){
+  const name = cfg().tabs[S.tab];
+  if(name==='Workout') return workoutRoot();
+  if(name==='Muscles') return musclesRoot();
+  if(name==='History') return historyRoot();
+  if(name==='Profile') return profileBody(true);
+  return '';
+}
+
+function workoutRoot(){
+  // Variant A/C: an open session REPLACES the landing. Variant B: Resume card above the landing.
+  if(S.session && cfg().sessionTakesOverTab){
+    return l0Header(S.session.title || S.session.template || 'Workout') + overviewBody();
+  }
+  let resume = '';
+  if(S.session){
+    resume = `<button class="card hot row" data-act="resume" style="display:block">
+      <div class="eyebrow">In progress</div>
+      <p>${esc(S.session.title || S.session.template || 'Ad-hoc workout')}</p>
+      <small>${totalSets()} sets logged · tap to resume</small></button>`;
+  }
+  return l0Header('Workout') + resume + `
+    <p class="lbl" style="margin-top:${S.session?'20px':'6px'}">Ready when you are</p>
+    <button class="big" data-act="templates">Start workout</button>
+    <button class="ghost" data-act="adhoc">Ad-hoc workout</button>
+    <p class="muted" style="margin-top:14px">Pick a template, or build the session as you go.</p>`;
+}
+
+function musclesRoot(){
+  return l0Header('Muscles') + `
+    <input class="fld" placeholder="Search exercises…" data-act="noop">
+    <div class="diag">[ body diagram ]<br>front &amp; back, tappable</div>
+    <p class="lbl">Browse by muscle</p>` +
+    MUSCLES.map(m=>`<button class="row" data-act="submg" data-id="${m.id}">
+      <div><p>${m.name}</p><small>${m.subs.length} sub-group${m.subs.length>1?'s':''}</small></div>
+      <span class="chev">›</span></button>`).join('');
+}
+
+function historyRoot(){
+  if(!S.history.length) return l0Header('History') +
+    `<div class="empty">No workouts yet.<br>Your finished sessions land here.</div>`;
+  return l0Header('History') +
+    S.history.map((h,i)=>`<button class="row" data-act="session" data-i="${i}">
+      <div><p>${esc(h.title)}</p><small>${h.date} · ${h.sets} sets · ${h.ex} exercises</small></div>
+      ${h.pbs?`<span class="chip acc">${h.pbs} PB</span>`:'<span class="chev">›</span>'}
+    </button>`).join('');
+}
+
+function profileBody(isTab){
+  const head = isTab ? l0Header('Profile') : pushHeader('Profile');
+  return head + `
+    <div class="hero"><b>🔥 3</b><span>day streak</span></div>
+    <div class="stats">
+      <div class="stat"><b>12</b><span>Workouts</span></div>
+      <div class="stat"><b>214</b><span>Sets</span></div>
+      <div class="stat"><b>3</b><span>PBs</span></div>
+    </div>
+    <p class="muted">Log on any day within 3 days of the last one and the streak holds.</p>
+    <p class="lbl">Manage</p>
+    <button class="row" data-act="noop"><div><p>My workout templates</p>
+      <small>3 predefined · 1 custom</small></div><span class="chev">›</span></button>
+    <button class="row" data-act="noop"><div><p>Personal details</p>
+      <small>Bodyweight, gender</small></div><span class="chev">›</span></button>` +
+    (isTab ? `<p class="lbl">History</p>` + S.history.map((h,i)=>
+      `<button class="row" data-act="session" data-i="${i}">
+        <div><p>${esc(h.title)}</p><small>${h.date} · ${h.sets} sets</small></div>
+        <span class="chev">›</span></button>`).join('') : '');
+}
+
+/* ============================ workout flow ============================ */
+function overviewBody(){
+  const s = S.session;
+  const list = s.exercises.length
+    ? s.exercises.map((e,i)=>{
+        const n = e.sets.filter(x=>x.done).length;
+        const state = e.done ? 'done' : n ? 'in progress' : 'not started';
+        return `<button class="row" data-act="exercise" data-i="${i}">
+          <div><p>${esc(EX[e.key].name)}</p><small>${state}${n?` · ${n} set${n>1?'s':''}`:''}</small></div>
+          ${e.done?'<span class="tick">✓</span>':'<span class="chev">›</span>'}</button>`;
+      }).join('')
+    : `<div class="empty">Nothing added yet.<br>Add your first exercise below.</div>`;
+
+  return `
+    <input class="fld" value="${esc(s.title)}" placeholder="Name this workout" data-act="title">
+    ${s.template?`<span class="chip">Template · ${esc(s.template)}</span>`:'<span class="chip">Ad-hoc</span>'}
+    <span class="chip">${totalSets()} sets</span>
+    <div class="diag" style="margin-top:10px">[ body diagram ]<br>heats up as exercises complete</div>
+    <p class="lbl">Exercises</p>${list}
+    <button class="ghost" style="margin-top:14px" data-act="add">+ Add exercise</button>
+    <button class="big" data-act="finish" ${totalSets()?'':'disabled'}>Finish workout</button>
+    <button class="danger" data-act="discard">Discard</button>
+    ${totalSets()?'':'<p class="muted" style="margin-top:8px">A session with no completed sets can’t be saved.</p>'}`;
+}
+
+function addExerciseBody(arg){
+  // Variant C adds a browse-by-muscle mode here, because A/C hide the Muscles tab mid-session.
+  const mode = (arg && arg.mode) || 'search';
+  const seg = cfg().browseInFlow ? `
+    <div class="seg">
+      <button class="${mode==='search'?'on':''}" data-act="addmode" data-m="search">Search</button>
+      <button class="${mode==='muscle'?'on':''}" data-act="addmode" data-m="muscle">By muscle</button>
+    </div>` : '';
+
+  if(cfg().browseInFlow && mode==='muscle'){
+    if(arg && arg.mg){
+      const m = MUSCLES.find(x=>x.id===arg.mg);
+      const list = Object.entries(EX).filter(([,e])=>e.mg===arg.mg);
+      return pushHeader('Add exercise') + seg +
+        `<p class="lbl">${m.name}</p>` +
+        (list.length ? list.map(([k,e])=>`<button class="row" data-act="pick" data-k="${k}">
+            <div><p>${esc(e.name)}</p><small>${e.eq} · last ${e.last}</small></div>
+            <span class="chev">+</span></button>`).join('')
+          : `<div class="empty">No exercises seeded for ${m.name} in this prototype.</div>`) +
+        `<button class="ghost" style="margin-top:14px" data-act="addmode" data-m="muscle">‹ All muscles</button>`;
+    }
+    return pushHeader('Add exercise') + seg +
+      MUSCLES.map(m=>`<button class="row" data-act="addmg" data-id="${m.id}">
+        <div><p>${m.name}</p></div><span class="chev">›</span></button>`).join('');
+  }
+
+  return pushHeader('Add exercise') + seg + `
+    <input class="fld" placeholder="Search 260 exercises…" data-act="noop">` +
+    Object.entries(EX).map(([k,e])=>`<button class="row" data-act="pick" data-k="${k}">
+      <div><p>${esc(e.name)}</p><small>${e.eq} · last ${e.last}</small></div>
+      <span class="chev">+</span></button>`).join('') +
+    (cfg().browseInFlow ? '' :
+      `<p class="muted" style="margin-top:16px">Search only — the Muscles tab isn’t reachable
+       from inside a workout in this variant.</p>`);
+}
+
+function logBody(i){
+  const e = S.session.exercises[i], meta = EX[e.key];
+  const unit = meta.load==='timed' ? 'sec' : meta.load==='assisted' ? 'kg assist' : 'kg';
+  const rows = e.sets.map((s,j)=>`
+    <div class="setrow">
+      <span class="n">${j+1}</span>
+      <input class="fld" value="${s.a}" data-act="setval" data-i="${i}" data-j="${j}" data-f="a">
+      <span class="u">${unit}</span>
+      ${meta.load!=='timed'?`<input class="fld" value="${s.b}" data-act="setval" data-i="${i}" data-j="${j}" data-f="b">
+      <span class="u">reps</span>`:''}
+      <button class="${s.done?'done':''}" data-act="toggleset" data-i="${i}" data-j="${j}">✓</button>
+    </div>`).join('');
+
+  const banner = meta.load==='assisted'
+    ? `<div class="card" style="border-color:var(--acc);margin-bottom:12px">
+         <p class="muted" style="color:var(--acc2)">Less assistance is better — a lower number is the record.</p></div>` : '';
+
+  return pushHeader(meta.name,
+      `<button class="iconbtn" data-act="detail" data-k="${e.key}" title="Exercise detail">ⓘ</button>`) +
+    `<span class="chip">${meta.eq}</span><span class="chip">${meta.load}</span>
+     ${banner}
+     <p class="lbl">Sets</p>${rows || '<p class="muted">No sets yet.</p>'}
+     <button class="ghost" style="margin-top:10px" data-act="addset" data-i="${i}">+ Add set</button>
+     <button class="big" data-act="markdone" data-i="${i}">${e.done?'Exercise done ✓':'Mark exercise done'}</button>
+     <p class="lbl">Recent</p>
+     <div class="card"><div class="eyebrow">Tue 8 Jul</div>
+       <span class="pill">${meta.last}</span><span class="pill">${meta.last}</span></div>
+     <button class="row" data-act="noop"><div><p>See all 6 sessions</p></div><span class="chev">›</span></button>`;
+}
+
+/* ============================ muscles flow ============================ */
+function subMgBody(id){
+  const m = MUSCLES.find(x=>x.id===id);
+  return pushHeader(m.name) + `
+    <div class="diag">[ body diagram ]<br>${m.name} highlighted</div>` +
+    m.subs.map(s=>`<button class="row" data-act="exlist" data-id="${id}" data-sub="${esc(s)}">
+      <div><p>${s}</p></div><span class="chev">›</span></button>`).join('');
+}
+function exListBody(arg){
+  const list = Object.entries(EX).filter(([,e])=>e.mg===arg.id);
+  return pushHeader(arg.sub) +
+    (list.length ? list.map(([k,e])=>`<button class="row" data-act="detail" data-k="${k}">
+        <div><p>${esc(e.name)}</p><small>${e.eq} · last ${e.last}</small></div>
+        <span class="chev">›</span></button>`).join('')
+      : `<div class="empty">No exercises seeded for this sub-group in the prototype.</div>`);
+}
+function detailBody(k){
+  const e = EX[k];
+  // §10: "Add to current workout" only for an ad-hoc session. In A/C this screen is
+  // unreachable mid-session unless the variant provides an in-flow path.
+  const canAdd = S.session && !S.session.template;
+  return pushHeader(e.name) + `
+    <span class="chip">${e.eq}</span><span class="chip">${e.load}</span>
+    <div class="diag">[ body diagram ]<br>primary &amp; secondary muscles filled</div>
+    <div class="stats">
+      <div class="stat"><b>${e.last.split(' ')[0]}</b><span>Best</span></div>
+      <div class="stat"><b>${e.last.split(' ')[0]}</b><span>Last</span></div>
+      <div class="stat"><b>6</b><span>Times</span></div>
+    </div>
+    ${canAdd?'<button class="big" data-act="addhere" data-k="'+k+'">Add to current workout</button>':''}
+    <p class="lbl">Setup</p><p class="muted">Reviewed copy lives here — setup, posture,
+      execution and common mistakes, rendered as four labelled blocks.</p>
+    <p class="lbl">Recent</p>
+    <div class="card"><div class="eyebrow">Tue 8 Jul</div>
+      <span class="pill">${e.last}</span><span class="pill">${e.last}</span></div>`;
+}
+
+/* ============================ finish flow ============================ */
+function celebrateBody(){
+  return `<div class="celeb"><div style="font-size:52px">🐢</div>
+    <h1 style="font-size:21px;font-weight:600">Nice work</h1>
+    <p class="muted">${totalSets()} sets · ${doneCount()} exercises</p>
+    <button class="big" data-act="summary">See summary</button></div>`;
+}
+function summaryBody(){
+  const h = S.history[0];
+  return pushHeader('Summary', '<button class="iconbtn" data-act="noop">↑</button>') + `
+    <div class="card">
+      <div class="eyebrow">Today</div>
+      <p style="font-size:17px;font-weight:600;margin-bottom:10px">${esc(h.title)}</p>
+      <div class="diag" style="margin:0 0 10px">[ body diagram ]<br>trained views only</div>
+      <div class="stats" style="margin:0">
+        <div class="stat"><b>${h.sets}</b><span>Sets</span></div>
+        <div class="stat"><b>${h.ex}</b><span>Exercises</span></div>
+        <div class="stat"><b>3</b><span>Streak</span></div>
+      </div>
+    </div>
+    <button class="ghost" data-act="rootWorkout">Done</button>`;
+}
+function sessionDetailBody(i){
+  const h = S.history[i];
+  return pushHeader('Session') + `
+    <div class="card"><div class="eyebrow">${h.date}</div>
+      <p style="font-size:17px;font-weight:600">${esc(h.title)}</p>
+      <p class="muted" style="margin-top:6px">${h.sets} sets · ${h.ex} exercises</p>
+      ${h.pbs?`<span class="chip acc" style="margin-top:9px">${h.pbs} personal best${h.pbs>1?'s':''}</span>`:''}
+    </div>
+    <p class="lbl">What you did</p>
+    <div class="card"><p style="font-size:13.5px;font-weight:500;margin-bottom:7px">Barbell back squat</p>
+      <span class="pill">80×8</span><span class="pill">80×8</span><span class="pill">75×10</span></div>
+    <div class="card"><p style="font-size:13.5px;font-weight:500;margin-bottom:7px">Romanian deadlift</p>
+      <span class="pill">70×10</span><span class="pill">70×10</span></div>
+    <p class="muted">Editable — title, date, sets. Same component as the live workout card.</p>
+    <button class="danger" data-act="noop">Delete workout</button>`;
+}
+
+/* ============================ render ============================ */
+function body(){
+  const t = top();
+  if(!t) return tabRoot();
+  switch(t.screen){
+    case 'templates': return pushHeader('Choose a template') +
+      TEMPLATES.map((tp,i)=>`<button class="row" data-act="picktpl" data-i="${i}">
+        <div><p>${tp.name}</p><small>${tp.mg.join(' · ')} · ${tp.ex.length} exercises</small></div>
+        <span class="chev">›</span></button>`).join('') +
+      `<p class="muted" style="margin-top:16px">Template sessions lock you to these muscle groups.</p>`;
+    case 'overview':  return pushHeader(S.session.title || S.session.template || 'Workout') + overviewBody();
+    case 'add':       return addExerciseBody(t.arg);
+    case 'log':       return logBody(t.arg);
+    case 'detail':    return detailBody(t.arg);
+    case 'submg':     return subMgBody(t.arg);
+    case 'exlist':    return exListBody(t.arg);
+    case 'profile':   return profileBody(false);
+    case 'celebrate': return celebrateBody();
+    case 'summary':   return summaryBody();
+    case 'session':   return sessionDetailBody(t.arg);
+  }
+  return '';
+}
+
+function render(){
+  try { renderInner(); }
+  catch(err){
+    // A throwaway prototype must never fail as a blank screen.
+    document.getElementById('phone').innerHTML =
+      `<div style="padding:20px;font-size:12px;line-height:1.6;color:#F0997B">
+         <b>Prototype error</b><br>${esc(err && err.message || err)}<br><br>
+         <span style="color:#6B6156">${esc((err && err.stack || '').split('\n').slice(0,4).join('\n'))}</span>
+       </div>`;
+  }
+}
+
+function renderInner(){
+  const c = cfg();
+  document.getElementById('vname').innerHTML = `<span class="k">${V}</span>${c.name}`;
+  document.getElementById('rule').textContent = c.rule;
+  try { location.hash = 'variant='+V; } catch(e){ /* file:// can refuse this */ }
+
+  const p = document.getElementById('phone');
+  if(!S.booted){
+    p.innerHTML = `<div class="status"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="splash" data-act="boot">
+        <div class="mark">🐢</div><h1>[ App name ]</h1><p>Log a set. That’s it.</p>
+        <div class="tap">TAP TO CONTINUE</div></div>`;
+    return;
+  }
+  p.innerHTML = `<div class="status"><span>9:41</span><span>▮▮▮</span></div>
+    <div class="scroll">${body()}</div>
+    ${S.toast?`<div class="toast show">${esc(S.toast)}</div>`:''}
+    ${tabBar()}`;
+}
+
+/* ============================ actions ============================ */
+document.getElementById('phone').addEventListener('click', e=>{
+  const el = e.target.closest('[data-act]'); if(!el) return;
+  const d = el.dataset, a = d.act;
+  const i = d.i!==undefined ? +d.i : null;
+
+  switch(a){
+    case 'boot': S.booted=true; break;
+    case 'back': back(); return;
+    case 'tab':  S.tab=i; S.stack=[]; break;
+    case 'profile': go('profile'); return;
+
+    case 'templates': go('templates'); return;
+    case 'adhoc': startSession(null);
+      if(!cfg().sessionTakesOverTab) go('overview'); else rootTo();
+      return;
+    case 'picktpl': startSession(TEMPLATES[i]);
+      if(!cfg().sessionTakesOverTab){ S.stack=[]; go('overview'); } else rootTo();
+      return;
+    case 'resume': go('overview'); return;
+
+    case 'add': go('add',{mode:'search'}); return;
+    case 'addmode': S.stack[S.stack.length-1].arg={mode:d.m}; break;
+    case 'addmg':   S.stack[S.stack.length-1].arg={mode:'muscle',mg:d.id}; break;
+    case 'pick':
+      S.session.exercises.push({key:d.k,sets:[],done:false});
+      back(); toast(EX[d.k].name+' added'); return;
+    case 'addhere':
+      S.session.exercises.push({key:d.k,sets:[],done:false});
+      toast(EX[d.k].name+' added to your workout'); return;
+
+    case 'exercise': go('log', i); return;
+    case 'addset': {
+      const ex = S.session.exercises[i], m = EX[ex.key];
+      const prev = ex.sets[ex.sets.length-1];
+      ex.sets.push(prev ? {a:prev.a,b:prev.b,done:false}
+        : {a: m.load==='timed'?'60': m.load==='bodyweight'?'0':'60', b:'10', done:false});
+      break;
+    }
+    case 'toggleset': {
+      const s = S.session.exercises[i].sets[+d.j]; s.done=!s.done; break;
+    }
+    case 'markdone': {
+      const ex = S.session.exercises[i];
+      if(!ex.sets.some(s=>s.done)){ toast('Log at least one set first'); return; }
+      ex.done = !ex.done; back(); return;
+    }
+    case 'detail': go('detail', d.k); return;
+    case 'submg': go('submg', d.id); return;
+    case 'exlist': go('exlist', {id:d.id, sub:d.sub}); return;
+    case 'session': go('session', i); return;
+
+    case 'finish': {
+      if(!totalSets()){ toast('A session with no completed sets can’t be saved'); return; }
+      S.history.unshift({ date:'Today',
+        title: S.session.title || S.session.template || 'Chest workout',
+        sets: totalSets(), ex: doneCount() || S.session.exercises.length, pbs: 1 });
+      S.session=null; S.stack=[{screen:'celebrate'}]; break;
+    }
+    case 'discard': S.session=null; rootTo(); toast('Session discarded'); return;
+    case 'summary': S.stack=[{screen:'summary'}]; break;
+    case 'rootWorkout': S.tab=0; rootTo(); return;
+    case 'noop': return;
+  }
+  render();
+});
+
+document.getElementById('phone').addEventListener('input', e=>{
+  const el = e.target.closest('[data-act]'); if(!el) return;
+  if(el.dataset.act==='title') S.session.title = el.value;
+  if(el.dataset.act==='setval'){
+    const s = S.session.exercises[+el.dataset.i].sets[+el.dataset.j];
+    s[el.dataset.f] = el.value;
+  }
+});
+
+/* ============================ switcher ============================ */
+function cycle(step){
+  V = KEYS[(KEYS.indexOf(V) + step + KEYS.length) % KEYS.length];
+  reset(); S.booted = true;            // keep the splash out of the way when comparing
+  render();
+}
+document.getElementById('prev').onclick = ()=>cycle(-1);
+document.getElementById('next').onclick = ()=>cycle(1);
+addEventListener('keydown', e=>{
+  if(/^(INPUT|TEXTAREA)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  if(e.key==='ArrowLeft') cycle(-1);
+  if(e.key==='ArrowRight') cycle(1);
+});
+
+render();
+</script>
+</body></html>

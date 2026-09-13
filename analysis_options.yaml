@@ -1,0 +1,13 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    # Generated, never hand-edited (CLAUDE.md). The lib/ copies are produced by
+    # tool/sync_generated.sh; the assets/ originals by their Python generators.
+    - assets/**
+    - lib/src/data/generated/**
+    # Drift / build_runner output.
+    - "**/*.g.dart"

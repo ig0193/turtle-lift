@@ -419,10 +419,12 @@ A single dark, warm palette. One hue family throughout (coral/orange), so there'
 | Accent — strong | `#D85A30` | Primary buttons, primary muscle fill, active nav tab, checkmarks/done states |
 | Accent — light | `#F0997B` | Secondary muscle fill, lighter emphasis, less prominent accents |
 | Text on accent fill | `#1B0C05` | Text/icon color when placed on top of a strong-accent-filled background (e.g. button label) |
+| Destructive | `#C4553A` | Delete a workout, discard a session. Nothing else. |
 
 ### Usage rules
 
 - **Accent strong (`#D85A30`)** is the "this is active / this has been worked" color — used consistently for primary buttons, the active tab bar icon, primary muscle-map fill, and completion checkmarks. Same meaning wherever it appears.
 - **Accent light (`#F0997B`)** is reserved for secondary muscle indication and lower-emphasis accents — never used for primary actions.
+- **Destructive (`#C4553A`)** is for destructive actions only — delete a workout, discard a session. It exists because accent strong could not carry it: accent strong means "active / this has been worked", so a delete confirmation painted in it reads as approval. Never a primary action, never a fill behind body text. Sessions are deletable, so this surface is real, not hypothetical.
 - Everything else (body text, borders, unfilled states, secondary buttons) stays neutral gray/off-white. No other colors are introduced — this keeps the palette calm and prevents visual competition on screens that combine the muscle map with buttons or list states.
 - Because it's a single hue family, new screens can freely reuse the same two accent values without needing to re-derive a color rule each time — unlike a two-color brand system, there's no governance overhead to maintain as the app grows.

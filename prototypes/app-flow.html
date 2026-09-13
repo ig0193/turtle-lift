@@ -30,8 +30,16 @@ body{background:#0B0907;font-family:Inter,system-ui,sans-serif;color:var(--t1);
 .tabs svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;
           stroke-linecap:round;stroke-linejoin:round}
 
-h1{font-size:23px;font-weight:600;letter-spacing:-.02em;margin:14px 0 16px}
-.hdr{display:flex;align-items:center;gap:9px;margin:12px 0 10px}
+/* Pinned header. The header is a sibling of the scroll body in the app
+   (Scaffold.appBar); here it lives inside .scroll, so sticky + a full-bleed
+   opaque background reproduces the same behaviour: content scrolls under
+   a header that stays put. */
+h1{font-size:23px;font-weight:600;letter-spacing:-.02em;
+   position:sticky;top:0;z-index:20;background:var(--bg);
+   margin:0 -18px 16px;padding:14px 18px 0}
+.hdr{display:flex;align-items:center;gap:9px;
+     position:sticky;top:0;z-index:20;background:var(--bg);
+     margin:0 -18px 10px;padding:12px 18px 0}
 .hdr h2{font-size:16px;font-weight:600;flex:1;letter-spacing:-.01em}
 .back{background:none;border:0;color:var(--t2);font-size:23px;line-height:1;cursor:pointer;padding:0 3px}
 .big{width:100%;background:var(--acc);color:var(--on);border:0;border-radius:var(--r);padding:14px;

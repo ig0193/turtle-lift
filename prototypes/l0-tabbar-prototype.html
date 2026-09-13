@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PROTOTYPE — L0 tab bar</title>
+<!--
+  THROWAWAY PROTOTYPE. Not production code, not a design system.
+
+  Question: what shape should the persistent L0 tab bar take?
+
+  Tabs are Workout | Muscles | History with Profile as a header avatar --
+  variant A of prototypes/l0-navigation-prototype.html, NOT the
+  Workout | Muscles | Profile shape still written in docs/00 SS11.
+
+  Shape is fixed by reference: the iOS 26 App Store tab bar -- a floating
+  capsule inset from the bottom edge, content scrolling beneath it, icon over
+  label, and a capsule highlight riding behind the active tab.
+
+  Three directions, switchable from the floating picker (1-3 / arrow keys),
+  reload-stable via ?v=N . They diverge on the two things the reference leaves
+  open for a dark, offline, Flutter app:
+
+    1  Glass   translucent + backdrop blur, neutral highlight, accent tint
+    2  Solid   same geometry, opaque surface + hairline, no blur at all
+    3  Ember   glass, but the highlight is an accent fill and the active
+               icon/label invert onto it
+
+  The L0 screen bodies are deliberate scaffolding -- realistic enough to judge
+  the bar against, not the real screens. The body diagram is a labelled
+  placeholder: docs/00 SS5 forbids any body figure other than the four traced SVGs.
+-->
+<!-- No external resources on purpose: this file must work offline and over AirDrop. -->
+<style>
+:root{
+  /* docs/00 SS12 -- the whole palette. No other colours. */
+  --bg:#17140F; --card:#211D18; --line:#332C22; --off:#241F19;
+  --t1:#F5EFE8; --t2:#A89C8E; --t3:#6B6156;
+  --acc:#D85A30; --acc2:#F0997B; --on:#1B0C05;
+  --r:10px;
+  --ease:cubic-bezier(0.23,1,0.32,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#0B0907;color:var(--t1);
+     font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,sans-serif;
+     -webkit-font-smoothing:antialiased;display:flex;flex-direction:column;align-items:center;
+     justify-content:center;min-height:100vh;padding:88px 12px 24px}
+.phone{width:360px;height:740px;max-height:calc(100vh - 112px);background:var(--bg);
+       border-radius:30px;border:1px solid #2A241C;overflow:hidden;display:flex;
+       flex-direction:column;position:relative}
+@media (max-width:430px){
+  body{padding:64px 0 0;display:block}
+  .phone{width:100%;height:calc(100vh - 64px);max-height:none;border-radius:0;border:0}
+}
+.status{height:26px;display:flex;align-items:center;justify-content:space-between;
+        padding:0 18px;font-size:10px;color:var(--t3);flex-shrink:0}
+.scroll{flex:1;overflow-y:auto;padding:0 18px 18px}
+.scroll::-webkit-scrollbar{width:0}
+
+/* ---- shared L0 chrome ---- */
+/* Pinned header. The header is a sibling of the scroll body in the app
+   (Scaffold.appBar); here it lives inside .scroll, so sticky + a full-bleed
+   opaque background reproduces the same behaviour: content scrolls under
+   a header that stays put. */
+.l0h{display:flex;align-items:center;justify-content:space-between;
+     position:sticky;top:0;z-index:20;background:var(--bg);
+     margin:0 -18px 14px;padding:10px 18px 0}
+.l0h h1{font-size:24px;font-weight:600;letter-spacing:-.02em}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--card);
+        border:1px solid var(--line);color:var(--t2);cursor:pointer;display:flex;
+        align-items:center;justify-content:center;flex-shrink:0}
+.avatar svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;
+            stroke-linecap:round;stroke-linejoin:round}
+.avatar:active{border-color:var(--acc);color:var(--acc)}
+
+.lbl{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin:20px 0 8px}
+.lbl:first-child{margin-top:6px}
+.big{width:100%;background:var(--acc);color:var(--on);border:0;border-radius:var(--r);
+     padding:14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:9px}
+.ghost{width:100%;background:var(--card);color:var(--t1);border:1px solid var(--line);
+       border-radius:var(--r);padding:13px;font:inherit;font-size:14px;font-weight:500;
+       cursor:pointer;margin-bottom:9px}
+.muted{font-size:12.5px;color:var(--t3);line-height:1.6}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 0;
+     border-bottom:1px solid var(--line);cursor:pointer;text-align:left;width:100%;
+     background:none;border:0;border-bottom:1px solid var(--line);color:var(--t1);font:inherit}
+.row p{font-size:14px;font-weight:500}
+.row small{font-size:11.5px;color:var(--t3);display:block;margin-top:3px;font-weight:400}
+.chev{color:var(--t3);font-size:17px;flex-shrink:0}
+.pb{font-size:10.5px;color:var(--acc2);border:1px solid var(--line);border-radius:99px;
+    padding:2px 7px;flex-shrink:0}
+.fld{width:100%;background:var(--off);border:1px solid var(--line);border-radius:8px;
+     padding:11px;color:var(--t1);font:inherit;font-size:14px;margin-bottom:9px}
+.diag{background:var(--off);border:1px dashed var(--line);border-radius:var(--r);
+      height:168px;display:flex;align-items:center;justify-content:center;text-align:center;
+      color:var(--t3);font-size:12px;line-height:1.7;margin-bottom:6px}
+
+/* ------------------------------------------------------------
+   Shared geometry -- identical across all three variants, so the
+   picker isolates material and highlight strength, nothing else.
+   The bar floats; content scrolls underneath it, never behind a scrim.
+   ------------------------------------------------------------ */
+.scroll{padding-bottom:104px}
+.barwrap{position:absolute;left:0;right:0;bottom:0;
+     padding:0 16px max(14px,env(safe-area-inset-bottom));pointer-events:none}
+.bar{position:relative;display:flex;padding:5px;border-radius:999px;pointer-events:auto}
+.cap{position:absolute;top:5px;bottom:5px;left:5px;width:calc((100% - 10px)/3);
+     border-radius:20px;will-change:transform;
+     transform:translateX(calc(var(--i,0) * 100%));
+     transition:transform 260ms var(--ease)}
+.bar button{position:relative;flex:1;min-width:0;background:none;border:0;
+     display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 7px;
+     color:var(--t2);font:inherit;cursor:pointer;border-radius:20px;
+     transition:color 160ms ease-out}
+.bar button:active{transform:scale(.96)}
+.bar button:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+.bar span{font-size:10.5px;font-weight:600;letter-spacing:.005em}
+.bar svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;
+     stroke-linecap:round;stroke-linejoin:round;
+     transition:stroke-width 160ms ease-out}
+.bar button[aria-current=page] svg{stroke-width:2.2}
+
+/* ============================================================
+   1 -- GLASS
+   Faithful to the reference: translucent bar over a real backdrop
+   blur, a neutral highlight one step lighter than the glass, and
+   accent carried purely as a tint on the active icon and label.
+   ============================================================ */
+.v-glass .bar{background:rgba(33,29,24,0.72);
+     -webkit-backdrop-filter:blur(22px) saturate(1.6);
+     backdrop-filter:blur(22px) saturate(1.6);
+     box-shadow:0 0 0 .5px rgba(245,239,232,0.10) inset,
+                0 1px 0 rgba(245,239,232,0.06) inset,
+                0 10px 28px rgba(0,0,0,0.42)}
+.v-glass .cap{background:rgba(245,239,232,0.09)}
+.v-glass .bar button[aria-current=page]{color:var(--acc)}
+
+/* ============================================================
+   2 -- SOLID
+   Same geometry, no blur: an opaque card surface with the standard
+   hairline. Cheap to paint on every frame, identical on every device,
+   and it never lets a bright hero image bleed through the chrome.
+   ============================================================ */
+.v-solid .bar{background:var(--card);border:1px solid var(--line);padding:4px;
+     box-shadow:0 8px 24px rgba(0,0,0,0.38)}
+.v-solid .cap{top:4px;bottom:4px;left:4px;width:calc((100% - 8px)/3);background:var(--off)}
+.v-solid .bar button[aria-current=page]{color:var(--acc)}
+
+/* ============================================================
+   3 -- EMBER
+   Glass bar, but the highlight is an accent fill and the active tab
+   inverts onto it. The reference tints; this one commits. The colour
+   change is delayed 130ms on the way IN so the label is never dark-on-
+   dark while the capsule is still travelling; leaving is immediate.
+   ============================================================ */
+.v-ember .bar{background:rgba(33,29,24,0.72);
+     -webkit-backdrop-filter:blur(22px) saturate(1.6);
+     backdrop-filter:blur(22px) saturate(1.6);
+     box-shadow:0 0 0 .5px rgba(245,239,232,0.10) inset,
+                0 10px 28px rgba(0,0,0,0.42)}
+.v-ember .cap{background:var(--acc)}
+.v-ember .bar button[aria-current=page]{color:var(--on);transition-delay:130ms}
+.v-ember .bar button[aria-current=page] svg{transition-delay:130ms}
+
+@media (prefers-reduced-motion:reduce){
+  .cap{transition:none}
+}
+
+/* ============================================================
+   Picker -- harness chrome. Verbatim from PICKER.md. Do not restyle.
+   data-position="top": the work sits bottom-centre.
+   ============================================================ */
+.proto-picker{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  z-index:2147483647;display:flex;align-items:center;gap:2px;padding:4px;border-radius:999px;
+  background:rgba(10,10,10,0.82);-webkit-backdrop-filter:blur(12px) saturate(1.4);
+  backdrop-filter:blur(12px) saturate(1.4);
+  box-shadow:0 0 0 1px rgba(255,255,255,0.08) inset,0 8px 24px rgba(0,0,0,0.24),
+             0 2px 6px rgba(0,0,0,0.12);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;
+  line-height:1;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none}
+.proto-picker-highlight{position:absolute;top:4px;left:0;height:28px;border-radius:999px;
+  background:rgba(255,255,255,0.12);will-change:transform}
+.proto-picker[data-ready] .proto-picker-highlight{
+  transition:transform 250ms cubic-bezier(0.23,1,0.32,1),width 250ms cubic-bezier(0.23,1,0.32,1)}
+@media (prefers-reduced-motion:reduce){
+  .proto-picker[data-ready] .proto-picker-highlight{transition:none}
+}
+.proto-picker-item{position:relative;display:flex;align-items:center;height:28px;padding:0 12px;
+  border:0;border-radius:999px;background:transparent;color:rgba(255,255,255,0.55);font:inherit;
+  cursor:pointer;transition:color 150ms ease-out}
+.proto-picker-item:hover{color:rgba(255,255,255,0.85)}
+.proto-picker-item:active{transform:scale(0.97)}
+.proto-picker-item:focus-visible{outline:2px solid rgba(255,255,255,0.4);outline-offset:2px}
+.proto-picker-item[data-active]{color:#fff}
+.proto-picker-divider{width:1px;height:16px;margin:0 4px;background:rgba(255,255,255,0.12)}
+.proto-picker-replay{padding:0 10px;font-size:14px}
+.proto-picker[data-position="top"]{bottom:auto;top:24px}
+</style>
+</head>
+<body>
+
+<div class="phone" id="stage"></div>
+
+<nav class="proto-picker" data-position="top" aria-label="Prototype variants">
+  <span class="proto-picker-highlight" aria-hidden="true"></span>
+  <button class="proto-picker-item" data-active aria-current="true">Glass</button>
+  <button class="proto-picker-item">Solid</button>
+  <button class="proto-picker-item">Ember</button>
+</nav>
+
+<script>
+/* ============================ icons ============================ */
+const ICON = {
+  Workout:'<path d="M4 12h16M7 8v8M17 8v8"/>',
+  Muscles:'<circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M12 15l-3 6M12 15l3 6M7 10h10"/>',
+  History:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
+};
+const TABS = ['Workout','Muscles','History'];
+const personIcon =
+  '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/>'+
+  '<path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>';
+
+/* Tab selection is shared across variants, so you can compare the same tab. */
+let tab = 0;
+
+/* ============================ L0 bodies (scaffolding) ============================ */
+function header(title){
+  return `<div class="l0h"><h1>${title}</h1>
+    <button class="avatar" aria-label="Profile">${personIcon}</button></div>`;
+}
+
+function workoutBody(){
+  return header('Workout') + `
+    <p class="lbl">Ready when you are</p>
+    <button class="big">Start workout</button>
+    <button class="ghost">Ad-hoc workout</button>
+    <p class="muted">Pick a template, or build the session as you go.</p>
+    <p class="lbl">Templates</p>
+    <button class="row"><div><p>Push</p><small>Chest · Shoulders · Triceps</small></div>
+      <span class="chev">›</span></button>
+    <button class="row"><div><p>Pull</p><small>Back · Biceps</small></div>
+      <span class="chev">›</span></button>
+    <button class="row"><div><p>Legs</p><small>Quads · Hamstrings · Glutes · Calves</small></div>
+      <span class="chev">›</span></button>
+    <button class="row"><div><p>Upper body</p><small>Chest · Back · Shoulders · Arms</small></div>
+      <span class="chev">›</span></button>`;
+}
+
+function musclesBody(){
+  const groups = [
+    ['Chest','3 sub-groups · 38 exercises'],
+    ['Back','3 sub-groups · 41 exercises'],
+    ['Shoulders','3 sub-groups · 34 exercises'],
+    ['Biceps','1 sub-group · 19 exercises'],
+    ['Triceps','1 sub-group · 22 exercises'],
+    ['Quads','1 sub-group · 24 exercises'],
+    ['Hamstrings','1 sub-group · 16 exercises'],
+    ['Glutes','1 sub-group · 18 exercises'],
+    ['Abs','2 sub-groups · 27 exercises'],
+  ];
+  return header('Muscles') + `
+    <input class="fld" placeholder="Search exercises…">
+    <div class="diag">[ body diagram ]<br>front &amp; back · tap a region</div>
+    <p class="muted" style="margin-bottom:2px">Tap a muscle on the diagram, or browse below.</p>
+    <p class="lbl">All muscle groups</p>
+    ${groups.map(([n,s]) => `<button class="row"><div><p>${n}</p><small>${s}</small></div>
+      <span class="chev">›</span></button>`).join('')}`;
+}
+
+function historyBody(){
+  const sessions = [
+    ['Push day','Today · 16 sets · 5 exercises','2 PBs'],
+    ['Pull day','Fri 11 Sep · 14 sets · 4 exercises',''],
+    ['Leg day','Wed 9 Sep · 18 sets · 6 exercises','1 PB'],
+    ['Ad-hoc workout','Tue 8 Sep · 6 sets · 2 exercises',''],
+    ['Upper body','Sun 6 Sep · 21 sets · 7 exercises','1 PB'],
+    ['Push day','Fri 4 Sep · 15 sets · 5 exercises',''],
+    ['Core + arms','Thu 3 Sep · 9 sets · 3 exercises',''],
+    ['Leg day','Tue 1 Sep · 17 sets · 6 exercises',''],
+  ];
+  return header('History') + `
+    <p class="muted" style="margin-bottom:4px">36 workouts · 4-day streak</p>
+    <p class="lbl">September</p>
+    ${sessions.map(([n,s,pb]) => `<button class="row"><div><p>${n}</p><small>${s}</small></div>
+      ${pb ? `<span class="pb">${pb}</span>` : ''}<span class="chev">›</span></button>`).join('')}`;
+}
+
+const BODY = [workoutBody, musclesBody, historyBody];
+
+function shell(bar){
+  return `<div class="status" style="pointer-events:none"><span>9:41</span><span>●●● ▾ ▮</span></div>
+    <div class="scroll" id="pane">${BODY[tab]()}</div>${bar}`;
+}
+
+/* ============================ variants ============================ */
+/* One bar, three materials. The markup is identical -- only the class on the
+   phone changes -- which is the point: the picker isolates the material and
+   the highlight, not the layout. */
+function bar(){
+  return `<div class="barwrap">
+    <nav class="bar" aria-label="Sections" style="--i:${tab}">
+      <span class="cap" aria-hidden="true"></span>
+      ${TABS.map((n,i) =>
+        `<button data-tab="${i}" ${i===tab?'aria-current="page"':''}>
+           <svg viewBox="0 0 24 24">${ICON[n]}</svg><span>${n}</span></button>`).join('')}
+    </nav></div>`;
+}
+
+const glass = () => ['v-glass', shell(bar())];
+const solid = () => ['v-solid', shell(bar())];
+const ember = () => ['v-ember', shell(bar())];
+
+const variants = [glass, solid, ember];
+
+/* ============================ tab wiring ============================ */
+/* A tab switch updates in place -- re-rendering would kill the travelling
+   indicator, and the pane swap must be instant (100+ switches a session). */
+const stage = document.getElementById('stage');
+
+function selectTab(i){
+  if(i === tab) return;
+  tab = i;
+  stage.querySelectorAll('[data-tab]').forEach((el,j) => {
+    if(j === i) el.setAttribute('aria-current','page');
+    else el.removeAttribute('aria-current');
+  });
+  stage.querySelector('.bar').style.setProperty('--i', i);
+  const pane = document.getElementById('pane');
+  pane.innerHTML = BODY[i]();
+  pane.scrollTop = 0;
+}
+
+stage.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-tab]');
+  if(btn) selectTab(+btn.dataset.tab);
+});
+
+/* ============================ picker ============================ */
+const picker = document.querySelector('.proto-picker');
+const highlight = picker.querySelector('.proto-picker-highlight');
+const items = [...picker.querySelectorAll('.proto-picker-item:not(.proto-picker-replay)')];
+let current = 0;
+
+function moveHighlight(){
+  const el = items[current];
+  highlight.style.width = el.offsetWidth + 'px';
+  highlight.style.transform = `translateX(${el.offsetLeft}px)`;
+}
+
+function mount(i){
+  const [cls, html] = variants[i]();
+  stage.className = 'phone ' + cls;
+  stage.innerHTML = html;
+}
+
+function setActive(i){
+  if(i < 0 || i >= variants.length) return;
+  current = i;
+  items.forEach((el,j) => {
+    el.toggleAttribute('data-active', j === i);
+    if(j === i) el.setAttribute('aria-current','true');
+    else el.removeAttribute('aria-current');
+  });
+  moveHighlight();
+  const url = new URL(location);
+  url.searchParams.set('v', i + 1);
+  history.replaceState(null, '', url);
+  mount(i);
+}
+
+items.forEach((el,i) => el.addEventListener('click', () => setActive(i)));
+window.addEventListener('resize', moveHighlight);
+
+document.addEventListener('keydown', (e) => {
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  if(e.metaKey || e.ctrlKey || e.altKey) return;
+  const num = parseInt(e.key, 10);
+  if(num >= 1 && num <= variants.length) setActive(num - 1);
+  else if(e.key === 'ArrowRight') setActive((current + 1) % variants.length);
+  else if(e.key === 'ArrowLeft') setActive((current - 1 + variants.length) % variants.length);
+});
+
+setActive((parseInt(new URLSearchParams(location.search).get('v'), 10) || 1) - 1);
+requestAnimationFrame(() => requestAnimationFrame(() => picker.setAttribute('data-ready','')));
+</script>
+</body></html>

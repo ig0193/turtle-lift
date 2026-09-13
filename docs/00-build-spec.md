@@ -246,8 +246,11 @@ streakAsOf(date) -> int
 | Accent strong | `#D85A30` |
 | Accent light | `#F0997B` |
 | Text on accent fill | `#1B0C05` |
+| Destructive action | `#C4553A` |
 
-`#D85A30` = active / trained / primary action. `#F0997B` = secondary muscle only, never a primary action. No other colours.
+`#D85A30` = active / trained / primary action. `#F0997B` = secondary muscle only, never a primary action. `#C4553A` = destructive action only (delete a workout, discard a session) — never a primary action, never a fill behind body text. No other colours.
+
+⚠ `#D85A30` must not carry "delete". `01` §Usage rules gives it one meaning, *"same meaning wherever it appears"*, so a delete confirmation painted in it reads as approval. That is why the destructive colour exists; it is not a general-purpose red.
 
 ---
 

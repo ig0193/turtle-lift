@@ -30,3 +30,6 @@ Thumbs.db
 # Generator scratch
 __pycache__/
 *.pyc
+
+# Agent issue tracker (docs/agents/issue-tracker.md) — local tickets, never pushed
+.scratch/
