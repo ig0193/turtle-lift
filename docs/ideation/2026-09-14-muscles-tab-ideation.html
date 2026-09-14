@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ideation: Muscles Tab</title>
+<style>
+:root{
+  --page:#0E0D0B; --panel:#17140F; --card:#1C1915; --line:#2A251D; --line2:#332C22;
+  --ink:#F5EFE8; --ink2:#A89C8E; --ink3:#6B6156;
+  --accent:#D85A30; --accent2:#F0997B; --onaccent:#1B0C05; --danger:#C4553A;
+  --app-page:#17140F; --app-surface:#211D18; --app-border:#332C22; --app-muted:#241F19;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.62 var(--sans);}
+.wrap{max-width:min(980px,92vw);margin-inline:auto;padding:48px 0 96px}
+p,li{max-width:72ch}
+a{color:var(--accent2);text-decoration:none;border-bottom:1px solid rgba(240,153,123,.3)}
+a:hover{border-bottom-color:var(--accent2)}
+code{font:13px/1.5 var(--mono);background:#211D18;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:#E4D9CC}
+strong{color:inherit;font-weight:650}
+hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:650;margin:0 0 10px}
+h1{font-size:32px;line-height:1.2;letter-spacing:-.02em;margin:0 0 14px;font-weight:680}
+h2{font-size:21px;letter-spacing:-.01em;margin:0 0 16px;font-weight:660;padding-bottom:10px;border-bottom:1px solid var(--line)}
+h3{font-size:17px;margin:0 0 8px;font-weight:650}
+h4{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin:20px 0 8px;font-weight:650}
+section{margin:0 0 52px;scroll-margin-top:20px}
+
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px;color:var(--ink2);margin:0 0 26px}
+.meta b{color:var(--ink3);font-weight:650;letter-spacing:.06em;text-transform:uppercase;font-size:11px;margin-right:6px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:0 0 34px}
+.stat{background:var(--card);padding:14px 16px}
+.stat .n{font-size:24px;font-weight:680;letter-spacing:-.02em;display:block;line-height:1.1}
+.stat .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-top:5px;display:block}
+
+nav.toc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin:0 0 48px}
+nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:32px}
+nav.toc li{margin:3px 0;max-width:none}
+
+.jump{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:0 0 28px}
+.jump ol{margin:0;padding-left:20px}
+.jump li{margin:4px 0;max-width:none}
+
+table{border-collapse:collapse;width:100%;font-size:14px;margin:12px 0}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650}
+td code{font-size:12px}
+
+.chip{display:inline-block;font-size:11px;letter-spacing:.05em;font-weight:650;padding:3px 9px;border-radius:999px;border:1px solid var(--line2);background:#211D18;color:var(--ink2);text-transform:uppercase}
+.chip.id{background:rgba(216,90,48,.14);border-color:rgba(216,90,48,.4);color:var(--accent2)}
+.chip.hi{background:rgba(240,153,123,.12);border-color:rgba(240,153,123,.32);color:var(--accent2)}
+
+.ruling{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:0 0 14px}
+.ruling h3{font-size:15px;margin-bottom:6px}
+.ruling p{margin:6px 0 0;font-size:14px;color:var(--ink2)}
+.ruling p:first-of-type{color:var(--ink)}
+
+.note{background:rgba(240,153,123,.06);border:1px solid rgba(240,153,123,.22);border-radius:10px;padding:16px 20px;margin:24px 0}
+.note .eyebrow{color:var(--accent2)}
+.note p{margin:0;font-size:14px}
+
+/* ---- variant cards ---- */
+article.variant{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px;margin:0 0 26px;scroll-margin-top:20px}
+.vhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.vhead h3{margin:0;font-size:19px}
+.vsub{color:var(--ink2);font-size:14px;margin:2px 0 18px;max-width:72ch}
+.vbody{display:grid;grid-template-columns:300px 1fr;gap:28px;align-items:start}
+@media(max-width:760px){.vbody{grid-template-columns:1fr}nav.toc ol{columns:1}}
+dl.vmeta{margin:0 0 4px;display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:14px}
+dl.vmeta dt{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650;padding-top:3px}
+dl.vmeta dd{margin:0}
+.vfields p{margin:0 0 12px;font-size:14px}
+.vfields p b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650;display:block;margin-bottom:3px}
+details{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650}
+details p{font-size:14px;margin:10px 0 0}
+
+/* ---- phone mockups ---- */
+.phone{width:280px;border:1px solid var(--line2);border-radius:22px;overflow:hidden;background:var(--app-page);box-shadow:0 12px 34px rgba(0,0,0,.45);font-size:13px}
+.ph-bar{display:flex;align-items:center;justify-content:space-between;padding:13px 15px 11px;background:var(--app-page);border-bottom:1px solid var(--app-border)}
+.ph-bar .t{font-size:17px;font-weight:650;color:#F5EFE8;letter-spacing:-.01em}
+.ph-av{width:26px;height:26px;border-radius:999px;background:var(--app-surface);border:1px solid var(--app-border)}
+.ph-scr{padding:16px 15px 12px;min-height:330px;display:flex;flex-direction:column;background:var(--app-page)}
+.ph-tabs{display:flex;gap:5px;padding:8px;margin:0 10px 10px;background:rgba(33,29,24,.92);border:1px solid var(--app-border);border-radius:999px}
+.ph-tabs span{flex:1;text-align:center;font-size:10px;letter-spacing:.04em;color:#6B6156;padding:5px 0;border-radius:999px}
+.ph-tabs span.on{background:var(--app-surface);color:#F5EFE8}
+.ph-push{margin-top:auto}
+.btn-p{display:block;background:var(--accent);color:var(--onaccent);border-radius:11px;padding:15px 14px;font-weight:680;font-size:14px;text-align:center;margin-bottom:9px}
+.btn-p small{display:block;font-weight:500;font-size:11px;opacity:.72;margin-top:2px}
+.btn-g{display:block;border:1px solid var(--app-border);background:var(--app-surface);color:#F5EFE8;border-radius:11px;padding:14px;font-weight:600;font-size:13px;text-align:center}
+.btn-g small{display:block;font-weight:400;font-size:11px;color:#A89C8E;margin-top:2px}
+.btn-eq{display:block;border:1px solid var(--app-border);background:var(--app-surface);border-radius:11px;padding:14px;text-align:center;margin-bottom:9px}
+.btn-eq b{display:block;font-size:13px;color:#F5EFE8;font-weight:650}
+.btn-eq small{display:block;font-size:11px;color:#A89C8E;margin-top:2px}
+.lnk{display:block;text-align:center;font-size:12px;color:#A89C8E;padding:9px 0}
+.ph-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6B6156;font-weight:650;margin:0 0 8px}
+.ph-recall{font-size:12px;color:#A89C8E;margin:0 0 16px}
+.ph-recall b{color:#F5EFE8;font-weight:600}
+.ph-stock{font-size:11px;color:#6B6156;text-align:center;margin-top:10px}
+.ph-search{display:flex;align-items:center;gap:8px;background:var(--app-surface);border:1px solid var(--app-border);border-radius:11px;padding:12px 13px;margin-bottom:16px;color:#6B6156;font-size:13px}
+.ph-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--app-border)}
+.ph-row b{font-size:13px;color:#F5EFE8;font-weight:600;display:block}
+.ph-row small{font-size:11px;color:#6B6156}
+.ph-row .go{color:#6B6156;font-size:14px}
+.ph-more{font-size:12px;color:#A89C8E;padding:11px 0}
+.ph-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.ph-chips i{font-style:normal;font-size:10.5px;padding:5px 9px;border-radius:999px;border:1px solid var(--app-border);background:var(--app-muted);color:#6B6156}
+.ph-chips i.on{background:var(--accent);border-color:var(--accent);color:var(--onaccent);font-weight:650}
+.ph-type{font-size:22px;line-height:1.2;font-weight:700;letter-spacing:-.01em;color:#F5EFE8;margin:4px 0 6px}
+.ph-cap{font-size:11px;color:#6B6156;margin:0 0 18px}
+.ph-streak{font-size:12px;color:#A89C8E;margin:0 0 12px}
+figcaption{font-size:11.5px;color:var(--ink3);margin-top:12px;line-height:1.5;max-width:280px}
+.mono{font:12px/1.5 var(--mono);color:var(--ink2)}
+footer.composition-signal{border-top:1px solid var(--line);margin-top:60px;padding-top:20px;font-size:12px;color:var(--ink3)}
+
+/* ---- idea cards ---- */
+article.idea{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin:0 0 22px;scroll-margin-top:20px}
+.ihead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.ihead h3{margin:0;font-size:18px}
+.ifields p{margin:0 0 13px;font-size:14.5px;max-width:74ch}
+.ifields p:last-child{margin-bottom:0}
+.ifields p b.lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650;display:block;margin-bottom:3px}
+.imeta{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 14px}
+.chip.axis{background:#211D18;border-color:var(--line2);color:var(--ink2);text-transform:none;letter-spacing:.02em}
+.chip.conf{background:rgba(240,153,123,.10);border-color:rgba(240,153,123,.28);color:var(--accent2)}
+.basis-tag{font:12px/1.5 var(--mono);color:var(--accent2);background:rgba(216,90,48,.12);border:1px solid rgba(216,90,48,.3);border-radius:4px;padding:1px 6px}
+figure{margin:18px 0 4px}
+figure svg{display:block;max-width:100%;height:auto}
+.fork{border:1px solid rgba(240,153,123,.3);background:rgba(240,153,123,.07);border-radius:10px;padding:13px 16px;margin:0 0 22px}
+.fork p{margin:0;font-size:13.5px;color:var(--ink2);max-width:76ch}
+.fork b{color:var(--ink)}
+ul.refs{list-style:none;padding:0;margin:0}
+ul.refs li{margin:0 0 9px;font-size:14px;max-width:76ch}
+ul.refs li span{color:var(--ink2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">Compound Engineering &middot; Ideation</p>
+<h1>Ideation: Muscles Tab</h1>
+
+<div class="meta">
+  <span><b>Date</b><time datetime="2026-09-14">2026-09-14</time></span>
+  <span><b>Topic</b>muscles-tab</span>
+  <span><b>Focus</b>Muscles tab &mdash; functionality and layout</span>
+  <span><b>Mode</b>repo-grounded</span>
+</div>
+
+<div class="stats">
+  <div class="stat"><span class="n">46</span><span class="l">Raw candidates</span></div>
+  <div class="stat"><span class="n">15</span><span class="l">Ranked ideas</span></div>
+  <div class="stat"><span class="n">7</span><span class="l">Cut</span></div>
+  <div class="stat"><span class="n">5</span><span class="l">Topic axes</span></div>
+  <div class="stat"><span class="n">6</span><span class="l">Ideation frames</span></div>
+</div>
+
+<nav class="toc">
+<ol>
+  <li><a href="#grounding-context">Codebase Context</a></li>
+  <li><a href="#topic-axes">Topic Axes</a></li>
+  <li><a href="#ranked-ideas">Ranked Ideas</a></li>
+  <li><a href="#rejection-summary">Rejection Summary</a></li>
+  <li><a href="#references">Sources &amp; References</a></li>
+</ol>
+</nav>
+
+<section id="grounding-context">
+<h2>Codebase Context</h2>
+
+<p>The app has three L0 tabs &mdash; Workout, Muscles, Profile/History. The Workout tab is largely built; the Muscles tab root is a stub carrying placeholder text. <code>docs/03-muscle-groups-tab-userflow.md</code> already specifies six screens for this tab (landing, muscle group selection, sub-muscle group selection, exercise list, exercise detail, exercise history) and frames it as &ldquo;exploration and reference&hellip; the app&rsquo;s MuscleWiki experience &mdash; no logging happens here.&rdquo;</p>
+
+<h4>What is already built and ready to use</h4>
+<p>Four traced body SVGs (male/female &times; front/back), a taxonomy of 12 parent groups / 19 sub-groups / 42 segments, and <code>body_paths.dart</code> holding every segment as a point list with a <code>toPath()</code> helper &mdash; rendered with <code>CustomPainter</code>, filled per segment, hit-tested with <code>Path.contains</code>. 260 exercises in <code>exercises.json</code>, each with <code>primary</code>/<code>secondary</code> arrays of <code>parent/sub</code> ids, an <code>equipment</code> value (8 distinct), a <code>loadType</code> (weighted 196, bodyweight 47, assisted 3, timed 14), and four fields of reviewed prose. Screen construction conventions are settled: <code>AppScreen.root</code> / <code>.pushed</code> with a pinned app bar, <code>screenScrollPadding</code>, Riverpod for derived values, Drift for storage.</p>
+
+<h4>Pain points and gaps</h4>
+<p><code>Session</code>, <code>SessionExercise</code> and <code>SetEntry</code> tables <strong>do not exist yet</strong> &mdash; <code>app_database.dart</code> holds only a <code>Settings</code> table. Every personal-history surface in this tab depends on that layer landing first. <code>exercise_search_screen.dart</code> is a placeholder with a TODO, so the search and ranking rules are genuinely unwritten. The custom palette is not applied yet. Two shipped asset gaps are recorded in <code>docs/00</code> &sect;13: no side-delt artwork, and triceps not split by head.</p>
+
+<h4>The contradiction inside the spec</h4>
+<p><code>docs/03</code> lists &ldquo;Muscle group selection&rdquo; and &ldquo;Sub-muscle group selection&rdquo; as two separate screens, while the same document (line 104) states that tapping a segment &ldquo;should go directly into that sub-muscle group&rsquo;s exercise list, not into a generic parent-muscle view first.&rdquo; Both statements cannot hold for a diagram tap. This was verified directly against the file, and it shapes the top-ranked idea below.</p>
+
+<h4>Constraints the ideas were qualified against</h4>
+<p>Nothing is stored that can be derived (streak, counts, PBs, per-session PB count, calorie estimate, the <code>trained</code> tick, the resolved title). <code>performedOn</code> is a local calendar date, not a timestamp. No SVG rendering package. The app bar is pinned on every screen. <code>#D85A30</code> means &ldquo;active / this has been worked&rdquo; everywhere and <code>#C4553A</code> is destructive-only. The four reviewed prose fields carry injury risk and must not be rewritten. Out of scope for V1: login, cloud sync, soft delete, rest timer, workout duration, notifications, wearables, AI, premium tier, ads, multi-day splits, per-exercise illustrations, achievements/badges/level-ups.</p>
+
+<h4>External context</h4>
+<p>Prior art converges on one dominant pattern: sets per muscle group per week, painted on a body, with a calendar-week default and a tap that opens a per-muscle breakdown (Hevy is the reference implementation). A second, distinct framing &mdash; recovery/readiness scoring &mdash; is what Fitbod and Arvo ship, and it is the wrong fork here: it needs a fatigue model this V1 has correctly excluded, and the recurring critique of it is that soreness is not readiness. Arvo&rsquo;s fourth state, <strong>untrained</strong>, is the most interesting mechanic found, because it turns a map from &ldquo;what I did&rdquo; into &ldquo;what I&rsquo;m neglecting&rdquo; with no model attached. The genre&rsquo;s dominant failure mode is being decorative &mdash; pretty, then never opened again, because the map has no next action. Two gaps are open here specifically: nobody surfaces anterior/posterior as the front/back toggle itself, and almost nobody offers an all-time map outside a paid tier.</p>
+
+<h4>Past learnings</h4>
+<p>There is no <code>docs/solutions/</code> store yet. The prior Workout-tab ideation from the same week established modifiers that apply app-wide &mdash; actions in the thumb arc, the streak may not use the accent orange, no congratulatory copy, a quick-log fast path matters &mdash; and rejected a grace-day meter, a &ldquo;most overdue muscle&rdquo; callout, lifetime counters, and the full-bleed diagram <em>as a cross-tab start control</em>. ADR 0003 accepted that reaching another tab from the deepest Muscles screen costs four back-presses.</p>
+</section>
+
+<section id="topic-axes">
+<h2>Topic Axes</h2>
+<ol>
+  <li><strong>The landing</strong> &mdash; what the tab root shows and how it is composed</li>
+  <li><strong>The browse drill-down</strong> &mdash; diagram &rarr; parent &rarr; sub-group &rarr; exercise list; hit-test granularity, depth, return path</li>
+  <li><strong>Finding a specific exercise</strong> &mdash; search, filtering, ranking</li>
+  <li><strong>The exercise page</strong> &mdash; detail and history, stat tiles, load-type formatting, add-to-workout</li>
+  <li><strong>Your own data in a reference tab</strong> &mdash; how logged history personalises a screen specified as pure reference</li>
+</ol>
+</section>
+
+<section id="ranked-ideas">
+<h2>Ranked Ideas</h2>
+
+<div class="jump">
+<ol>
+  <li><a href="#i1">Collapse the browse chain into one landing</a></li>
+  <li><a href="#i2">The landing fill answers absence, and is windowed</a></li>
+  <li><a href="#i3">The landing map counts primary muscles only</a></li>
+  <li><a href="#i4">One search field, three vocabularies</a></li>
+  <li><a href="#i5">Shared components, and session state read ambiently</a></li>
+  <li><a href="#i6">History-first ranking in a shared matcher core</a></li>
+  <li><a href="#i7">The front/back flip is the balance readout</a></li>
+  <li><a href="#i8">An &ldquo;equivalent options&rdquo; rail on the exercise page</a></li>
+  <li><a href="#i9">Exercise page ordering branches on whether history exists</a></li>
+  <li><a href="#i10">Collapse the reviewed prose; open Common mistakes</a></li>
+  <li><a href="#i11">Lateral navigation instead of back-presses</a></li>
+  <li><a href="#i12">Decide whether the assisted inversion is user-facing at all</a></li>
+  <li><a href="#i13">A derived training-frequency line</a></li>
+  <li><a href="#i14">An equipment coverage map</a></li>
+  <li><a href="#i15">Full-bleed diagram &mdash; the alternative landing</a></li>
+</ol>
+</div>
+
+<div class="fork">
+<p><b>Two forks to settle before any of this is built.</b> Ideas <a href="#i1">1</a> and <a href="#i15">15</a> are incompatible landing compositions &mdash; one puts a sub-group list beside the diagram, the other removes everything but the diagram. And idea <a href="#i7">7</a> keeps the front/back buttons in order to hang a number on them, which rules out replacing those buttons with a drag gesture (cut, below). Pick one of each; they are presented together because the choice is real, not because both can ship.</p>
+</div>
+
+<article class="idea" id="i1">
+<div class="ihead"><h3>1. Collapse the browse chain into one landing</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: the browse drill-down</span>
+  <span class="chip conf">Confidence 92%</span>
+  <span class="chip">Complexity: Medium</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>Put the 19 sub-group rows as a companion list directly beneath the body diagram on the landing. A segment tap <em>or</em> a row tap goes straight to that sub-group&rsquo;s exercise list. Delete <code>docs/03</code>&rsquo;s separate &ldquo;Muscle group selection&rdquo; and &ldquo;Sub-muscle group selection&rdquo; screens entirely. Handle the single genuinely ambiguous segment &mdash; front-delt, which also carries side-delt on the front view &mdash; with a two-row bottom sheet on that one segment.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">direct:</span> <code>docs/03</code> lists screens 2 and 3 separately, while line 104 of the same file says a segment tap &ldquo;should go directly into that sub-muscle group&rsquo;s exercise list, not into a generic parent-muscle view first.&rdquo; Verified in <code>muscle_taxonomy.dart</code>: <code>shoulders/front-delt</code> and <code>shoulders/side-delt</code> both map to <code>(front, shoulders/front-delt)</code>, and <strong>every other sub-group&rsquo;s segment list is unique</strong> &mdash; exactly one collision in 42 segments. ADR 0003 records the chain as five deep, costing four back-presses to leave the tab.</p>
+<p><b class="lbl">Rationale</b>The spec contradiction is not a judgement call once you count: screen 3 exists to disambiguate one tap target out of 42. Resolving it by deletion rather than by picking a side removes two screens from the build and shortens the app&rsquo;s most back-press-expensive chain. The companion list is not an accessibility afterthought either &mdash; <code>docs/00</code> &sect;13 records that there is no side-delt artwork, so a sub-group with 14 primary exercises has no tap target of its own on any view. Without a list path, part of the taxonomy is unreachable by tap.</p>
+<p><b class="lbl">Downsides</b>Overrides a written spec, so <code>docs/03</code> needs updating rather than quietly diverging. A diagram plus 19 rows is a longer landing than the prototype shows, which pushes the diagram up and may make it feel smaller. The bottom sheet is a one-off interaction that exists for a single segment, which is the kind of special case that tends to rot.</p>
+</div>
+<figure>
+<svg viewBox="0 0 820 195" role="img" aria-label="The browse chain today is six screens; the proposal collapses it to four by deleting the two selection screens.">
+<text x="33" y="20" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="11" font-weight="650" letter-spacing="1.1" fill="#6B6156">AS SPECIFIED &#183; 6 SCREENS, 4 BACK-PRESSES TO LEAVE THE TAB</text>
+<g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="11.5" text-anchor="middle">
+<rect x="33" y="34" width="104" height="46" rx="8" fill="#211D18" stroke="#332C22"/><text x="85" y="62" fill="#F5EFE8">Landing</text>
+<rect x="163" y="34" width="104" height="46" rx="8" fill="#1C1915" stroke="#332C22" stroke-dasharray="4 3"/><text x="215" y="55" fill="#6B6156">Muscle</text><text x="215" y="69" fill="#6B6156">group</text>
+<rect x="293" y="34" width="104" height="46" rx="8" fill="#1C1915" stroke="#332C22" stroke-dasharray="4 3"/><text x="345" y="55" fill="#6B6156">Sub-muscle</text><text x="345" y="69" fill="#6B6156">group</text>
+<rect x="423" y="34" width="104" height="46" rx="8" fill="#211D18" stroke="#332C22"/><text x="475" y="55" fill="#F5EFE8">Exercise</text><text x="475" y="69" fill="#F5EFE8">list</text>
+<rect x="553" y="34" width="104" height="46" rx="8" fill="#211D18" stroke="#332C22"/><text x="605" y="62" fill="#F5EFE8">Detail</text>
+<rect x="683" y="34" width="104" height="46" rx="8" fill="#211D18" stroke="#332C22"/><text x="735" y="62" fill="#F5EFE8">History</text>
+</g>
+<g stroke="#6B6156" stroke-width="1.3" fill="none">
+<path d="M141 57 H156"/><path d="M271 57 H286"/><path d="M401 57 H416"/><path d="M531 57 H546"/><path d="M661 57 H676"/>
+</g>
+<g fill="#6B6156"><path d="M156 57 l-5 -3 v6 z"/><path d="M286 57 l-5 -3 v6 z"/><path d="M416 57 l-5 -3 v6 z"/><path d="M546 57 l-5 -3 v6 z"/><path d="M676 57 l-5 -3 v6 z"/></g>
+<text x="33" y="114" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="11" font-weight="650" letter-spacing="1.1" fill="#F0997B">PROPOSED &#183; 4 SCREENS</text>
+<g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="11.5" text-anchor="middle">
+<rect x="33" y="128" width="104" height="46" rx="8" fill="rgba(216,90,48,0.13)" stroke="rgba(240,153,123,0.45)"/><text x="85" y="149" fill="#F5EFE8">Landing</text><text x="85" y="163" fill="#F0997B">diagram + list</text>
+<rect x="163" y="128" width="104" height="46" rx="8" fill="#211D18" stroke="#332C22"/><text x="215" y="149" fill="#F5EFE8">Exercise</text><text x="215" y="163" fill="#F5EFE8">list</text>
+<rect x="293" y="128" width="104" height="46" rx="8" fill="#211D18" stroke="#332C22"/><text x="345" y="156" fill="#F5EFE8">Detail</text>
+<rect x="423" y="128" width="104" height="46" rx="8" fill="#211D18" stroke="#332C22"/><text x="475" y="156" fill="#F5EFE8">History</text>
+</g>
+<g stroke="#6B6156" stroke-width="1.3" fill="none"><path d="M141 151 H156"/><path d="M271 151 H286"/><path d="M401 151 H416"/></g>
+<g fill="#6B6156"><path d="M156 151 l-5 -3 v6 z"/><path d="M286 151 l-5 -3 v6 z"/><path d="M416 151 l-5 -3 v6 z"/></g>
+<text x="553" y="146" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="11.5" fill="#6B6156">Dashed screens are</text>
+<text x="553" y="161" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="11.5" fill="#6B6156">deleted, not merged.</text>
+</svg>
+<figcaption style="max-width:none">Directional only. The two dashed screens disappear because a segment tap already resolves to an exact sub-group id.</figcaption>
+</figure>
+</article>
+
+<article class="idea" id="i2">
+<div class="ihead"><h3>2. The landing fill answers absence, and is windowed</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: the landing</span>
+  <span class="chip conf">Confidence 85%</span>
+  <span class="chip">Complexity: Medium</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>Make the landing diagram&rsquo;s fills answer &ldquo;what have I not touched&rdquo; rather than &ldquo;what have I done.&rdquo; A segment fills when it was trained inside the current window and stays muted when it was not, so the screen&rsquo;s visual subject becomes the dark regions. The window is a steppable calendar week with left/right arrows, plus a named &ldquo;all time&rdquo; option &mdash; not a lifetime default.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">external:</span> Arvo&rsquo;s recovery map carries &ldquo;untrained&rdquo; as a first-class fourth state, and no surveyed app does neglect well inside a non-recovery map. Hevy defaults to the current calendar week and steps it with arrows. <span class="basis-tag">direct:</span> <code>muscles_root.dart</code> states the rule this must satisfy: &ldquo;This tab has no empty state&hellip; only the diagram&rsquo;s fills differ.&rdquo;</p>
+<p><b class="lbl">Rationale</b>The window is not a nicety, it is what keeps the promise in <code>muscles_root.dart</code> survivable. A binary trained/untrained map with no window is uniformly lit for a 300-session user &mdash; the screen degrades to decoration exactly for the people who earned it, which is the genre&rsquo;s documented failure mode. Framing the fill around absence gives the map a question to answer without a fatigue model, a readiness score, or a recommendation, all of which are out of scope. It is <code>performedOn</code> arithmetic and stores nothing.</p>
+<p><b class="lbl">Downsides</b>A window control is the only stateful element on an otherwise stateless screen, and the default choice quietly decides what the tab means on first open. &ldquo;Neglect&rdquo; framing risks reading as nagging, which the prior Workout-tab ideation already rejected once in the form of a most-overdue-muscle callout &mdash; the difference has to stay in the copy and the absence of any verdict. Depends on the Session/SetEntry tables, so it cannot ship first.</p>
+</div>
+</article>
+
+<article class="idea" id="i3">
+<div class="ihead"><h3>3. The landing map counts primary muscles only</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: your own data in a reference tab</span>
+  <span class="chip conf">Confidence 90%</span>
+  <span class="chip">Complexity: Low</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>When the landing diagram sums across many sessions, count <code>primary</code> muscles only and ignore <code>secondary</code>. Keep the two-tone primary/secondary fill on the <em>exercise detail</em> diagram, where it describes a single movement rather than a summed history. One rule, two screens, deliberately opposite answers.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">direct:</span> computed over all 260 entries in <code>exercises.json</code> and independently recomputed during verification &mdash; secondary appearances run <code>shoulders/front-delt</code> 43, <code>forearms</code> 41, <code>triceps</code> 41, <code>back/upper</code> 32, <code>abs/upper</code> 27, against <code>calves</code> 4, <code>quads</code> 3 and <code>chest/upper</code> <strong>0</strong>; 72 exercises carry no <code>secondary</code> array at all. <span class="basis-tag">external:</span> secondary attribution is named in the research as the credibility cliff &mdash; under-count and users notice neglected arms, over-count and every muscle glows and the map says nothing.</p>
+<p><b class="lbl">Rationale</b>This is the single decision most likely to make the map worthless, and the shipped dataset already answers it. The distribution is not close to balanced: count secondaries and front-delt, forearms and triceps glow permanently regardless of what was actually trained, while chest/upper can never light from them at all. It also settles the direct-1.0 / secondary-0.5 counting convention the research describes as the serious-user expectation &mdash; on this dataset it would be actively misleading.</p>
+<p><b class="lbl">Downsides</b>Users who do a lot of compound work will see arms stay dark despite real indirect volume, which is the exact complaint levelled at COROS for primary-only attribution. The asymmetry between the two screens is defensible but non-obvious, so someone will eventually &ldquo;fix&rdquo; it into consistency unless the reason is written down.</p>
+</div>
+<figure>
+<svg viewBox="0 0 620 268" role="img" aria-label="Secondary-muscle appearances across 260 exercises, ranging from 43 for front delt down to zero for upper chest.">
+<text x="0" y="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="11" font-weight="650" letter-spacing="1.1" fill="#6B6156">SECONDARY APPEARANCES ACROSS 260 EXERCISES</text>
+<g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="12">
+<text x="0" y="42" fill="#A89C8E">shoulders/front-delt</text><rect x="132" y="32" width="440" height="13" rx="2.5" fill="#F0997B"/><text x="580" y="42" fill="#F5EFE8">43</text>
+<text x="0" y="68" fill="#A89C8E">forearms</text><rect x="132" y="58" width="419" height="13" rx="2.5" fill="#F0997B"/><text x="559" y="68" fill="#F5EFE8">41</text>
+<text x="0" y="94" fill="#A89C8E">triceps</text><rect x="132" y="84" width="419" height="13" rx="2.5" fill="#F0997B"/><text x="559" y="94" fill="#F5EFE8">41</text>
+<text x="0" y="120" fill="#A89C8E">back/upper</text><rect x="132" y="110" width="327" height="13" rx="2.5" fill="#F0997B"/><text x="467" y="120" fill="#F5EFE8">32</text>
+<text x="0" y="146" fill="#A89C8E">abs/upper</text><rect x="132" y="136" width="276" height="13" rx="2.5" fill="#F0997B"/><text x="416" y="146" fill="#F5EFE8">27</text>
+<text x="0" y="172" fill="#A89C8E">calves</text><rect x="132" y="162" width="41" height="13" rx="2.5" fill="#F0997B"/><text x="181" y="172" fill="#F5EFE8">4</text>
+<text x="0" y="198" fill="#A89C8E">quads</text><rect x="132" y="188" width="31" height="13" rx="2.5" fill="#F0997B"/><text x="171" y="198" fill="#F5EFE8">3</text>
+<text x="0" y="224" fill="#A89C8E">chest/upper</text><rect x="132" y="214" width="2" height="13" rx="1" fill="#332C22"/><text x="142" y="224" fill="#6B6156">0</text>
+</g>
+<text x="0" y="256" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="11.5" fill="#6B6156">Count these on a summed map and the top three glow permanently; the bottom three never can.</text>
+</svg>
+<figcaption style="max-width:none">Directional only. Counts recomputed from the shipped dataset during verification.</figcaption>
+</figure>
+</article>
+
+<article class="idea" id="i4">
+<div class="ihead"><h3>4. One search field, three vocabularies</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: finding a specific exercise</span>
+  <span class="chip conf">Confidence 85%</span>
+  <span class="chip">Complexity: Medium</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>Index the 19 sub-group labels and the 8 equipment values alongside the 260 exercise names, in the one search field. Typing &ldquo;lats&rdquo; lands on that sub-group&rsquo;s exercise list; &ldquo;kettlebell&rdquo; lands on the kettlebell list; &ldquo;swing&rdquo; lands on the exercise. Each result is labelled by kind so the three never blur together.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">direct:</span> <code>docs/03</code> line 11 scopes search to exercise names only &mdash; &ldquo;Typing an exercise name (e.g. &lsquo;barbell curl&rsquo;) jumps straight to that exercise&rsquo;s detail page if there&rsquo;s a clear match, or to a short filtered list if the query is ambiguous.&rdquo; <code>muscle_taxonomy.dart</code> already carries 19 human-readable sub-group labels, and <code>exercises.json</code> carries 8 distinct equipment values &mdash; 27 extra strings, no new data.</p>
+<p><b class="lbl">Rationale</b>The tab&rsquo;s stated identity is MuscleWiki, yet the only place a muscle can be named is a diagram tap. A user who already knows they want lats has to abandon the search bar and go hunting on a silhouette. Indexing the other two vocabularies makes the field a complete substitute for the diagram rather than a parallel path &mdash; which matters most for exactly the sub-groups the artwork handles badly. Equipment is the constraint a user actually faces standing in a gym, and <code>docs/03</code> already treats it as first-class by putting an equipment chip on every exercise row.</p>
+<p><b class="lbl">Downsides</b>Three result kinds in one list needs a clear visual grammar or it reads as noise, and it complicates the &ldquo;clear match jumps straight to detail&rdquo; rule &mdash; a muscle match should presumably never auto-jump. Adding a second navigation axis to a tab named Muscles is a framing decision, not a search tweak.</p>
+</div>
+</article>
+
+<article class="idea" id="i5">
+<div class="ihead"><h3>5. Shared components, and session state read ambiently</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: the browse drill-down</span>
+  <span class="chip conf">Confidence 88%</span>
+  <span class="chip">Complexity: Medium</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>Build one <code>MuscleDiagram</code> widget parameterised by view, mode and fill-map, with the <code>Path</code> objects for all four assets cached once in a provider. Build one accordion list component shared with the Workout tab&rsquo;s template muscle list. And have the exercise detail screen read the active session&rsquo;s state (none / ad-hoc / template) from a provider rather than receiving it as a route argument.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">direct:</span> <code>docs/03</code> already asserts both shapes &mdash; the diagram is &ldquo;one reusable full-body component used on every screen,&rdquo; interactive on landing and sub-group, read-only on detail; and the sub-muscle expansion is &ldquo;the same accordion pattern as the Workout tab.&rdquo; <code>body_paths.dart</code>&rsquo;s own header instructs callers to cache built <code>Path</code> objects rather than rebuild them per frame. <code>docs/03</code> gives the three-state visibility table for &ldquo;Add to current workout.&rdquo;</p>
+<p><b class="lbl">Rationale</b>The taxonomy has sharp edges &mdash; side-delt maps to front-delt on the front view only, traps live under <code>back/upper</code>, serratus renders as a second path element routed to obliques. If four screens each re-implement segment lookup, those exceptions get fixed in one screen and silently missed in another. The ambient-session half matters because exercise detail is reachable from at least three places with three different session states; threading it as a route argument means every call site must remember to forward it, and a future fourth entry point gets it wrong by default.</p>
+<p><b class="lbl">Downsides</b>This is architecture, not a user-visible feature, so it competes for time against things a user can see. A widget parameterised for four call sites tends to accumulate flags; the accordion in particular may already exist in flight on the Workout tab, which decides who extracts from whom rather than whether to share.</p>
+</div>
+</article>
+
+<article class="idea" id="i6">
+<div class="ihead"><h3>6. History-first ranking in a shared matcher core</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: finding a specific exercise</span>
+  <span class="chip conf">Confidence 80%</span>
+  <span class="chip">Complexity: Medium</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>Write one matching-and-ranking function over <code>exerciseLibraryProvider</code> &mdash; exercises you have logged before first (most recent first), then name prefix, then name substring, then muscle and equipment matches &mdash; and consume it from both the Muscles-tab reference search and the Workout tab&rsquo;s ad-hoc search. The two differ only in where a tap goes: exercise detail here, straight to set-logging there. A query that matches no exercise name falls through to muscle and equipment matches instead of returning an empty state.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">direct:</span> <code>exercise_search_screen.dart</code> is a placeholder carrying a TODO for build-order step 4, so the ranking is genuinely unwritten; its own comment states that the ad-hoc path must route to set-logging rather than through detail, &ldquo;because routing every logging action through detail taxes the majority who already know the lift.&rdquo; <span class="basis-tag">reasoned:</span> the app is local-only with no telemetry, so the three signals modern search leans on &mdash; popularity, click-through, editorial curation &mdash; are all unavailable. What remains is lexical match over 260 names, a fixed 19-node classification, and the user&rsquo;s own log. Ranking by the log is the only genuinely personal signal available, and it is derived on read by construction, with no recents list to store or invalidate.</p>
+<p><b class="lbl">Rationale</b>With 260 exercises and a four-character query, the best result is almost always one of the handful the user actually does. Deciding the tiers once means the two entry points cannot drift on typo tolerance or on what counts as a clear match, and both unbuilt screens can ship from one piece of work rather than two.</p>
+<p><b class="lbl">Downsides</b>History-first ranking is invisible on day one and only earns its keep after a few weeks of logging, so it will look like over-engineering at review time. It also lets personal data reorder results in a tab specified as pure reference, which is the same philosophical question idea 13 raises &mdash; worth answering once for both.</p>
+</div>
+</article>
+
+<article class="idea" id="i7">
+<div class="ihead"><h3>7. The front/back flip is the balance readout</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: the landing</span>
+  <span class="chip conf">Confidence 75%</span>
+  <span class="chip">Complexity: Low</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>Hang a derived anterior/posterior number on the two flip controls the landing already has &mdash; for instance <code>Front 62</code> and <code>Back 38</code> for the current window &mdash; so that flipping between views is a comparison rather than a camera move. No new screen, no ratio verdict, no statement that any particular split is correct.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">external:</span> the research names this as an open gap &mdash; every push/pull balance feature found in prior art is a separate screen with its own ratio computation (JEFIT ships a Movement Balance Engine; Strength Balance is a standalone app), and nobody surfaces anterior/posterior as the front/back toggle itself. This app already has both views and a flip control.</p>
+<p><b class="lbl">Rationale</b>The two halves of the comparison already exist as two rendered assets and one control, so the feature is mostly a refusal to build anything extra. It also answers the &ldquo;decorative by default&rdquo; critique in the mildest possible way: a ledger states, it does not accuse &mdash; which keeps it clear of the most-overdue-muscle callout the prior ideation rejected.</p>
+<p><b class="lbl">Downsides</b>It reassigns meaning to an existing control, which changes its label and probably its size. A raw set count invites a correctness reading the app is deliberately refusing to supply &mdash; users will ask what the right ratio is. And it forecloses replacing those buttons with a drag-to-turn gesture, which was the competing proposal.</p>
+</div>
+</article>
+
+<article class="idea" id="i8">
+<div class="ihead"><h3>8. An &ldquo;equivalent options&rdquo; rail on the exercise page</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: the exercise page</span>
+  <span class="chip conf">Confidence 78%</span>
+  <span class="chip">Complexity: Medium</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>Close every exercise page with a short rail of substitutes that share the same <code>primary</code> sub-group, ordered by equipment distance and matching <code>loadType</code> where possible. It answers &ldquo;the bench is taken&rdquo; and &ldquo;is there a better one for this muscle&rdquo; without a recommendation engine, a score, or a generated word of prose.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">direct:</span> every field the substitution needs already ships &mdash; a record carries <code>equipment</code>, <code>loadType</code>, <code>primary[]</code> and <code>secondary[]</code>. There is real choice to surface: glutes has 26 primary exercises, quads 25, <code>back/upper</code> 23. <span class="basis-tag">reasoned:</span> the tab exists for a user who &ldquo;doesn&rsquo;t want to build a full workout and just wants to find or understand a specific exercise&rdquo; &mdash; and the question behind that is usually comparative, not singular. A mechanical equivalence (same primary muscle, different equipment) makes no claim the app has to stand behind, which keeps it clear of the AI and recommendation exclusions.</p>
+<p><b class="lbl">Rationale</b>It is the strongest available answer to the genre&rsquo;s no-next-action critique that stays inside V1&rsquo;s boundaries. It also converts the deepest screen in the chain from a dead end into a lateral hop, so the four-back-press cost ADR 0003 accepted is incurred less often &mdash; the user stops needing to go back up at all.</p>
+<p><b class="lbl">Downsides</b>&ldquo;Equivalent&rdquo; is a stronger word than the data supports &mdash; sharing a primary sub-group does not make a machine press equivalent to a barbell bench press, and the wording will need care to avoid implying the app endorses the swap. It also touches the app&rsquo;s most-shared screen, so it lands on the set-logging entry point too.</p>
+</div>
+</article>
+
+<article class="idea" id="i9">
+<div class="ihead"><h3>9. Exercise page ordering branches on whether history exists</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: the exercise page</span>
+  <span class="chip conf">Confidence 80%</span>
+  <span class="chip">Complexity: Low</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>One screen, one formatter, two orderings. For an exercise the user has never logged, the reference content leads &mdash; diagram, chips, and the four prose fields &mdash; because that is the only reason the page was opened. For one they have logged, the Best/Last/Times tiles and the recent log lead, because they came to check what to beat.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">direct:</span> <code>docs/03</code> already branches this screen on history presence &mdash; when nothing is logged it replaces &ldquo;the entire history block &mdash; all three tiles and the recent list &mdash; with a single muted line&hellip; Do not render three tiles of dashes.&rdquo; And it justifies the tile set on the same grounds: &ldquo;the last session is what the user is trying to beat, an average is trivia.&rdquo; Verification confirmed the doc branches on <em>content substitution</em> only, not on ordering &mdash; so this is a genuine addition rather than a restatement.</p>
+<p><b class="lbl">Rationale</b>The spec already accepted that this screen serves two populations; it just stopped short of letting that change the layout. Two orderings cost almost nothing on top of a branch that has to exist anyway, and they remove a scroll from the most common return visit &mdash; checking last time&rsquo;s numbers on a lift you do every week.</p>
+<p><b class="lbl">Downsides</b>Two layouts for one screen is a thing teams either endorse once or forbid once; decided mid-build it becomes an inconsistency. It also means a user&rsquo;s first and tenth visit to the same page look different, which can be disorienting the first time it flips.</p>
+</div>
+</article>
+
+<article class="idea" id="i10">
+<div class="ihead"><h3>10. Collapse the reviewed prose; open Common mistakes</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: the exercise page</span>
+  <span class="chip conf">Confidence 75%</span>
+  <span class="chip">Complexity: Low</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>Render the four reviewed fields as labelled collapsible rows &mdash; Setup, Posture, Execution, Common mistakes &mdash; verbatim, with Common mistakes expanded by default and the other three collapsed. Not one word changes; only placement does.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">direct:</span> <code>CLAUDE.md</code> is explicit that &ldquo;Exercise content carries injury risk. Do not rewrite, summarise, or regenerate the <code>setup</code> / <code>posture</code> / <code>execution</code> / <code>commonMistakes</code> fields. They are reviewed copy.&rdquo; The fields average roughly 76 words each across the library, which makes the page a wall of text if all four render open.</p>
+<p><b class="lbl">Rationale</b>This is the only way to shorten the page without touching a reviewed word. It also turns an accident into a decision: as specified, which safety content the user sees first is determined by layout order, and nobody chose that. Defaulting the injury-relevant field open makes the choice deliberate.</p>
+<p><b class="lbl">Downsides</b>Collapsed setup and posture content is content people will not read, and for a genuinely unfamiliar lift those matter as much as the mistakes list. Deciding which single field is default-visible is a judgement about injury risk that probably should not be made by whoever writes the widget.</p>
+</div>
+</article>
+
+<article class="idea" id="i11">
+<div class="ihead"><h3>11. Lateral navigation instead of back-presses</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: the browse drill-down</span>
+  <span class="chip conf">Confidence 72%</span>
+  <span class="chip">Complexity: Medium</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>Carry a small diagram into the exercise-list screen with the current sub-group lit and every other segment live. Tapping a neighbour <em>replaces</em> the route rather than pushing, so the stack never grows and the user re-orients without a screen transition. Optionally the same sideways move from the pinned title, as a sibling picker.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">direct:</span> ADR 0003 records that &ldquo;the browse chain is five screens deep&hellip; reaching another tab from the bottom of it takes four back presses,&rdquo; and accepted that cost rather than solving it. <code>docs/03</code> already requires the reusable diagram component on this screen, so the widget is not new. <code>AppScreen.pushed</code> exposes <code>titleWidget</code> and <code>actions</code>, which is where a sibling picker would live.</p>
+<p><b class="lbl">Rationale</b>The expensive gesture in a reference tab is not going deeper, it is going sideways &mdash; comparing lats against upper back today means pop, pop, tap, tap. Replace-instead-of-push makes that cost never accrue, and it does so without touching the navigation model the ADR settled: no per-tab back stack is ever observed, and the change is entirely intra-tab.</p>
+<p><b class="lbl">Downsides</b>Replace-instead-of-push changes the navigation contract for a chain an ADR already reasoned about, so it should be recorded against that ADR rather than slipped in. A second diagram on a list screen competes for vertical space with the list itself, and a map that navigates differently here than on the landing is a subtle inconsistency.</p>
+</div>
+</article>
+
+<article class="idea" id="i12">
+<div class="ihead"><h3>12. Decide whether the assisted inversion is user-facing at all</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: the exercise page</span>
+  <span class="chip conf">Confidence 70%</span>
+  <span class="chip">Complexity: Low</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>Two defensible routes, and the spec cannot hold both. Either carry the inversion <em>on the value</em> &mdash; a permanent direction marker in the Best tile, or a relabelled tile such as &ldquo;Lightest assist&rdquo; &mdash; so the correction cannot be separated from the number by scrolling or a screenshot. Or take the spec&rsquo;s own hint and remove the user-facing signalling entirely, letting the label do all the work with no banner. What should not happen is shipping a banner nobody reads above a number that looks wrong.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">direct:</span> <code>CLAUDE.md</code> calls this out as &ldquo;the only place in the app where a smaller number is the record, and it is the thing most likely to ship backwards.&rdquo; <code>docs/03</code> currently mitigates it with a single banner &mdash; &ldquo;Less assistance is better. Your record is the lightest assist you&rsquo;ve used.&rdquo; &mdash; and adds, in its own words, that if a second such banner ever becomes necessary &ldquo;that is a signal the inversion shouldn&rsquo;t be user-facing at all.&rdquo; Only 3 of 260 exercises are <code>assisted</code>.</p>
+<p><b class="lbl">Rationale</b>Three exercises is exactly why this ships backwards: too rare for everyday use to catch a sign error, too rare for anyone to remember the banner. Putting the comparator on the value makes the tile self-describing, so a wrong comparison reads as visibly wrong in a screenshot and a widget test has something to assert on other than banner presence. The spec text already reads as an invitation to reconsider, so the decision is open rather than settled.</p>
+<p><b class="lbl">Downsides</b>Special-casing one tile for 3 of 260 exercises adds a branch to a screen that is otherwise uniform across four load types. Relabelling the tile breaks the Best/Last/Times symmetry that makes the three-tile row scannable. And whichever route is chosen, the doc needs amending rather than accumulating a second mitigation on top of the first.</p>
+</div>
+</article>
+
+<article class="idea" id="i13">
+<div class="ihead"><h3>13. A derived training-frequency line</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: your own data in a reference tab</span>
+  <span class="chip conf">Confidence 68%</span>
+  <span class="chip">Complexity: Medium</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>On the sub-group or exercise-list screen, show a compact derived line counting how often that sub-group appears across recent logged sessions &mdash; &ldquo;trained in 6 of your last 10 sessions.&rdquo; Computed from <code>performedOn</code> alone, on read, with no fatigue model and no stored counter.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">external:</span> clinical pain body maps are the closest structural match found &mdash; grid-cell templates where each region is binary per session, which makes a frequency map (how often a region is marked, across time) trivially computable. This app&rsquo;s 42 fixed segments are exactly that grid-based family, so the frequency-of-training map is the direct analogue, and it needs no model. <span class="basis-tag">direct:</span> the derived-on-read rule already covers the <code>trained</code> tick, so this adds a bucket to an existing computation rather than a new kind of value.</p>
+<p><b class="lbl">Rationale</b>It gives a reference screen a next action without crossing into recovery or readiness, which the research is clear is the wrong fork for an offline, no-AI V1 &mdash; soreness tracks novelty, not adaptation, and a readiness score that cannot show the load that produced it reads as decoration. A frequency count is traceable by construction: it is a count of sessions the user can go and look at.</p>
+<p><b class="lbl">Downsides</b>&ldquo;6 of your last 10&rdquo; is a ratio a user will want to compare against something, and the app deliberately offers no target &mdash; the credible volume band (roughly 10&ndash;20 hard sets per muscle per week) is not settled enough per muscle to hard-code without sounding authoritative. Depends on the Session tables. And it is more history bleeding into a tab specified as pure reference.</p>
+</div>
+</article>
+
+<article class="idea" id="i14">
+<div class="ihead"><h3>14. An equipment coverage map</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: the landing</span>
+  <span class="chip conf">Confidence 65%</span>
+  <span class="chip">Complexity: Medium</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>Let the user declare the equipment they actually have, as a preference in the existing <code>Settings</code> table, then dim the sub-groups their kit cannot reach and show a count for the ones it can. A coverage map, in the sense a utility or mobile network publishes one: the same map, dimmed where service does not reach.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">direct:</span> computed and independently re-verified over <code>exercises.json</code> &mdash; filtering to the 47 <code>bodyweight</code> exercises, the only sub-groups with zero primary coverage are <code>biceps/biceps</code>, <code>shoulders/rear-delt</code> and <code>shoulders/side-delt</code>; 16 of 19 sub-groups remain covered. Equipment has 8 distinct values. The <code>Settings</code> table is explicitly for preferences, never derived values, so an owned-equipment list belongs there.</p>
+<p><b class="lbl">Rationale</b>This is the only personalisation in the tab that needs no session data at all, so it ships before the Session tables land and works on first launch. It also honours the rule in <code>muscles_root.dart</code> that a zero-session user must see a meaningful screen &mdash; here they see one tailored to their actual gym rather than a uniformly muted silhouette.</p>
+<p><b class="lbl">Downsides</b>It introduces a persistent preference into a tab that currently has none, and that preference wants to be respected by search and the ad-hoc flow too, so the blast radius is larger than the landing. A user whose kit changes, or who trains at two gyms, is poorly served by a single list. And dimming reachable muscles risks reading as &ldquo;you cannot train this,&rdquo; which is rarely literally true.</p>
+</div>
+</article>
+
+<article class="idea" id="i15">
+<div class="ihead"><h3>15. Full-bleed diagram &mdash; the alternative landing</h3></div>
+<div class="imeta">
+  <span class="chip axis">Axis: the landing</span>
+  <span class="chip conf">Confidence 55%</span>
+  <span class="chip">Complexity: Medium</span>
+</div>
+<div class="ifields">
+<p><b class="lbl">Description</b>The opposite composition to idea 1. Remove the search field, the flip buttons and the hint copy from the body entirely and let the map occupy the whole scrollable. Search becomes a magnifier in the pinned header via the unused <code>actions</code> slot; front/back becomes a horizontal swipe on the map, matching the tab-bar swipe idiom already shipped. The tab becomes one object rather than a page of controls.</p>
+<p><b class="lbl">Basis</b><span class="basis-tag">direct:</span> verified that <code>L0TabSpec</code> in <code>l0_shell.dart</code> declares <code>final List&lt;Widget&gt;? actions</code> documented as header controls a tab adds before the profile avatar, and that none of the three tabs currently passes it &mdash; the slot exists and is unused. The tab-swipe idiom shipped in commit <code>0bcb95c</code>. The prior Workout-tab ideation did reject a full-bleed diagram, but verification confirmed it rejected the diagram as a cross-tab <em>start control</em>, which is a different question from the Muscles tab&rsquo;s own layout.</p>
+<p><b class="lbl">Rationale</b>On the Workout tab the diagram is a side effect of logging; here it is the content, so the earlier rejection does not automatically transfer. Naming that explicitly is worth more than inheriting the veto by accident. If the diagram really is the tab, giving it the whole screen is the honest expression of that.</p>
+<p><b class="lbl">Downsides</b>This is the weakest-confidence idea here, and it is directly incompatible with idea 1: a full-bleed map has no room for a companion list, so it reinstates the tap-precision problem that the side-delt artwork gap makes concrete. Hiding search behind a header icon demotes the faster of the tab&rsquo;s two entry paths. It is included because the fork deserves stating, not because it is recommended over idea 1.</p>
+</div>
+<figure>
+<svg viewBox="0 0 620 250" role="img" aria-label="Two incompatible landing compositions: a diagram with a companion sub-group list, versus a full-bleed diagram with search moved into the header.">
+<g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">
+<text x="8" y="14" font-size="11" font-weight="650" letter-spacing="1.1" fill="#F0997B">IDEA 1 &#183; DIAGRAM + COMPANION LIST</text>
+<rect x="8" y="24" width="270" height="210" rx="12" fill="#17140F" stroke="#332C22"/>
+<rect x="8" y="24" width="270" height="34" rx="12" fill="#211D18" stroke="#332C22"/>
+<text x="24" y="46" font-size="12.5" font-weight="650" fill="#F5EFE8">Muscles</text>
+<circle cx="258" cy="41" r="9" fill="#1C1915" stroke="#332C22"/>
+<rect x="22" y="70" width="242" height="24" rx="7" fill="#211D18" stroke="#332C22"/>
+<text x="34" y="86" font-size="11.5" fill="#6B6156">Search exercises</text>
+<rect x="22" y="104" width="242" height="62" rx="8" fill="#241F19" stroke="#332C22"/>
+<text x="143" y="140" font-size="11.5" text-anchor="middle" fill="#A89C8E">body diagram</text>
+<rect x="22" y="176" width="242" height="17" rx="4" fill="#211D18" stroke="#332C22"/><text x="32" y="188" font-size="10.5" fill="#A89C8E">Upper chest</text>
+<rect x="22" y="197" width="242" height="17" rx="4" fill="#211D18" stroke="#332C22"/><text x="32" y="209" font-size="10.5" fill="#A89C8E">Lats</text>
+<rect x="22" y="218" width="242" height="12" rx="4" fill="#1C1915" stroke="#332C22"/>
+
+<text x="340" y="14" font-size="11" font-weight="650" letter-spacing="1.1" fill="#6B6156">IDEA 15 &#183; FULL-BLEED DIAGRAM</text>
+<rect x="340" y="24" width="270" height="210" rx="12" fill="#17140F" stroke="#332C22"/>
+<rect x="340" y="24" width="270" height="34" rx="12" fill="#211D18" stroke="#332C22"/>
+<text x="356" y="46" font-size="12.5" font-weight="650" fill="#F5EFE8">Muscles</text>
+<circle cx="566" cy="41" r="9" fill="#1C1915" stroke="#332C22"/>
+<circle cx="538" cy="41" r="7.5" fill="none" stroke="#F0997B" stroke-width="1.4"/><path d="M543 46 l5 5" stroke="#F0997B" stroke-width="1.4" fill="none"/>
+<rect x="354" y="70" width="242" height="150" rx="8" fill="#241F19" stroke="#332C22"/>
+<text x="475" y="149" font-size="11.5" text-anchor="middle" fill="#A89C8E">body diagram</text>
+<text x="475" y="234" font-size="10.5" text-anchor="middle" fill="#6B6156">swipe to turn</text>
+</g>
+</svg>
+<figcaption style="max-width:none">Directional only &mdash; illustrates the intended shape of each option. Exact spacing, copy and component choices are placeholders for comparison, not requirements.</figcaption>
+</figure>
+</article>
+</section>
+
+<section id="rejection-summary">
+<h2>Rejection Summary</h2>
+<table>
+<thead><tr><th>#</th><th>Idea</th><th>Reason rejected</th></tr></thead>
+<tbody>
+<tr><td>R1</td><td>One derivation layer for Best/Last/Times</td><td>Already covered &mdash; restates the derived-value architecture <code>CLAUDE.md</code> mandates and <code>docs/03</code> cross-references; not a fork, just the only sane implementation.</td></tr>
+<tr><td>R2</td><td>Replace the &ldquo;Times&rdquo; tile with recency</td><td>Basis refuted &mdash; the average-removal argument does not transfer; an average is lossy across values, a lifetime count still carries real familiarity information.</td></tr>
+<tr><td>R3</td><td>&ldquo;Start a workout with this exercise&rdquo; when no session is active</td><td>Overturns an explicit, deliberate rule (&ldquo;No session &rarr; no&rdquo;) and the tab&rsquo;s stated no-logging identity, on friction alone. Real tension, but needs stronger justification than restating it.</td></tr>
+<tr><td>R4</td><td>Build the whole tab against empty history first</td><td>Already covered &mdash; restates the existing empty-state spec and the current data-layer absence; build sequencing, not an idea.</td></tr>
+<tr><td>R5</td><td>One &ldquo;my history&rdquo; layer toggle governing the whole tab</td><td>Too vague &mdash; the landing&rsquo;s fill, the list&rsquo;s <code>Last:</code> line and the detail page&rsquo;s tile swap are different kinds of information; one switch cannot coherently govern all three.</td></tr>
+<tr><td>R6</td><td>Drag-to-turn gesture replacing the front/back buttons</td><td>Basis refuted &mdash; <code>docs/00</code> &sect;5&rsquo;s &ldquo;one diagram treatment everywhere&rdquo; is about full-body-vs-crop, not front/back geometric identity. Also mutually exclusive with survivor 7.</td></tr>
+<tr><td>R7</td><td>Skip &ldquo;See all N sessions&rdquo; when N &le; 2</td><td>Premise inaccurate &mdash; the history screen adds a summary strip, relative dates and PB badges not present inline, so it is not a dead click. Also below the ambition floor.</td></tr>
+</tbody>
+</table>
+<p>All five topic axes carried survivors; no axis-coverage gap to report.</p>
+</section>
+
+<section id="references">
+<h2>Sources &amp; References</h2>
+<h4>Repository</h4>
+<ul class="refs">
+<li><a href="https://github.com/ig0193/turtle-lift/blob/main/docs/03-muscle-groups-tab-userflow.md">docs/03-muscle-groups-tab-userflow.md</a> &mdash; <span>the Muscles tab spec: six screens, entry paths, stat tiles, empty-state rule, add-to-workout visibility.</span></li>
+<li><a href="https://github.com/ig0193/turtle-lift/blob/main/docs/00-build-spec.md">docs/00-build-spec.md</a> &mdash; <span>derived-values list, palette &sect;12, accordion rules, segment mapping exceptions, known asset gaps.</span></li>
+<li><a href="https://github.com/ig0193/turtle-lift/blob/main/docs/01-app-idea.md">docs/01-app-idea.md</a> &mdash; <span>the derived-on-read rule and the per-loadType personal-best metric table.</span></li>
+<li><a href="https://github.com/ig0193/turtle-lift/blob/main/docs/02-workout-tab-userflow.md">docs/02-workout-tab-userflow.md</a> &mdash; <span>the live-filling session muscle map, and the shared exercise-history screen.</span></li>
+<li><a href="https://github.com/ig0193/turtle-lift/blob/main/CLAUDE.md">CLAUDE.md</a> &mdash; <span>V1 exclusions, the assisted-PB inversion warning, the reviewed-copy constraint.</span></li>
+<li><a href="https://github.com/ig0193/turtle-lift/blob/main/docs/adr/0003-l0-navigation-variant-a.md">docs/adr/0003-l0-navigation-variant-a.md</a> &mdash; <span>the accepted four-back-press cost of the five-deep browse chain.</span></li>
+<li><a href="https://github.com/ig0193/turtle-lift/blob/main/assets/body-diagrams/muscle_taxonomy.dart">assets/body-diagrams/muscle_taxonomy.dart</a> &mdash; <span>12 parents, 19 sub-groups, 42 segments; the single front-delt/side-delt collision.</span></li>
+<li><a href="https://github.com/ig0193/turtle-lift/blob/main/assets/exercises/exercises.json">assets/exercises/exercises.json</a> &mdash; <span>260 exercises; the primary and secondary distributions behind ideas 3, 8 and 14.</span></li>
+<li><a href="https://github.com/ig0193/turtle-lift/blob/main/lib/src/ui/exercise_search_screen.dart">lib/src/ui/exercise_search_screen.dart</a> &mdash; <span>the search placeholder and its routing note.</span></li>
+<li><a href="https://github.com/ig0193/turtle-lift/blob/main/lib/src/ui/l0_shell.dart">lib/src/ui/l0_shell.dart</a> &mdash; <span><code>L0TabSpec</code> and its unused <code>actions</code> slot.</span></li>
+</ul>
+<h4>External</h4>
+<ul class="refs">
+<li><a href="https://www.hevyapp.com/features/muscle-group-workout-chart/">Hevy &mdash; muscle group workout chart</a> &mdash; <span>sets as the metric, calendar-week default, week arrows, tap-to-breakdown.</span></li>
+<li><a href="https://arvo.guru/recovery-map">Arvo &mdash; recovery map</a> &mdash; <span>the four-state map and the &ldquo;untrained&rdquo; state; sub-muscle double-count handling.</span></li>
+<li><a href="https://fitbod.me/blog/how-fitbods-ai-knows-exactly-when-you-should-lift-heavier-and-when-to-recover/">Fitbod &mdash; recovery scoring</a> &mdash; <span>the 0&ndash;100% readiness heatmap this V1 deliberately does not build.</span></li>
+<li><a href="https://rpstrength.com/blogs/articles/training-volume-landmarks-muscle-growth">Renaissance Periodization &mdash; volume landmarks</a> &mdash; <span>why a per-muscle weekly set target is not settled enough to hard-code.</span></li>
+<li><a href="https://formative.jmir.org/2022/6/e36687/">JMIR &mdash; digital pain body maps</a> &mdash; <span>grid-cell templates and the pain-frequency algorithm behind idea 13.</span></li>
+<li><a href="https://support.coros.com/hc/en-us/articles/360043963592">COROS &mdash; muscle heatmap attribution</a> &mdash; <span>primary-only counting as a stated limitation, and the complaint it draws.</span></li>
+<li><a href="https://push-pull.app/blog/workout-recovery-readiness-app">On readiness scores</a> &mdash; <span>why a score untraceable to the load that produced it reads as decoration.</span></li>
+</ul>
+</section>
+
+<footer class="composition-signal">Composed 2026-09-14 by ce-ideate from the session prompt &ldquo;I want to build the Muscles Tab now &mdash; 10&ndash;15 ideas on functionality and layout&rdquo;. Grounded against <code>docs/00</code>&ndash;<code>04</code>, <code>CLAUDE.md</code>, <code>docs/adr/0003</code>, the generated taxonomy and exercise data, both prototype files, and <code>lib/src/</code>. 46 raw candidates from six ideation frames across five topic axes, filtered by a fresh-context basis verifier that re-derived the dataset counts and confirmed the six highest-stakes citations.</footer>
+
+</div>
+</body>
+</html>

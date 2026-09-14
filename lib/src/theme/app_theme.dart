@@ -134,8 +134,66 @@ ThemeData buildAppTheme() {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(foregroundColor: AppPalette.accentStrong),
     ),
+    // The app's first text input is the Muscles search field, and Material's
+    // default decoration is the one place a palette this strict leaks: an
+    // unstyled `TextField` paints a filled surface from `surfaceContainerHighest`
+    // and an underline from `onSurfaceVariant`, neither of which is a shape this
+    // app uses anywhere -- every other box in it is a 1pt bordered rectangle on
+    // `surface`. So every colour and every border is named here rather than
+    // left to the defaults, the same way `showTemplateFilterMenu` names every
+    // property of its menu.
+    inputDecorationTheme: InputDecorationTheme(
+      // Filled *and* outlined, which Material treats as unusual: the prototype's
+      // `.search` is a filled box with a hairline border, so both are set.
+      filled: true,
+      fillColor: AppPalette.surface,
+      // Dense, because the height comes from the content padding below rather
+      // than from Material's 48pt minimum -- the prototype's field is 11px of
+      // padding around a 13.5px line.
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      hintStyle: const TextStyle(
+        fontSize: 13.5,
+        color: AppPalette.textMuted,
+      ),
+      prefixIconColor: AppPalette.textMuted,
+      suffixIconColor: AppPalette.textMuted,
+      // One shape, four states. `border` alone is not enough: Material resolves
+      // the enabled, focused, disabled and error borders separately and only
+      // falls back to its own defaults for the ones left unset.
+      border: _inputBorder(AppPalette.border),
+      enabledBorder: _inputBorder(AppPalette.border),
+      disabledBorder: _inputBorder(AppPalette.border),
+      // Accent on focus is the one-meaning rule applied, not decoration: §12
+      // gives that colour "active", and a focused field is the active one. It
+      // is also the only visible focus indicator this field has.
+      focusedBorder: _inputBorder(AppPalette.accentStrong),
+      errorBorder: _inputBorder(AppPalette.danger),
+      focusedErrorBorder: _inputBorder(AppPalette.danger),
+      errorStyle: const TextStyle(fontSize: 11.5, color: AppPalette.danger),
+    ),
+    // The caret and the selection band. Left unset they come from
+    // `colorScheme.primary`, which happens to be on-palette today and would
+    // stop being so the moment that role moved; naming them keeps the input's
+    // colours in one place with the rest of its decoration.
+    textSelectionTheme: const TextSelectionThemeData(
+      cursorColor: AppPalette.accentStrong,
+      selectionColor: AppPalette.accentLight,
+      selectionHandleColor: AppPalette.accentStrong,
+    ),
     // No bottomNavigationBarTheme: that themes Material 2's BottomNavigationBar,
     // which this app does not use. The L0 tab bar is a custom widget (see
     // prototypes/l0-tabbar-prototype.html) and carries its own styling.
   );
 }
+
+/// The search field's box: the app's one border radius for a control, drawn as
+/// a hairline in [color].
+///
+/// A function rather than six literals, because the four border states below
+/// differ only in that colour -- and a state that drifted to a different radius
+/// would look like a rendering bug rather than a theme edit.
+OutlineInputBorder _inputBorder(Color color) => OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: color),
+    );

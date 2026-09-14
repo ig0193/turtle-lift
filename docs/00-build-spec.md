@@ -64,7 +64,7 @@ Male and female assets have different coordinate spaces — never assume a value
 
 All inputs are unsigned positive numbers; the sign is carried by the type. `assistKg` is its own field, never a negative `addedKg`. Display formats, prefill rules and the duration input spec are in `01` §Set logging by loadType.
 
-**Exercise** (library) — `id`, `name`, `equipment`, `loadType`, `primary[]`, `secondary[]`, and four content fields rendered as separate labelled blocks on Exercise Detail, in this order:
+**Exercise** (library) — `id`, `name`, `equipment`, `loadType`, `primary[]`, `secondary[]`, and four content fields rendered as separate labelled, collapsible blocks on Exercise Detail. The table below is the data order; the **render order is Common mistakes, Setup, Posture, Execution** (§10):
 
 | Field | Contains |
 |---|---|
@@ -100,7 +100,7 @@ Load from `muscle_taxonomy.dart`. **12 parents, 19 sub-groups, 1 mapping excepti
 - `back/upper`, `forearms/forearms`, `calves/calves` each fill segments in **both** views. Normal.
 - **`shoulders/side-delt` → `shoulders/front-delt`, FRONT VIEW ONLY.** The only exception. Never map it to `rear-delt`.
 - Traps is `back/upper`, not `shoulders/*`, on both views.
-- Accordion only for **chest, back, shoulders, abs**. The other 8 parents have one sub-group → render one flat row, no accordion.
+- Accordion only for **chest, back, shoulders, abs**. The other 8 parents have one sub-group → render one flat row, no accordion. **This is a Workout-tab rule** — it governs the template path's nested muscle list (§9). The Muscles tab accordions nothing; the screens that used it there were deleted (§10).
 
 → `01` §Muscle group hierarchy.
 
@@ -109,8 +109,8 @@ Load from `muscle_taxonomy.dart`. **12 parents, 19 sub-groups, 1 mapping excepti
 ## 5. Body diagram rendering
 
 - Asset pair chosen by Profile gender field. Default male. Switching applies app-wide immediately.
-- **One diagram treatment everywhere: full body, unmodified viewBox.** There is no zoomed or cropped view anywhere in V1. Used on Workout Overview, Muscle Groups landing, sub-muscle-group selection, Exercise Detail, summary and session cards.
-  - **The crop system has been deleted** (`muscle_crops.json`, `muscle_crops.dart`, `generate_muscle_crops.py`). Its last two consumers — Exercise Detail and sub-muscle-group selection — both moved to full body during prototyping, because crops produced unreadable letterbox strips and lost the anatomical context that makes the diagram educational. Do not reintroduce cropping without a screen that genuinely needs it.
+- **One diagram treatment everywhere: full body, unmodified viewBox.** There is no zoomed or cropped view anywhere in V1. Used on Workout Overview, Muscle Groups landing, Exercise Detail, summary and session cards.
+  - **The crop system has been deleted** (`muscle_crops.json`, `muscle_crops.dart`, `generate_muscle_crops.py`). Its last two consumers both stopped needing it: Exercise Detail moved to full body during prototyping, because crops produced unreadable letterbox strips and lost the anatomical context that makes the diagram educational, and the sub-muscle-group selection screen was deleted outright (§10). **Do not reintroduce cropping.** `03`'s exercise-detail mockup note used to call for a zoomed viewBox; it has been corrected.
 - Exercise Detail: **full-body** diagram. If relevant muscles span both views, show **both side by side**, each full body. If one view covers everything, show one, centred.
 - Fill colours: primary `#D85A30`, secondary `#F0997B`, untrained `#241F19`.
 - **Uniformity rule:** every muscle map comes from these SVGs. No screen gets its own simplified diagram. Mockup SVGs in `02`–`04` are layout references only.
@@ -167,7 +167,7 @@ streakAsOf(date) -> int
 
 ## 9. Workout tab
 
-**Entry:** Start workout (template picker) · Ad-hoc workout (exercise search).
+**Entry:** the landing lists the predefined templates filtered by split (**1 Muscle per day** · **Multi Split** · **Push-Pull-Legs**; no unfiltered value, Multi Split on first launch, last choice remembered), then the user's own templates unfiltered, then **Ad-hoc workout** (exercise search). No separate picker screen. The filter is a view control, never a declared programme — see `02` §Step 1.
 
 **Overview screen**
 - Editable title; **no caption line**.
@@ -199,17 +199,27 @@ streakAsOf(date) -> int
 
 ## 10. Muscle Groups tab
 
-- Search + browse, both landing on the shared Exercise Detail screen.
-- **No logging anywhere in this tab.**
-- **Exercise list** (per sub-muscle group) — vertical list of compact cards: name, equipment chip, derived `Last: 22kg × 8`. Not a horizontal carousel: this is a comparison decision ("which of these can I do right now") and it needs every option visible at once. No `alternatives` field — this list is the alternatives.
-- **Exercise detail** — one screen with a per-`loadType` formatter, not four screens. Structure is identical across load types; only the tile values, recent-log rows and load-type chip change.
-  - Diagram(s): **full body**. Both front and back side by side **only** when the relevant muscles span both views.
-  - Three stat tiles: **Best · Last · Times**. **No "average weight"** — meaningless for `bodyweight`, `assisted` and `timed`.
-  - `assisted` exercises additionally show a one-line accent banner: less assistance is better. Required — without it `Best 20kg / Last 25kg` reads as a regression.
-  - **Recent log:** last 2 sessions, then **"See all N sessions"** → the dedicated **Exercise history** screen. No inline expansion, no back-to-top control (both dropped — they were workarounds for an over-long screen).
-- **Exercise history screen** — one destination, reached from Exercise Detail and from set logging. Summary strip, every session newest-first with each set as a pill, PB badges on record-setting sessions, "See more" appends 20. Tapping a session opens the workout it belonged to.
-  - **Empty state:** never logged → replace all three tiles and the recent list with the single line "You haven't logged this yet." Never render tiles of dashes. Diagrams, chips and how-to content still render.
-- "Add to current workout" renders **only when an ad-hoc session is active**. Template session → no. No session → no.
+**Pure reference. No logging anywhere in this tab, and nothing in it reads session history.** Every personal figure is **deferred to a later plan** — see `03` §What ships, and what is deferred, which keeps those rules written down. Do not build any of them here.
+
+**Landing** — search field, front/back view control, the full-body map, then **all 19 sub-group rows** as one flat list ordered by parent group, each showing how many exercises name it as a *primary* muscle.
+- **Every segment on the map renders muted.** No fill stands for training. The diagram takes its per-segment fill as a caller-supplied parameter, so the deferred trained/untrained colour is added by the caller, not by reopening the widget.
+- `shoulders/side-delt` has no artwork; the list is its only route, and its row says so.
+
+**Browse is one tap.** A segment tap and a row tap both open that sub-muscle group's exercise list — **no muscle-group selection screen and no sub-muscle-group selection screen exist.** They were **deleted, not deferred**: of 42 segments exactly one (`shoulders/front-delt`, which also carries `shoulders/side-delt`) is ambiguous, so a picker for all 42 earned nothing.
+- **That one segment opens a two-option bottom sheet** — Front delt / Side delt — and pushes the chosen one. Dismissing opens nothing. Read the ambiguity from the taxonomy; never hard-code the pair.
+
+**Search** — one field over **three vocabularies**: 260 exercise names, 19 sub-group labels, 8 equipment values. Every result is labelled with its kind. Exercise → detail; muscle → that sub-group's exercise list; equipment → **the equipment-filtered list, which is a search destination only — nothing browses to it**. A query matching no exercise name still renders the full muscle list and the full equipment list, each headed. Never an empty result screen.
+
+**Exercise list** (per sub-muscle group) — vertical list of compact cards: name and equipment chip. Primary involvement only. Not a horizontal carousel: this is a comparison decision ("which of these can I do right now") and it needs every option visible at once. No `alternatives` field — this list is the alternatives. **The derived `Last: 22kg × 8` line is deferred.**
+
+**Exercise detail** — one screen, in this order: equipment + load type, primary/secondary muscle chips, diagram(s), the four reviewed content fields, substitutes.
+- Diagram(s): **full body, read-only**. Both front and back side by side **only** when the relevant muscles span both views — primaries *and* secondaries decide that. Otherwise one, centred.
+- **The four content fields are collapsible rows: Common mistakes first and expanded, then Setup, Posture, Execution, collapsed.** Rendered verbatim — reviewed copy, never rewritten, summarised, truncated or reflowed.
+- **Substitutes rail** — exercises sharing **any** of this one's primary sub-groups, different equipment first, capped at 8. Titled after the muscle only when there is exactly one primary; neutral otherwise.
+- **No history block of any kind** — no Best/Last/Times tiles, no recent log, no PB badge, no `assisted` banner, and **no "You haven't logged this yet" line**. Deferred, all of it.
+- **No "Add to current workout".** Deferred with the session it would add to.
+
+**Deferred screen:** Exercise history. Unreachable until sessions exist.
 
 → `03`.
 
@@ -268,7 +278,7 @@ Known asset gaps, not blockers: no side-delt artwork (see §4); triceps not spli
 
 ## 14. Blocked / undecided — do not guess
 
-**Nothing is blocked on an asset that does not exist.** All four body diagrams, the taxonomy, the crops and all 260 exercises with content are shipped and validated.
+**Nothing is blocked on an asset that does not exist.** All four body diagrams, the taxonomy and all 260 exercises with content are shipped and validated. (The crops are not — that system was deleted, §5.)
 
 | Item | Status |
 |---|---|
