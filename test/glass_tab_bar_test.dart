@@ -336,19 +336,44 @@ void main() {
       expect(atEnd, isEmpty, reason: 'the last tab does not wrap either');
     });
 
-    testWidgets('a slow drag is not a swipe', (tester) async {
+    testWidgets('a deliberate slow drag steps, even with no flick', (tester) async {
+      // The bug this guards: a mouse or trackpad click-drag releases with
+      // essentially no velocity, so a velocity-only handler ignores a gesture
+      // the user watched themselves make. Committing on distance too is what
+      // makes the swipe work with a pointer at all.
       final reported = <int>[];
       await tester.pumpWidget(
         host(GlassTabBar(selectedIndex: 0, onSelected: reported.add)),
       );
       await tester.pumpAndSettle();
 
-      // Below the threshold: a thumb drifting across the bar on its way to a
-      // tab must not move anything.
-      await flick(tester, -100);
+      // tester.drag releases with no fling velocity, unlike tester.fling.
+      await tester.drag(find.byType(GlassTabBar), const Offset(-120, 0));
+      await tester.pumpAndSettle();
 
-      expect(reported, isEmpty,
-          reason: 'a drift slower than the threshold is not a tab change');
+      expect(reported, <int>[1],
+          reason: 'a slow drag well past the distance threshold must step, '
+              'even though it carries no release velocity');
+    });
+
+    testWidgets('a small slow movement is not a swipe', (tester) async {
+      // A thumb drifting a few pixels on its way to a tab, or a sloppy tap,
+      // must not move anything -- short and slow fails both thresholds.
+      final reported = <int>[];
+      await tester.pumpWidget(
+        host(GlassTabBar(selectedIndex: 0, onSelected: reported.add)),
+      );
+      await tester.pumpAndSettle();
+
+      // On the selected tab, so a step and a tap report different indices and
+      // the assertion can tell them apart: a step would say 1, a tap says 0.
+      await tester.drag(find.byKey(GlassTabBar.itemKey(0)), const Offset(-10, 0));
+      await tester.pumpAndSettle();
+
+      expect(reported, <int>[0],
+          reason: 'too short to be deliberate and too slow to be a flick, so '
+              'it stays a tap on the tab under the finger rather than '
+              'stepping to the next one');
     });
 
     testWidgets('the swipe gesture does not swallow taps', (tester) async {

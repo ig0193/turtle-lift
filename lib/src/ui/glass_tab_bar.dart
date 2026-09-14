@@ -299,14 +299,8 @@ class GlassTabBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(barRadius),
                 border: Border.all(color: ringColor, width: ringWidth),
               ),
-              child: GestureDetector(
-                // A horizontal flick anywhere on the bar steps one tab, the
-                // same gesture the bar's shape invites. Only onHorizontalDragEnd
-                // is wired: claiming the drag earlier would win the arena
-                // against the items' taps on any finger that moves a pixel,
-                // and a tap that moves a pixel is still a tap.
-                behavior: HitTestBehavior.translucent,
-                onHorizontalDragEnd: _onHorizontalDragEnd,
+              child: _SwipeToChangeTab(
+                onStep: _step,
                 child: Stack(
                   children: <Widget>[
                     _buildTopHighlight(),
@@ -322,26 +316,14 @@ class GlassTabBar extends StatelessWidget {
     );
   }
 
-  /// How fast a horizontal flick has to be, in logical pixels per second,
-  /// before it counts as a tab step rather than a stray finger.
+  /// Move [delta] tabs, if there is a tab there.
   ///
-  /// Deliberately well above zero: the bar is 55pt tall and sits under the
-  /// thumb, so slow drift across it while reaching for a tab is common and
-  /// must not move anything.
-  static const double swipeVelocityThreshold = 300;
-
-  /// A flick steps one tab and stops at the ends.
-  ///
-  /// One step per flick, never a jump to the far tab: the highlight's travel
-  /// is what tells the user where they went, and skipping a slot makes it read
-  /// as a glitch. Clamped rather than wrapped, so a flick at the last tab does
+  /// One step per gesture, never a jump to the far tab: the highlight's travel
+  /// is what tells the user where they went, and skipping a slot reads as a
+  /// glitch. Clamped rather than wrapped, so a swipe at the last tab does
   /// nothing instead of teleporting back to the first.
-  void _onHorizontalDragEnd(DragEndDetails details) {
-    final velocity = details.velocity.pixelsPerSecond.dx;
-    if (velocity.abs() < swipeVelocityThreshold) return;
-
-    // Drag left (negative velocity) advances, matching the content direction.
-    final next = velocity < 0 ? selectedIndex + 1 : selectedIndex - 1;
+  void _step(int delta) {
+    final next = selectedIndex + delta;
     if (next < 0 || next >= labels.length) return;
     onSelected(next);
   }
@@ -536,6 +518,76 @@ class _GlassTabItemState extends State<_GlassTabItem> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Turns a horizontal swipe across the bar into a one-tab step.
+///
+/// Stateful because the decision needs the distance travelled, and only a drag
+/// that is still in progress knows that.
+///
+/// **Distance or velocity, not velocity alone.** A flick is the gesture a
+/// thumb makes, but a deliberate slow drag — the whole gesture a mouse or
+/// trackpad can produce, and a common one on a device — releases with
+/// essentially no velocity. Committing on velocity alone means the bar simply
+/// ignores a drag the user watched themselves make, with no feedback. The
+/// first version of this shipped that way and it read as broken.
+class _SwipeToChangeTab extends StatefulWidget {
+  const _SwipeToChangeTab({required this.onStep, required this.child});
+
+  /// Called with -1 or +1. The bar decides whether that tab exists.
+  final ValueChanged<int> onStep;
+  final Widget child;
+
+  /// Fast enough to be a flick, in logical pixels per second.
+  ///
+  /// Well above zero on purpose: the bar sits under the thumb, so slow drift
+  /// across it while reaching for a tab is normal and must not move anything.
+  static const double velocityThreshold = 300;
+
+  /// Far enough to be deliberate, in logical pixels, for a drag too slow to
+  /// register as a flick. About a thumb's width of travel — short enough to
+  /// feel responsive, long enough that it is not triggered by a sloppy tap.
+  static const double distanceThreshold = 32;
+
+  @override
+  State<_SwipeToChangeTab> createState() => _SwipeToChangeTabState();
+}
+
+class _SwipeToChangeTabState extends State<_SwipeToChangeTab> {
+  double _travelled = 0;
+
+  void _onStart(DragStartDetails _) => _travelled = 0;
+
+  void _onUpdate(DragUpdateDetails details) =>
+      _travelled += details.primaryDelta ?? 0;
+
+  void _onEnd(DragEndDetails details) {
+    final velocity = details.velocity.pixelsPerSecond.dx;
+    final flicked = velocity.abs() >= _SwipeToChangeTab.velocityThreshold;
+    final dragged =
+        _travelled.abs() >= _SwipeToChangeTab.distanceThreshold;
+    if (!flicked && !dragged) return;
+
+    // Prefer the flick's direction when there is one: a drag that doubles back
+    // before release should go where it was thrown, not where it started.
+    final direction = flicked ? velocity : _travelled;
+    // Moving left advances, matching the direction the content would travel.
+    widget.onStep(direction < 0 ? 1 : -1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      // Only the drag callbacks are wired. A recognizer that claimed the arena
+      // any earlier would beat the items' taps on every finger that moves a
+      // pixel, and a tap that moves a pixel is still a tap.
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragStart: _onStart,
+      onHorizontalDragUpdate: _onUpdate,
+      onHorizontalDragEnd: _onEnd,
+      child: widget.child,
     );
   }
 }
