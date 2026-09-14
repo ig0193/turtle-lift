@@ -83,8 +83,22 @@ class GlassTabBar extends StatelessWidget {
   /// stadium at this height, kept literal to match the prototype.
   static const double barRadius = 999;
 
-  /// `.cap { border-radius: 20px }`.
-  static const double highlightRadius = 20;
+  /// The highlight's corner radius, derived rather than literal.
+  ///
+  /// The prototype says `.cap { border-radius: 20px }`, and that is wrong here
+  /// for a reason the prototype could not have seen: its bar has no
+  /// `overflow: hidden`, so the capsule may spill past the pill's curve
+  /// unnoticed. This bar must clip -- the blur requires it -- so a 20px corner
+  /// gets visibly sliced. At the far-left and far-right slots the bar's pill
+  /// has already curved inward by ~15pt at the capsule's top edge, while the
+  /// capsule sits only [barPadding] in, putting its corners outside the clip.
+  ///
+  /// So the radius follows the concentric-corner rule instead: an inner corner
+  /// nests inside an outer one when its radius is the outer radius minus the
+  /// gap between them. Both are stadiums here, so that falls out for free --
+  /// an oversized radius is clamped to half the box, giving the capsule
+  /// (barHeight/2 - barPadding) exactly, at any bar height, with no measuring.
+  static const double highlightRadius = barRadius;
 
   /// `box-shadow: 0 0 0 .5px ... inset`. Flutter has no inset [BoxShadow], so
   /// this ships as a [BoxDecoration.border] instead.
@@ -285,18 +299,51 @@ class GlassTabBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(barRadius),
                 border: Border.all(color: ringColor, width: ringWidth),
               ),
-              child: Stack(
-                children: <Widget>[
-                  _buildTopHighlight(),
-                  _buildHighlight(reducedMotion),
-                  _buildItems(reducedMotion),
-                ],
+              child: GestureDetector(
+                // A horizontal flick anywhere on the bar steps one tab, the
+                // same gesture the bar's shape invites. Only onHorizontalDragEnd
+                // is wired: claiming the drag earlier would win the arena
+                // against the items' taps on any finger that moves a pixel,
+                // and a tap that moves a pixel is still a tap.
+                behavior: HitTestBehavior.translucent,
+                onHorizontalDragEnd: _onHorizontalDragEnd,
+                child: Stack(
+                  children: <Widget>[
+                    _buildTopHighlight(),
+                    _buildHighlight(reducedMotion),
+                    _buildItems(reducedMotion),
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// How fast a horizontal flick has to be, in logical pixels per second,
+  /// before it counts as a tab step rather than a stray finger.
+  ///
+  /// Deliberately well above zero: the bar is 55pt tall and sits under the
+  /// thumb, so slow drift across it while reaching for a tab is common and
+  /// must not move anything.
+  static const double swipeVelocityThreshold = 300;
+
+  /// A flick steps one tab and stops at the ends.
+  ///
+  /// One step per flick, never a jump to the far tab: the highlight's travel
+  /// is what tells the user where they went, and skipping a slot makes it read
+  /// as a glitch. Clamped rather than wrapped, so a flick at the last tab does
+  /// nothing instead of teleporting back to the first.
+  void _onHorizontalDragEnd(DragEndDetails details) {
+    final velocity = details.velocity.pixelsPerSecond.dx;
+    if (velocity.abs() < swipeVelocityThreshold) return;
+
+    // Drag left (negative velocity) advances, matching the content direction.
+    final next = velocity < 0 ? selectedIndex + 1 : selectedIndex - 1;
+    if (next < 0 || next >= labels.length) return;
+    onSelected(next);
   }
 
   /// The 1px lit top edge. A [Border] cannot express it (it would ring all four

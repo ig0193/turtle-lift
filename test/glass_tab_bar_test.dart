@@ -263,6 +263,110 @@ void main() {
     });
   });
 
+  group('swipe', () {
+    /// A flick across the bar steps one tab. The gesture has to coexist with
+    /// the items' taps, so the tests below cover both directions, both ends,
+    /// the too-slow case, and -- most importantly -- that a tap still taps.
+    Future<void> flick(WidgetTester tester, double velocity) async {
+      await tester.fling(
+        find.byType(GlassTabBar),
+        Offset(velocity.isNegative ? -80 : 80, 0),
+        velocity.abs(),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('flicking left advances one tab', (tester) async {
+      final reported = <int>[];
+      await tester.pumpWidget(
+        host(GlassTabBar(selectedIndex: 0, onSelected: reported.add)),
+      );
+      await tester.pumpAndSettle();
+
+      await flick(tester, -1000);
+
+      expect(reported, <int>[1],
+          reason: 'a left flick moves toward the next tab, matching the '
+              'direction the content would travel');
+    });
+
+    testWidgets('flicking right goes back one tab', (tester) async {
+      final reported = <int>[];
+      await tester.pumpWidget(
+        host(GlassTabBar(selectedIndex: 2, onSelected: reported.add)),
+      );
+      await tester.pumpAndSettle();
+
+      await flick(tester, 1000);
+
+      expect(reported, <int>[1], reason: 'a right flick steps back');
+    });
+
+    testWidgets('one flick never skips a slot', (tester) async {
+      final reported = <int>[];
+      await tester.pumpWidget(
+        host(GlassTabBar(selectedIndex: 0, onSelected: reported.add)),
+      );
+      await tester.pumpAndSettle();
+
+      await flick(tester, -6000);
+
+      expect(reported, <int>[1],
+          reason: 'however hard the flick, it steps one tab -- the travelling '
+              'highlight is what tells the user where they went, and skipping '
+              'a slot reads as a glitch');
+    });
+
+    testWidgets('a flick at either end does nothing', (tester) async {
+      final atStart = <int>[];
+      await tester.pumpWidget(
+        host(GlassTabBar(selectedIndex: 0, onSelected: atStart.add)),
+      );
+      await tester.pumpAndSettle();
+      await flick(tester, 1000);
+      expect(atStart, isEmpty,
+          reason: 'the first tab does not wrap around to the last');
+
+      final atEnd = <int>[];
+      await tester.pumpWidget(
+        host(GlassTabBar(selectedIndex: 2, onSelected: atEnd.add)),
+      );
+      await tester.pumpAndSettle();
+      await flick(tester, -1000);
+      expect(atEnd, isEmpty, reason: 'the last tab does not wrap either');
+    });
+
+    testWidgets('a slow drag is not a swipe', (tester) async {
+      final reported = <int>[];
+      await tester.pumpWidget(
+        host(GlassTabBar(selectedIndex: 0, onSelected: reported.add)),
+      );
+      await tester.pumpAndSettle();
+
+      // Below the threshold: a thumb drifting across the bar on its way to a
+      // tab must not move anything.
+      await flick(tester, -100);
+
+      expect(reported, isEmpty,
+          reason: 'a drift slower than the threshold is not a tab change');
+    });
+
+    testWidgets('the swipe gesture does not swallow taps', (tester) async {
+      // The regression that matters: a drag recognizer that claims the arena
+      // early beats the items' taps on any finger that moves a pixel.
+      final reported = <int>[];
+      await tester.pumpWidget(
+        host(GlassTabBar(selectedIndex: 0, onSelected: reported.add)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(GlassTabBar.itemKey(2)));
+      await tester.pumpAndSettle();
+
+      expect(reported, <int>[2], reason: 'tapping a tab still selects it');
+    });
+  });
+
   group('reduced motion', () {
     /// Both platforms assert the same thing. 20ms is a margin, not a
     /// discriminator: the bar sets the duration to zero outright, and the
@@ -374,6 +478,55 @@ void main() {
             reason:
                 'GlassTabBar.$name is not a palette colour at full opacity');
       });
+    });
+  });
+
+  group('capsule geometry', () {
+    testWidgets('the highlight nests inside the bar instead of being clipped',
+        (tester) async {
+      await tester.pumpWidget(
+        host(GlassTabBar(selectedIndex: 0, onSelected: (_) {})),
+      );
+      await tester.pumpAndSettle();
+
+      final cap = tester.getRect(find.byKey(GlassTabBar.highlightKey));
+      final bar = tester.getRect(find.byType(ClipRRect).first);
+
+      // Concentric corners: an inner corner nests inside an outer one when its
+      // radius is the outer radius minus the gap. Both are stadiums, so the
+      // capsule's effective radius is half its height, and that must equal the
+      // bar's half-height minus the padding between them. Get this wrong -- as
+      // the prototype's literal 20 does -- and the capsule's outer corners
+      // fall outside the bar's curve at the first and last slots, where the
+      // ClipRRect the blur requires slices them off.
+      expect(cap.height / 2, bar.height / 2 - GlassTabBar.barPadding,
+          reason: 'the capsule must be exactly concentric with the bar');
+
+      // And the gap is the same on every side it touches.
+      expect(cap.left - bar.left, GlassTabBar.barPadding);
+      expect(cap.top - bar.top, GlassTabBar.barPadding);
+      expect(bar.bottom - cap.bottom, GlassTabBar.barPadding);
+    });
+
+    testWidgets('the highlight is exactly one tab slot', (tester) async {
+      await tester.pumpWidget(
+        host(GlassTabBar(selectedIndex: 1, onSelected: (_) {})),
+      );
+      await tester.pumpAndSettle();
+
+      final cap = tester.getRect(find.byKey(GlassTabBar.highlightKey));
+      final slot = tester.getRect(find.byKey(GlassTabBar.itemKey(1)));
+
+      // Edge by edge with a tolerance, not Rect equality: a third of the track
+      // is not exact in binary, so the two rects differ in the last bits while
+      // being the same rectangle on screen.
+      const tolerance = 0.01;
+      expect(cap.left, moreOrLessEquals(slot.left, epsilon: tolerance),
+          reason: 'the capsule sits on the selected tab');
+      expect(cap.right, moreOrLessEquals(slot.right, epsilon: tolerance),
+          reason: 'neither wider nor narrower than the slot it marks');
+      expect(cap.top, moreOrLessEquals(slot.top, epsilon: tolerance));
+      expect(cap.bottom, moreOrLessEquals(slot.bottom, epsilon: tolerance));
     });
   });
 
