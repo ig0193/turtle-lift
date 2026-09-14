@@ -119,6 +119,39 @@ void main() {
     });
   });
 
+  group('path caching', () {
+    // CLAUDE.md: cache built Path objects rather than rebuilding them each
+    // frame. Caching only the unscaled base path is not enough -- the scaled
+    // one is what gets drawn, and the tint animation repaints ~10 times per
+    // tab switch, so an uncached scale rebuilt an identical Path every frame.
+    // Nothing about that is visible on screen, which is why it is pinned here.
+    test('the scaled path is built once per size and reused', () {
+      for (final glyph in TabGlyph.values) {
+        final first =
+            _painterFor(glyph).pathFor(const Size.square(kTabGlyphSize));
+        final second =
+            _painterFor(glyph).pathFor(const Size.square(kTabGlyphSize));
+
+        expect(identical(first, second), isTrue,
+            reason: '$glyph rebuilt its scaled path for a size it had already '
+                'scaled to; the geometry is identical every time, so this is '
+                'pure per-frame waste during the tint animation');
+      }
+    });
+
+    test('a different size gets its own path', () {
+      final small = _painterFor(TabGlyph.workout).pathFor(const Size.square(16));
+      final large = _painterFor(TabGlyph.workout).pathFor(const Size.square(32));
+
+      expect(identical(small, large), isFalse,
+          reason: 'the cache must key on size, not just on the glyph, or every '
+              'icon after the first would render at the first one\'s scale');
+      expect(large.getBounds().width,
+          greaterThan(small.getBounds().width),
+          reason: 'the larger size must actually produce a larger path');
+    });
+  });
+
   group('the painted stroke', () {
     for (final glyph in TabGlyph.values) {
       test('${glyph.name} strokes with exactly the width it was given', () {
@@ -193,3 +226,9 @@ class _RecordingCanvas implements Canvas {
   dynamic noSuchMethod(Invocation invocation) =>
       super.noSuchMethod(invocation);
 }
+
+TabGlyphPainter _painterFor(TabGlyph glyph) => TabGlyphPainter(
+      glyph: glyph,
+      strokeWidth: kTabGlyphStrokeWidth,
+      color: AppPalette.textSecondary,
+    );

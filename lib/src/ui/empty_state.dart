@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'stroke_glyph.dart';
+
 import '../theme/app_palette.dart';
 
 /// The empty-state block: a disc-mounted glyph, a heading and a line of body
@@ -33,10 +35,12 @@ class EmptyState extends StatelessWidget {
 
   /// Marks the reserved mascot band so a test can prove the space survives a
   /// refactor. See [kEmptyStateMascotSlot].
+  @visibleForTesting
   static const Key mascotSlotKey = Key('empty-state-mascot-slot');
 
   /// Marks the 46px disc behind the glyph, so a test can measure it without
   /// guessing which `Container` in the tree it is.
+  @visibleForTesting
   static const Key discKey = Key('empty-state-disc');
 
   @override
@@ -192,22 +196,16 @@ class EmptyStateGlyphPainter extends CustomPainter {
   /// Butt caps and mitre joins, unlike the tab bar's round ones: `.empty .ico
   /// svg` sets no `stroke-linecap`, so SVG's defaults apply, and the logbook's
   /// square corners are the whole reason that disc reads as a page.
-  Paint buildPaint() => Paint()
-    ..style = PaintingStyle.stroke
-    ..color = color
-    ..strokeWidth = strokeWidth
-    ..strokeCap = StrokeCap.butt
-    ..strokeJoin = StrokeJoin.miter
-    ..isAntiAlias = true;
+  Paint buildPaint() => strokeGlyphPaint(
+        color: color,
+        strokeWidth: strokeWidth,
+        cap: StrokeCap.butt,
+        join: StrokeJoin.miter,
+      );
 
   /// The glyph in viewBox units, scaled to [size]. The stroke is applied after
   /// the scale, so [strokeWidth] is in rendered pixels either way.
-  Path pathFor(Size size) {
-    final base = _basePath(glyph);
-    final scale = size.shortestSide / _viewBox;
-    if (scale == 1) return base;
-    return base.transform(Matrix4.diagonal3Values(scale, scale, 1).storage);
-  }
+  Path pathFor(Size size) => scaledGlyphPath(_basePath(glyph), size);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -221,7 +219,6 @@ class EmptyStateGlyphPainter extends CustomPainter {
       oldDelegate.color != color;
 }
 
-const double _viewBox = 24;
 
 /// Built paths are cached, not rebuilt per frame — the geometry never changes.
 final Map<EmptyStateGlyph, Path> _basePaths = <EmptyStateGlyph, Path>{};

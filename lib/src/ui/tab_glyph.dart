@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'stroke_glyph.dart';
+
 import '../theme/app_palette.dart';
 
 /// The three tab-bar icons, drawn as strokes rather than font glyphs.
@@ -95,22 +97,12 @@ class TabGlyphPainter extends CustomPainter {
   /// The [Paint] this painter strokes with. Round cap and join are not
   /// decoration: the barbell and the clock hand are open polylines whose ends
   /// and corners would read as chiselled at these weights otherwise.
-  Paint buildPaint() => Paint()
-    ..style = PaintingStyle.stroke
-    ..color = color
-    ..strokeWidth = strokeWidth
-    ..strokeCap = StrokeCap.round
-    ..strokeJoin = StrokeJoin.round
-    ..isAntiAlias = true;
+  Paint buildPaint() =>
+      strokeGlyphPaint(color: color, strokeWidth: strokeWidth);
 
   /// The glyph in viewBox units, scaled to [size]. The stroke is applied after
   /// the scale (see [TabGlyphIcon]), so it is never scaled with the geometry.
-  Path pathFor(Size size) {
-    final base = _basePath(glyph);
-    final scale = size.shortestSide / _viewBox;
-    if (scale == 1) return base;
-    return base.transform(Matrix4.diagonal3Values(scale, scale, 1).storage);
-  }
+  Path pathFor(Size size) => scaledGlyphPath(_basePath(glyph), size);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -124,7 +116,6 @@ class TabGlyphPainter extends CustomPainter {
       oldDelegate.color != color;
 }
 
-const double _viewBox = 24;
 
 /// Built paths are cached rather than rebuilt each frame: the bar repaints on
 /// every animation tick, and the geometry never changes.

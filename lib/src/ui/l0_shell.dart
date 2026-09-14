@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
+import 'stroke_glyph.dart';
 import 'glass_tab_bar.dart';
 import 'history_root.dart';
 import 'muscles_root.dart';
@@ -305,23 +306,12 @@ class ProfileGlyphPainter extends CustomPainter {
   /// Round cap and join, matching `stroke-linecap:round; stroke-linejoin:round`
   /// on `.avatar svg`: the shoulders are an open curve whose ends would read as
   /// chiselled otherwise.
-  Paint buildPaint() => Paint()
-    ..style = PaintingStyle.stroke
-    ..color = color
-    ..strokeWidth = strokeWidth
-    ..strokeCap = StrokeCap.round
-    ..strokeJoin = StrokeJoin.round
-    ..isAntiAlias = true;
+  Paint buildPaint() =>
+      strokeGlyphPaint(color: color, strokeWidth: strokeWidth);
 
   /// The glyph in viewBox units, scaled to [size]. The stroke is applied after
   /// the scale, so [strokeWidth] is in rendered pixels either way.
-  Path pathFor(Size size) {
-    final scale = size.shortestSide / _viewBox;
-    if (scale == 1) return _basePath;
-    return _basePath.transform(
-      Matrix4.diagonal3Values(scale, scale, 1).storage,
-    );
-  }
+  Path pathFor(Size size) => scaledGlyphPath(_basePath, size);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -333,7 +323,6 @@ class ProfileGlyphPainter extends CustomPainter {
       oldDelegate.strokeWidth != strokeWidth || oldDelegate.color != color;
 }
 
-const double _viewBox = 24;
 
 /// `<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/>`.
 ///
