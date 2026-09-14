@@ -7,6 +7,31 @@ import '../theme/app_palette.dart';
 /// not to a wrapper, so overscroll glow and the scrollbar still reach the edge.
 const double kScreenGutter = 18;
 
+/// The padding a screen's scrollable should carry: [kScreenGutter] plus
+/// whatever the system is intruding on that edge.
+///
+/// One rule for every screen. A pushed screen picks up the home indicator on
+/// the bottom edge; a tab root under [AppScreen.extendBody] picks up the
+/// floating tab bar's height on the same edge, because the Scaffold reports it
+/// as padding. Both are the same call here, so there is no second mental model
+/// for the bottom edge and no screen that quietly forgets it.
+///
+/// Left and right are not decoration: neither platform locks orientation, so in
+/// landscape the notch and the rounded corners eat into both sides.
+///
+/// Top is deliberately 0 — the pinned [Scaffold.appBar] already covers that
+/// edge, and adding the status-bar inset here would push every screen's first
+/// row down by it a second time.
+EdgeInsets screenScrollPadding(BuildContext context) {
+  final inset = MediaQuery.paddingOf(context);
+  return EdgeInsets.fromLTRB(
+    kScreenGutter + inset.left,
+    0,
+    kScreenGutter + inset.right,
+    kScreenGutter + inset.bottom,
+  );
+}
+
 /// The shell every screen is built from.
 ///
 /// **The header is pinned. It does not scroll — anywhere in the app.**
@@ -40,6 +65,7 @@ class AppScreen extends StatelessWidget {
     this.titleWidget,
     this.actions,
     this.bottomBar,
+    this.extendBody = false,
     this.onBack,
     super.key,
   });
@@ -51,6 +77,7 @@ class AppScreen extends StatelessWidget {
     Widget? titleWidget,
     List<Widget>? actions,
     Widget? bottomBar,
+    bool extendBody = false,
     Key? key,
   }) : this._(
           title: title,
@@ -60,6 +87,7 @@ class AppScreen extends StatelessWidget {
           titleWidget: titleWidget,
           actions: actions,
           bottomBar: bottomBar,
+          extendBody: extendBody,
           key: key,
         );
 
@@ -70,6 +98,7 @@ class AppScreen extends StatelessWidget {
     Widget? titleWidget,
     List<Widget>? actions,
     Widget? bottomBar,
+    bool extendBody = false,
     VoidCallback? onBack,
     Key? key,
   }) : this._(
@@ -80,6 +109,7 @@ class AppScreen extends StatelessWidget {
           titleWidget: titleWidget,
           actions: actions,
           bottomBar: bottomBar,
+          extendBody: extendBody,
           onBack: onBack,
           key: key,
         );
@@ -97,6 +127,12 @@ class AppScreen extends StatelessWidget {
 
   final List<Widget>? actions;
   final Widget? bottomBar;
+
+  /// Lets [body] paint behind [bottomBar] — the tab bar floats over the
+  /// content rather than sitting in a reserved strip below it. The Scaffold
+  /// then reports the bar's height as a bottom [MediaQuery] padding, which
+  /// [screenScrollPadding] turns into the scrollable's own bottom padding.
+  final bool extendBody;
   final bool showBack;
   final bool largeTitle;
   final VoidCallback? onBack;
@@ -143,7 +179,13 @@ class AppScreen extends StatelessWidget {
           const SizedBox(width: kScreenGutter - 8),
         ],
       ),
-      body: SafeArea(top: false, child: body),
+      // No SafeArea here on purpose. It would consume the bottom padding
+      // `extendBody` injects and strip it from the descendant MediaQuery, so
+      // `screenScrollPadding` would silently read zero and every screen's
+      // clearance would vanish with nothing failing. Screens pad their own
+      // scrollable instead -- one rule for pushed screens and tab roots alike.
+      body: body,
+      extendBody: extendBody,
       bottomNavigationBar: bottomBar,
     );
   }
