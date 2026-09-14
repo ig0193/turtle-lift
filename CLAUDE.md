@@ -11,7 +11,7 @@ doesn't cover something. **If `00` disagrees with `01`–`04`, `01`–`04` win**
 `00` is a digest, not the source of truth. Report any conflict you find rather
 than picking one.
 
-`prototype/prototype.html` — 22 screens, open it in a browser. It is the visual
+`prototypes/screens.html` — 22 screens, open it in a browser. It is the visual
 reference and is **ahead of the docs on layout**. Where they differ on how a
 screen looks, follow the prototype. Where they differ on a rule, follow the docs.
 
@@ -132,7 +132,7 @@ no notifications · no wearables · no AI features · no premium tier · no ads 
 no multi-day splits · no per-exercise illustrations ·
 no achievements, badges or level-ups.
 
-The turtle mascot (`mascot-brief.md`) is **the last thing to build** — decorative only,
+The turtle mascot (`docs/05-mascot-brief.md`) is **the last thing to build** — decorative only,
 never a body diagram, and it must never react to inactivity. Orientation per surface
 (standing vs horizontal), whether it appears on the set-logging screen, and exact sizing
 are all deliberately left open in the brief. Settle them against running screens, with

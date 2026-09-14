@@ -66,7 +66,7 @@ Both paths converge into the same underlying session-running experience from Ste
 ## Step 2b — Session persistence and resume
 
 - **An active session persists indefinitely.** It is never auto-discarded on app close, on a date change, or after any timeout.
-- Returning to the Workout tab with a session still open shows a **Resume** card at the top, above Start workout and Ad-hoc workout.
+- Returning to the Workout tab with a session still open shows **the session itself** — it replaces the landing, so Start workout and Ad-hoc workout are not on screen. There is no Resume card. **Note:** this removes the trigger for the auto-save rule below, which fires when a new workout is started while one is open. The rule stands; the entry point that fires it has to be restored when this screen is built. See `docs/adr/0003-l0-navigation-variant-a.md`.
 - **Starting a new workout while one is still open auto-saves the old one** rather than discarding it or blocking the user:
   - If the abandoned session has **at least one completed set**, it is saved to history exactly as if Finish had been tapped. Show a brief toast ("Chest and triceps day saved") — work must not vanish silently into history.
   - If it has **zero completed sets**, discard it silently. Saving it would create an empty session that counts toward the streak, contradicting the rule in `01-app-idea.md`.

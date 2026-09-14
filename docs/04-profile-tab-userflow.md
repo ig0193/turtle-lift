@@ -2,7 +2,7 @@
 
 **Purpose:** a single place to see everything the app remembers on the user's behalf — history and stats, with no manual tracking required.
 
-**Entry point:** Home → Profile tab.
+**Entry point:** Home → the profile avatar in the L0 header. Profile is not a tab (`docs/adr/0003-l0-navigation-variant-a.md`). **Workout history is now its own tab**, so the history list below belongs to the History tab; which of the remaining stats stay behind the avatar is unresolved.
 
 ---
 

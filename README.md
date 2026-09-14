@@ -19,13 +19,13 @@ screens yet. Everything here exists so the build can start without re-deciding a
 | [`docs/05-mascot-brief.md`](docs/05-mascot-brief.md) | The turtle. Last thing to build. |
 | `assets/body-diagrams/` | 4 traced SVGs, muscle taxonomy, and the diagrams as Dart point data. |
 | `assets/exercises/` | 260 exercises with setup / posture / execution / common mistakes. |
-| `prototypes/` | Three browser prototypes. Open them; nothing to install. |
+| `prototypes/` | Browser prototypes. Open them; nothing to install. |
 | `lib/` | Flutter app. Theme, the generated data as Dart, and a placeholder screen. |
 | `tool/sync_generated.sh` | Copies generated Dart from `assets/` into `lib/`; `--check` fails on drift. |
 
 ## The shape of it
 
-Three tabs — **Workout**, **Muscles**, **Profile**.
+Three tabs — **Workout**, **Muscles**, **History**. Profile sits behind an avatar in the header (`docs/adr/0003-l0-navigation-variant-a.md`).
 
 - Start from a template or go ad-hoc, log sets, finish. Muscle diagram fills in live as
   you work.
