@@ -84,7 +84,9 @@ are reviewed copy.
 4. Workout flow: landing → template picker → overview → exercise list → logging.
 5. Summary and celebration.
 6. Muscles tab.
-7. Profile tab.
+7. History tab.
+8. Profile screen — reached from the header avatar, not a tab
+   (`docs/adr/0003-l0-navigation-variant-a.md`).
 
 ## Decided in session 1
 
@@ -101,9 +103,9 @@ are reviewed copy.
   `lib/src/data/generated/` by `tool/sync_generated.sh`, because Dart can only
   import from `lib/`. Both copies are generated output: edit the generator, re-run
   it, then re-run the sync. `tool/sync_generated.sh --check` guards this in CI.
-- `lib/main.dart` currently renders a placeholder `SetupCheckScreen` that counts
-  the shipped data. Delete it when the workout tab lands. The data it reads lives
-  in `lib/src/data/`, not in `main.dart`, so deleting the screen takes nothing
+- ~~`lib/main.dart` renders a placeholder `SetupCheckScreen`~~ **Done.** The
+  placeholder is deleted and `main.dart` boots into `L0Shell`. The data it read lives
+  in `lib/src/data/`, not in `main.dart`, so deleting the screen took nothing
   with it.
 - **Bundle id: `dev.indresh.turtle_lift` (Android) / `dev.indresh.turtleLift` (iOS).**
   The casing differs because that is what each platform's tooling produces from one

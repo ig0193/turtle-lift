@@ -14,13 +14,20 @@ void main() {
     final manifest =
         File('android/app/src/main/AndroidManifest.xml').readAsStringSync();
 
-    expect(manifest, contains('<application'),
+    // Strip comments first: a raw substring match would stay green with the
+    // attribute commented out, which is the most likely way it gets disabled.
+    final live = manifest.replaceAll(RegExp(r'<!--[\s\S]*?-->'), '');
+
+    final application = RegExp(r'<application\b[^>]*>').firstMatch(live);
+    expect(application, isNotNull,
         reason: 'the manifest should declare an application element');
+
     expect(
-      manifest,
+      application!.group(0),
       contains('android:enableOnBackInvokedCallback="true"'),
-      reason: 'without this attribute predictive back is silently absent on '
-          'Android 13, 14 and 15, and present on 16 regardless -- so no device '
+      reason: 'the attribute has to be live and on <application> -- commented '
+          'out, or moved onto <activity>, predictive back is silently absent '
+          'on Android 13, 14 and 15 and present on 16 regardless, so no device '
           'test catches its removal',
     );
   });

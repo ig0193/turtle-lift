@@ -12,7 +12,7 @@
 
 Two options:
 
-1. **Start workout** — pick a workout template to run. The list shows predefined templates (Push day, Pull day, Leg day, Full body day, etc.) alongside any custom templates the user has created and saved. Creating and editing templates happens in the **Profile tab**, not here — this screen is only for selecting an already-saved template to start a session from.
+1. **Start workout** — pick a workout template to run. The list shows predefined templates (Push day, Pull day, Leg day, Full body day, etc.) alongside any custom templates the user has created and saved. Creating and editing templates happens **behind the Profile avatar**, not here — this screen is only for selecting an already-saved template to start a session from.
 2. **Ad-hoc workout** — search for exercises directly and add them to a session. No template or muscle-group structure required — for a user who already knows exactly what they want to do (e.g. following a YouTube trainer's routine) or wants a one-off session without saving a reusable template.
    - Adding an exercise via search just places it in the session's exercise list with a "not started" state — it does not require logging immediately.
    - Logging is a separate action, reached by tapping into any exercise in the list.
@@ -127,7 +127,7 @@ Both paths converge into the same underlying session-running experience from Ste
 6. Exercise logging screen (sets, reps, weight)
 7. Workout summary (inline-editable title; same composition reused for Session Detail in Profile)
 
-Note: creating/editing a custom workout template is a separate flow that lives in the Profile tab — see that document.
+Note: creating/editing a custom workout template is a separate flow that lives behind the Profile avatar — see that document.
 
 ## Animations specific to this tab
 
@@ -342,7 +342,7 @@ countUp('kcal', 185, '', 750);
 
 ### Workout summary screen (shareable by design)
 
-The celebration animation above transitions directly into this screen — it **is** the workout summary, not a separate share screen. No share button, no export step: the mascot figure is the hero visual, stats are large and clean, and app chrome is kept to a single small back control so the screen looks intentional if screenshotted exactly as-is. This same composition is reused for Session Detail in the Profile tab (see `04-profile-tab-userflow.md`) so past workouts are just as shareable as the moment they were saved.
+The celebration animation above transitions directly into this screen — it **is** the workout summary, not a separate share screen. No share button, no export step: the mascot figure is the hero visual, stats are large and clean, and app chrome is kept to a single small back control so the screen looks intentional if screenshotted exactly as-is. This same composition is reused for Session Detail, reached from the History tab (see `04-profile-tab-userflow.md`) so past workouts are just as shareable as the moment they were saved.
 
 Note: this mockup uses simplified placeholder body shapes; production renders `body-diagram-front.svg` / `body-diagram-back.svg` (or the female pair) exactly as the Workout Overview does. Both views appear here because chest is on the front and triceps on the back — a session confined to one view shows only that view, centred.
 

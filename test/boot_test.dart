@@ -17,6 +17,13 @@ void main() {
     expect(find.byType(L0Shell), findsOneWidget,
         reason: 'the app must open on the tab shell, not on any other screen');
 
+    // Which tab it opens on is part of the boot contract, and only this file
+    // exercises the real TurtleLiftApp path -- the shell's own tests host
+    // L0Shell directly and would not notice main.dart handing it a different
+    // starting index.
+    expect(find.text('Ready when you are').hitTestable(), findsOneWidget,
+        reason: 'the app opens on the Workout tab');
+
     final context = tester.element(find.byType(L0Shell));
     expect(
       Theme.of(context).scaffoldBackgroundColor,

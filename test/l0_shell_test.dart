@@ -349,9 +349,16 @@ void main() {
 
       expect(find.byType(ProfileScreen), findsOneWidget,
           reason: 'the header avatar pushes the Profile destination');
-      expect(find.byType(GlassTabBar).hitTestable(), findsNothing,
-          reason: 'Profile is an opaque page route, so it hides the bar — a '
-              'modal sheet here would leave the bar sitting under it');
+      // Offstage-ness, not hit-testability, is what separates an opaque route
+      // from a modal one. A dialog also leaves the bar un-hit-testable behind
+      // its barrier, so hitTestable() alone would pass for the very thing this
+      // is meant to rule out -- the dialog test above asserts exactly that.
+      expect(find.byType(GlassTabBar), findsNothing,
+          reason: 'Profile is an opaque page route, so the bar goes offstage; '
+              'a modal sheet here would leave it onstage underneath');
+      expect(find.byType(GlassTabBar, skipOffstage: false), findsOneWidget,
+          reason: 'the shell stays mounted beneath the route, it is not torn '
+              'down -- which is why the tab survives the pop below');
 
       // And it comes back, so Profile is genuinely a push and not a replace.
       navigator.pop();

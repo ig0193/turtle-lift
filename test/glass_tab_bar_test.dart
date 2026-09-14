@@ -264,11 +264,12 @@ void main() {
   });
 
   group('reduced motion', () {
-    /// Both platforms assert the same thing, and 20ms is not arbitrary: an
-    /// `AnimationController` under `disableAnimations` scales its duration by
-    /// 0.05 rather than to zero, so a bar that merely inherited that behaviour
-    /// would still be moving one frame in. 20ms is past 260 x 0.05 = 13ms and
-    /// far short of the full 260ms.
+    /// Both platforms assert the same thing. 20ms is a margin, not a
+    /// discriminator: the bar sets the duration to zero outright, and the
+    /// framework's own `disableAnimations` scaling would give 260 x 0.05 =
+    /// 13ms, so either implementation has settled by 20ms. What the threshold
+    /// does catch is the failure that matters -- a bar that ignores reduced
+    /// motion entirely and plays the full 260ms travel.
     Future<void> expectHighlightSnaps(WidgetTester tester) async {
       await tester.pumpWidget(
         host(GlassTabBar(selectedIndex: 0, onSelected: (_) {})),

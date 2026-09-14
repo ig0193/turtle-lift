@@ -22,7 +22,8 @@ const double kGlyphViewBox = 24;
 ///
 /// Bounded by construction: the keys are the memoized base paths (a fixed
 /// handful, one per glyph) times the two or three sizes the app draws them at.
-final Map<(Path, double), Path> _scaledGlyphs = <(Path, double), Path>{};
+final Map<(Path, double, double), Path> _scaledGlyphs =
+    <(Path, double, double), Path>{};
 
 /// [base], in viewBox units, scaled to fit [size] — built once per size and
 /// reused thereafter.
@@ -33,8 +34,12 @@ Path scaledGlyphPath(Path base, Size size, {double viewBox = kGlyphViewBox}) {
   final side = size.shortestSide;
   final scale = side / viewBox;
   if (scale == 1) return base;
+  // [viewBox] belongs in the key even though every caller takes the default:
+  // it changes the scale, so leaving it out would hand a caller with a
+  // different viewBox the geometry cached for someone else's, silently and at
+  // the right size.
   return _scaledGlyphs.putIfAbsent(
-    (base, side),
+    (base, side, viewBox),
     () => base.transform(Matrix4.diagonal3Values(scale, scale, 1).storage),
   );
 }

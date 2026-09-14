@@ -95,8 +95,11 @@ class L0Shell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     assert(
-      tabs.length == kL0TabCount && tabs.length == GlassTabBar.labels.length,
-      'the tab specs, the tab-index range and the bar labels must agree',
+      tabs.length == kL0TabCount &&
+          tabs.length == GlassTabBar.labels.length &&
+          tabs.length == GlassTabBar.glyphs.length,
+      'the tab specs, the tab-index range, the bar labels and the bar glyphs '
+      'must agree -- every one of them is indexed by the same tab index',
     );
 
     // Watched *here*, in the shell's own build, and not inside a Consumer

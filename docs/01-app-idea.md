@@ -81,7 +81,7 @@ Note: the app doesn't suggest or auto-select a workout for the user (no "today's
   - Benefit of deriving rather than storing: if a sub-muscle group is ever added to the taxonomy (e.g. a real side-delt segment), every existing template picks it up with no data migration.
   - **A template is a curated shortlist to browse within, not a plan to complete.** Nothing in a template is ever "finished", and no muscle group has a completion state. This is why a seven-row Push day is unremarkable — seven options in a menu, not seven unchecked boxes.
   - **Templates are locked to their own muscle groups during a session.** An exercise outside the template's muscle groups cannot be added to a template-based session. Keeping the template coherent is the reason for choosing one; users who don't have a fixed plan should use the ad-hoc path instead. Full rationale and the accepted friction are documented in `02-workout-tab-userflow.md`.
-- User can create a fully custom template from scratch by picking muscle groups à la carte, give it a name, and save it for reuse. Template creation and management lives in the Profile tab; the Workout tab is just for starting a session from an already-saved template.
+- User can create a fully custom template from scratch by picking muscle groups à la carte, give it a name, and save it for reuse. Template creation and management lives behind the Profile avatar; the Workout tab is just for starting a session from an already-saved template.
 - User can build a one-off ad-hoc workout by searching and adding exercises directly, without any template or muscle-group structure. This is not saved as a reusable template — it's a single session.
 
 ### Exercise library

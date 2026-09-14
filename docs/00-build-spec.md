@@ -8,7 +8,7 @@
 | `01-app-idea.md` | Scope, data model, muscle taxonomy, palette, and the reasoning behind every rule here. |
 | `02-workout-tab-userflow.md` | Workout tab flow + mockups. |
 | `03-muscle-groups-tab-userflow.md` | Muscle Groups tab flow + mockups. |
-| `04-profile-tab-userflow.md` | Profile tab flow + mockups. |
+| `04-profile-tab-userflow.md` | Profile flow + mockups. Profile is behind the header avatar; history is its own tab. |
 
 Conflict resolution: if this file disagrees with `01`–`04`, **`01`–`04` win** — this is a digest, not a source of truth. Report the conflict.
 
