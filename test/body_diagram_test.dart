@@ -236,14 +236,18 @@ void main() {
       final topLeft = tester.getTopLeft(find.byType(BodyDiagram));
 
       await tester.tapAt(topLeft + _pointHitting(painter, box, 'chest/mid'));
-      await tester.pumpAndSettle();
+      await tester.pump();
       expect(reported, {'chest/mid'});
+      // Drain the commit hold, or its timer outlives the test.
+      await tester.pump(const Duration(milliseconds: 600));
 
       await tester.tapAt(
         topLeft + _pointHitting(painter, box, 'shoulders/front-delt'),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
       expect(reported, {'shoulders/front-delt', 'shoulders/side-delt'});
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pumpAndSettle();
     });
 
     testWidgets('a tap on empty space reports nothing', (tester) async {
@@ -269,6 +273,174 @@ void main() {
     });
   });
 
+  group('pressing a muscle', () {
+    // A body map has no hover on a phone, so the press is what names the
+    // muscle. These assert the two halves a reader depends on: the muscle
+    // lights up, and it says which muscle it is.
+
+    testWidgets('holding paints the light accent, releasing paints the full '
+        'one', (tester) async {
+      // The two states answer different questions: holding asks which muscle
+      // this is, releasing says that it is the chosen one.
+      Set<String>? opened;
+      await tester.pumpWidget(host(
+        BodyDiagram(
+          view: BodyView.front,
+          fill: mutedBodyFill,
+          onSegmentTap: (ids) => opened = ids,
+        ),
+      ));
+      await tester.pumpAndSettle();
+      const painter = BodyDiagramPainter(
+        view: BodyView.front,
+        gender: BodyGender.male,
+        fill: mutedBodyFill,
+      );
+      final topLeft = tester.getTopLeft(find.byType(BodyDiagram));
+      final point = _pointHitting(painter, box, 'chest/mid');
+
+      Set<int> paintedColours() {
+        final canvas = _RecordingCanvas();
+        final rendered = tester.widget<CustomPaint>(
+          find.descendant(
+            of: find.byType(BodyDiagram),
+            matching: find.byType(CustomPaint),
+          ).first,
+        );
+        (rendered.painter! as BodyDiagramPainter).paint(canvas, box);
+        return canvas.paints.map((p) => p.color.toARGB32()).toSet();
+      }
+
+      final gesture = await tester.startGesture(topLeft + point);
+      await tester.pump();
+      expect(paintedColours(), contains(AppPalette.accentLight.toARGB32()),
+          reason: 'holding is the hover: the light accent');
+      expect(paintedColours(),
+          isNot(contains(AppPalette.accentStrong.toARGB32())));
+
+      await gesture.up();
+      await tester.pump();
+      expect(paintedColours(), contains(AppPalette.accentStrong.toARGB32()),
+          reason: 'releasing commits the choice: the full accent');
+
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pumpAndSettle();
+      expect(opened, {'chest/mid'});
+    });
+
+    testWidgets('holding a muscle names it',
+        (tester) async {
+      await tester.pumpWidget(host(
+        BodyDiagram(
+          view: BodyView.front,
+          fill: mutedBodyFill,
+          onSegmentTap: (_) {},
+        ),
+      ));
+      const painter = BodyDiagramPainter(
+        view: BodyView.front,
+        gender: BodyGender.male,
+        fill: mutedBodyFill,
+      );
+      await tester.pumpAndSettle();
+      final topLeft = tester.getTopLeft(find.byType(BodyDiagram));
+      final gesture = await tester.startGesture(
+        topLeft + _pointHitting(painter, box, 'chest/mid'),
+      );
+      await tester.pump();
+
+      expect(find.text('Mid chest'), findsOneWidget,
+          reason: 'the press has to say which muscle it is — that is the '
+              'question a reference tab exists to answer');
+
+      await gesture.up();
+      await tester.pump();
+      expect(find.text('Mid chest'), findsNothing,
+          reason: 'the name has been answered; the next screen is coming');
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a shared segment names both muscles it carries',
+        (tester) async {
+      await tester.pumpWidget(host(
+        BodyDiagram(
+          view: BodyView.front,
+          fill: mutedBodyFill,
+          onSegmentTap: (_) {},
+        ),
+      ));
+      const painter = BodyDiagramPainter(
+        view: BodyView.front,
+        gender: BodyGender.male,
+        fill: mutedBodyFill,
+      );
+      await tester.pumpAndSettle();
+      final topLeft = tester.getTopLeft(find.byType(BodyDiagram));
+      final gesture = await tester.startGesture(
+        topLeft + _pointHitting(painter, box, 'shoulders/front-delt'),
+      );
+      await tester.pump();
+
+      // Naming only one of the two would misdescribe what releasing opens.
+      final label = tester.widget<Text>(find.byType(Text).first).data!;
+      expect(label, contains('Front delt'));
+      expect(label, contains('Side delt'));
+
+      await gesture.up();
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('releasing still opens the muscle', (tester) async {
+      Set<String>? opened;
+      await tester.pumpWidget(host(
+        BodyDiagram(
+          view: BodyView.front,
+          fill: mutedBodyFill,
+          onSegmentTap: (ids) => opened = ids,
+        ),
+      ));
+      const painter = BodyDiagramPainter(
+        view: BodyView.front,
+        gender: BodyGender.male,
+        fill: mutedBodyFill,
+      );
+      await tester.pumpAndSettle();
+      final topLeft = tester.getTopLeft(find.byType(BodyDiagram));
+      await tester.tapAt(topLeft + _pointHitting(painter, box, 'quads/quads'));
+      await tester.pump();
+      expect(opened, {'quads/quads'},
+          reason: 'the muscle opens in the same frame the colour commits — the '
+              'navigation is never held back to play an animation');
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a read-only diagram never names or lights anything',
+        (tester) async {
+      await tester.pumpWidget(host(
+        const BodyDiagram(view: BodyView.front, fill: mutedBodyFill),
+      ));
+      const painter = BodyDiagramPainter(
+        view: BodyView.front,
+        gender: BodyGender.male,
+        fill: mutedBodyFill,
+      );
+      await tester.pumpAndSettle();
+      final topLeft = tester.getTopLeft(find.byType(BodyDiagram));
+      final gesture = await tester.startGesture(
+        topLeft + _pointHitting(painter, box, 'chest/mid'),
+      );
+      await tester.pump();
+      expect(find.text('Mid chest'), findsNothing,
+          reason: 'the exercise page renders this diagram read-only (R16)');
+      await gesture.up();
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pumpAndSettle();
+    });
+  });
+
   group('the painted fill', () {
     test('every segment is painted with the colour the caller returned for it',
         () {
@@ -280,11 +452,25 @@ void main() {
       ).paint(canvas, box);
 
       final asset = kBodyAssets['frontMale']!;
-      // One decorative pass, then one pass per segment, in order.
-      expect(canvas.paints, hasLength(asset.segments.length + 1));
+      // One decorative pass, one fill pass per segment, then one separator
+      // stroke per segment. The separators are what stop the body reading as a
+      // silhouette, so their pass is asserted rather than tolerated.
+      expect(canvas.paints,
+          hasLength(asset.segments.length * 2 + 1));
       expect(canvas.paints.first.color.toARGB32(),
-          AppPalette.mutedSurface.toARGB32());
+          AppPalette.surface.toARGB32());
       expect(canvas.paints.first.style, PaintingStyle.fill);
+
+      final separators =
+          canvas.paints.skip(asset.segments.length + 1).toList();
+      expect(separators, hasLength(asset.segments.length),
+          reason: 'every segment must be outlined, or neighbouring muscles '
+              'sharing one fill colour merge into one shape');
+      for (final stroke in separators) {
+        expect(stroke.style, PaintingStyle.stroke);
+        expect(stroke.color.toARGB32(), AppPalette.border.toARGB32());
+        expect(stroke.strokeWidth, kBodySegmentSeparatorWidth);
+      }
 
       for (var i = 0; i < asset.segments.length; i++) {
         final ids = subMuscleGroupsForSegment(
@@ -307,13 +493,26 @@ void main() {
           BodyDiagramPainter(view: view, gender: gender, fill: mutedBodyFill)
               .paint(canvas, box);
 
+          // The guard that matters: nothing on an untrained map may carry an
+          // accent, because accent means "this has been worked" wherever it
+          // appears (docs/00 §12) and there is no session data to justify it.
           for (final paint in canvas.paints) {
-            expect(paint.color.toARGB32(), AppPalette.mutedSurface.toARGB32());
             expect(paint.color.toARGB32(),
                 isNot(AppPalette.accentStrong.toARGB32()));
             expect(paint.color.toARGB32(),
                 isNot(AppPalette.accentLight.toARGB32()));
           }
+          // And the map is drawn from exactly three palette tones: the
+          // silhouette under the muscles, the muscles themselves, and the line
+          // that separates one from the next.
+          expect(
+            canvas.paints.map((p) => p.color.toARGB32()).toSet(),
+            <int>{
+              AppPalette.surface.toARGB32(),
+              AppPalette.mutedSurface.toARGB32(),
+              AppPalette.border.toARGB32(),
+            },
+          );
         }
       }
     });

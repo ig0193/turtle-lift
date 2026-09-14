@@ -237,6 +237,10 @@ void main() {
       await tester.pump();
 
       expect(tester.takeException(), isNull);
+      // The chosen muscle keeps its accent briefly while the next screen comes
+      // in; drain that before the test ends or its timer outlives it.
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pumpAndSettle();
     });
   });
 

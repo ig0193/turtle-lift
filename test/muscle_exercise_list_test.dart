@@ -107,6 +107,7 @@ void main() {
     final size = tester.getSize(find.byType(BodyDiagram));
     final topLeft = tester.getTopLeft(find.byType(BodyDiagram));
     await tester.tapAt(topLeft + _pointHitting(painter, size, segmentId));
+    await tester.pump(const Duration(milliseconds: 600));
     await tester.pumpAndSettle();
   }
 
@@ -234,6 +235,7 @@ void main() {
       // The scrim above the sheet: a modal barrier dismiss, which is what a
       // user who tapped the wrong polygon does.
       await tester.tapAt(const Offset(195, 40));
+      await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
 
       expect(find.byType(MuscleSegmentSheet), findsNothing);

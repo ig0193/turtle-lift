@@ -100,7 +100,7 @@ final Map<(String, String), Set<String>> _segmentIndex = () {
 /// `docs/04`'s "changing gender later in Profile immediately switches the
 /// diagram set app-wide" is true by construction instead of by every caller
 /// remembering to thread it through.
-class BodyDiagram extends ConsumerWidget {
+class BodyDiagram extends ConsumerStatefulWidget {
   const BodyDiagram({
     required this.view,
     required this.fill,
@@ -115,11 +115,65 @@ class BodyDiagram extends ConsumerWidget {
   final BodySegmentTapped? onSegmentTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BodyDiagram> createState() => _BodyDiagramState();
+}
+
+class _BodyDiagramState extends ConsumerState<BodyDiagram> {
+  /// The muscle currently under the finger, or null.
+  ///
+  /// **A press state exists because a body map has no hover on a phone.** The
+  /// approved prototype names the muscle under the pointer and lights it; that
+  /// is how a reader learns the map is made of 19 nameable parts rather than
+  /// being one picture. A finger has no hover, so the press itself stands in:
+  /// hold and the muscle answers, release and it opens.
+  BodyDiagramSegment? _pressed;
+  Offset? _pressedAt;
+
+  /// True once the finger lifts, for the moment before the muscle opens.
+  ///
+  /// **Hold and commit are different colours because they answer different
+  /// questions.** Holding asks "which one is this?" and gets the light accent —
+  /// the prototype's hover. Lifting answers "this one", and gets the full
+  /// accent, §12's "active", so the choice is visibly made before the screen
+  /// changes under it.
+  bool _committed = false;
+
+  void _clear() {
+    if (_pressed == null && !_committed) return;
+    setState(() {
+      _pressed = null;
+      _pressedAt = null;
+      _committed = false;
+    });
+  }
+
+  /// How long the chosen muscle keeps its full accent after the screen has
+  /// already been asked for.
+  ///
+  /// **The navigation is not delayed to show it.** The push is requested in the
+  /// same frame the colour lands, so the route's own transition is what the
+  /// commit colour is visible during — holding the tap back to play an
+  /// animation would make every muscle slower to open for no gain. This only
+  /// decides when the landing underneath stops being painted that way.
+  static const Duration _commitHold = Duration(milliseconds: 450);
+
+  @override
+  Widget build(BuildContext context) {
+    final interactive = widget.onSegmentTap != null;
+    final pressedIds = _pressed?.subMuscleGroupIds;
+
     final painter = BodyDiagramPainter(
-      view: view,
+      view: widget.view,
       gender: ref.watch(bodyGenderProvider),
-      fill: fill,
+      // The muscle under the finger is painted over whatever the caller asked
+      // for: the light accent while held, the full accent once chosen. Both are
+      // owned by the touch and gone when it ends, so neither ever claims
+      // anything about training.
+      fill: pressedIds == null
+          ? widget.fill
+          : (ids) => identical(ids, pressedIds)
+              ? (_committed ? AppPalette.accentStrong : AppPalette.accentLight)
+              : widget.fill(ids),
     );
 
     return LayoutBuilder(
@@ -130,18 +184,117 @@ class BodyDiagram extends ConsumerWidget {
           // region of its own, so taps would fall through to whatever is
           // behind the diagram.
           behavior: HitTestBehavior.opaque,
-          onTapUp: onSegmentTap == null
+          onTapDown: !interactive
               ? null
               : (details) {
                   final segment =
                       painter.segmentAt(details.localPosition, size);
-                  if (segment != null) {
-                    onSegmentTap!(segment.subMuscleGroupIds);
-                  }
+                  if (segment == null) return;
+                  setState(() {
+                    _pressed = segment;
+                    _pressedAt = details.localPosition;
+                  });
                 },
-          child: CustomPaint(painter: painter, size: size),
+          onTapCancel: !interactive ? null : _clear,
+          onTapUp: !interactive
+              ? null
+              : (details) async {
+                  final segment =
+                      painter.segmentAt(details.localPosition, size);
+                  if (segment == null) {
+                    _clear();
+                    return;
+                  }
+                  setState(() {
+                    _pressed = segment;
+                    // The name has served its purpose the moment the choice is
+                    // made, and the next screen is already coming — leaving it
+                    // would park a label over the transition.
+                    _pressedAt = null;
+                    _committed = true;
+                  });
+                  widget.onSegmentTap!(segment.subMuscleGroupIds);
+                  await Future<void>.delayed(_commitHold);
+                  if (mounted) _clear();
+                },
+          child: SizedBox.fromSize(
+            size: size,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: <Widget>[
+                CustomPaint(painter: painter, size: size),
+                if (pressedIds != null && _pressedAt != null)
+                  _MuscleNameLabel(
+                    ids: pressedIds,
+                    at: _pressedAt!,
+                    within: size,
+                  ),
+              ],
+            ),
+          ),
         );
       },
+    );
+  }
+}
+
+/// The name of the muscle being pressed, shown beside the finger.
+///
+/// **Naming it is the point, not decorating it.** A segment lighting up says
+/// "something is here"; the name says *which* muscle, which is the question a
+/// reference tab exists to answer. It sits above the touch so the finger does
+/// not cover it, and is clamped to the diagram's bounds so a muscle near an
+/// edge still reads.
+class _MuscleNameLabel extends StatelessWidget {
+  const _MuscleNameLabel({
+    required this.ids,
+    required this.at,
+    required this.within,
+  });
+
+  final Set<String> ids;
+  final Offset at;
+  final Size within;
+
+  /// Two names when the segment carries two — the front-delt polygon is shared,
+  /// and saying only one of them would be a lie about what a tap will open.
+  static String labelFor(Set<String> ids) =>
+      ids.map((id) => kSubMuscleGroups[id]?.label ?? id).join(' · ');
+
+  @override
+  Widget build(BuildContext context) {
+    const width = 168.0;
+    final left = (at.dx - width / 2).clamp(0.0, (within.width - width).clamp(0.0, double.infinity));
+    final top = (at.dy - 46).clamp(0.0, within.height);
+    return Positioned(
+      left: left,
+      top: top,
+      child: IgnorePointer(
+        child: SizedBox(
+          width: width,
+          child: Center(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppPalette.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppPalette.border),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                child: Text(
+                  labelFor(ids),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppPalette.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -175,6 +328,9 @@ Size bodyDiagramSize(BoxConstraints constraints, Size viewBox) {
 /// renders a perfectly plausible body, and a hit-test that scales differently
 /// from the paint still returns *a* muscle for most taps. Neither failure is
 /// visible, so both are asserted against what actually reaches the canvas.
+/// How thick the line between two muscles is, in logical pixels.
+const double kBodySegmentSeparatorWidth = 2.5;
+
 class BodyDiagramPainter extends CustomPainter {
   const BodyDiagramPainter({
     required this.view,
@@ -232,6 +388,32 @@ class BodyDiagramPainter extends CustomPainter {
     ..color = color
     ..isAntiAlias = true;
 
+  /// The line that separates one muscle from the next.
+  ///
+  /// **Without it the map is a silhouette, not an anatomy.** Every segment on
+  /// the landing is filled the same muted colour, so fill alone cannot show
+  /// where one muscle ends and the next begins — the body reads as a single
+  /// dark shape and there is nothing to aim a tap at. The approved prototype
+  /// strokes each segment for exactly this reason
+  /// (`prototypes/muscles-tab-variants.html`), and `CLAUDE.md` gives the
+  /// prototype authority over how a screen looks.
+  ///
+  /// [AppPalette.border] is the palette's own divider colour and is lighter
+  /// than the muted fill, so each muscle reads as an outlined region the way an
+  /// anatomical drawing does. A darker line was tried first and cut the body
+  /// into gaps instead of drawing it; §12 ends "No other colours", so a third
+  /// option was never available.
+  ///
+  /// The width is in logical pixels and is deliberately **not** scaled with the
+  /// geometry — the same rule `stroke_glyph.dart` follows, so the separation
+  /// stays legible whether the body is drawn at 200pt or 600pt.
+  Paint buildSeparatorPaint() => Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = kBodySegmentSeparatorWidth
+    ..color = AppPalette.border
+    ..isAntiAlias = true
+    ..strokeJoin = StrokeJoin.round;
+
   /// The segment containing [position] — in the widget's local coordinates —
   /// or null if the point is outside every one of them.
   ///
@@ -257,12 +439,19 @@ class BodyDiagramPainter extends CustomPainter {
     final origin = originFor(size);
     canvas.save();
     canvas.translate(origin.dx, origin.dy);
-    canvas.drawPath(decorativePathFor(size), buildPaint(AppPalette.mutedSurface));
-    for (final segment in segmentPathsFor(size)) {
+    canvas.drawPath(decorativePathFor(size), buildPaint(AppPalette.surface));
+    final segments = segmentPathsFor(size);
+    for (final segment in segments) {
       canvas.drawPath(
         segment.path,
         buildPaint(fill(segment.subMuscleGroupIds)),
       );
+    }
+    // Separators last, so a muscle's own fill never paints over the line that
+    // divides it from its neighbour.
+    final separator = buildSeparatorPaint();
+    for (final segment in segments) {
+      canvas.drawPath(segment.path, separator);
     }
     canvas.restore();
   }
