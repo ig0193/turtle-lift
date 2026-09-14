@@ -263,120 +263,305 @@ void main() {
     });
   });
 
-  group('swipe', () {
-    /// A flick across the bar steps one tab. The gesture has to coexist with
-    /// the items' taps, so the tests below cover both directions, both ends,
-    /// the too-slow case, and -- most importantly -- that a tap still taps.
-    Future<void> flick(WidgetTester tester, double velocity) async {
-      await tester.fling(
-        find.byType(GlassTabBar),
-        Offset(velocity.isNegative ? -80 : 80, 0),
-        velocity.abs(),
+  group('drag along the bar', () {
+    /// The capsule follows the finger and the selection commits as it crosses
+    /// each slot -- the iOS 26 tab bar's gesture, not a swipe that steps on
+    /// release. The tests below cover the tracking, the live commit, crossing
+    /// more than one slot, both ends, and -- most importantly -- that a tap
+    /// still taps.
+
+    /// Hosts a bar whose selection actually updates, the way the shell does.
+    ///
+    /// The drag is a feedback loop -- the bar reports, the parent rebuilds, the
+    /// tints and the capsule's resting place follow -- and a host that recorded
+    /// the report without applying it would test only half of that. Every
+    /// index the bar reports lands in [reported], in order.
+    Widget liveHost(int initialIndex, List<int> reported) {
+      var index = initialIndex;
+      return StatefulBuilder(
+        builder: (context, setState) => host(
+          GlassTabBar(
+            selectedIndex: index,
+            onSelected: (i) {
+              reported.add(i);
+              setState(() => index = i);
+            },
+          ),
+        ),
       );
-      await tester.pumpAndSettle();
     }
 
-    testWidgets('flicking left advances one tab', (tester) async {
+    /// Centre of tab [index], in global coordinates.
+    Offset tabCentre(WidgetTester tester, int index) =>
+        tester.getCenter(find.byKey(GlassTabBar.itemKey(index)));
+
+    /// Presses at [from] and slides to [to] in steps, so the gesture produces
+    /// real intermediate positions rather than one teleport. Returns the
+    /// still-open gesture: the caller decides when the finger lifts, because
+    /// what the capsule does *during* the drag is half of what is being tested.
+    Future<TestGesture> dragAcross(
+      WidgetTester tester,
+      Offset from,
+      Offset to, {
+      int steps = 12,
+    }) async {
+      final gesture = await tester.startGesture(from);
+      final step = (to - from) / steps.toDouble();
+      for (var i = 0; i < steps; i++) {
+        await gesture.moveBy(step);
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      return gesture;
+    }
+
+    testWidgets('the capsule follows the finger before it is lifted',
+        (tester) async {
+      // The regression this guards is the whole point of the rework: a gesture
+      // that only commits on release leaves the bar looking frozen while the
+      // user drags, so there is nothing to aim and no reason to trust it.
+      await tester.pumpWidget(
+        host(GlassTabBar(selectedIndex: 0, onSelected: (_) {})),
+      );
+      await tester.pumpAndSettle();
+
+      final capsule = find.byKey(GlassTabBar.highlightKey);
+      final atRest = tester.getCenter(capsule).dx;
+
+      final gesture = await dragAcross(
+        tester,
+        tabCentre(tester, 0),
+        tabCentre(tester, 2),
+      );
+
+      expect(tester.getCenter(capsule).dx, greaterThan(atRest + 1),
+          reason: 'the capsule must have travelled while the finger is still '
+              'down, not waited for the release');
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('the selection commits as the finger crosses each slot',
+        (tester) async {
       final reported = <int>[];
-      await tester.pumpWidget(
-        host(GlassTabBar(selectedIndex: 0, onSelected: reported.add)),
-      );
+      await tester.pumpWidget(liveHost(0, reported));
       await tester.pumpAndSettle();
 
-      await flick(tester, -1000);
+      final gesture = await dragAcross(
+        tester,
+        tabCentre(tester, 0),
+        tabCentre(tester, 2),
+      );
 
-      expect(reported, <int>[1],
-          reason: 'a left flick moves toward the next tab, matching the '
-              'direction the content would travel');
+      expect(reported, <int>[1, 2],
+          reason: 'each slot the finger crosses is reported, in order, while '
+              'the finger is still down -- one report per slot, not one per '
+              'frame');
+
+      await gesture.up();
+      await tester.pumpAndSettle();
     });
 
-    testWidgets('flicking right goes back one tab', (tester) async {
+    testWidgets('crossing two slots in one gesture lands two tabs over',
+        (tester) async {
+      // Deliberately the opposite of the old one-step-per-gesture rule. That
+      // clamp was right when nothing moved until release -- a jump read as a
+      // glitch. Here the capsule travelled the whole way under the finger, so
+      // stopping it a slot short would be the glitch.
       final reported = <int>[];
-      await tester.pumpWidget(
-        host(GlassTabBar(selectedIndex: 2, onSelected: reported.add)),
-      );
+      await tester.pumpWidget(liveHost(0, reported));
       await tester.pumpAndSettle();
 
-      await flick(tester, 1000);
+      final gesture = await dragAcross(
+        tester,
+        tabCentre(tester, 0),
+        tabCentre(tester, 2),
+      );
+      await gesture.up();
+      await tester.pumpAndSettle();
 
-      expect(reported, <int>[1], reason: 'a right flick steps back');
+      expect(reported.last, 2, reason: 'the finger ended over the third tab');
     });
 
-    testWidgets('one flick never skips a slot', (tester) async {
+    testWidgets('dragging back before lifting lands where the finger stopped',
+        (tester) async {
+      // The capsule is absolute: it is wherever the finger is. A drag out to
+      // the last tab and back must therefore end on the first, and must not
+      // remember the furthest slot it touched.
       final reported = <int>[];
-      await tester.pumpWidget(
-        host(GlassTabBar(selectedIndex: 0, onSelected: reported.add)),
-      );
+      await tester.pumpWidget(liveHost(0, reported));
       await tester.pumpAndSettle();
 
-      await flick(tester, -6000);
+      final gesture = await dragAcross(
+        tester,
+        tabCentre(tester, 0),
+        tabCentre(tester, 2),
+      );
+      // Same gesture, dragged back. moveBy is relative, so this walks home.
+      final back = tabCentre(tester, 0) - tabCentre(tester, 2);
+      for (var i = 0; i < 12; i++) {
+        await gesture.moveBy(back / 12);
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await gesture.up();
+      await tester.pumpAndSettle();
 
-      expect(reported, <int>[1],
-          reason: 'however hard the flick, it steps one tab -- the travelling '
-              'highlight is what tells the user where they went, and skipping '
-              'a slot reads as a glitch');
+      expect(reported.last, 0,
+          reason: 'the selection follows the finger rather than latching on '
+              'the furthest tab the gesture reached');
     });
 
-    testWidgets('a flick at either end does nothing', (tester) async {
-      final atStart = <int>[];
-      await tester.pumpWidget(
-        host(GlassTabBar(selectedIndex: 0, onSelected: atStart.add)),
-      );
-      await tester.pumpAndSettle();
-      await flick(tester, 1000);
-      expect(atStart, isEmpty,
-          reason: 'the first tab does not wrap around to the last');
-
-      final atEnd = <int>[];
-      await tester.pumpWidget(
-        host(GlassTabBar(selectedIndex: 2, onSelected: atEnd.add)),
-      );
-      await tester.pumpAndSettle();
-      await flick(tester, -1000);
-      expect(atEnd, isEmpty, reason: 'the last tab does not wrap either');
-    });
-
-    testWidgets('a deliberate slow drag steps, even with no flick', (tester) async {
-      // The bug this guards: a mouse or trackpad click-drag releases with
-      // essentially no velocity, so a velocity-only handler ignores a gesture
-      // the user watched themselves make. Committing on distance too is what
-      // makes the swipe work with a pointer at all.
+    testWidgets('dragging past the last tab holds there instead of wrapping',
+        (tester) async {
       final reported = <int>[];
-      await tester.pumpWidget(
-        host(GlassTabBar(selectedIndex: 0, onSelected: reported.add)),
+      await tester.pumpWidget(liveHost(1, reported));
+      await tester.pumpAndSettle();
+
+      final capsule = find.byKey(GlassTabBar.highlightKey);
+      final gesture = await dragAcross(
+        tester,
+        tabCentre(tester, 1),
+        // Well past the right edge of the bar.
+        tabCentre(tester, 2) + const Offset(400, 0),
       );
-      await tester.pumpAndSettle();
 
-      // tester.drag releases with no fling velocity, unlike tester.fling.
-      await tester.drag(find.byType(GlassTabBar), const Offset(-120, 0));
-      await tester.pumpAndSettle();
+      expect(reported, <int>[2],
+          reason: 'it must stop at the last tab, and report it once however '
+              'far past the edge the finger goes');
+      expect(
+        tester.getCenter(capsule).dx,
+        moreOrLessEquals(tabCentre(tester, 2).dx, epsilon: 1),
+        reason: 'the capsule clamps to the last slot rather than sliding out '
+            'of the bar',
+      );
 
-      expect(reported, <int>[1],
-          reason: 'a slow drag well past the distance threshold must step, '
-              'even though it carries no release velocity');
+      await gesture.up();
+      await tester.pumpAndSettle();
     });
 
-    testWidgets('a small slow movement is not a swipe', (tester) async {
-      // A thumb drifting a few pixels on its way to a tab, or a sloppy tap,
-      // must not move anything -- short and slow fails both thresholds.
+    testWidgets('a drag that crosses no slot reports nothing', (tester) async {
+      // Load-bearing: a repeat report is the *tap's* contract -- it is how
+      // pop-to-root is wired -- so a drag that re-sent the current tab on
+      // every frame would fire it dozens of times in one gesture.
       final reported = <int>[];
-      await tester.pumpWidget(
-        host(GlassTabBar(selectedIndex: 0, onSelected: reported.add)),
+      await tester.pumpWidget(liveHost(1, reported));
+      await tester.pumpAndSettle();
+
+      final centre = tabCentre(tester, 1);
+      final gesture = await dragAcross(
+        tester,
+        centre,
+        // Past the touch slop, so a drag really starts, but nowhere near the
+        // neighbouring slot centres.
+        centre + const Offset(30, 0),
       );
+      await gesture.up();
       await tester.pumpAndSettle();
 
-      // On the selected tab, so a step and a tap report different indices and
-      // the assertion can tell them apart: a step would say 1, a tap says 0.
-      await tester.drag(find.byKey(GlassTabBar.itemKey(0)), const Offset(-10, 0));
-      await tester.pumpAndSettle();
-
-      expect(reported, <int>[0],
-          reason: 'too short to be deliberate and too slow to be a flick, so '
-              'it stays a tap on the tab under the finger rather than '
-              'stepping to the next one');
+      expect(reported, isEmpty,
+          reason: 'the slot under the finger never changed');
     });
 
-    testWidgets('the swipe gesture does not swallow taps', (tester) async {
+    /// The capsule's horizontal scale, as actually painted. The stretch is a
+    /// Transform, so it never reaches `getSize` -- a test that measured the
+    /// layout box would pass on a bar that does not stretch at all.
+    double paintedScaleX(WidgetTester tester) {
+      final transform = tester.widget<Transform>(find.ancestor(
+        of: find.byKey(GlassTabBar.highlightKey),
+        matching: find.byType(Transform),
+      ));
+      return transform.transform.storage[0];
+    }
+
+    testWidgets('the capsule stretches while it is chasing the finger',
+        (tester) async {
+      final reported = <int>[];
+      await tester.pumpWidget(liveHost(0, reported));
+      await tester.pumpAndSettle();
+
+      expect(paintedScaleX(tester), moreOrLessEquals(1, epsilon: 0.001),
+          reason: 'at rest the capsule is exactly one slot wide');
+
+      final gesture = await dragAcross(
+        tester,
+        tabCentre(tester, 0),
+        tabCentre(tester, 2),
+        steps: 4, // Few, large steps: a fast drag, so the capsule falls behind.
+      );
+
+      expect(paintedScaleX(tester), greaterThan(1.02),
+          reason: 'the capsule must stretch along its travel while it is '
+              'still catching up with the finger');
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(paintedScaleX(tester), moreOrLessEquals(1, epsilon: 0.001),
+          reason: 'and must come back to one slot once it has settled');
+    });
+
+    testWidgets('a finger that stops without lifting settles the capsule',
+        (tester) async {
+      // The regression a speed-driven stretch cannot avoid: when the finger
+      // stops moving but stays down, no further move events arrive, so a
+      // stretch read from the last speed stays frozen at full extension under
+      // a stationary thumb. Read from the capsule's lag it decays on its own.
+      final reported = <int>[];
+      await tester.pumpWidget(liveHost(0, reported));
+      await tester.pumpAndSettle();
+
+      final gesture = await dragAcross(
+        tester,
+        tabCentre(tester, 0),
+        tabCentre(tester, 2),
+        steps: 4,
+      );
+      expect(paintedScaleX(tester), greaterThan(1.02),
+          reason: 'precondition: it is stretched mid-drag');
+
+      // Finger still down, simply not moving. Long enough for the follow to
+      // finish, and not one frame of it is a new pointer event.
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(paintedScaleX(tester), moreOrLessEquals(1, epsilon: 0.01),
+          reason: 'the capsule caught up, so nothing is pulling it any more');
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('the stretch grows inward at the last slot', (tester) async {
+      // Anchoring the stretch at the capsule's centre would push its outer
+      // edge past the bar padding and back outside the ClipRRect at the end
+      // slots -- the clipped-corner bug, reintroduced through paint. Anchored
+      // at the trailing edge it can only grow the way it is travelling.
+      final reported = <int>[];
+      await tester.pumpWidget(liveHost(0, reported));
+      await tester.pumpAndSettle();
+
+      final barRight = tester.getRect(find.byType(ClipRRect).first).right;
+      final gesture = await dragAcross(
+        tester,
+        tabCentre(tester, 0),
+        tabCentre(tester, 2),
+        steps: 4,
+      );
+
+      final painted = tester.getRect(find.byKey(GlassTabBar.highlightKey));
+      // getRect is the layout box; the stretch is painted from the left edge
+      // outward by (scaleX - 1) of that width.
+      final paintedRight =
+          painted.left + painted.width * paintedScaleX(tester);
+
+      expect(paintedRight, lessThanOrEqualTo(barRight),
+          reason: 'the stretched capsule must stay inside the bar it is '
+              'clipped by');
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('the drag gesture does not swallow taps', (tester) async {
       // The regression that matters: a drag recognizer that claims the arena
       // early beats the items' taps on any finger that moves a pixel.
       final reported = <int>[];
@@ -389,6 +574,23 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(reported, <int>[2], reason: 'tapping a tab still selects it');
+    });
+
+    testWidgets('a movement inside the touch slop stays a tap', (tester) async {
+      // A thumb drifting a few pixels on its way to a tab must not become a
+      // drag -- below the slop no drag is recognized at all, so the tap wins.
+      final reported = <int>[];
+      await tester.pumpWidget(
+        host(GlassTabBar(selectedIndex: 0, onSelected: reported.add)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.drag(
+          find.byKey(GlassTabBar.itemKey(0)), const Offset(-10, 0));
+      await tester.pumpAndSettle();
+
+      expect(reported, <int>[0],
+          reason: 'it stays a tap on the tab under the finger');
     });
   });
 

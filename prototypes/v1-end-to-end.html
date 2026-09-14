@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Turtle Lift — V1 Interactive Prototype</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #17140f;
+        --card: #211d18;
+        --line: #332c22;
+        --off: #241f19;
+        --text: #f5efe8;
+        --muted: #a89c8e;
+        --soft: #6b6156;
+        --accent: #d85a30;
+        --accent-light: #f0997b;
+        --on-accent: #1b0c05;
+        --danger: #c4553a;
+        --shadow: rgba(0, 0, 0, 0.28);
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background: #0d0b09;
+        color: var(--text);
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      body {
+        display: flex;
+        justify-content: center;
+        padding: 28px 14px 48px;
+      }
+
+      .device {
+        width: 360px;
+        height: 760px;
+        background: var(--bg);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 28px;
+        box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+        overflow: hidden;
+        position: relative;
+      }
+
+      .statusbar {
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        font-size: 10px;
+        color: var(--soft);
+        background: rgba(0,0,0,0.06);
+      }
+
+      .view {
+        position: relative;
+        height: calc(100% - 30px - 64px);
+        overflow: hidden;
+      }
+
+      .screen {
+        display: none;
+        height: 100%;
+      }
+
+      .screen.active {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0 18px 20px;
+      }
+
+      .scroll::-webkit-scrollbar { display: none; }
+
+      .header {
+        position: sticky;
+        top: 0;
+        background: var(--bg);
+        z-index: 10;
+        padding-top: 14px;
+        margin: 0 -18px;
+      }
+
+      .header-inner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 18px 10px;
+      }
+
+      .back-btn,
+      .icon-btn {
+        appearance: none;
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .back-btn {
+        font-size: 22px;
+        line-height: 1;
+        padding: 0 2px 0 0;
+      }
+
+      .header-title {
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        flex: 1;
+      }
+
+      .header-sub {
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 2px;
+      }
+
+      h1, h2, h3, h4, p { margin: 0; }
+
+      .splash {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        background: radial-gradient(circle at top, rgba(216,90,48,0.14), transparent 40%), var(--bg);
+        position: relative;
+        cursor: pointer;
+      }
+
+      .logo-wrap {
+        width: 78px;
+        height: 78px;
+        border-radius: 21px;
+        background: var(--accent);
+        display: grid;
+        place-items: center;
+        box-shadow: 0 18px 28px rgba(216,90,48,0.2);
+        animation: pop 0.7s cubic-bezier(.2,.9,.32,1.3) both;
+      }
+
+      .logo-wrap svg {
+        width: 39px;
+        height: 39px;
+        stroke: var(--on-accent);
+        fill: none;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .wordmark {
+        margin-top: 18px;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        animation: fadeIn .5s ease both .18s;
+      }
+
+      .tagline {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.02em;
+        animation: fadeIn .5s ease both .25s;
+      }
+
+      .tap-hint {
+        position: absolute;
+        bottom: 26px;
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        color: var(--soft);
+        text-transform: uppercase;
+      }
+
+      @keyframes pop {
+        0% { opacity: 0; transform: scale(0.82); }
+        100% { opacity: 1; transform: scale(1); }
+      }
+
+      @keyframes fadeIn {
+        0% { opacity: 0; transform: translateY(6px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+
+      .section-label {
+        font-size: 10px;
+        letter-spacing: 0.11em;
+        color: var(--soft);
+        text-transform: uppercase;
+        margin: 18px 0 8px;
+      }
+
+      .card-btn,
+      .ghost-btn,
+      .primary-btn,
+      .danger-btn,
+      .filter-btn,
+      .mini-btn {
+        appearance: none;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .card-btn {
+        width: 100%;
+        background: var(--card);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-align: left;
+        margin-bottom: 12px;
+      }
+
+      .card-btn .icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--line);
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+
+      .card-btn .icon svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .card-btn strong {
+        display: block;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .card-btn span {
+        display: block;
+        margin-top: 2px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .primary-btn {
+        width: 100%;
+        background: var(--accent);
+        color: var(--on-accent);
+        border: none;
+        border-radius: 10px;
+        padding: 13px 14px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .ghost-btn {
+        width: 100%;
+        background: var(--card);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .danger-btn {
+        width: 100%;
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid rgba(196,85,58,0.6);
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .muted-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        padding: 11px 0;
+      }
+
+      .muted-row strong {
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .muted-row small {
+        display: block;
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      .chev {
+        color: var(--soft);
+        font-size: 18px;
+      }
+
+      .date-chip {
+        width: fit-content;
+        background: var(--card);
+        border: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 11.5px;
+        border-radius: 999px;
+        padding: 6px 12px;
+        margin-bottom: 10px;
+      }
+
+      .muscle-map {
+        background: radial-gradient(circle at top, rgba(240,153,123,0.06), transparent 34%);
+        border-radius: 14px;
+        padding: 8px 0 4px;
+      }
+
+      .body-toggle {
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        margin: 10px 0 6px;
+      }
+
+      .filter-btn {
+        background: var(--card);
+        color: var(--soft);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 11.5px;
+        font-weight: 500;
+      }
+
+      .filter-btn.active {
+        background: rgba(240,153,123,0.08);
+        border-color: rgba(216,90,48,0.65);
+        color: var(--accent-light);
+      }
+
+      .body-svg {
+        width: 100%;
+        display: block;
+      }
+
+      .body-svg .muscle-segment path,
+      .body-svg .muscle-segment polygon,
+      .body-svg .muscle-segment rect {
+        fill: var(--off);
+        stroke: rgba(255,255,255,0.04);
+        stroke-width: 2;
+        transition: fill 0.2s ease;
+      }
+
+      .body-svg .muscle-segment.trained path,
+      .body-svg .muscle-segment.trained polygon,
+      .body-svg .muscle-segment.trained rect {
+        fill: var(--accent);
+      }
+
+      .body-svg .muscle-segment.secondary path,
+      .body-svg .muscle-segment.secondary polygon,
+      .body-svg .muscle-segment.secondary rect {
+        fill: var(--accent-light);
+      }
+
+      .exercise-list { margin-top: 8px; }
+
+      .exercise-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .exercise-item .glyph {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        display: grid;
+        place-items: center;
+        color: var(--accent-light);
+      }
+
+      .exercise-item .glyph svg {
+        width: 24px;
+        height: 24px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .exercise-item .name {
+        flex: 1;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .exercise-item .meta {
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 3px;
+      }
+
+      .state-pill {
+        font-size: 10px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        color: var(--soft);
+        background: rgba(255,255,255,0.02);
+      }
+
+      .state-pill.done {
+        background: rgba(216,90,48,0.08);
+        color: var(--accent-light);
+        border-color: rgba(216,90,48,0.45);
+      }
+
+      .state-pill.active {
+        background: rgba(240,153,123,0.08);
+        color: var(--accent-light);
+        border-color: rgba(240,153,123,0.5);
+      }
+
+      .template-list { margin-top: 2px; }
+
+      .template-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .template-name {
+        font-size: 15px;
+        font-weight: 500;
+      }
+
+      .template-copy {
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 3px;
+      }
+
+      .template-row .meta {
+        color: var(--soft);
+        font-size: 17px;
+      }
+
+      .subgroup-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 0 10px 14px;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+      }
+
+      .subgroup-row .label {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--muted);
+      }
+
+      .subgroup-row.trained .label {
+        color: var(--text);
+      }
+
+      .subgroup-row .check {
+        color: var(--accent);
+        font-size: 14px;
+      }
+
+      .section-divider {
+        border-top: 1px solid var(--line);
+        margin: 14px 0 0;
+      }
+
+      .stack { display: flex; flex-direction: column; gap: 12px; }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .stat-card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px 8px 10px;
+        text-align: center;
+      }
+
+      .stat-card .value {
+        font-size: 20px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+
+      .stat-card .label {
+        margin-top: 7px;
+        color: var(--soft);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .pb-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: rgba(216,90,48,0.08);
+        border: 1px solid rgba(216,90,48,0.42);
+        color: var(--accent-light);
+        font-size: 11px;
+        margin-bottom: 12px;
+      }
+
+      .summary-callout {
+        background: rgba(216,90,48,0.08);
+        border: 1px solid rgba(216,90,48,0.35);
+        border-radius: 12px;
+        padding: 11px 12px;
+        color: var(--accent-light);
+        font-size: 12px;
+      }
+
+      .set-row {
+        display: grid;
+        grid-template-columns: 18px 70px 70px 1fr;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .set-row .n {
+        color: var(--soft);
+        font-size: 12px;
+      }
+
+      .set-row input {
+        width: 100%;
+        background: rgba(255,255,255,0.02);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 7px 8px;
+        font: inherit;
+        font-size: 13px;
+      }
+
+      .checkmark {
+        justify-self: end;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--line);
+        color: var(--soft);
+        font-size: 14px;
+        display: grid;
+        place-items: center;
+      }
+
+      .checkmark.active {
+        background: var(--accent);
+        color: var(--on-accent);
+        border-color: var(--accent);
+      }
+
+      .quick-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 10px 0 12px;
+      }
+
+      .mini-btn {
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--muted);
+        border-radius: 8px;
+        padding: 6px 8px;
+        font-size: 11px;
+      }
+
+      .thin-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 12px;
+      }
+
+      .thin-row span:first-child { color: var(--soft); }
+      .thin-row span:last-child { color: var(--muted); }
+
+      .history-item {
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .history-item .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .history-item .date {
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .history-item .pb {
+        background: rgba(240,153,123,0.08);
+        border: 1px solid rgba(240,153,123,0.35);
+        color: var(--accent-light);
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-size: 10px;
+      }
+
+      .history-item .sets {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .history-item .set-pill {
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,0.02);
+        color: var(--muted);
+        border-radius: 6px;
+        padding: 4px 7px;
+        font-size: 11px;
+      }
+
+      .history-item .set-pill.best {
+        border-color: rgba(216,90,48,0.4);
+        background: rgba(216,90,48,0.08);
+        color: var(--accent-light);
+      }
+
+      .bottom-nav {
+        height: 64px;
+        border-top: 1px solid var(--line);
+        background: rgba(23,20,15,0.92);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+      }
+
+      .nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--soft);
+        font-size: 10px;
+        font-weight: 500;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+      }
+
+      .nav-item.active {
+        color: var(--accent);
+      }
+
+      .nav-item svg {
+        width: 20px;
+        height: 20px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .tab-cta {
+        position: absolute;
+        left: 50%;
+        bottom: 72px;
+        transform: translateX(-50%);
+        background: rgba(216,90,48,0.12);
+        border: 1px solid rgba(216,90,48,0.4);
+        color: var(--accent-light);
+        border-radius: 999px;
+        padding: 5px 10px;
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .capsule {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--line);
+        color: var(--muted);
+        padding: 6px 10px;
+        font-size: 11px;
+      }
+
+      .summary-hero {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px 14px 10px;
+      }
+
+      .summary-wrap {
+        display: flex;
+        justify-content: center;
+        margin: 4px 0 8px;
+      }
+
+      .summary-map {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        width: 100%;
+      }
+
+      .summary-map .mini {
+        width: 110px;
+      }
+
+      .mini .body-svg {
+        min-height: 140px;
+      }
+
+      .summary-title {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+
+      .tiny {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .row-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .row-grid .stat-card { padding: 12px 10px; }
+
+      @media (max-width: 420px) {
+        body { padding: 0; }
+        .device { width: 100vw; height: 100vh; border-radius: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="device">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span>◼◼◼</span>
+      </div>
+
+      <div class="view">
+        <div id="screen-splash" class="screen active">
+          <div class="splash" id="splashTap">
+            <div class="logo-wrap">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 11.5v-1a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v1"/>
+                <path d="M9 11.5h6v4.7a3 3 0 0 1-3 3h0a3 3 0 0 1-3-3v-4.7Z"/>
+                <path d="M12 8V5"/>
+                <path d="M7 16.5l-2 2"/>
+                <path d="M17 16.5l2 2"/>
+              </svg>
+            </div>
+            <div class="wordmark">Turtle Lift</div>
+            <div class="tagline">Workout flow for better habits.</div>
+            <div class="tap-hint">Tap to continue</div>
+          </div>
+        </div>
+
+        <div id="screen-workout" class="screen">
+          <div class="scroll">
+            <div class="header">
+              <div class="header-inner">
+                <button class="back-btn" data-action="back-to-landing">←</button>
+                <div class="header-title">Workout</div>
+              </div>
+            </div>
+
+            <div class="section-label">Choose your start</div>
+
+            <button class="card-btn" data-action="start-template">
+              <div class="icon">
+                <svg viewBox="0 0 24 24"><path d="M8 8h8v10H8zm2-4h4M7 4h10M4 10h2M18 10h2"/></svg>
+              </div>
+              <div>
+                <strong>Start workout</strong>
+                <span>Pick a saved template</span>
+              </div>
+            </button>
+
+            <button class="card-btn" data-action="start-adhoc">
+              <div class="icon">
+                <svg viewBox="0 0 24 24"><path d="M10 18h4M3 7h18M7 3v8M17 3v8M6 21h12"/></svg>
+              </div>
+              <div>
+                <strong>Ad-hoc workout</strong>
+                <span>Search and add exercises</span>
+              </div>
+            </button>
+
+            <div class="section-label" style="margin-top: 18px;">Resume</div>
+            <div class="summary-callout" style="margin-bottom: 10px;">A set from Monday is still open. Resume the session to keep your streak clean.</div>
+          </div>
+        </div>
+
+        <div id="screen-template-picker" class="screen">
+          <div class="scroll">
+            <div class="header">
+              <div class="header-inner">
+                <button class="back-btn" data-action="back-to-workout">←</button>
+                <div class="header-title">Choose template</div>
+              </div>
+            </div>
+
+            <div class="template-list">
+              <div class="template-row" data-template="push-day">
+                <div>
+                  <div class="template-name">Push day</div>
+                  <div class="template-copy">Chest, shoulders, triceps</div>
+                </div>
+                <div class="meta">›</div>
+              </div>
+              <div class="template-row" data-template="pull-day">
+                <div>
+                  <div class="template-name">Pull day</div>
+                  <div class="template-copy">Back, biceps, rear delts</div>
+                </div>
+                <div class="meta">›</div>
+              </div>
+              <div class="template-row" data-template="legs-day">
+                <div>
+                  <div class="template-name">Leg day</div>
+                  <div class="template-copy">Quads, hamstrings, glutes</div>
+                </div>
+                <div class="meta">›</div>
+              </div>
+              <div class="template-row" data-template="full-body">
+                <div>
+                  <div class="template-name">Full body</div>
+                  <div class="template-copy">Whole-body balanced session</div>
+                </div>
+                <div class="meta">›</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="screen-overview" class="screen">
+          <div class="scroll">
+            <div class="header">
+              <div class="header-inner">
+                <button class="back-btn" data-action="back-to-workout">←</button>
+                <div class="header-title" id="overviewTitle">Push day</div>
+              </div>
+            </div>
+
+            <div class="date-chip" id="overviewDate">Today</div>
+
+            <div class="muscle-map">
+              <div class="body-toggle">
+                <button class="filter-btn active" data-view="front">Front</button>
+                <button class="filter-btn" data-view="back">Back</button>
+              </div>
+              <svg class="body-svg" id="overviewBodySvg" viewBox="0 0 700 1324" xmlns="http://www.w3.org/2000/svg" aria-label="Muscle map"></svg>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div id="overviewMuscleList"></div>
+
+            <div style="margin-top: 16px;">
+              <button class="primary-btn" data-action="go-finish">Finish workout</button>
+            </div>
+            <div style="margin-top: 10px;">
+              <button class="ghost-btn" data-action="discard-session">Discard workout</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="screen-muscle-picker" class="screen">
+          <div class="scroll">
+            <div class="header">
+              <div class="header-inner">
+                <button class="back-btn" data-action="back-to-overview">←</button>
+                <div class="header-title" id="musclePickerTitle">Upper chest</div>
+              </div>
+            </div>
+
+            <div class="section-label">Exercise options</div>
+            <div id="exerciseOptions"></div>
+          </div>
+        </div>
+
+        <div id="screen-log" class="screen">
+          <div class="scroll">
+            <div class="header">
+              <div class="header-inner">
+                <button class="back-btn" data-action="back-to-overview">←</button>
+                <div class="header-title" id="logExerciseName">Incline dumbbell press</div>
+                <button class="icon-btn" data-action="open-info" aria-label="Exercise info">i</button>
+              </div>
+            </div>
+
+            <div class="tiny" id="logLastTime">Last time: 22kg × 10</div>
+
+            <div class="section-label" style="margin-top: 12px;">Sets</div>
+            <div id="setRows"></div>
+
+            <div class="quick-chips">
+              <button class="mini-btn" data-quick="30">30s</button>
+              <button class="mini-btn" data-quick="45">45s</button>
+              <button class="mini-btn" data-quick="60">60s</button>
+              <button class="mini-btn" data-quick="90">90s</button>
+            </div>
+
+            <div style="margin-top: 16px;">
+              <button class="primary-btn" data-action="mark-exercise-done">Mark exercise done</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="screen-summary" class="screen">
+          <div class="scroll">
+            <div class="header">
+              <div class="header-inner">
+                <button class="back-btn" data-action="back-to-workout">←</button>
+                <div class="header-title">Workout summary</div>
+              </div>
+            </div>
+
+            <div class="summary-hero">
+              <div class="summary-wrap">
+                <div class="summary-map">
+                  <div class="mini" id="summaryFrontMap"></div>
+                  <div class="mini" id="summaryBackMap"></div>
+                </div>
+              </div>
+              <div class="summary-title" id="summaryTitle">Push day</div>
+              <div class="tiny" id="summaryMeta">Today • 4 sets • 2 exercises</div>
+              <div style="margin-top: 12px;" class="pb-pill">🏆 1 personal best</div>
+            </div>
+
+            <div style="margin-top: 16px;" class="stats-grid">
+              <div class="stat-card"><div class="value" id="sumSets">4</div><div class="label">Sets</div></div>
+              <div class="stat-card"><div class="value" id="sumEx">2</div><div class="label">Exercises</div></div>
+              <div class="stat-card"><div class="value" id="sumStreak">12</div><div class="label">Streak</div></div>
+            </div>
+
+            <div class="section-label" style="margin-top: 18px;">This session</div>
+            <div class="thin-row"><span>Performed</span><span id="summaryDate">Today</span></div>
+            <div class="thin-row"><span>Completed</span><span id="summaryDone">2 exercises</span></div>
+            <div class="thin-row"><span>Calories</span><span id="summaryKcal">185 kcal</span></div>
+
+            <div style="margin-top: 16px;">
+              <button class="primary-btn" data-action="go-profile">Done</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="screen-muscles" class="screen">
+          <div class="scroll">
+            <div class="header">
+              <div class="header-inner">
+                <div class="header-title">Muscle Groups</div>
+              </div>
+            </div>
+
+            <div class="section-label">Search</div>
+            <div class="muted-row"><strong>Chest</strong><span class="chev">›</span></div>
+            <div class="muted-row"><strong>Back</strong><span class="chev">›</span></div>
+            <div class="muted-row"><strong>Shoulders</strong><span class="chev">›</span></div>
+            <div class="muted-row"><strong>Legs</strong><span class="chev">›</span></div>
+          </div>
+        </div>
+
+        <div id="screen-profile" class="screen">
+          <div class="scroll">
+            <div class="header">
+              <div class="header-inner">
+                <div class="header-title">Profile</div>
+              </div>
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-card"><div class="value">12</div><div class="label">Streak</div></div>
+              <div class="stat-card"><div class="value">28</div><div class="label">Workouts</div></div>
+              <div class="stat-card"><div class="value">196</div><div class="label">Sets</div></div>
+            </div>
+
+            <div class="section-label" style="margin-top: 18px;">History</div>
+            <div class="history-item">
+              <div class="top"><span class="date">Mon 14 Sep</span><span class="pb">PB</span></div>
+              <div class="sets">
+                <span class="set-pill best">57.5×8</span>
+                <span class="set-pill">55×8</span>
+                <span class="set-pill">30×12</span>
+              </div>
+            </div>
+            <div class="history-item">
+              <div class="top"><span class="date">Thu 10 Sep</span></div>
+              <div class="sets">
+                <span class="set-pill">47.5×10</span>
+                <span class="set-pill">35×12</span>
+              </div>
+            </div>
+            <div class="history-item">
+              <div class="top"><span class="date">Tue 8 Sep</span></div>
+              <div class="sets">
+                <span class="set-pill">42×10</span>
+                <span class="set-pill">25×14</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="bottom-nav" aria-label="Main navigation">
+        <button class="nav-item active" data-tab="workout">
+          <svg viewBox="0 0 24 24"><path d="M5 15h2v2h10v-2h2v4H5zm2-7h2V5h6v3h2V5h2v4H5V5h2z"/></svg>
+          Workout
+        </button>
+        <button class="nav-item" data-tab="muscles">
+          <svg viewBox="0 0 24 24"><path d="M7 18c0-3.2 2.2-5 5-5s5 1.8 5 5M12 6.5a3 3 0 1 1 0 6a3 3 0 0 1 0-6Z"/></svg>
+          Muscles
+        </button>
+        <button class="nav-item" data-tab="profile">
+          <svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8Zm-7 7a7 7 0 0 1 14 0"/></svg>
+          Profile
+        </button>
+      </nav>
+    </div>
+
+    <script>
+      const state = {
+        currentScreen: 'splash',
+        activeTab: 'workout',
+        currentTemplate: 'push-day',
+        selectedMuscle: 'chest/upper',
+        selectedExercise: 'Incline dumbbell press',
+        view: 'front',
+        workouts: {
+          'push-day': {
+            title: 'Push day',
+            muscles: [
+              { id: 'chest/upper', name: 'Upper chest', trained: true },
+              { id: 'chest/mid', name: 'Mid chest', trained: true },
+              { id: 'chest/lower', name: 'Lower chest', trained: false },
+              { id: 'shoulders/front-delt', name: 'Front delt', trained: true },
+              { id: 'triceps/triceps', name: 'Triceps', trained: true }
+            ]
+          }
+        },
+        exerciseBank: {
+          'Incline dumbbell press': { name: 'Incline dumbbell press', equipment: 'Dumbbell', type: 'weighted', muscle: ['chest/upper'], secondary: ['shoulders/front-delt', 'triceps/triceps'], last: '22kg × 10' },
+          'Barbell bench press': { name: 'Barbell bench press', equipment: 'Barbell', type: 'weighted', muscle: ['chest/mid'], secondary: ['triceps/triceps'], last: '57.5kg × 8' },
+          'Cable pushdown': { name: 'Cable pushdown', equipment: 'Cable', type: 'weighted', muscle: ['triceps/triceps'], secondary: [], last: '30kg × 12' },
+          'Push-up': { name: 'Push-up', equipment: 'Bodyweight', type: 'bodyweight', muscle: ['chest/mid'], secondary: ['triceps/triceps'], last: '10 reps' }
+        },
+        sets: [
+          { id: 1, weight: '22', reps: '10', done: true },
+          { id: 2, weight: '22', reps: '9', done: true },
+          { id: 3, weight: '', reps: '', done: false },
+        ]
+      };
+
+      const templates = {
+        'push-day': { name: 'Push day', blurb: 'Chest, shoulders, triceps' },
+        'pull-day': { name: 'Pull day', blurb: 'Back, biceps, rear delts' },
+        'legs-day': { name: 'Leg day', blurb: 'Quads, hamstrings, glutes' },
+        'full-body': { name: 'Full body', blurb: 'Whole-body balanced session' }
+      };
+
+      const muscleMeta = {
+        'chest/upper': 'Upper chest',
+        'chest/mid': 'Mid chest',
+        'chest/lower': 'Lower chest',
+        'shoulders/front-delt': 'Front delt',
+        'shoulders/side-delt': 'Side delt',
+        'triceps/triceps': 'Triceps',
+        'abs/upper': 'Upper abs',
+        'back/upper': 'Upper back',
+        'quads/quads': 'Quads',
+        'hamstrings/hamstrings': 'Hamstrings',
+        'glutes/glutes': 'Glutes'
+      };
+
+      const frontSegments = [
+        'chest/upper', 'chest/mid', 'chest/lower',
+        'shoulders/front-delt', 'triceps/triceps',
+        'abs/upper', 'abs/lower', 'quads/quads', 'forearms/forearms', 'calves/calves'
+      ];
+
+      const backSegments = [
+        'back/upper', 'shoulders/rear-delt', 'triceps/triceps',
+        'hamstrings/hamstrings', 'glutes/glutes', 'calves/calves', 'forearms/forearms'
+      ];
+
+      function showScreen(name) {
+        state.currentScreen = name;
+        document.querySelectorAll('.screen').forEach(screen => {
+          screen.classList.toggle('active', screen.id === `screen-${name}` || (name === 'workout' && screen.id === 'screen-workout'));
+        });
+        if (name !== 'splash') {
+          document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.tab === state.activeTab);
+          });
+        }
+      }
+
+      function setActiveTab(tab) {
+        state.activeTab = tab;
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.classList.toggle('active', item.dataset.tab === tab);
+        });
+
+        if (tab === 'workout') showScreen('workout');
+        if (tab === 'muscles') showScreen('muscles');
+        if (tab === 'profile') showScreen('profile');
+      }
+
+      function renderOverview() {
+        const template = templates[state.currentTemplate];
+        document.getElementById('overviewTitle').textContent = template.name;
+        document.getElementById('overviewDate').textContent = 'Today';
+
+        const list = document.getElementById('overviewMuscleList');
+        const workout = state.workouts[state.currentTemplate] || { muscles: [] };
+        list.innerHTML = '';
+
+        workout.muscles.forEach((muscle) => {
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.className = `subgroup-row ${muscle.trained ? 'trained' : ''}`;
+          row.dataset.muscle = muscle.id;
+          row.innerHTML = `
+            <span class="label">${muscleMeta[muscle.id] || muscle.id}</span>
+            ${muscle.trained ? '<span class="check">✓</span>' : '<span class="check">›</span>'}
+          `;
+          row.addEventListener('click', () => {
+            state.selectedMuscle = muscle.id;
+            document.getElementById('musclePickerTitle').textContent = muscleMeta[muscle.id] || muscle.id;
+            renderExerciseOptions();
+            showScreen('muscle-picker');
+          });
+          list.appendChild(row);
+        });
+
+        renderBodyMap('overviewBodySvg', state.view, workout.muscles);
+      }
+
+      function renderExerciseOptions() {
+        const list = document.getElementById('exerciseOptions');
+        const options = [
+          state.exerciseBank['Incline dumbbell press'],
+          state.exerciseBank['Barbell bench press'],
+          state.exerciseBank['Cable pushdown'],
+          state.exerciseBank['Push-up']
+        ];
+
+        list.innerHTML = '';
+        options.forEach((exercise) => {
+          const item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'template-row';
+          item.style.cursor = 'pointer';
+          item.innerHTML = `
+            <div>
+              <div class="template-name">${exercise.name}</div>
+              <div class="template-copy">${exercise.equipment} • ${exercise.type}</div>
+            </div>
+            <div class="meta">›</div>
+          `;
+          item.addEventListener('click', () => {
+            state.selectedExercise = exercise.name;
+            document.getElementById('logExerciseName').textContent = exercise.name;
+            document.getElementById('logLastTime').textContent = `Last time: ${exercise.last}`;
+            state.sets = [
+              { id: 1, weight: '22', reps: '10', done: true },
+              { id: 2, weight: '22', reps: '9', done: true },
+              { id: 3, weight: '', reps: '', done: false }
+            ];
+            renderSetRows();
+            showScreen('log');
+          });
+          list.appendChild(item);
+        });
+      }
+
+      function renderSetRows() {
+        const container = document.getElementById('setRows');
+        container.innerHTML = '';
+
+        state.sets.forEach((set, idx) => {
+          const row = document.createElement('div');
+          row.className = 'set-row';
+          row.innerHTML = `
+            <div class="n">${idx + 1}</div>
+            <input value="${set.weight || ''}" data-index="${idx}" data-field="weight" placeholder="kg" />
+            <input value="${set.reps || ''}" data-index="${idx}" data-field="reps" placeholder="reps" />
+            <div class="checkmark ${set.done ? 'active' : ''}" data-index="${idx}" data-action="toggle-set">✓</div>
+          `;
+          container.appendChild(row);
+        });
+
+        container.querySelectorAll('input').forEach(input => {
+          input.addEventListener('input', (event) => {
+            const index = Number(event.target.dataset.index);
+            const field = event.target.dataset.field;
+            state.sets[index][field] = event.target.value;
+          });
+        });
+
+        container.querySelectorAll('.checkmark').forEach(button => {
+          button.addEventListener('click', () => {
+            const idx = Number(button.dataset.index);
+            state.sets[idx].done = !state.sets[idx].done;
+            renderSetRows();
+          });
+        });
+      }
+
+      function renderBodyMap(svgId, view, trained = []) {
+        const active = new Set(trained.map(m => m.id || m));
+        const svg = document.getElementById(svgId);
+        if (!svg) return;
+        svg.innerHTML = '';
+
+        const isFront = view === 'front';
+        const pathMap = isFront ? frontendMap() : backMap();
+
+        const groups = Object.entries(pathMap).map(([id, paths]) => {
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('class', `muscle-segment ${active.has(id) ? 'trained' : ''}`);
+          paths.forEach((d) => {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', d);
+            g.appendChild(path);
+          });
+          return g;
+        });
+
+        groups.forEach((node) => svg.appendChild(node));
+      }
+
+      function frontendMap() {
+        return {
+          'chest/upper': ['M215 260 L275 240 L335 250 L350 320 L260 320 L220 290 Z'],
+          'chest/mid': ['M350 250 L415 240 L485 260 L490 330 L350 330 Z'],
+          'chest/lower': ['M260 320 L350 320 L345 385 L285 395 L235 350 Z'],
+          'shoulders/front-delt': ['M220 210 L180 245 L165 300 L220 310 L260 270 Z', 'M485 210 L530 245 L545 300 L490 310 L450 270 Z'],
+          'triceps/triceps': ['M200 325 L165 350 L150 420 L185 450 L220 410 L230 350 Z', 'M500 325 L535 350 L550 420 L515 450 L480 410 L470 350 Z'],
+          'abs/upper': ['M300 390 L355 375 L410 390 L410 454 L300 454 Z'],
+          'abs/lower': ['M300 455 L410 455 L394 520 L324 520 Z'],
+          'quads/quads': ['M250 580 L220 670 L230 760 L295 840 L340 760 L350 660 L340 580 Z', 'M450 580 L480 660 L470 760 L405 840 L360 760 L350 660 L360 580 Z'],
+          'forearms/forearms': ['M170 455 L135 525 L145 620 L175 650 L210 602 L214 470 Z', 'M530 455 L565 525 L555 620 L525 650 L490 602 L486 470 Z'],
+          'calves/calves': ['M250 840 L225 930 L230 1010 L280 1095 L310 1045 L320 930 Z', 'M450 840 L475 930 L470 1010 L420 1095 L390 1045 L380 930 Z']
+        };
+      }
+
+      function backMap() {
+        return {
+          'back/upper': ['M250 240 L305 225 L350 235 L390 225 L450 240 L470 295 L360 315 L290 295 Z'],
+          'shoulders/rear-delt': ['M205 250 L154 290 L160 330 L220 320 L260 285 Z', 'M495 250 L546 290 L540 330 L480 320 L440 285 Z'],
+          'triceps/triceps': ['M185 345 L152 395 L158 450 L210 470 L235 405 L225 350 Z', 'M515 345 L548 395 L542 450 L490 470 L465 405 L475 350 Z'],
+          'hamstrings/hamstrings': ['M260 600 L225 720 L250 790 L305 850 L345 805 L350 630 Z', 'M440 600 L475 720 L450 790 L395 850 L350 805 L350 630 Z'],
+          'glutes/glutes': ['M260 530 L220 590 L245 670 L315 700 L350 660 L350 560 Z', 'M440 530 L480 590 L455 670 L385 700 L350 660 L350 560 Z'],
+          'calves/calves': ['M245 850 L220 940 L240 1030 L290 1085 L316 1025 L320 930 Z', 'M455 850 L480 940 L460 1030 L410 1085 L384 1025 L380 930 Z'],
+          'forearms/forearms': ['M150 470 L125 540 L150 620 L190 650 L215 605 L215 480 Z', 'M550 470 L575 540 L550 620 L510 650 L485 605 L485 480 Z']
+        };
+      }
+
+      function renderSummary() {
+        const template = templates[state.currentTemplate];
+        document.getElementById('summaryTitle').textContent = template.name;
+        document.getElementById('summaryMeta').textContent = 'Today • 4 sets • 2 exercises';
+        document.getElementById('summaryDate').textContent = 'Today';
+        document.getElementById('summaryDone').textContent = '2 exercises';
+        document.getElementById('summaryKcal').textContent = '185 kcal';
+        document.getElementById('sumSets').textContent = '4';
+        document.getElementById('sumEx').textContent = '2';
+        document.getElementById('sumStreak').textContent = '12';
+
+        const front = document.getElementById('summaryFrontMap');
+        const back = document.getElementById('summaryBackMap');
+        if (front) {
+          front.innerHTML = `<svg class="body-svg" viewBox="0 0 700 1324" xmlns="http://www.w3.org/2000/svg">${svgMarkup('front')}</svg>`;
+        }
+        if (back) {
+          back.innerHTML = `<svg class="body-svg" viewBox="0 0 700 1324" xmlns="http://www.w3.org/2000/svg">${svgMarkup('back')}</svg>`;
+        }
+      }
+
+      function svgMarkup(view) {
+        const map = view === 'front' ? frontendMap() : backMap();
+        const keys = Object.keys(map);
+        return Object.entries(map).map(([key, pieces]) => {
+          const used = key === 'chest/upper' || key === 'chest/mid' || key === 'triceps/triceps' || key === 'quads/quads' || key === 'calves/calves' ? 'trained' : '';
+          return `<g class="muscle-segment ${used}">${pieces.map(d => `<path d="${d}"/>`).join('')}</g>`;
+        }).join('');
+      }
+
+      function bindEvents() {
+        document.getElementById('splashTap').addEventListener('click', () => {
+          setActiveTab('workout');
+          showScreen('workout');
+        });
+
+        document.querySelectorAll('[data-action="start-template"]').forEach(btn => {
+          btn.addEventListener('click', () => showScreen('template-picker'));
+        });
+
+        document.querySelectorAll('[data-action="start-adhoc"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            state.currentTemplate = 'full-body';
+            renderOverview();
+            showScreen('overview');
+          });
+        });
+
+        document.querySelectorAll('[data-action="back-to-workout"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            setActiveTab('workout');
+            showScreen('workout');
+          });
+        });
+
+        document.querySelectorAll('[data-action="back-to-overview"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            renderOverview();
+            showScreen('overview');
+          });
+        });
+
+        document.querySelectorAll('[data-template]').forEach(item => {
+          item.addEventListener('click', () => {
+            state.currentTemplate = item.dataset.template;
+            renderOverview();
+            showScreen('overview');
+          });
+        });
+
+        document.querySelectorAll('.filter-btn[data-view]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            state.view = btn.dataset.view;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+            renderOverview();
+          });
+        });
+
+        document.querySelectorAll('[data-action="go-finish"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            renderSummary();
+            showScreen('summary');
+          });
+        });
+
+        document.querySelectorAll('[data-action="discard-session"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            state.currentTemplate = 'push-day';
+            renderOverview();
+            showScreen('workout');
+          });
+        });
+
+        document.querySelectorAll('[data-action="go-profile"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            setActiveTab('profile');
+            showScreen('profile');
+          });
+        });
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.addEventListener('click', () => {
+            setActiveTab(item.dataset.tab);
+            if (item.dataset.tab === 'workout') showScreen('workout');
+            if (item.dataset.tab === 'muscles') showScreen('muscles');
+            if (item.dataset.tab === 'profile') showScreen('profile');
+          });
+        });
+
+        document.querySelectorAll('[data-quick]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const value = btn.dataset.quick;
+            const firstEmpty = state.sets.findIndex(set => !set.done);
+            if (firstEmpty >= 0) {
+              state.sets[firstEmpty].reps = value;
+              state.sets[firstEmpty].done = true;
+              renderSetRows();
+            }
+          });
+        });
+
+        document.querySelectorAll('[data-action="mark-exercise-done"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            state.workouts[state.currentTemplate].muscles = state.workouts[state.currentTemplate].muscles.map(m => {
+              if (m.id === state.selectedMuscle) return { ...m, trained: true };
+              return m;
+            });
+            renderOverview();
+            showScreen('overview');
+          });
+        });
+
+        document.querySelectorAll('[data-action="open-info"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            alert('Exercise detail: keep the torso braced, lower under control, and keep the chest lifted.');
+          });
+        });
+      }
+
+      bindEvents();
+      renderOverview();
+      renderSummary();
+      renderSetRows();
+      renderExerciseOptions();
+    </script>
+  </body>
+</html>

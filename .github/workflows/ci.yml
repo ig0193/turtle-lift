@@ -54,6 +54,18 @@ jobs:
       - name: Generated Dart in lib/ matches assets/
         run: tool/sync_generated.sh --check
 
+      # Drift's generated database code is committed, and nothing else here
+      # would catch it going stale: `analysis_options.yaml` excludes
+      # `**/*.g.dart` from analysis, so an edit to a table definition without a
+      # regeneration compiles, passes the suite and builds the APK -- against
+      # the old companion, with the new column simply absent at runtime. Same
+      # regenerate-then-diff guard the generated-data job uses for the Python
+      # assets.
+      - name: Drift codegen is current
+        run: |
+          dart run build_runner build
+          git diff --exit-code
+
       - run: flutter analyze
       - run: flutter test
       - run: flutter build apk --debug

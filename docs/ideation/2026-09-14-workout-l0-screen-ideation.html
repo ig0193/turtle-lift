@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ideation: Workout Tab L0 Screen</title>
+<style>
+:root{
+  --page:#0E0D0B; --panel:#17140F; --card:#1C1915; --line:#2A251D; --line2:#332C22;
+  --ink:#F5EFE8; --ink2:#A89C8E; --ink3:#6B6156;
+  --accent:#D85A30; --accent2:#F0997B; --onaccent:#1B0C05; --danger:#C4553A;
+  --app-page:#17140F; --app-surface:#211D18; --app-border:#332C22; --app-muted:#241F19;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.62 var(--sans);}
+.wrap{max-width:min(980px,92vw);margin-inline:auto;padding:48px 0 96px}
+p,li{max-width:72ch}
+a{color:var(--accent2);text-decoration:none;border-bottom:1px solid rgba(240,153,123,.3)}
+a:hover{border-bottom-color:var(--accent2)}
+code{font:13px/1.5 var(--mono);background:#211D18;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:#E4D9CC}
+strong{color:inherit;font-weight:650}
+hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:650;margin:0 0 10px}
+h1{font-size:32px;line-height:1.2;letter-spacing:-.02em;margin:0 0 14px;font-weight:680}
+h2{font-size:21px;letter-spacing:-.01em;margin:0 0 16px;font-weight:660;padding-bottom:10px;border-bottom:1px solid var(--line)}
+h3{font-size:17px;margin:0 0 8px;font-weight:650}
+h4{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin:20px 0 8px;font-weight:650}
+section{margin:0 0 52px;scroll-margin-top:20px}
+
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px;color:var(--ink2);margin:0 0 26px}
+.meta b{color:var(--ink3);font-weight:650;letter-spacing:.06em;text-transform:uppercase;font-size:11px;margin-right:6px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:0 0 34px}
+.stat{background:var(--card);padding:14px 16px}
+.stat .n{font-size:24px;font-weight:680;letter-spacing:-.02em;display:block;line-height:1.1}
+.stat .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-top:5px;display:block}
+
+nav.toc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin:0 0 48px}
+nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:32px}
+nav.toc li{margin:3px 0;max-width:none}
+
+.jump{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:0 0 28px}
+.jump ol{margin:0;padding-left:20px}
+.jump li{margin:4px 0;max-width:none}
+
+table{border-collapse:collapse;width:100%;font-size:14px;margin:12px 0}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650}
+td code{font-size:12px}
+
+.chip{display:inline-block;font-size:11px;letter-spacing:.05em;font-weight:650;padding:3px 9px;border-radius:999px;border:1px solid var(--line2);background:#211D18;color:var(--ink2);text-transform:uppercase}
+.chip.id{background:rgba(216,90,48,.14);border-color:rgba(216,90,48,.4);color:var(--accent2)}
+.chip.hi{background:rgba(240,153,123,.12);border-color:rgba(240,153,123,.32);color:var(--accent2)}
+
+.ruling{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:0 0 14px}
+.ruling h3{font-size:15px;margin-bottom:6px}
+.ruling p{margin:6px 0 0;font-size:14px;color:var(--ink2)}
+.ruling p:first-of-type{color:var(--ink)}
+
+.note{background:rgba(240,153,123,.06);border:1px solid rgba(240,153,123,.22);border-radius:10px;padding:16px 20px;margin:24px 0}
+.note .eyebrow{color:var(--accent2)}
+.note p{margin:0;font-size:14px}
+
+/* ---- variant cards ---- */
+article.variant{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px;margin:0 0 26px;scroll-margin-top:20px}
+.vhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.vhead h3{margin:0;font-size:19px}
+.vsub{color:var(--ink2);font-size:14px;margin:2px 0 18px;max-width:72ch}
+.vbody{display:grid;grid-template-columns:300px 1fr;gap:28px;align-items:start}
+@media(max-width:760px){.vbody{grid-template-columns:1fr}nav.toc ol{columns:1}}
+dl.vmeta{margin:0 0 4px;display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:14px}
+dl.vmeta dt{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650;padding-top:3px}
+dl.vmeta dd{margin:0}
+.vfields p{margin:0 0 12px;font-size:14px}
+.vfields p b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650;display:block;margin-bottom:3px}
+details{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650}
+details p{font-size:14px;margin:10px 0 0}
+
+/* ---- phone mockups ---- */
+.phone{width:280px;border:1px solid var(--line2);border-radius:22px;overflow:hidden;background:var(--app-page);box-shadow:0 12px 34px rgba(0,0,0,.45);font-size:13px}
+.ph-bar{display:flex;align-items:center;justify-content:space-between;padding:13px 15px 11px;background:var(--app-page);border-bottom:1px solid var(--app-border)}
+.ph-bar .t{font-size:17px;font-weight:650;color:#F5EFE8;letter-spacing:-.01em}
+.ph-av{width:26px;height:26px;border-radius:999px;background:var(--app-surface);border:1px solid var(--app-border)}
+.ph-scr{padding:16px 15px 12px;min-height:330px;display:flex;flex-direction:column;background:var(--app-page)}
+.ph-tabs{display:flex;gap:5px;padding:8px;margin:0 10px 10px;background:rgba(33,29,24,.92);border:1px solid var(--app-border);border-radius:999px}
+.ph-tabs span{flex:1;text-align:center;font-size:10px;letter-spacing:.04em;color:#6B6156;padding:5px 0;border-radius:999px}
+.ph-tabs span.on{background:var(--app-surface);color:#F5EFE8}
+.ph-push{margin-top:auto}
+.btn-p{display:block;background:var(--accent);color:var(--onaccent);border-radius:11px;padding:15px 14px;font-weight:680;font-size:14px;text-align:center;margin-bottom:9px}
+.btn-p small{display:block;font-weight:500;font-size:11px;opacity:.72;margin-top:2px}
+.btn-g{display:block;border:1px solid var(--app-border);background:var(--app-surface);color:#F5EFE8;border-radius:11px;padding:14px;font-weight:600;font-size:13px;text-align:center}
+.btn-g small{display:block;font-weight:400;font-size:11px;color:#A89C8E;margin-top:2px}
+.btn-eq{display:block;border:1px solid var(--app-border);background:var(--app-surface);border-radius:11px;padding:14px;text-align:center;margin-bottom:9px}
+.btn-eq b{display:block;font-size:13px;color:#F5EFE8;font-weight:650}
+.btn-eq small{display:block;font-size:11px;color:#A89C8E;margin-top:2px}
+.lnk{display:block;text-align:center;font-size:12px;color:#A89C8E;padding:9px 0}
+.ph-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6B6156;font-weight:650;margin:0 0 8px}
+.ph-recall{font-size:12px;color:#A89C8E;margin:0 0 16px}
+.ph-recall b{color:#F5EFE8;font-weight:600}
+.ph-stock{font-size:11px;color:#6B6156;text-align:center;margin-top:10px}
+.ph-search{display:flex;align-items:center;gap:8px;background:var(--app-surface);border:1px solid var(--app-border);border-radius:11px;padding:12px 13px;margin-bottom:16px;color:#6B6156;font-size:13px}
+.ph-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--app-border)}
+.ph-row b{font-size:13px;color:#F5EFE8;font-weight:600;display:block}
+.ph-row small{font-size:11px;color:#6B6156}
+.ph-row .go{color:#6B6156;font-size:14px}
+.ph-more{font-size:12px;color:#A89C8E;padding:11px 0}
+.ph-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.ph-chips i{font-style:normal;font-size:10.5px;padding:5px 9px;border-radius:999px;border:1px solid var(--app-border);background:var(--app-muted);color:#6B6156}
+.ph-chips i.on{background:var(--accent);border-color:var(--accent);color:var(--onaccent);font-weight:650}
+.ph-type{font-size:22px;line-height:1.2;font-weight:700;letter-spacing:-.01em;color:#F5EFE8;margin:4px 0 6px}
+.ph-cap{font-size:11px;color:#6B6156;margin:0 0 18px}
+.ph-streak{font-size:12px;color:#A89C8E;margin:0 0 12px}
+figcaption{font-size:11.5px;color:var(--ink3);margin-top:12px;line-height:1.5;max-width:280px}
+.mono{font:12px/1.5 var(--mono);color:var(--ink2)}
+footer.composition-signal{border-top:1px solid var(--line);margin-top:60px;padding-top:20px;font-size:12px;color:var(--ink3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">Ideation</p>
+<h1>Workout Tab L0 Screen</h1>
+<div class="meta">
+  <span><b>Date</b><time datetime="2026-09-14">2026-09-14</time></span>
+  <span><b>Topic</b>workout-l0-screen</span>
+  <span><b>Mode</b>repo-grounded</span>
+</div>
+<p><b>Focus:</b> design variants of the Workout tab's L0 screen &mdash; the app's primary landing surface &mdash; for review and selection of one direction.</p>
+
+<div class="stats">
+  <div class="stat"><span class="n">48</span><span class="l">Raw ideas</span></div>
+  <div class="stat"><span class="n">7</span><span class="l">Ranked variants</span></div>
+  <div class="stat"><span class="n">11</span><span class="l">Cut</span></div>
+  <div class="stat"><span class="n">4</span><span class="l">Topic axes</span></div>
+  <div class="stat"><span class="n">4</span><span class="l">Open rulings</span></div>
+</div>
+
+<nav class="toc">
+  <ol>
+    <li><a href="#grounding-context">Grounding Context</a></li>
+    <li><a href="#topic-axes">Topic Axes</a></li>
+    <li><a href="#open-rulings">Open Rulings</a></li>
+    <li><a href="#ranked-ideas">Ranked Ideas</a></li>
+    <li><a href="#modifiers">Modifiers</a></li>
+    <li><a href="#rejection-summary">Rejection Summary</a></li>
+  </ol>
+</nav>
+
+<section id="grounding-context">
+<h2>Grounding Context</h2>
+<h4>Codebase Context</h4>
+<p>The Workout tab root is <code>WorkoutRoot()</code>, mounted in <code>L0Shell</code>, which owns the app's only <code>Scaffold</code>. It currently renders a placeholder <code>EmptyState</code> with a barbell glyph and the copy &ldquo;Ready when you are&rdquo;; its <code>hasSession</code> flag is not yet wired to a provider. The landing UI is build-order step&nbsp;4 and has not been built.</p>
+<p>Four constraints shape every candidate below:</p>
+<ul>
+  <li><b>The header is pinned and outside the body.</b> <code>WorkoutRoot</code> returns a scrollable body, not a <code>Scaffold</code>; no title row may live inside the scroll view. The tab bar floats over content and appears only at L0.</li>
+  <li><b>There is no Resume card.</b> Under navigation variant A, an active session <em>replaces</em> the tab root entirely, so this screen is purely the no-session-open state.</li>
+  <li><b>Nothing derivable is stored.</b> Streak, set and exercise counts, personal bests, the <code>trained</code> tick and the resolved session title are computed on every read, because sessions are editable, deletable and backdatable.</li>
+  <li><b>Eleven colours exist, and two carry fixed meanings.</b> <code>#D85A30</code> means &ldquo;active / trained / this has been worked&rdquo; wherever it appears; <code>#F0997B</code> is secondary-muscle only; <code>#C4553A</code> is destructive only. A test fails on any colour outside the set.</li>
+</ul>
+<p>Nine predefined templates and 260 exercises ship inside the binary, so day one is not empty of content &mdash; only of history. The body diagram's 42 segments are already built as hit-testable point lists and are used nowhere yet.</p>
+<h4>External Context</h4>
+<p>Three schools of workout-app home screen recur in the market. <b>Tool-first</b> (Strong) makes home a single start action plus a short routines list, preferred by people who log fast and leave. <b>Feed-first</b> (Hevy) leads with a social activity feed &mdash; ruled out here, as there is no cloud or login. <b>Plan-first</b> (Fitbod, Boostcamp, Apple Fitness+) surfaces a prescribed workout derived from history &mdash; ruled out by the no-AI and no-multi-day-splits constraints. None of the three leads with a dashboard of metrics; streaks and PBs are shown small or pushed to a secondary tab.</p>
+<p>Habit research makes the streak the primary retention lever, but via notifications and badges &mdash; both excluded. A computed streak can be <em>shown</em>; it can never be <em>pushed</em>. Separately, <b>no competitor reviewed puts a body diagram on its landing screen</b>, which is either an unfilled gap or a signal that it does not belong there.</p>
+</section>
+
+<section id="topic-axes">
+<h2>Topic Axes</h2>
+<ol>
+  <li><b>The start decision</b> &mdash; how the two mandated paths are presented and weighted, and how deep template content surfaces on L0 itself.</li>
+  <li><b>The look back</b> &mdash; what the screen says about past training: streak, last session, recency.</li>
+  <li><b>The look forward</b> &mdash; what the screen says about what to train next: muscle coverage, the body diagram.</li>
+  <li><b>Day one vs month six</b> &mdash; how the screen behaves across data volume, from zero sessions to heavy use.</li>
+</ol>
+</section>
+
+<section id="open-rulings">
+<h2>Open Rulings</h2>
+<p>Four things surfaced during grounding that are decisions, not design preferences. They are reported rather than resolved, because each needs a call that is not this document's to make.</p>
+
+<div class="ruling">
+<h3>1. The two prototypes disagree on entry-point weighting</h3>
+<p><code>prototypes/screens.html:322-323</code> renders &ldquo;Start workout&rdquo; as <code>.big</code> (filled, primary) with &ldquo;Ad-hoc workout&rdquo; as <code>.ghost</code>. The untracked <code>prototypes/v1-end-to-end.html:844,854</code> gives both an identical <code>.card-btn</code>. Both citations were verified.</p>
+<p>CLAUDE.md's rule is &ldquo;where they differ on how a screen looks, follow the prototype&rdquo; &mdash; which has no tiebreaker when two prototypes differ from each other. Every variant below has to pick a side, so this is worth settling first.</p>
+</div>
+
+<div class="ruling">
+<h3>2. L0 is not on the diagram's list of permitted surfaces</h3>
+<p><code>docs/00-build-spec.md:112</code> enumerates where the body diagram may appear &mdash; Overview, Muscles landing, sub-muscle-group selection, Exercise Detail, summary and session cards. The Workout tab root is not among them.</p>
+<p>Variants 4 and 6 need that list amended before they can ship. This is a documented rule, not an oversight, so it should be changed deliberately or the variants dropped.</p>
+</div>
+
+<div class="ruling">
+<h3>3. Quick log has no fast route</h3>
+<p>A single-exercise quick log is a first-class session type: it counts toward the streak (<code>docs/00-build-spec.md:144</code>), gets its own rung in the title-resolution chain (<code>docs/01-app-idea.md:208</code>), and is labelled distinctly in History (<code>docs/04-profile-tab-userflow.md:38</code>). It is reachable today only by going through the ad-hoc path, which creates an implicit session (<code>docs/01-app-idea.md:198</code>).</p>
+<p>So the gap is narrower than &ldquo;no entry point&rdquo; &mdash; but there is no dedicated fast route to the thing three documents describe as its own session shape.</p>
+</div>
+
+<div class="ruling">
+<h3>4. The grace-day hint belongs to Profile, not here</h3>
+<p><code>docs/00-build-spec.md:148</code> permits an &ldquo;optional in-app hint on the final grace day. No notifications.&rdquo; That line names no surface. <code>docs/01-app-idea.md:251</code> does: &ldquo;Profile can show a &lsquo;streak ends tomorrow&rsquo; hint.&rdquo;</p>
+<p>Per CLAUDE.md, <code>01</code> wins over <code>00</code>. An early version of variant 5 claimed this screen as the hint's natural home; that claim does not survive. The streak may still be <em>shown</em> at L0 &mdash; it just cannot borrow this line as its warrant.</p>
+</div>
+</section>
+
+<section id="ranked-ideas">
+<h2>Ranked Ideas</h2>
+<p>The seven entries below are <b>composed screens</b>, not loose suggestions &mdash; each assembles several surviving candidate ideas into something that could be built as-is. They are ranked, but the top three are genuinely different philosophies rather than better and worse versions of one thing, so read at least those three before choosing.</p>
+
+<div class="note">
+<p class="eyebrow">Directional only</p>
+<p>The mockups illustrate the intended shape of each screen. Exact spacing, copy and component choices are placeholders for review, not requirements. They do use the real §12 palette rather than grey boxes, because several variants turn on palette semantics &mdash; whether a streak may be orange at all, given that <code>#D85A30</code> already means &ldquo;this has been worked&rdquo; &mdash; and a greyscale wireframe cannot show that. The body silhouette in variant 6 is a rough stand-in for the traced asset, not the asset itself.</p>
+</div>
+
+<div class="jump">
+<ol>
+  <li><a href="#v1">The Service Tag</a> &mdash; two doors, one line of memory</li>
+  <li><a href="#v2">The Tool</a> &mdash; two doors, nothing else</li>
+  <li><a href="#v3">The Learned Default</a> &mdash; the button names your last template</li>
+  <li><a href="#v4">The Open Stack</a> &mdash; the landing is the picker</li>
+  <li><a href="#v5">The Stamp Card</a> &mdash; the streak rule made visible</li>
+  <li><a href="#v6">The Record</a> &mdash; last session, drawn on the body</li>
+  <li><a href="#v7">The Shadow Board</a> &mdash; twelve chips, binary coverage</li>
+</ol>
+</div>
+
+<article class="variant" id="v1">
+<div class="vhead">
+  <span class="chip id">V1</span>
+  <h3>The Service Tag</h3>
+  <span class="chip hi">Top pick</span>
+</div>
+<p class="vsub">Two weighted entry points and exactly one line of memory: what you did last and how long ago. Nothing else derived, nothing that congratulates.</p>
+<div class="vbody">
+<figure style="margin:0">
+<div class="phone">
+  <div class="ph-bar"><span class="t">Workout</span><span class="ph-av"></span></div>
+  <div class="ph-scr">
+    <p class="ph-recall">Last session &middot; <b>Push day</b> &middot; 3 days ago</p>
+    <div class="ph-push">
+      <span class="btn-p">Start workout<small>Pick a saved template</small></span>
+      <span class="btn-g">Ad-hoc workout<small>Search and add as you go</small></span>
+    </div>
+  </div>
+  <div class="ph-tabs"><span class="on">Workout</span><span>Muscles</span><span>History</span></div>
+</div>
+<figcaption>Actions sit low, in the thumb arc. The recall line is the only derived content and never uses the accent colour.</figcaption>
+</figure>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>The look back</dd>
+  <dt>Confidence</dt><dd>86%</dd>
+  <dt>Complexity</dt><dd>Low</dd>
+  <dt>Assembles</dt><dd>Recall-not-recommendation &middot; settled door weighting &middot; three shipping states</dd>
+</dl>
+<p><b>Description</b>The screen carries the two mandated paths with a clear primary/secondary hierarchy, plus a single line resolving the last session's title and its recency. The line uses the existing four-rung title fallback chain, so it is never blank for any session that exists: a named session shows its name, an untitled ad-hoc session falls through to its comma-separated primary muscle groups, a quick log shows the exercise name. Three states key off session count and days elapsed &mdash; fresh (explanatory copy, no recall line), warm (recall line, copy dropped), lapsed (neutral recall, streak suppressed entirely, no guilt copy).</p>
+<p><b>Basis</b><code>direct:</code> <code>docs/02-workout-tab-userflow.md:7</code> &mdash; &ldquo;the app does not suggest or auto-select a workout. There is no &lsquo;today's workout,&rsquo; no rotation logic, no AI&hellip; The user always makes an active choice.&rdquo; Recall is legal where recommendation is not. <code>direct:</code> <code>docs/00-build-spec.md:126-131</code>, the title fallback chain ending &ldquo;Primary muscle groups trained, comma-separated&rdquo;, verified. <code>direct:</code> <code>lib/src/ui/empty_state.dart:7-13</code> &mdash; &ldquo;This is a shipping screen state, not a placeholder&hellip; every user meets this on day one and keeps meeting it until they log something.&rdquo;</p>
+<p><b>Rationale</b>This is the smallest change that makes the screen say something specific to <em>this</em> user without the app ever advising. The plan-first competitors answer &ldquo;what do I train today&rdquo; with logic this project has banned outright; recall is the only legal answer, and it costs one query against a value the History tab already needs. It also lets the user perform the inference the app is forbidden to perform.</p>
+<p><b>Downsides</b>It settles for less than the screen could do &mdash; a user wanting coverage or progress sees neither. The lapsed state needs history <em>and</em> absence together, so it is the state most likely to ship untested. And it still inherits Ruling&nbsp;1: the door weighting has to be decided.</p>
+<details><summary>Why this ranks first</summary><p>Every citation verified, no constraint conflicts, no open ruling blocking it beyond the weighting question every variant shares, and the lowest build cost of the seven. It is also the only variant that is straightforwardly compatible with adopting a second one later &mdash; the recall line coexists with a stamp card, a chip strip, or a diagram, where several other variants compete for the same real estate.</p></details>
+</div>
+</div>
+</article>
+
+<article class="variant" id="v2">
+<div class="vhead">
+  <span class="chip id">V2</span>
+  <h3>The Tool</h3>
+  <span class="chip">Restraint pole</span>
+</div>
+<p class="vsub">No backward-looking content at all, written down as a decision rather than left as an omission. Two doors, a stock line, and nothing to read.</p>
+<div class="vbody">
+<figure style="margin:0">
+<div class="phone">
+  <div class="ph-bar"><span class="t">Workout</span><span class="ph-av"></span></div>
+  <div class="ph-scr">
+    <div class="ph-push">
+      <span class="btn-p">Start workout<small>Pick a saved template</small></span>
+      <span class="btn-g">Ad-hoc workout<small>Search and add as you go</small></span>
+      <p class="ph-stock">9 templates &middot; 260 exercises</p>
+    </div>
+  </div>
+  <div class="ph-tabs"><span class="on">Workout</span><span>Muscles</span><span>History</span></div>
+</div>
+<figcaption>The stock line is the only text that is not an action. It counts what is available, never what is missing.</figcaption>
+</figure>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>The start decision</dd>
+  <dt>Confidence</dt><dd>80%</dd>
+  <dt>Complexity</dt><dd>Low</dd>
+  <dt>Assembles</dt><dd>Zero look-back &middot; settled door weighting &middot; stock behind glass</dd>
+</dl>
+<p><b>Description</b>Rule out every backward-looking element on this screen permanently &mdash; no streak, no last-session line, no counts of what you have done &mdash; and record that as a decision. The one derived string is a count of what sits <em>behind</em> each door: nine templates rising as the user saves customs, 260 exercises. Day one therefore makes a claim about the tool rather than about the user's empty history.</p>
+<p><b>Basis</b><code>external:</code> Strong's home screen is a single start action plus a short routines list; convergent review sentiment is that it suits people who log fast and leave, and that none of the three market schools leads with metrics. <code>direct:</code> <code>lib/src/ui/workout_root.dart:44-50</code> &mdash; the current heading &ldquo;Ready when you are&rdquo; says nothing about anything being stocked, though nine templates and 260 exercises ship in the binary. <code>reasoned:</code> once one backward-looking line exists, &ldquo;just one more&rdquo; is an easy next ask; naming the boundary once is cheaper than re-litigating it per element.</p>
+<p><b>Rationale</b>This screen is opened standing in a gym, often between sets, and its job is to be left quickly. Everything that is not an action is a tax on that. The stock counts also solve the empty-state problem without any history: an app that says &ldquo;260 exercises&rdquo; on first open does not read as empty, and because both counts only grow, the number can never become discouraging.</p>
+<p><b>Downsides</b>A user with three months of history gets no payoff for it at the screen they open most. It is also the variant most likely to feel inert &mdash; the deliberate cost of the position. If the team later wants any derived content here, this decision has to be reopened rather than extended.</p>
+<details><summary>The case against ranking this first</summary><p>It is the safest variant and the cheapest, and the market evidence genuinely supports it. It ranks second only because V1 buys a meaningful amount of life for one extra query and one line of text, and the &ldquo;no derived content, ever&rdquo; position is easier to adopt later than to reverse.</p></details>
+</div>
+</div>
+</article>
+
+<article class="variant" id="v3">
+<div class="vhead">
+  <span class="chip id">V3</span>
+  <h3>The Learned Default</h3>
+  <span class="chip">Biggest tap win</span>
+</div>
+<p class="vsub">The primary button is named after the template you last ran, and goes straight to its overview &mdash; skipping the picker for the common case without ever prescribing a workout.</p>
+<div class="vbody">
+<figure style="margin:0">
+<div class="phone">
+  <div class="ph-bar"><span class="t">Workout</span><span class="ph-av"></span></div>
+  <div class="ph-scr">
+    <div class="ph-push">
+      <span class="btn-p">Start Push day<small>8 exercises &middot; last run 3 days ago</small></span>
+      <span class="lnk">Choose a different template</span>
+      <span class="btn-g">Ad-hoc workout<small>Search and add as you go</small></span>
+    </div>
+  </div>
+  <div class="ph-tabs"><span class="on">Workout</span><span>Muscles</span><span>History</span></div>
+</div>
+<figcaption>Day one shows the generic &ldquo;Start workout&rdquo; instead, since there is no last template to name.</figcaption>
+</figure>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>Day one vs month six</dd>
+  <dt>Confidence</dt><dd>74%</dd>
+  <dt>Complexity</dt><dd>Medium</dd>
+  <dt>Assembles</dt><dd>Learned default &middot; settled door weighting &middot; stock behind glass</dd>
+</dl>
+<p><b>Description</b>For a user with at least one completed session, compute the most recently used <code>templateId</code> &mdash; one query, nothing stored &mdash; and label the primary action with that template's name, routing straight to its overview. A secondary text link preserves the picker for the exception case, and the ad-hoc door is unchanged. Users with no history see today's generic flow, so day one is untouched.</p>
+<p><b>Basis</b><code>direct:</code> <code>docs/00-build-spec.md:169</code> names the picker as the template entry point, making the picker step the thing being skipped. <code>reasoned:</code> a repeat user is disproportionately likely to re-run the template they last ran, so collapsing that step is a pure tap saving against the stated three-tap budget, costing nothing for a first-time user. It remains a plain &ldquo;last used&rdquo; default &mdash; not a schedule, not a rotation, not a prescription &mdash; which keeps it clear of the ruled-out plan-first school.</p>
+<p><b>Rationale</b>It is the only variant that makes the screen behave differently at month six than on day one <em>on purpose</em>, and it targets the median path rather than an edge. The distinction that makes it legal is narrow but real: the app is forbidden from choosing a workout for you, not from remembering the one you chose.</p>
+<p><b>Downsides</b>The edge cases need rulings before it can be built &mdash; what happens when the last-used template has been deleted, renamed, or was a one-off custom. There is also a genuine question of whether naming a template on the button reads as the app suggesting it, which is exactly the line the project has drawn carefully elsewhere.</p>
+<details><summary>Compatibility</summary><p>This composes cleanly with V1's recall line (the two say different things &mdash; one names what you did, the other what you would repeat) but overlaps awkwardly with it, since &ldquo;Start Push day&rdquo; and &ldquo;Last session &middot; Push day&rdquo; would often show the same words. Pick one or resolve the redundancy.</p></details>
+</div>
+</div>
+</article>
+
+<article class="variant" id="v4">
+<div class="vhead">
+  <span class="chip id">V4</span>
+  <h3>The Open Stack</h3>
+  <span class="chip">Boldest</span>
+</div>
+<p class="vsub">Stop asking which path before the user has any information. Put the search field and the actual template rows on the landing, and let the fork happen by what they tap.</p>
+<div class="vbody">
+<figure style="margin:0">
+<div class="phone">
+  <div class="ph-bar"><span class="t">Workout</span><span class="ph-av"></span></div>
+  <div class="ph-scr">
+    <div class="ph-search">Search 260 exercises</div>
+    <p class="ph-lbl">Templates</p>
+    <div class="ph-row"><span><b>Push day</b><small>Chest, shoulders, triceps</small></span><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><span><b>Pull day</b><small>Back, biceps</small></span><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><span><b>Leg day</b><small>Quads, hamstrings, calves</small></span><span class="go">&rsaquo;</span></div>
+    <p class="ph-more">All 9 templates &rsaquo;</p>
+  </div>
+  <div class="ph-tabs"><span class="on">Workout</span><span>Muscles</span><span>History</span></div>
+</div>
+<figcaption>Day one is the app's fullest screen rather than its emptiest &mdash; the nine shipped templates are visible without any history.</figcaption>
+</figure>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>The start decision</dd>
+  <dt>Confidence</dt><dd>62%</dd>
+  <dt>Complexity</dt><dd>High</dd>
+  <dt>Assembles</dt><dd>Open stacks &middot; stock made visible rather than counted</dd>
+</dl>
+<p><b>Description</b>Replace the two card-buttons with one composition surface: a live exercise-search field above the actual template rows, in the picker's own row shape. Tapping a template goes to its overview; typing goes to ad-hoc composition. The template-versus-ad-hoc distinction stops being a question asked up front and becomes a consequence of what the user touches. Because the nine shipped templates are visible, the stock count of variant 2 becomes redundant &mdash; the inventory <em>is</em> the evidence.</p>
+<p><b>Basis</b><code>direct:</code> <code>docs/02-workout-tab-userflow.md:21</code> &mdash; both paths &ldquo;converge into the same underlying session-running experience from Step 2 onward, just with different starting inputs&rdquo;, so the Step&nbsp;1 divergence is a UI choice rather than a structural one. <code>direct:</code> <code>docs/01-app-idea.md:349</code> &mdash; the minimal-typing rule is scoped to &ldquo;steppers/number inputs&rdquo;, i.e. numeric entry, and does not argue against search. <code>external:</code> the library shift from closed to open stacks traded curatorial control for fewer intermediating steps; the analogy holds because the catalogue here is small enough to fit on the shelf, which is precisely why the closed-stack rationale is weaker here than in the domain it comes from.</p>
+<p><b>Rationale</b>It is the largest available tap-budget win and it makes day one rich rather than apologetic. It also removes the one moment on this screen where a beginner can pick wrong, since they are choosing between things they can see rather than between two abstractions.</p>
+<p><b>Downsides</b>The heaviest of the seven, and it partly absorbs a screen the docs specify separately (<code>docs/02-workout-tab-userflow.md:125</code> names a Workout template picker). The verifier also flagged that the claimed tap saving only holds if switching tabs counts as a tap &mdash; plausible, but it was never stated. And the search field competes with the template rows for first-glance attention, which is the real risk: two affordances at the top of a screen whose job is to be left quickly.</p>
+<details><summary>Conflict to resolve first</summary><p>This variant and the separate template-picker screen cannot both be the answer. Adopting it means either deleting that screen from the flow or redefining it as the &ldquo;all 9 templates&rdquo; overflow destination, which is the lighter of the two readings and probably the right one.</p></details>
+</div>
+</div>
+</article>
+
+<article class="variant" id="v5">
+<div class="vhead">
+  <span class="chip id">V5</span>
+  <h3>The Stamp Card</h3>
+  <span class="chip">Needs Ruling 1</span>
+</div>
+<p class="vsub">Fourteen days as cells, with the chain drawn underneath &mdash; so the screen shows not just what the streak is, but why it is that number.</p>
+<div class="vbody">
+<figure style="margin:0">
+<div class="phone">
+  <div class="ph-bar"><span class="t">Workout</span><span class="ph-av"></span></div>
+  <div class="ph-scr">
+    <p class="ph-streak"><b style="color:#F5EFE8">5-day streak</b> &middot; last 14 days</p>
+    <svg width="250" height="34" viewBox="0 0 250 34" role="img" aria-label="Fourteen day cells; days with a completed set are filled, and a hairline beneath joins days chained within the three-day tolerance. The chain breaks between day two and day seven.">
+      <rect x="0" y="0" width="16" height="22" rx="3" fill="#D85A30"/>
+      <rect x="18" y="0" width="16" height="22" rx="3" fill="#D85A30"/>
+      <rect x="36" y="0" width="16" height="22" rx="3" fill="#241F19" stroke="#332C22"/>
+      <rect x="54" y="0" width="16" height="22" rx="3" fill="#241F19" stroke="#332C22"/>
+      <rect x="72" y="0" width="16" height="22" rx="3" fill="#241F19" stroke="#332C22"/>
+      <rect x="90" y="0" width="16" height="22" rx="3" fill="#241F19" stroke="#332C22"/>
+      <rect x="108" y="0" width="16" height="22" rx="3" fill="#D85A30"/>
+      <rect x="126" y="0" width="16" height="22" rx="3" fill="#241F19" stroke="#332C22"/>
+      <rect x="144" y="0" width="16" height="22" rx="3" fill="#D85A30"/>
+      <rect x="162" y="0" width="16" height="22" rx="3" fill="#241F19" stroke="#332C22"/>
+      <rect x="180" y="0" width="16" height="22" rx="3" fill="#D85A30"/>
+      <rect x="198" y="0" width="16" height="22" rx="3" fill="#241F19" stroke="#332C22"/>
+      <rect x="216" y="0" width="16" height="22" rx="3" fill="#D85A30"/>
+      <rect x="234" y="0" width="16" height="22" rx="3" fill="#D85A30"/>
+      <line x1="8" y1="29" x2="26" y2="29" stroke="#6B6156" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="116" y1="29" x2="242" y2="29" stroke="#A89C8E" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <div class="ph-push">
+      <span class="btn-p">Start workout<small>Pick a saved template</small></span>
+      <span class="btn-g">Ad-hoc workout<small>Search and add as you go</small></span>
+    </div>
+  </div>
+  <div class="ph-tabs"><span class="on">Workout</span><span>Muscles</span><span>History</span></div>
+</div>
+<figcaption>The break between day two and day seven is where the gap exceeded three days. The unbroken run to the right is the current streak.</figcaption>
+</figure>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>The look back</dd>
+  <dt>Confidence</dt><dd>58%</dd>
+  <dt>Complexity</dt><dd>Medium</dd>
+  <dt>Assembles</dt><dd>Stamp card with the chain drawn &middot; settled door weighting &middot; three shipping states</dd>
+</dl>
+<p><b>Description</b>A row of cells, one per recent calendar day, filled when that day has at least one completed set. The part that distinguishes it from a generic contribution heatmap is the hairline beneath: it joins consecutive filled days whose gap falls within the three-day tolerance, and visibly breaks where it does not. The number and the picture explain each other. On day one it is a row of empty cells &mdash; a ruled card, not an error grid.</p>
+<p><b>Basis</b><code>direct:</code> <code>docs/01-app-idea.md:247-249</code> &mdash; the streak is a pure function of the set of distinct <code>performedOn</code> dates with a three-day tolerance, so both the fills and the chain derive from the walk the streak computation already performs. <code>external:</code> the date-due card in the back of a library book &mdash; blank it reads as a promise rather than a defect, full it reads as a record, and the same artifact serves day one and year ten without changing shape.</p>
+<p><b>Rationale</b>The three-day tolerance is the app's most misunderstandable mechanic, and this explains it with no copy at all. Heatmaps elsewhere show density; this shows the rule. It is also the only look-back element here that is honestly good at both ends of the data range, since an empty card still communicates the shape of what will fill it.</p>
+<p><b>Downsides</b>It runs directly at a written rule: <code>docs/03-muscle-groups-tab-userflow.md:57-61</code> warns &ldquo;Do not render three tiles of dashes. An empty grid reads as broken; one line reads as a state.&rdquo; The card survives that objection only if empty cells genuinely read as ruling rather than as missing values, which is a judgement that needs to be made against a running screen, not a mockup. It is also the most visually assertive of the look-back options on a screen meant to be left quickly.</p>
+<details><summary>What changed after verification</summary><p>An earlier version of this variant paired the card with a grace-window countdown, justified by <code>docs/00-build-spec.md:148</code> (&ldquo;Optional in-app hint on the final grace day. No notifications.&rdquo;). That line is real, but <code>docs/01-app-idea.md:251</code> assigns the hint to Profile, and <code>01</code> outranks <code>00</code>. The countdown was removed; see Ruling&nbsp;4.</p></details>
+</div>
+</div>
+</article>
+
+<article class="variant" id="v6">
+<div class="vhead">
+  <span class="chip id">V6</span>
+  <h3>The Record</h3>
+  <span class="chip">Needs Ruling 2</span>
+</div>
+<p class="vsub">The body diagram on the landing, lit from the last completed session and captioned with its date. It states position, not course.</p>
+<div class="vbody">
+<figure style="margin:0">
+<div class="phone">
+  <div class="ph-bar"><span class="t">Workout</span><span class="ph-av"></span></div>
+  <div class="ph-scr">
+    <div style="text-align:center;margin-bottom:6px">
+    <svg width="106" height="176" viewBox="0 0 110 200" role="img" aria-label="Front body diagram with chest and shoulders filled in the primary accent and the abdominals in the secondary tint; arms and legs unfilled.">
+      <circle cx="55" cy="16" r="11" fill="#241F19" stroke="#332C22"/>
+      <rect x="47" y="27" width="16" height="9" rx="3" fill="#241F19" stroke="#332C22"/>
+      <ellipse cx="31" cy="47" rx="12" ry="10" fill="#D85A30"/>
+      <ellipse cx="79" cy="47" rx="12" ry="10" fill="#D85A30"/>
+      <path d="M39 40 h14 v26 h-14 a4 4 0 0 1 -4 -4 v-18 a4 4 0 0 1 4 -4z" fill="#D85A30"/>
+      <path d="M57 40 h14 a4 4 0 0 1 4 4 v18 a4 4 0 0 1 -4 4 h-14z" fill="#D85A30"/>
+      <rect x="45" y="69" width="20" height="32" rx="5" fill="#F0997B"/>
+      <rect x="36" y="71" width="7" height="26" rx="3" fill="#241F19" stroke="#332C22"/>
+      <rect x="67" y="71" width="7" height="26" rx="3" fill="#241F19" stroke="#332C22"/>
+      <rect x="19" y="55" width="13" height="36" rx="6" fill="#241F19" stroke="#332C22"/>
+      <rect x="78" y="55" width="13" height="36" rx="6" fill="#241F19" stroke="#332C22"/>
+      <rect x="17" y="93" width="12" height="32" rx="5" fill="#241F19" stroke="#332C22"/>
+      <rect x="81" y="93" width="12" height="32" rx="5" fill="#241F19" stroke="#332C22"/>
+      <rect x="41" y="104" width="13" height="46" rx="6" fill="#241F19" stroke="#332C22"/>
+      <rect x="56" y="104" width="13" height="46" rx="6" fill="#241F19" stroke="#332C22"/>
+      <rect x="42" y="153" width="11" height="36" rx="5" fill="#241F19" stroke="#332C22"/>
+      <rect x="57" y="153" width="11" height="36" rx="5" fill="#241F19" stroke="#332C22"/>
+    </svg>
+    </div>
+    <p class="ph-cap" style="text-align:center">Last session &middot; Push day &middot; 3 days ago</p>
+    <div class="ph-push">
+      <span class="btn-p">Start workout<small>Pick a saved template</small></span>
+      <span class="btn-g">Ad-hoc workout<small>Search and add as you go</small></span>
+    </div>
+  </div>
+  <div class="ph-tabs"><span class="on">Workout</span><span>Muscles</span><span>History</span></div>
+</div>
+<figcaption>Rough stand-in for the traced asset. Zero sessions renders nothing at all here &mdash; not a placeholder, not a grey body.</figcaption>
+</figure>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>The look forward</dd>
+  <dt>Confidence</dt><dd>55%</dd>
+  <dt>Complexity</dt><dd>Medium</dd>
+  <dt>Assembles</dt><dd>Diagram as record &middot; recall line &middot; settled door weighting</dd>
+</dl>
+<p><b>Description</b>Render the standard full-body diagram, unmodified viewBox, filled from the last completed session's primary and secondary muscle map, with its date beneath. The framing matters: this is a record of what happened, not a readiness map. It implies no recovery state, because none is modelled. With zero sessions it renders nothing rather than an empty body.</p>
+<p><b>Basis</b><code>direct:</code> <code>docs/00-build-spec.md:119</code> &mdash; the share-card view rule (&ldquo;show only the view(s) containing trained muscles&hellip; Never render an empty second diagram&rdquo;) already solves the empty case, verified. <code>direct:</code> the <code>body_paths.dart</code> header &mdash; 42 segments as point lists with a <code>toPath()</code> helper and a caching note; the render path exists and is used nowhere yet. <code>external:</code> no reviewed competitor (Strong, Hevy, Fitbod) puts a muscle map on a landing screen &mdash; they keep it in summaries or a separate tab.</p>
+<p><b>Rationale</b>It is the app's strongest visual asset, already built, currently absent from its most-viewed screen. The read-as-record framing is what neutralises the usual objection, which is that a muscle map on a home screen implies recovery tracking the app deliberately refuses to do. And the competitive gap cuts both ways: either nobody has filled it, or everybody has concluded it does not belong. That is worth deciding with evidence.</p>
+<p><b>Downsides</b><code>docs/00-build-spec.md:112</code> enumerates the diagram's permitted surfaces and L0 is not among them, so this cannot ship without amending that list (Ruling&nbsp;2). It also consumes the most vertical space of any element here, pushing the actions out of the thumb arc unless the diagram is kept small. One detail matters: because the palette has no fade, the diagram must be <em>captioned</em> with its date rather than dimmed with age &mdash; dimming would imply a decay the data model does not have.</p>
+<details><summary>The no-diagram treatment of the same slot</summary><p>If Ruling&nbsp;2 goes the other way, the same real estate has a cheaper answer: set the derived last-trained muscle string at display size &mdash; <b>CHEST &middot; SHOULDERS &middot; TRICEPS</b> &mdash; as the largest object on the screen, with the actions beneath. That exact string is already a specified derived value (it is the final rung of the title fallback chain at <code>docs/00-build-spec.md:126-131</code>), it costs no assets, it reads at two metres on a gym floor, and it parses faster than a picture. Day one holds the existing heading in the same slot. Treat this as the same decision with two renderings, not a separate variant.</p></details>
+</div>
+</div>
+</article>
+
+<article class="variant" id="v7">
+<div class="vhead">
+  <span class="chip id">V7</span>
+  <h3>The Shadow Board</h3>
+  <span class="chip">Needs Ruling 2</span>
+</div>
+<p class="vsub">Twelve muscle groups as chips, filled if trained in the last seven days. The unfilled ones carry the information; the screen never tells you what to do about them.</p>
+<div class="vbody">
+<figure style="margin:0">
+<div class="phone">
+  <div class="ph-bar"><span class="t">Workout</span><span class="ph-av"></span></div>
+  <div class="ph-scr">
+    <p class="ph-lbl">Trained this week</p>
+    <div class="ph-chips">
+      <i class="on">Chest</i><i class="on">Shoulders</i><i class="on">Triceps</i><i>Back</i><i>Biceps</i><i>Forearms</i><i class="on">Abs</i><i>Obliques</i><i>Quads</i><i>Hamstrings</i><i>Glutes</i><i>Calves</i>
+    </div>
+    <div class="ph-push">
+      <span class="btn-p">Start workout<small>Pick a saved template</small></span>
+      <span class="btn-g">Ad-hoc workout<small>Search and add as you go</small></span>
+    </div>
+  </div>
+  <div class="ph-tabs"><span class="on">Workout</span><span>Muscles</span><span>History</span></div>
+</div>
+<figcaption>Binary fill only. No ordering by neglect, no counts, no progress bar &mdash; a completion count would turn it into the checklist the docs forbid.</figcaption>
+</figure>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>The look forward</dd>
+  <dt>Confidence</dt><dd>52%</dd>
+  <dt>Complexity</dt><dd>Medium</dd>
+  <dt>Assembles</dt><dd>Shadow board &middot; settled door weighting &middot; three shipping states</dd>
+</dl>
+<p><b>Description</b>A strip of twelve chips, one per parent muscle group, filled in the accent when any session in the last seven calendar days completed an exercise whose primary muscles include that group, and left in the muted fill otherwise. No ranking, no counts, no ordering by how overdue anything is. The absent fills do the work.</p>
+<p><b>Basis</b><code>direct:</code> <code>docs/02-workout-tab-userflow.md:51-57</code> &mdash; <code>trained</code> &ldquo;is binary and read-only&hellip; It gates nothing&hellip; Muscle groups are a menu of options, not a checklist to complete&rdquo;, verified. <code>reasoned:</code> the palette provides exactly two fills that can carry this meaning and nothing between them, so a staleness gradient is not expressible even if it were wanted; the constraint forces binary, which happens to be the only honest encoding of a value that is itself binary. <code>external:</code> the Toyota 5S shadow board, where a tool's painted outline makes its absence self-evident from geometry alone, and the board never instructs.</p>
+<p><b>Rationale</b>This is the only way found to deliver forward-looking value using nothing but backward-looking facts: no recommendation, no rotation, no AI, no gradient. The user draws the inference the app is forbidden from drawing, and the mechanism for doing so is a query the data model already supports.</p>
+<p><b>Downsides</b>It sits close to the &ldquo;muscle-neglect alert&rdquo; the project deliberately has nowhere, and the line between a fact and an alert is exactly what needs ruling. Twelve chips is also a lot of visual noise above the actions. And there is a naming trap: the field is called <code>trained</code> rather than <code>done</code> for a reason, so the strip must never acquire a completion count or a progress bar, or it becomes the checklist the docs explicitly refuse.</p>
+<details><summary>Citation correction</summary><p>An earlier draft of this idea presented &ldquo;no gradient, decay or staleness ramp&rdquo; as a direct quote from the docs. It is not &mdash; that phrasing appears nowhere in <code>docs/</code>. The underlying palette argument holds, but it is a <code>reasoned:</code> inference from the eleven-colour set, not documented text, and has been relabelled accordingly.</p></details>
+</div>
+</div>
+</article>
+</section>
+
+<section id="modifiers">
+<h2>Modifiers</h2>
+<p>These are rules and small additions that apply to <em>any</em> variant rather than competing with them. They survived critique but are not themselves screens.</p>
+<table>
+<thead><tr><th>Modifier</th><th>What it says</th></tr></thead>
+<tbody>
+<tr><td><b>Ergonomics</b></td><td>This is the one screen opened standing, one-handed, often between sets; every other screen is read stationary. Actions belong in the thumb arc &mdash; the lower part of the scroll body, above the floating tab bar &mdash; not top-aligned in a reading layout. Every mockup above follows this.</td></tr>
+<tr><td><b>The streak cannot be orange</b></td><td><code>#D85A30</code> means &ldquo;active / trained / this has been worked&rdquo; wherever it appears, so a streak number painted in it reads as a trained muscle. <code>#F0997B</code> is secondary-muscle only and <code>#C4553A</code> is destructive only. That leaves exactly one honest colour for a statistic, and it is a text grey. This settles, once, a question every stat element would otherwise re-open.</td></tr>
+<tr><td><b>Seen three hundred times</b></td><td>Nothing on this screen congratulates, animates on entry, or reacts to the user. Explanatory copy appears only in the zero-history state and is dropped once a session exists.</td></tr>
+<tr><td><b>A quick-log route</b></td><td>A third, smaller entry going search &rarr; exercise &rarr; set-logging with no overview screen, closing the gap in Ruling&nbsp;3. Compatible with every variant; most natural in V4, where the search field already exists.</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="rejection-summary">
+<h2>Rejection Summary</h2>
+<table>
+<thead><tr><th>#</th><th>Idea</th><th>Reason Rejected</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Start empty, choose a template later &mdash; one door, decision deferred into the session</td><td>Refuted on mechanism. <code>templateId</code> is fixed at session creation and Template Lock is keyed off it; no documented path turns an empty session into a templated one.</td></tr>
+<tr><td>2</td><td>Streak grace-window meter on the landing</td><td>Real quote, wrong surface. <code>docs/01-app-idea.md:251</code> assigns the grace-day hint to Profile and <code>01</code> outranks <code>00</code>, so the warrant does not transfer here. See Ruling&nbsp;4.</td></tr>
+<tr><td>3</td><td>Most-overdue muscle group as a single text line</td><td>Redundant with V7 &mdash; same underlying query, rendered as one line instead of twelve chips. Shipping both would be repetition, not addition. Its <code>direct:</code> citation also turned out to be a research paraphrase rather than doc text.</td></tr>
+<tr><td>4</td><td>Full-bleed diagram as the start control &mdash; tap a muscle to begin</td><td>Scope. It blurs the Workout/Muscles tab boundary, which is a navigation-architecture decision wearing an L0 layout choice's clothes.</td></tr>
+<tr><td>5</td><td>Quiet lifetime counter (sessions or sets logged)</td><td>A lower-resolution restatement of the recall line and the streak; no territory of its own.</td></tr>
+<tr><td>6</td><td>Tap a muscle to quick-log</td><td>Compounds the tab-boundary problem of #4 with an overstated reading of the quick-log gap, resolving neither.</td></tr>
+<tr><td>7</td><td><code>performedOn</code> date control on the landing</td><td>Folded to a modifier and then dropped. By its own cited text the vast majority of sessions never touch this control, which makes it a rare edge case competing for the primary screen's best space.</td></tr>
+<tr><td>8</td><td>Grace meter combined with the stamp card</td><td>Inherits the placement problem of #2; the combination is only as strong as the claim that this screen is the hint's home, and that claim failed.</td></tr>
+<tr><td>9</td><td>Zero look-back as a standalone idea</td><td>Not cut &mdash; promoted. It is the defining stance of V2 rather than a separate candidate.</td></tr>
+<tr><td>10</td><td>Typographic muscle string at display size</td><td>Not cut &mdash; folded into V6 as the no-diagram treatment of the same slot, since the two compete for identical real estate and answer one question two ways.</td></tr>
+<tr><td>11</td><td>Quick-log fast path as a standalone idea</td><td>Real, but narrower than argued &mdash; a route exists via the ad-hoc path. Carried as a modifier and as Ruling&nbsp;3 rather than a variant.</td></tr>
+</tbody>
+</table>
+<p class="mono">All four axes carry at least one survivor; no coverage gaps.</p>
+</section>
+
+<footer class="composition-signal">Composed 2026-09-14 by ce-ideate from the session prompt &ldquo;build the workout tab L0 screen &mdash; multiple variants to review and choose one&rdquo;. Grounded against <code>docs/00</code>&ndash;<code>04</code>, <code>CLAUDE.md</code>, <code>docs/adr/0003-l0-navigation-variant-a.md</code>, both prototype files, and <code>lib/src/ui/</code>. 48 raw candidates from six ideation frames, filtered by a fresh-context basis verifier.</footer>
+
+</div>
+</body>
+</html>

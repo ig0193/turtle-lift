@@ -17,7 +17,7 @@
 - **Duplicate a predefined template** — creates an editable custom copy (e.g. "Push day (mine)"), which the user can then freely adjust. The original predefined template is untouched.
 - **Create a custom template from scratch** — pick muscle groups à la carte, give it a name, save it.
 - **Edit or delete a custom template** the user previously created (whether built from scratch or duplicated from a predefined one).
-- This list is exactly what populates the template picker in the Workout tab's "Start workout" option — this is the only place templates are created or edited; the Workout tab only selects and runs them.
+- This list is exactly what populates the user's own templates on the Workout tab landing, shown there beneath the split-filtered predefined ones and unaffected by that filter — this is the only place templates are created or edited; the Workout tab only selects and runs them.
 - Every template is a single, self-contained day — there is no multi-day split system or weekly rotation to configure.
 
 ### Workout history

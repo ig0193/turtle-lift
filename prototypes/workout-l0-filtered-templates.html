@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PROTOTYPE — Workout L0, filtered templates</title>
+<!--
+  THROWAWAY PROTOTYPE. Not production. Not wired to anything.
+
+  PLAN: Three variants of the Workout tab L0 screen, switchable via ?variant=A|B|C,
+  each pairing a header treatment with a different filter mechanic.
+
+  QUESTIONS THIS IS BUILT TO SETTLE:
+    1. Does the filter-as-heading treatment read as a heading, or as a stray control?
+    2. With "All" selected the list is 11 rows - good browse surface, or a wall?
+       Is "All" the right default, or should it remember the last filter?
+    3. Does "Ad-hoc workout" stay reachable when the list is at its longest?
+    4. Does the filter read as a view control, not as declaring a training programme?
+
+  CONSTRAINTS HELD: app bar is pinned outside the scroll body; the body is the
+  scrollable; no title row inside the scroll view; tab bar floats over content;
+  Profile is the header avatar, not a tab; only the 11 palette colours from
+  docs/00-build-spec.md 12; system typeface only (the app's face is undecided).
+
+  Chest day and Back day do not ship today - they are the two additions agreed
+  in session, marked NEW here only.
+-->
+<style>
+:root{
+  --page:#17140F; --surface:#211D18; --border:#332C22; --muted:#241F19;
+  --ink:#F5EFE8; --ink2:#A89C8E; --ink3:#6B6156;
+  --accent:#D85A30; --accent2:#F0997B; --onaccent:#1B0C05; --danger:#C4553A;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#0B0A09;font-family:var(--sans);display:flex;flex-direction:column;
+     align-items:center;min-height:100vh;padding:26px 12px 120px;color:#fff}
+
+/* ---------- prototype scaffolding (deliberately NOT the app palette) ---------- */
+.scaffold{max-width:392px;width:100%;margin-bottom:14px;font-size:12px;color:#8b8b8b}
+.scaffold b{color:#d4d4d4}
+.tag{display:inline-block;background:#2d2d2d;color:#bdbdbd;border:1px solid #3d3d3d;
+     border-radius:4px;padding:2px 7px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+.readout{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-variant-numeric:tabular-nums}
+.readout span b{color:#fff}
+.switcher{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:99;
+  display:flex;align-items:center;gap:4px;background:#f4f4f4;color:#111;border-radius:999px;
+  padding:5px 6px;box-shadow:0 8px 30px rgba(0,0,0,.6);font-size:13px}
+.switcher button{border:0;background:#e2e2e2;color:#111;width:30px;height:30px;border-radius:999px;
+  font-size:15px;cursor:pointer;line-height:1}
+.switcher button:hover{background:#cfcfcf}
+.switcher .lab{padding:0 10px;font-weight:650;white-space:nowrap}
+.switcher .hint{padding-right:8px;color:#777;font-size:11px}
+.reachbtn{border:1px solid #3d3d3d;background:#1d1d1d;color:#bdbdbd;border-radius:6px;
+  padding:5px 10px;font-size:11px;cursor:pointer;margin-top:8px}
+.reachbtn.on{background:#2f2f2f;color:#fff}
+.iconbtn{margin-left:6px}
+#iconpick{margin-left:14px;font-size:11px;color:#8b8b8b}
+
+/* ---------- the phone ---------- */
+.device{width:392px;height:812px;border-radius:30px;border:1px solid #2a2a2a;overflow:hidden;
+        background:var(--page);display:flex;flex-direction:column;position:relative;
+        box-shadow:0 20px 60px rgba(0,0,0,.6)}
+
+/* pinned app bar - OUTSIDE the scroller */
+.appbar{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+        padding:16px 18px 13px;background:var(--page);border-bottom:1px solid var(--border);z-index:3}
+.appbar h1{margin:0;font-size:22px;font-weight:650;letter-spacing:-.02em;color:var(--ink)}
+.avatar{width:32px;height:32px;border-radius:999px;background:var(--surface);
+        border:1px solid var(--border);display:grid;place-items:center;font-size:12px;color:var(--ink3)}
+
+/* the body IS the scrollable */
+.scroll{flex:1 1 auto;overflow-y:auto;padding:18px 18px 108px;position:relative}
+.scroll::-webkit-scrollbar{width:0}
+
+/* floating tab bar */
+.tabbar{position:absolute;left:18px;right:18px;bottom:14px;display:flex;gap:6px;padding:7px;
+        background:rgba(33,29,24,.94);backdrop-filter:blur(12px);border:1px solid var(--border);
+        border-radius:999px;z-index:4}
+.tabbar span{flex:1;text-align:center;font-size:12px;color:var(--ink3);padding:9px 0;border-radius:999px}
+.tabbar span.on{background:var(--surface);color:var(--ink);font-weight:600}
+
+/* thumb-reach overlay */
+.reach{position:absolute;left:0;right:0;bottom:0;height:330px;pointer-events:none;z-index:5;display:none;
+       border-top:1px dashed rgba(240,153,123,.55);
+       background:linear-gradient(to top,rgba(240,153,123,.10),rgba(240,153,123,0))}
+.reach::after{content:"comfortable one-handed reach";position:absolute;top:6px;right:10px;
+       font-size:10px;letter-spacing:.06em;color:var(--accent2);text-transform:uppercase}
+.device.showreach .reach{display:block}
+
+/* ---------- header treatments ---------- */
+.hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.hdr-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:700}
+.hdr-label.big{font-size:15px;letter-spacing:0;text-transform:none;color:var(--ink);font-weight:650}
+
+/* A: filter as the heading */
+.filter-head{display:inline-flex;align-items:center;gap:9px;background:none;border:0;padding:4px 0;
+  font-family:inherit;font-size:23px;font-weight:680;letter-spacing:-.02em;color:var(--ink);cursor:pointer}
+.filter-head .caret{font-size:14px;color:var(--ink3);transform:translateY(2px)}
+
+/* B: icon-only trigger */
+.filter-icon{display:inline-grid;place-items:center;width:40px;height:40px;background:var(--surface);
+  border:1px solid var(--border);border-radius:999px;color:var(--ink2);cursor:pointer;font-family:inherit}
+.filter-icon.active{color:var(--ink);border-color:var(--ink3)}
+
+/* B: compact chip */
+.filter-chip{display:inline-flex;align-items:center;gap:7px;background:var(--surface);
+  border:1px solid var(--border);border-radius:999px;padding:8px 13px;font-family:inherit;
+  font-size:12.5px;color:var(--ink);cursor:pointer;font-weight:600}
+.filter-chip .caret{font-size:10px;color:var(--ink3)}
+
+/* C: exposed scrollable chip row */
+.chiprow{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px}
+.chiprow::-webkit-scrollbar{height:0}
+.chiprow button{flex:0 0 auto;background:var(--muted);border:1px solid var(--border);color:var(--ink2);
+  border-radius:999px;padding:9px 14px;font-family:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.chiprow button.on{background:var(--accent);border-color:var(--accent);color:var(--onaccent);font-weight:660}
+
+/* ---------- menu ---------- */
+.menu{position:absolute;z-index:8;background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:6px;min-width:210px;box-shadow:0 18px 44px rgba(0,0,0,.6);display:none}
+.menu.open{display:block}
+.menu button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;
+  background:none;border:0;color:var(--ink);font-family:inherit;font-size:14px;text-align:left;
+  padding:12px 12px;border-radius:9px;cursor:pointer}
+.menu button:hover{background:var(--muted)}
+.menu button .dot{width:15px;height:15px;border-radius:999px;border:1.5px solid var(--ink3);flex:0 0 auto}
+.menu button.on .dot{border-color:var(--accent);background:radial-gradient(circle,var(--accent) 0 5px,transparent 5px)}
+.menu button.on{color:var(--ink);font-weight:620}
+.scrim{position:absolute;inset:0;z-index:7;display:none}
+.scrim.open{display:block}
+
+/* ---------- template rows ---------- */
+.row{display:flex;align-items:center;gap:12px;width:100%;background:var(--surface);
+  border:1px solid var(--border);border-radius:13px;padding:15px 15px;margin-bottom:9px;
+  text-align:left;font-family:inherit;cursor:pointer;color:inherit}
+.row:active{background:var(--muted)}
+.row .txt{flex:1 1 auto;min-width:0}
+.row .nm{display:block;font-size:15px;font-weight:620;color:var(--ink);letter-spacing:-.01em}
+.row .gp{display:block;font-size:11.5px;color:var(--ink3);margin-top:3px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.row .chev{color:var(--ink3);font-size:17px;flex:0 0 auto}
+.new{display:inline-block;font-size:9px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+  color:var(--accent2);border:1px solid rgba(240,153,123,.4);border-radius:4px;padding:1px 5px;
+  margin-left:7px;vertical-align:1px}
+.count{font-size:11px;color:var(--ink3);margin:0 0 12px}
+.count b{color:var(--ink2);font-weight:600}
+
+/* ad-hoc */
+.adhoc{display:flex;align-items:center;gap:12px;width:100%;background:var(--muted);
+  border:1px dashed var(--border);border-radius:13px;padding:16px 15px;margin-top:16px;
+  text-align:left;font-family:inherit;cursor:pointer;color:inherit}
+.adhoc .nm{display:block;font-size:15px;font-weight:620;color:var(--ink)}
+.adhoc .gp{display:block;font-size:11.5px;color:var(--ink3);margin-top:3px}
+</style>
+</head>
+<body>
+
+<div class="scaffold">
+  <span class="tag">Prototype scaffolding</span>
+  <div class="readout">
+    <span>variant <b id="ro-v">A</b></span>
+    <span>filter <b id="ro-f">All</b></span>
+    <span>rows <b id="ro-n">11</b></span>
+    <span>scroll to ad-hoc <b id="ro-s">-</b></span>
+  </div>
+  <button class="reachbtn" id="reachtoggle">Show thumb-reach overlay</button>
+  <span id="iconpick"></span>
+</div>
+
+<div class="device" id="device">
+  <div class="appbar">
+    <h1>Workout</h1>
+    <div class="avatar">IG</div>
+  </div>
+
+  <div class="scroll" id="scroll">
+    <div id="headerslot"></div>
+    <div id="list"></div>
+    <button class="adhoc" id="adhoc">
+      <span class="txt">
+        <span class="nm">Ad-hoc workout</span>
+        <span class="gp">Search and add as you go</span>
+      </span>
+      <span class="chev">&rsaquo;</span>
+    </button>
+  </div>
+
+  <div class="scrim" id="scrim"></div>
+  <div class="menu" id="menu"></div>
+  <div class="reach"></div>
+
+  <div class="tabbar">
+    <span class="on">Workout</span><span>Muscles</span><span>History</span>
+  </div>
+</div>
+
+<div class="switcher">
+  <button id="prev" aria-label="Previous variant">&larr;</button>
+  <span class="lab" id="swlab">A — Filter as heading</span>
+  <button id="next" aria-label="Next variant">&rarr;</button>
+  <span class="hint">&larr; &rarr; keys</span>
+</div>
+
+<script>
+const TEMPLATES = [
+  {id:'push',   name:'Push day',            groups:'Chest, shoulders, triceps',          in:['ppl']},
+  {id:'pull',   name:'Pull day',            groups:'Back, biceps',                       in:['ppl']},
+  {id:'leg',    name:'Leg day',             groups:'Quads, hamstrings, glutes, calves',  in:['ppl','single']},
+  {id:'upper',  name:'Upper body day',      groups:'Chest, back, shoulders, arms',       in:['multi']},
+  {id:'full',   name:'Full body day',       groups:'A mix across all major groups',      in:['multi']},
+  {id:'chtri',  name:'Chest and triceps day',groups:'Chest, triceps',                    in:['multi']},
+  {id:'bkbi',   name:'Back and biceps day', groups:'Back, biceps',                       in:['multi']},
+  {id:'sho',    name:'Shoulders day',       groups:'Shoulders',                          in:['single']},
+  {id:'arms',   name:'Arms day',            groups:'Biceps, triceps',                    in:['single']},
+  {id:'chest',  name:'Chest day',           groups:'Chest',              in:['single'], isNew:true},
+  {id:'back',   name:'Back day',            groups:'Back',               in:['single'], isNew:true},
+];
+// "All" removed in session — every state is now a filtered subset.
+const FILTERS = [
+  {key:'single', label:'1 Muscle per day'},
+  {key:'multi',  label:'Multi Split'},
+  {key:'ppl',    label:'Push-Pull-Legs'},
+];
+const SVG = b => '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" ' +
+  'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + b + '</svg>';
+const ICONS = {
+  lines:   {label:'Descending lines', svg: SVG('<path d="M2.5 4h11M4.5 8h7M6.5 12h3"/>')},
+  funnel:  {label:'Funnel',           svg: SVG('<path d="M2 3h12l-4.6 5.4v4.1l-2.8 1.4V8.4z"/>')},
+  sliders: {label:'Sliders',          svg: SVG('<path d="M2 5.5h12M2 10.5h12"/>' +
+             '<circle cx="6" cy="5.5" r="2" fill="#211D18"/><circle cx="10.5" cy="10.5" r="2" fill="#211D18"/>')},
+};
+let icon = 'lines';
+const FUNNEL = '';
+
+const VARIANTS = {
+  A:  'A — Filter as heading',
+  B1: 'B1 — Icon only, plain count',
+  B2: 'B2 — Icon only, "3 of 11" count',
+  B3: 'B3 — Icon + label, plain count',
+  C:  'C — "Start a workout" + exposed chips',
+};
+
+let variant = (new URLSearchParams(location.search).get('variant') || 'A').toUpperCase();
+if(!VARIANTS[variant]) variant = 'A';
+let filter = 'ppl';   // deliberate default: most common split, and pre-selected in the user's mock
+
+const $ = id => document.getElementById(id);
+const visible = () => TEMPLATES.filter(t => t.in.includes(filter));
+const labelFor = k => FILTERS.find(f => f.key === k).label;
+
+function renderHeader(){
+  const slot = $('headerslot');
+  if(variant === 'A'){
+    slot.innerHTML =
+      '<div class="hdr"><button class="filter-head" id="ftrigger">' +
+      '<span>' + labelFor(filter) + '</span><span class="caret">&#9662;</span></button></div>';
+  } else if(variant === 'B1' || variant === 'B2'){
+    slot.innerHTML =
+      '<div class="hdr"><span class="hdr-label">Templates</span>' +
+      '<button class="filter-icon active' +
+      '" id="ftrigger" aria-label="Filter templates">' + FUNNEL + '</button></div>';
+  } else if(variant === 'B3'){
+    slot.innerHTML =
+      '<div class="hdr"><span class="hdr-label">Templates</span>' +
+      '<button class="filter-chip" id="ftrigger">' + ICONS[icon].svg + '<span>' + labelFor(filter) +
+      '</span><span class="caret">&#9662;</span></button></div>';
+  } else {
+    slot.innerHTML =
+      '<div class="hdr"><span class="hdr-label big">Start a workout</span></div>' +
+      '<div class="chiprow" id="chiprow">' +
+      FILTERS.map(f => '<button data-k="' + f.key + '"' + (f.key===filter?' class="on"':'') +
+        '>' + f.label + '</button>').join('') + '</div>';
+  }
+  const trig = $('ftrigger');
+  if(trig) trig.addEventListener('click', e => { e.stopPropagation(); openMenu(trig); });
+  const row = $('chiprow');
+  if(row) row.addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    filter = b.dataset.k; render();
+  });
+}
+
+function renderList(){
+  const rows = visible();
+  const plural = n => n + ' template' + (n===1?'':'s');
+  const countHtml = (variant === 'B2')
+    ? '<b>' + rows.length + ' of ' + TEMPLATES.length + '</b> templates &middot; ' + labelFor(filter)
+    : plural(rows.length);
+  $('list').innerHTML =
+    '<p class="count">' + countHtml + '</p>' +
+    rows.map(t =>
+      '<button class="row"><span class="txt"><span class="nm">' + t.name +
+      (t.isNew ? '<span class="new">new</span>' : '') +
+      '</span><span class="gp">' + t.groups + '</span></span><span class="chev">&rsaquo;</span></button>'
+    ).join('');
+}
+
+function openMenu(anchor){
+  const menu = $('menu');
+  menu.innerHTML = FILTERS.map(f =>
+    '<button data-k="' + f.key + '"' + (f.key===filter?' class="on"':'') + '>' +
+    '<span>' + f.label + '</span><span class="dot"></span></button>').join('');
+  const dev = $('device').getBoundingClientRect();
+  const a = anchor.getBoundingClientRect();
+  menu.style.top  = (a.bottom - dev.top + 8) + 'px';
+  if(variant.charAt(0) === 'B'){ menu.style.right = (dev.right - a.right) + 'px'; menu.style.left = 'auto'; }
+  else { menu.style.left = (a.left - dev.left) + 'px'; menu.style.right = 'auto'; }
+  menu.classList.add('open'); $('scrim').classList.add('open');
+  menu.onclick = e => {
+    const b = e.target.closest('button'); if(!b) return;
+    filter = b.dataset.k; closeMenu(); render();
+  };
+}
+function closeMenu(){ $('menu').classList.remove('open'); $('scrim').classList.remove('open'); }
+$('scrim').addEventListener('click', closeMenu);
+
+function measure(){
+  const sc = $('scroll'), ad = $('adhoc');
+  const overflow = Math.max(0, ad.offsetTop + ad.offsetHeight + 108 - sc.clientHeight);
+  $('ro-s').textContent = overflow > 2 ? Math.round(overflow) + 'px' : 'visible';
+}
+
+function render(){
+  renderHeader(); renderList();
+  $('ro-v').textContent = variant;
+  $('ro-f').textContent = labelFor(filter);
+  $('ro-n').textContent = visible().length;
+  $('swlab').textContent = VARIANTS[variant];
+  const u = new URL(location); u.searchParams.set('variant', variant);
+  history.replaceState(null, '', u);
+  requestAnimationFrame(measure);
+}
+
+function cycle(step){
+  const keys = Object.keys(VARIANTS);
+  variant = keys[(keys.indexOf(variant) + step + keys.length) % keys.length];
+  closeMenu(); render();
+}
+$('prev').addEventListener('click', () => cycle(-1));
+$('next').addEventListener('click', () => cycle(1));
+document.addEventListener('keydown', e => {
+  if(/^(INPUT|TEXTAREA)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  if(e.key === 'ArrowLeft') cycle(-1);
+  if(e.key === 'ArrowRight') cycle(1);
+});
+$('reachtoggle').addEventListener('click', e => {
+  $('device').classList.toggle('showreach');
+  e.target.classList.toggle('on');
+  e.target.textContent = $('device').classList.contains('showreach')
+    ? 'Hide thumb-reach overlay' : 'Show thumb-reach overlay';
+});
+$('iconpick').innerHTML = 'icon: ' + Object.keys(ICONS).map(k =>
+  '<button class="reachbtn iconbtn' + (k===icon?' on':'') + '" data-i="' + k + '">' +
+  ICONS[k].label + '</button>').join('');
+$('iconpick').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  icon = b.dataset.i;
+  [...$('iconpick').querySelectorAll('button')].forEach(x => x.classList.toggle('on', x.dataset.i===icon));
+  render();
+});
+$('scroll').addEventListener('scroll', closeMenu);
+render();
+</script>
+</body>
+</html>
