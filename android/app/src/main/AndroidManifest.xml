@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- enableOnBackInvokedCallback: predictive back. Android 16 (targetSdk 36)
+         turns it on by default, so testing on a current device hides the
+         omission entirely; on 13, 14 and 15 the gesture is silently absent
+         without this flag. -->
     <application
         android:label="Turtle Lift"
+        android:enableOnBackInvokedCallback="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

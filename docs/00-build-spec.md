@@ -8,7 +8,7 @@
 | `01-app-idea.md` | Scope, data model, muscle taxonomy, palette, and the reasoning behind every rule here. |
 | `02-workout-tab-userflow.md` | Workout tab flow + mockups. |
 | `03-muscle-groups-tab-userflow.md` | Muscle Groups tab flow + mockups. |
-| `04-profile-tab-userflow.md` | Profile tab flow + mockups. |
+| `04-profile-tab-userflow.md` | Profile flow + mockups. Profile is behind the header avatar; history is its own tab. |
 
 Conflict resolution: if this file disagrees with `01`–`04`, **`01`–`04` win** — this is a digest, not a source of truth. Report the conflict.
 
@@ -187,7 +187,7 @@ streakAsOf(date) -> int
 
 **Finish** — available any time. **A session with 0 completed sets must not save.**
 
-**Session persistence** — an active session persists indefinitely; never auto-discarded. Returning shows a **Resume** card. Starting a new workout auto-saves the open one (>=1 completed set, keeping its **original `performedOn`**, with a toast) or discards it silently (0 sets). One active session at a time.
+**Session persistence** — an active session persists indefinitely; never auto-discarded. Returning to the Workout tab shows the session in place of the landing; no Resume card. Starting a new workout auto-saves the open one (>=1 completed set, keeping its **original `performedOn`**, with a toast) or discards it silently (0 sets). One active session at a time.
 
 **Exercise tap → set logging directly.** Info button in the logging header reaches Exercise Detail. Exception: `timesPerformed == 0` → land on Exercise Detail first.
 
@@ -215,7 +215,9 @@ streakAsOf(date) -> int
 
 ---
 
-## 11. Profile tab
+## 11. Profile and History
+
+History is a tab; Profile is reached from the header avatar (`docs/adr/0003-l0-navigation-variant-a.md`). The split of the contents below between the two is unresolved.
 
 - Stats: streak, total workouts, total sets. Streak explainer copy sits below the stat. No volume stat.
 - **Per-session PB count** — `pbCountFor(session)`. Rendered as a pill on the hero card **only when >= 1** (never "0 personal bests"). Individual PB exercises are marked in the session's exercise log below the card.
@@ -271,4 +273,5 @@ Known asset gaps, not blockers: no side-delt artwork (see §4); triceps not spli
 | Item | Status |
 |---|---|
 | ~~Personal bests in V1~~ | **Decided: in.** Derived, no schema cost. See `01` §Progress tracking. |
-| App name + **Play Store package ID** | Undecided. Package ID is permanent from first upload, including internal test tracks. |
+| App name | Undecided. Splash and share card use a placeholder. |
+| ~~Play Store package ID~~ | **Decided:** `dev.indresh.turtle_lift` (Android) / `dev.indresh.turtleLift` (iOS). Permanent from first upload. |

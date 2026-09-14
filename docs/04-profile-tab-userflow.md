@@ -1,8 +1,11 @@
-# Profile tab — user flow
+# Profile — user flow
+
+> Profile is reached from the header avatar, not a tab, and workout history is
+> now its own tab. See `docs/adr/0003-l0-navigation-variant-a.md`.
 
 **Purpose:** a single place to see everything the app remembers on the user's behalf — history and stats, with no manual tracking required.
 
-**Entry point:** Home → Profile tab.
+**Entry point:** Home → the profile avatar in the L0 header. Profile is not a tab (`docs/adr/0003-l0-navigation-variant-a.md`). **Workout history is now its own tab**, so the history list below belongs to the History tab; which of the remaining stats stay behind the avatar is unresolved.
 
 ---
 
@@ -60,7 +63,7 @@
 
 ## Screen list
 
-1. Profile tab landing (stats summary + history list + entry into My workout templates + bodyweight field)
+1. Profile landing (stats summary + entry into My workout templates + bodyweight field). The history list moved to the History tab.
 2. My workout templates list (predefined + custom, with a duplicate action on predefined templates)
 3. Template editor (create new / edit an existing custom template — muscle group multi-select, naming)
 4. Session detail (shareable hero card + full scrollable, **editable** log, for a past workout or ad-hoc entry; includes Delete workout)
@@ -76,7 +79,7 @@
 
 Reference HTML/CSS mockups for this tab's key screens, using the Coral palette defined in `01-app-idea.md`.
 
-### Profile tab landing
+### Profile landing
 
 ```html
 <div style="background:#17140F; border-radius:16px; padding:0; max-width:340px; overflow:hidden;">

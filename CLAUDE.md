@@ -11,7 +11,7 @@ doesn't cover something. **If `00` disagrees with `01`–`04`, `01`–`04` win**
 `00` is a digest, not the source of truth. Report any conflict you find rather
 than picking one.
 
-`prototype/prototype.html` — 22 screens, open it in a browser. It is the visual
+`prototypes/screens.html` — 22 screens, open it in a browser. It is the visual
 reference and is **ahead of the docs on layout**. Where they differ on how a
 screen looks, follow the prototype. Where they differ on a rule, follow the docs.
 
@@ -84,7 +84,9 @@ are reviewed copy.
 4. Workout flow: landing → template picker → overview → exercise list → logging.
 5. Summary and celebration.
 6. Muscles tab.
-7. Profile tab.
+7. History tab.
+8. Profile screen — reached from the header avatar, not a tab
+   (`docs/adr/0003-l0-navigation-variant-a.md`).
 
 ## Decided in session 1
 
@@ -101,9 +103,9 @@ are reviewed copy.
   `lib/src/data/generated/` by `tool/sync_generated.sh`, because Dart can only
   import from `lib/`. Both copies are generated output: edit the generator, re-run
   it, then re-run the sync. `tool/sync_generated.sh --check` guards this in CI.
-- `lib/main.dart` currently renders a placeholder `SetupCheckScreen` that counts
-  the shipped data. Delete it when the workout tab lands. The data it reads lives
-  in `lib/src/data/`, not in `main.dart`, so deleting the screen takes nothing
+- ~~`lib/main.dart` renders a placeholder `SetupCheckScreen`~~ **Done.** The
+  placeholder is deleted and `main.dart` boots into `L0Shell`. The data it read lives
+  in `lib/src/data/`, not in `main.dart`, so deleting the screen took nothing
   with it.
 - **Bundle id: `dev.indresh.turtle_lift` (Android) / `dev.indresh.turtleLift` (iOS).**
   The casing differs because that is what each platform's tooling produces from one
@@ -132,7 +134,7 @@ no notifications · no wearables · no AI features · no premium tier · no ads 
 no multi-day splits · no per-exercise illustrations ·
 no achievements, badges or level-ups.
 
-The turtle mascot (`mascot-brief.md`) is **the last thing to build** — decorative only,
+The turtle mascot (`docs/05-mascot-brief.md`) is **the last thing to build** — decorative only,
 never a body diagram, and it must never react to inactivity. Orientation per surface
 (standing vs horizontal), whether it appears on the set-logging screen, and exact sizing
 are all deliberately left open in the brief. Settle them against running screens, with

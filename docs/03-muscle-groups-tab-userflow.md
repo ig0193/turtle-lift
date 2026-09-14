@@ -2,7 +2,7 @@
 
 **Purpose:** exploration and reference. For a user who doesn't want to build a full workout and just wants to find or understand a specific exercise. This is the app's "MuscleWiki" experience — no logging happens here.
 
-**Entry point:** Home → Muscle Groups tab.
+**Entry point:** Home → Muscles tab.
 
 ---
 

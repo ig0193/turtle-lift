@@ -49,7 +49,7 @@
 
 - Splash screen — no login, no signup. Straight into the app.
 - Splash leads directly to the home screen.
-- Home screen has three tabs: **Workout | Muscle Groups | Profile**.
+- Home screen has three tabs: **Workout | Muscles | History**. Profile is reached from an avatar in the header, not a tab (see `docs/adr/0003-l0-navigation-variant-a.md`).
 - No onboarding wizard. First-time and returning users land in the same place.
 
 | Tab | Purpose |
@@ -81,7 +81,7 @@ Note: the app doesn't suggest or auto-select a workout for the user (no "today's
   - Benefit of deriving rather than storing: if a sub-muscle group is ever added to the taxonomy (e.g. a real side-delt segment), every existing template picks it up with no data migration.
   - **A template is a curated shortlist to browse within, not a plan to complete.** Nothing in a template is ever "finished", and no muscle group has a completion state. This is why a seven-row Push day is unremarkable — seven options in a menu, not seven unchecked boxes.
   - **Templates are locked to their own muscle groups during a session.** An exercise outside the template's muscle groups cannot be added to a template-based session. Keeping the template coherent is the reason for choosing one; users who don't have a fixed plan should use the ad-hoc path instead. Full rationale and the accepted friction are documented in `02-workout-tab-userflow.md`.
-- User can create a fully custom template from scratch by picking muscle groups à la carte, give it a name, and save it for reuse. Template creation and management lives in the Profile tab; the Workout tab is just for starting a session from an already-saved template.
+- User can create a fully custom template from scratch by picking muscle groups à la carte, give it a name, and save it for reuse. Template creation and management lives behind the Profile avatar; the Workout tab is just for starting a session from an already-saved template.
 - User can build a one-off ad-hoc workout by searching and adding exercises directly, without any template or muscle-group structure. This is not saved as a reusable template — it's a single session.
 
 ### Exercise library
@@ -208,7 +208,7 @@ Each exercise entry contains:
     3. The single exercise's name (`Barbell curl`) — quick logs
     4. The primary muscle groups trained, comma-separated (`Chest, triceps`)
   - **Do not auto-generate a time-of-day title** ("Evening workout") as the fallback. With retrospective logging the log time is not the workout time, so it would be wrong on any backdated session. Nothing stops the user typing it themselves.
-- **An active session persists indefinitely** — never auto-discarded on close, date change, or timeout. Only one may be active at a time. Returning offers **Resume**; starting a new workout auto-saves the open one if it has at least one completed set (keeping its original `performedOn`) or discards it silently if empty. Full rules in `02-workout-tab-userflow.md` Step 2b.
+- **An active session persists indefinitely** — never auto-discarded on close, date change, or timeout. Only one may be active at a time. Returning to the Workout tab shows the open session in place of the landing — it takes the tab over, with no Resume card. Starting a new workout auto-saves the open one if it has at least one completed set (keeping its original `performedOn`) or discards it silently if empty. Full rules in `02-workout-tab-userflow.md` Step 2b.
 - `performedOn` is **clamped to today or earlier** — future-dated sessions are not accepted, since they'd make the streak calculation meaningless.
 
 ### Derived values — a general rule
@@ -336,7 +336,7 @@ The app remembers everything on the user's behalf, so it must also let them corr
 
 ### Navigation and shell
 
-- **Three tabs: Workout · Muscles · Profile.** Plain over clever, for a beginner audience. "Muscles" rather than "Muscle groups" — shorter, same meaning.
+- **Three tabs: Workout · Muscles · History.** Plain over clever, for a beginner audience. "Muscles" rather than "Muscle groups" — shorter, same meaning. **Profile is a header avatar on the three tab roots, not a tab**, and **the tab bar appears only at L0** — pushing any screen hides it. History is promoted to a tab because it is the most-revisited surface in the app. Rationale and the architecture this rests on: `docs/adr/0003-l0-navigation-variant-a.md`.
 - **Splash screen is branding only and must never block.** The app is offline with no login and nothing to fetch, so there is nothing legitimate to wait for. Target roughly 600ms and never gate entry on it.
 
 ### Beginner experience
