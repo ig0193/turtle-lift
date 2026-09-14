@@ -19,7 +19,7 @@ import 'tab_glyph.dart';
 /// ClipRRect        -- the capsule silhouette
 /// BackdropFilter   -- the blur, sampling what is behind the bar
 /// DecoratedBox     -- the translucent fill and the inset ring
-/// Stack            -- the top hairline, the highlight, the three items
+/// _GlassTabBarBody -- the hairline, the capsule, the items, and the drag
 /// ```
 ///
 /// Two of those are easy to "simplify" into a bug:
@@ -38,6 +38,14 @@ import 'tab_glyph.dart';
 /// The bar is stateless about which tab is current: [selectedIndex] and
 /// [onSelected] come from the shell. Keeping the selection out of here is what
 /// lets the shell own navigation and lets this widget be tested in isolation.
+/// The one piece of state the bar does own lives in [_GlassTabBarBody] and is
+/// not the selection: it is where a finger currently is mid-drag, which no
+/// caller can be told about because it does not outlive the gesture.
+///
+/// **Two gestures reach the same place.** Tapping a tab selects it, and
+/// dragging along the bar slides the capsule under the finger and selects
+/// whatever it crosses -- the iOS 26 tab bar's behaviour, and the reason the
+/// drag is absolute rather than a swipe that steps. See [_GlassTabBarBody].
 ///
 /// Geometry and colour are transcribed from the Glass variant of
 /// `prototypes/l0-tabbar-prototype.html`, chosen over Solid and Ember.
@@ -56,6 +64,11 @@ class GlassTabBar extends StatelessWidget {
   /// Re-reporting the current tab is not a no-op higher up -- it is how
   /// "scroll to top" / "pop to root" gestures are wired -- and the semantics
   /// tree requires a live tap action on every tab regardless.
+  ///
+  /// A drag along the bar reports through here too, but **only when the slot
+  /// under the finger changes.** The repeat report is the tap's contract, not
+  /// the drag's: a drag that re-sent the current tab every frame would fire
+  /// pop-to-root dozens of times in one gesture.
   final ValueChanged<int> onSelected;
 
   /// The three tabs, in order. Profile is a header avatar, not a tab
@@ -142,6 +155,60 @@ class GlassTabBar extends StatelessWidget {
   /// frame-or-two ramp is what keeps it from reading as a glitch on device.
   static const Duration pressDuration = Duration(milliseconds: 90);
 
+  /// How far the capsule stretches along its travel, at full drag speed.
+  ///
+  /// **First pass, pending the App Store reference.** The magnitude is the part
+  /// a video settles and reading the spec cannot; the *shape* below is the part
+  /// that is structural, and that one is not a guess -- see
+  /// [stretchAnchorsToTrailingEdge].
+  static const double maxDragStretch = 0.18;
+
+  /// How far the capsule must fall behind its target, in slots, to reach
+  /// [maxDragStretch]. Beyond it the stretch saturates rather than growing
+  /// without bound.
+  ///
+  /// **The stretch is read from the capsule's lag, not from the finger's
+  /// speed**, and that is what makes it settle correctly. A speed-driven
+  /// stretch has nothing to decay it when the finger stops *without* lifting:
+  /// no more move events arrive, so the last speed stands and the capsule sits
+  /// there stretched under a stationary thumb until it is released. Lag is
+  /// self-correcting -- it is zero exactly when the capsule has caught up,
+  /// which is the definition of "no longer being pulled" -- and it needs no
+  /// ticker to notice.
+  static const double lagAtFullStretch = 0.5;
+
+  /// Volume preservation: the share of its horizontal stretch the capsule gives
+  /// back in height. A blob pulled longer gets thinner, and a capsule that
+  /// stretches without thinning reads as a rectangle being scaled.
+  static const double stretchSquash = 0.35;
+
+  /// **The stretch grows from the trailing edge, never from the centre**, and
+  /// that is a clip constraint as much as a motion one.
+  ///
+  /// Growing about the centre pushes the capsule's outer edge past
+  /// [barPadding] at the first and last slots, back outside the `ClipRRect` --
+  /// the exact bug [highlightRadius] exists to fix, reintroduced through paint
+  /// instead of layout. Anchoring at the trailing edge means the capsule only
+  /// ever grows in the direction it is travelling, and at an end slot the only
+  /// direction it can travel is inward. So the shape that is correct for a
+  /// liquid is also the one that cannot escape the clip.
+  static const bool stretchAnchorsToTrailingEdge = true;
+
+  /// How quickly the stretch itself eases in and out. Shorter than
+  /// [dragFollowDuration]: the stretch is a response to the follow, so a
+  /// slower one would still be growing after the capsule had stopped.
+  static const Duration stretchDuration = Duration(milliseconds: 70);
+
+  /// How hard the capsule chases the finger during a drag.
+  ///
+  /// Not zero, and not [highlightDuration]. Zero pins the capsule rigidly to
+  /// the touch point, which reads as a sprite being dragged rather than a
+  /// liquid the finger is pulling; 260ms is the settle curve and lags so far
+  /// behind a moving finger that the bar feels disconnected. At 90ms the
+  /// capsule trails by a couple of frames and catches up when the finger
+  /// stops -- which is the whole of the effect.
+  static const Duration dragFollowDuration = Duration(milliseconds: 90);
+
   // --- Colour --------------------------------------------------------------
   //
   // Every colour is named, and every one is derived from AppPalette (or black,
@@ -175,6 +242,17 @@ class GlassTabBar extends StatelessWidget {
   static final Color highlightColor =
       AppPalette.textPrimary.withValues(alpha: 0.09);
 
+  /// The same capsule while a finger is on it, one step more present.
+  ///
+  /// The iOS bubble grows when you press it. Growing this one is the obvious
+  /// transcription and it is the wrong one here: the capsule already sits only
+  /// [barPadding] inside a bar that must clip, so scaling it up pushes its
+  /// outer corners back outside the clip at the first and last slots -- the
+  /// exact bug the concentric-corner radius above exists to fix. Brightening
+  /// costs no geometry and says the same thing.
+  static final Color draggingHighlightColor =
+      AppPalette.textPrimary.withValues(alpha: 0.14);
+
   /// `.v-glass .bar button[aria-current=page] { color: var(--acc) }`.
   static const Color activeItemColor = AppPalette.accentStrong;
 
@@ -190,6 +268,7 @@ class GlassTabBar extends StatelessWidget {
     'topHighlightColor': topHighlightColor,
     'shadowColor': shadowColor,
     'highlightColor': highlightColor,
+    'draggingHighlightColor': draggingHighlightColor,
     'activeItemColor': activeItemColor,
     'inactiveItemColor': inactiveItemColor,
   };
@@ -299,15 +378,10 @@ class GlassTabBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(barRadius),
                 border: Border.all(color: ringColor, width: ringWidth),
               ),
-              child: _SwipeToChangeTab(
-                onStep: _step,
-                child: Stack(
-                  children: <Widget>[
-                    _buildTopHighlight(),
-                    _buildHighlight(reducedMotion),
-                    _buildItems(reducedMotion),
-                  ],
-                ),
+              child: _GlassTabBarBody(
+                selectedIndex: selectedIndex,
+                onSelected: onSelected,
+                reducedMotion: reducedMotion,
               ),
             ),
           ),
@@ -316,61 +390,246 @@ class GlassTabBar extends StatelessWidget {
     );
   }
 
-  /// Move [delta] tabs, if there is a tab there.
+}
+
+/// The bar's interior -- the lit top edge, the travelling capsule and the three
+/// items -- plus the drag that moves between them.
+///
+/// **The capsule tracks the finger; it does not wait for the release.** iOS 26's
+/// tab bar puts a glass selection bubble under your finger and slides it along
+/// the bar as you move, updating the selection live as it crosses each tab.
+/// This bar's first version committed on release instead: nothing moved until
+/// you lifted, and then it stepped exactly one tab. That is a different
+/// interaction wearing the same name -- there is no feedback during the
+/// gesture, so there is nothing to aim, and a gesture you cannot aim is one you
+/// stop using.
+///
+/// **The mapping is absolute, not relative**, which is what makes a tap and a
+/// drag the same gesture rather than two that must be kept in agreement:
+/// the capsule goes to the slot under the finger, so pressing the third tab and
+/// lifting selects it, and pressing the third tab and sliding to the first
+/// selects the first. Under a relative mapping the same finger position means
+/// different tabs depending on where the drag began, and the capsule stops
+/// being a thing the user is touching.
+///
+/// **Crossing two slots in one gesture lands two tabs over.** The old
+/// one-step-per-gesture clamp was right for a deferred gesture -- nothing had
+/// travelled, so a jump read as a glitch -- and is wrong for this one, where
+/// the capsule travelled the whole way under the finger and the "jump" is what
+/// the user just watched happen.
+///
+/// Stateful because the slot under the finger only exists mid-drag.
+class _GlassTabBarBody extends StatefulWidget {
+  const _GlassTabBarBody({
+    required this.selectedIndex,
+    required this.onSelected,
+    required this.reducedMotion,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+  final bool reducedMotion;
+
+  @override
+  State<_GlassTabBarBody> createState() => _GlassTabBarBodyState();
+}
+
+class _GlassTabBarBodyState extends State<_GlassTabBarBody> {
+  /// Which slot the finger is over, fractionally, while a drag is in progress.
   ///
-  /// One step per gesture, never a jump to the far tab: the highlight's travel
-  /// is what tells the user where they went, and skipping a slot reads as a
-  /// glitch. Clamped rather than wrapped, so a swipe at the last tab does
-  /// nothing instead of teleporting back to the first.
-  void _step(int delta) {
-    final next = selectedIndex + delta;
-    if (next < 0 || next >= labels.length) return;
-    onSelected(next);
+  /// Null when there is no drag, and that null -- rather than a separate bool
+  /// -- is what makes the capsule fall back to the selected tab on release.
+  double? _dragSlot;
+
+  bool get _dragging => _dragSlot != null;
+
+  /// The last index this drag handed to [_GlassTabBarBody.onSelected].
+  ///
+  /// **Not `widget.selectedIndex`.** Comparing against the parent's value
+  /// assumes the parent echoes every report straight back, synchronously, and
+  /// a parent is entitled to do neither -- it may rebuild a frame later, or
+  /// refuse the change outright. When it does, the comparison stays true and
+  /// the drag re-reports the same tab on every frame it moves. That is how the
+  /// first version of this shipped, and the damage is not the duplicate
+  /// reports: it is that `onSelected` also carries pop-to-root, so one drag
+  /// would fire it ten times.
+  int? _lastReported;
+
+  /// The padded box the three items share. One slot is its width over three,
+  /// so the drag needs neither [GlassTabBar.barPadding] arithmetic nor a
+  /// `LayoutBuilder`: it measures the track that is actually on screen instead
+  /// of reconstructing where the track ought to be.
+  final GlobalKey _trackKey = GlobalKey(debugLabel: 'glass-tab-bar-track');
+
+  /// The fractional slot under [globalPosition], or null before the track has
+  /// been laid out.
+  ///
+  /// Clamped, not wrapped: dragging past the last tab holds the capsule there
+  /// rather than teleporting it back to the first.
+  double? _slotAt(Offset globalPosition) {
+    final box = _trackKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize || box.size.width <= 0) return null;
+    final slotWidth = box.size.width / GlassTabBar.labels.length;
+    // -0.5 because slot *centres* are what the capsule aligns to: the centre
+    // of slot 0 sits half a slot in from the track's left edge.
+    final slot = box.globalToLocal(globalPosition).dx / slotWidth - 0.5;
+    return slot.clamp(0.0, GlassTabBar.labels.length - 1.0);
+  }
+
+  void _track(Offset globalPosition) {
+    final slot = _slotAt(globalPosition);
+    if (slot == null) return;
+
+    setState(() => _dragSlot = slot);
+
+    // Seeded at the tab the drag began on, so a gesture that wanders inside
+    // one slot reports nothing at all -- see GlassTabBar.onSelected for why a
+    // repeat report belongs to the tap and not to this.
+    final index = slot.round();
+    _lastReported ??= widget.selectedIndex;
+    if (index == _lastReported) return;
+    _lastReported = index;
+    widget.onSelected(index);
+  }
+
+  void _endDrag() {
+    if (!_dragging) return;
+    setState(() {
+      _dragSlot = null;
+      _lastReported = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      // Only the drag callbacks are wired, and the recognizer therefore does
+      // not claim the arena until the pointer has moved past the touch slop.
+      // Claiming any earlier would beat the items' taps on every finger that
+      // moves a pixel, and a tap that moves a pixel is still a tap.
+      behavior: HitTestBehavior.translucent,
+      // The drag starts where the finger already is, so the capsule travels to
+      // meet it. There is no separate long-press to arm it: on this bar the
+      // press *is* the tap, and arming behind a hold would hide the gesture
+      // behind a timer for no gain.
+      onHorizontalDragStart: (d) => _track(d.globalPosition),
+      onHorizontalDragUpdate: (d) => _track(d.globalPosition),
+      onHorizontalDragEnd: (_) => _endDrag(),
+      onHorizontalDragCancel: _endDrag,
+      child: Stack(
+        children: <Widget>[
+          _buildTopHighlight(),
+          _buildHighlight(),
+          _buildItems(),
+        ],
+      ),
+    );
   }
 
   /// The 1px lit top edge. A [Border] cannot express it (it would ring all four
   /// sides) and a [BoxShadow] cannot be inset, so it is a real child, clipped
-  /// to the capsule by the [ClipRRect] above it.
+  /// to the capsule by the `ClipRRect` above it.
   Widget _buildTopHighlight() {
     return Positioned(
       top: 0,
       left: 0,
       right: 0,
       child: SizedBox(
-        height: topHighlightHeight,
-        child: ColoredBox(color: topHighlightColor),
+        height: GlassTabBar.topHighlightHeight,
+        child: ColoredBox(color: GlassTabBar.topHighlightColor),
       ),
     );
   }
 
-  /// The capsule riding behind the active tab.
+  /// The capsule riding behind the active tab, or under the finger.
   ///
   /// `.cap { width: calc((100% - 10px)/3); transform: translateX(--i * 100%) }`
   /// becomes a [FractionallySizedBox] a third as wide inside an [AnimatedAlign]
   /// -- for a child of exactly one-third width, `Alignment.x` of -1 / 0 / +1
   /// lands it on slot 0 / 1 / 2 with no arithmetic against the bar's measured
   /// width, so it is correct at every screen size without a [LayoutBuilder].
-  Widget _buildHighlight(bool reducedMotion) {
+  /// That the mapping is *linear* is what lets the drag reuse it: a fractional
+  /// slot of 1.5 is `Alignment.x` 0.5 and lands exactly halfway between.
+  Widget _buildHighlight() {
+    final target = _dragSlot ?? widget.selectedIndex.toDouble();
+
     return Positioned.fill(
       child: Padding(
-        padding: const EdgeInsets.all(barPadding),
+        padding: const EdgeInsets.all(GlassTabBar.barPadding),
         // The SDK asserts in debug that every child of a tab-bar node is a
         // tab. This is decoration with no tap and no label; excluding it keeps
         // that assertion honest instead of muted.
         child: ExcludeSemantics(
-          child: AnimatedAlign(
-            alignment: Alignment(selectedIndex - 1.0, 0),
-            duration: reducedMotion ? Duration.zero : highlightDuration,
-            curve: highlightCurve,
-            child: FractionallySizedBox(
-              widthFactor: 1 / 3,
-              heightFactor: 1,
-              child: DecoratedBox(
-                key: highlightKey,
-                decoration: BoxDecoration(
-                  color: highlightColor,
-                  borderRadius: BorderRadius.circular(highlightRadius),
+          // A TweenAnimationBuilder rather than the AnimatedAlign this used to
+          // be, for one reason: the builder hands back the capsule's *current*
+          // interpolated slot, and the gap between that and the target is the
+          // stretch. An AnimatedAlign animates the same number but keeps it to
+          // itself, so the stretch would have to be reconstructed from the
+          // finger's speed -- see GlassTabBar.lagAtFullStretch for why that
+          // version cannot settle.
+          //
+          // `begin` is left null on purpose: the tween then seeds itself at
+          // `end`, so the capsule does not slide in from slot 0 on first build.
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(end: target),
+            duration: widget.reducedMotion
+                ? Duration.zero
+                : _dragging
+                    ? GlassTabBar.dragFollowDuration
+                    : GlassTabBar.highlightDuration,
+            // The settle curve decelerates hard, which is right for a tap and
+            // wrong while a finger is still moving: under a drag it reads as
+            // the capsule repeatedly braking. easeOut is the follow.
+            curve: _dragging ? Curves.easeOut : GlassTabBar.highlightCurve,
+            builder: (context, slot, child) {
+              // How far the capsule still has to go. Zero when it has caught
+              // up, and signed, which is also the direction of travel.
+              final lag = target - slot;
+              final pull = widget.reducedMotion
+                  ? 0.0
+                  : (lag.abs() / GlassTabBar.lagAtFullStretch).clamp(0.0, 1.0);
+              final stretch = pull * GlassTabBar.maxDragStretch;
+
+              return Align(
+                alignment: Alignment(slot - 1.0, 0),
+                child: FractionallySizedBox(
+                  widthFactor: 1 / 3,
+                  heightFactor: 1,
+                  child: Transform(
+                    // Anchored at the trailing edge, so the capsule only ever
+                    // grows the way it is going -- and at an end slot the only
+                    // way it can go is inward, which is what keeps the stretch
+                    // inside the clip. See
+                    // GlassTabBar.stretchAnchorsToTrailingEdge.
+                    alignment: lag >= 0
+                        ? Alignment.centerLeft
+                        : Alignment.centerRight,
+                    transform: Matrix4.diagonal3Values(
+                      1 + stretch,
+                      1 - stretch * GlassTabBar.stretchSquash,
+                      1,
+                    ),
+                    // Paint-only: the capsule's layout size is untouched, so
+                    // the slot it occupies and the geometry the tests measure
+                    // stay exactly what they were.
+                    transformHitTests: false,
+                    child: child,
+                  ),
                 ),
+              );
+            },
+            // Built once and reused across every frame of the travel -- the
+            // capsule's decoration does not depend on where it is.
+            child: AnimatedContainer(
+              key: GlassTabBar.highlightKey,
+              duration:
+                  widget.reducedMotion ? Duration.zero : GlassTabBar.tintDuration,
+              curve: Curves.easeOut,
+              decoration: BoxDecoration(
+                color: _dragging
+                    ? GlassTabBar.draggingHighlightColor
+                    : GlassTabBar.highlightColor,
+                borderRadius: BorderRadius.circular(GlassTabBar.highlightRadius),
               ),
             ),
           ),
@@ -379,31 +638,35 @@ class GlassTabBar extends StatelessWidget {
     );
   }
 
-  Widget _buildItems(bool reducedMotion) {
+  Widget _buildItems() {
     return Padding(
-      padding: const EdgeInsets.all(barPadding),
+      // The drag measures this box. Same geometry as the highlight's padding
+      // above, deliberately: the capsule and the slots have to agree about
+      // where a slot is, and they agree by sharing one track.
+      key: _trackKey,
+      padding: const EdgeInsets.all(GlassTabBar.barPadding),
       // container + explicitChildNodes: the three tabs must surface as three
       // distinct children of this node, or the debug tab-bar validator (and
       // every screen reader) sees one merged blob.
       child: Semantics(
-        key: tabBarKey,
+        key: GlassTabBar.tabBarKey,
         role: SemanticsRole.tabBar,
         container: true,
         explicitChildNodes: true,
         child: Row(
           children: <Widget>[
-            for (var i = 0; i < labels.length; i++)
+            for (var i = 0; i < GlassTabBar.labels.length; i++)
               Expanded(
                 child: _GlassTabItem(
-                  key: itemKey(i),
-                  glyph: glyphs[i],
-                  label: labels[i],
+                  key: GlassTabBar.itemKey(i),
+                  glyph: GlassTabBar.glyphs[i],
+                  label: GlassTabBar.labels[i],
                   // Set on all three, never just the active one: a tab whose
                   // `selected` is absent rather than false fails the SDK's
                   // "a tab needs selected states" assertion.
-                  selected: i == selectedIndex,
-                  reducedMotion: reducedMotion,
-                  onTap: () => onSelected(i),
+                  selected: i == widget.selectedIndex,
+                  reducedMotion: widget.reducedMotion,
+                  onTap: () => widget.onSelected(i),
                 ),
               ),
           ],
@@ -518,76 +781,6 @@ class _GlassTabItemState extends State<_GlassTabItem> {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Turns a horizontal swipe across the bar into a one-tab step.
-///
-/// Stateful because the decision needs the distance travelled, and only a drag
-/// that is still in progress knows that.
-///
-/// **Distance or velocity, not velocity alone.** A flick is the gesture a
-/// thumb makes, but a deliberate slow drag — the whole gesture a mouse or
-/// trackpad can produce, and a common one on a device — releases with
-/// essentially no velocity. Committing on velocity alone means the bar simply
-/// ignores a drag the user watched themselves make, with no feedback. The
-/// first version of this shipped that way and it read as broken.
-class _SwipeToChangeTab extends StatefulWidget {
-  const _SwipeToChangeTab({required this.onStep, required this.child});
-
-  /// Called with -1 or +1. The bar decides whether that tab exists.
-  final ValueChanged<int> onStep;
-  final Widget child;
-
-  /// Fast enough to be a flick, in logical pixels per second.
-  ///
-  /// Well above zero on purpose: the bar sits under the thumb, so slow drift
-  /// across it while reaching for a tab is normal and must not move anything.
-  static const double velocityThreshold = 300;
-
-  /// Far enough to be deliberate, in logical pixels, for a drag too slow to
-  /// register as a flick. About a thumb's width of travel — short enough to
-  /// feel responsive, long enough that it is not triggered by a sloppy tap.
-  static const double distanceThreshold = 32;
-
-  @override
-  State<_SwipeToChangeTab> createState() => _SwipeToChangeTabState();
-}
-
-class _SwipeToChangeTabState extends State<_SwipeToChangeTab> {
-  double _travelled = 0;
-
-  void _onStart(DragStartDetails _) => _travelled = 0;
-
-  void _onUpdate(DragUpdateDetails details) =>
-      _travelled += details.primaryDelta ?? 0;
-
-  void _onEnd(DragEndDetails details) {
-    final velocity = details.velocity.pixelsPerSecond.dx;
-    final flicked = velocity.abs() >= _SwipeToChangeTab.velocityThreshold;
-    final dragged =
-        _travelled.abs() >= _SwipeToChangeTab.distanceThreshold;
-    if (!flicked && !dragged) return;
-
-    // Prefer the flick's direction when there is one: a drag that doubles back
-    // before release should go where it was thrown, not where it started.
-    final direction = flicked ? velocity : _travelled;
-    // Moving left advances, matching the direction the content would travel.
-    widget.onStep(direction < 0 ? 1 : -1);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      // Only the drag callbacks are wired. A recognizer that claimed the arena
-      // any earlier would beat the items' taps on every finger that moves a
-      // pixel, and a tap that moves a pixel is still a tap.
-      behavior: HitTestBehavior.translucent,
-      onHorizontalDragStart: _onStart,
-      onHorizontalDragUpdate: _onUpdate,
-      onHorizontalDragEnd: _onEnd,
-      child: widget.child,
     );
   }
 }

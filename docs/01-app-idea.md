@@ -65,16 +65,18 @@ Note: the app doesn't suggest or auto-select a workout for the user (no "today's
 ## V1 feature list
 
 ### Workout templates
-- Predefined, **single-day** templates — each one is self-contained, with no multi-day rotation or weekly split system behind it:
+- Predefined, **single-day** templates — each one is self-contained, with no multi-day rotation or weekly split system behind it. Eleven ship; the authored set and each one's split membership live in `lib/src/data/workout_templates.dart`, which is the single source of truth for both:
   - Push day (chest, shoulders, triceps)
   - Pull day (back, biceps)
   - Leg day (quads, hamstrings, glutes, calves)
-  - Upper body day (chest, back, shoulders, arms)
+  - Upper body day (chest, back, shoulders, arms — "arms" is not a parent group, so it is stored as biceps + triceps)
   - Full body day (a mix across all major muscle groups)
   - Chest and triceps day
   - Back and biceps day
   - Shoulders day
   - Arms day (biceps and triceps)
+  - Chest day
+  - Back day
 - Each predefined template has a short explanation of what it means.
 - **Predefined templates cannot be edited directly** — they stay as a reliable, unmodified reference. A user can duplicate one into an editable custom copy instead.
 - **A template stores parent muscle groups only** (e.g. `['chest','shoulders','triceps']`). Sub-muscle groups are **derived from the muscle taxonomy at render time**, never copied into the template. Picking "chest" in the template editor therefore surfaces upper, mid and lower chest automatically; the user does not select bands individually.

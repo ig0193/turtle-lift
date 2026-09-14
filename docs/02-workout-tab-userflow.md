@@ -8,17 +8,68 @@
 
 ---
 
-## Step 1 — Choose a starting point
+## Step 1 — The Workout landing
 
-Two options:
+**The landing *is* the template list.** There is no intermediate picker screen and no pair of entry buttons: the templates are on screen the moment the tab opens. Two things follow, and both are the reason for the shape. Day one shows real content rather than an empty state, because eleven templates ship with the app. And starting a saved workout is one tap rather than three.
 
-1. **Start workout** — pick a workout template to run. The list shows predefined templates (Push day, Pull day, Leg day, Full body day, etc.) alongside any custom templates the user has created and saved. Creating and editing templates happens **behind the Profile avatar**, not here — this screen is only for selecting an already-saved template to start a session from.
-2. **Ad-hoc workout** — search for exercises directly and add them to a session. No template or muscle-group structure required — for a user who already knows exactly what they want to do (e.g. following a YouTube trainer's routine) or wants a one-off session without saving a reusable template.
-   - Adding an exercise via search just places it in the session's exercise list with a "not started" state — it does not require logging immediately.
-   - Logging is a separate action, reached by tapping into any exercise in the list.
-   - This means both usage patterns are supported naturally with no extra UI: a user can search → tap an exercise → land straight on the log screen for it (log-as-you-go), or search and add several exercises first, then tap into each one at their own pace (plan-ahead). There's no forced order — it's the same list and the same tap-to-log interaction either way.
+### Anatomy, top to bottom
 
-Both paths converge into the same underlying session-running experience from Step 2 onward, just with different starting inputs.
+| Row | What it is |
+|---|---|
+| Pinned header | `Workout`, with the Profile avatar trailing. Outside the scroll body — it never moves. |
+| `TEMPLATES` | A quiet small-caps group label, with the split filter control on its right. |
+| Count line | `4 templates` — how many the current split yields. |
+| Template rows | The predefined templates for the selected split, in a curated order. |
+| `YOUR TEMPLATES` | The user's own templates, in their own group. **Absent entirely when they have none** — not a heading over nothing. |
+| `Ad-hoc workout` | A single entry below every group, on the muted surface so it reads as a different kind of thing rather than one more template. |
+| Floating tab bar | Over the content, as on every L0 root. |
+
+The body is the scrollable and carries the gutter plus the tab bar's inset itself; the header is the `Scaffold.appBar` and sits outside it.
+
+### The split filter
+
+A control beside the group label filters the predefined templates to one of three splits: **1 Muscle per day**, **Multi Split**, or **Push-Pull-Legs**.
+
+- **There is no unfiltered value.** Every arrival lands in a named split, so each of the three must always have at least one template behind it — an empty split would be a dead end with no "All" to escape to.
+- **First launch shows Multi Split**; after that the screen opens on whichever split the user last chose. That choice is read *before the first frame*, so the list never renders one split and swaps to another.
+- **It is a view filter, not a declared programme.** This is the same line the note at the top of this document draws. It changes which templates are listed and nothing else: it never advances, never rotates, never suggests, and does not know what day it is.
+- **A template may belong to more than one split.** Leg day is both the legs of push/pull/legs and a single-focus day, so the eleven templates carry twelve memberships between them.
+- **Membership lives in one place** — with the template data in `lib/src/data/workout_templates.dart`. It is deliberately not copied into these docs, because two copies drift.
+
+The control shows a filter glyph, the current split's name, and a caret. **The name is not decoration:** with no unfiltered value the list on screen is always a subset, so a control that showed only an icon would leave a user seeing three rows concluding the app ships three templates.
+
+Tapping it opens a **dropdown anchored under the control**, right edges aligned — the menu belongs to the chip that opened it. Three options, the current one marked. It is painted from the app's own surfaces rather than taking Material's popup defaults, which would bring an elevation and surface tint used nowhere else here. The accepted trade is reach: a dropdown lands at the top of the screen, which is the harder half to touch one-handed, and the control's 48pt target is what keeps that round trip manageable.
+
+### A template row
+
+Each row is the template's **name** over its **parent muscle groups**, with a chevron, and is tappable across a comfortable target — this screen is used standing, often one-handed, between sets.
+
+The muscle line is derived from the taxonomy at render time, never stored: the labels are joined in taxonomy order, in sentence case (`Chest, shoulders, triceps`). **Full body day is the one exception** — it spans all twelve parent groups, so the literal join would run about four times longer than any other row, and it carries the bespoke line `A mix across all major groups` instead.
+
+Tapping a row opens the workout overview for that template. It does **not** create a session yet; see Step 2.
+
+### Ad-hoc workout
+
+Search for exercises directly and add them to a session. No template or muscle-group structure required — for a user who already knows exactly what they want to do (e.g. following a YouTube trainer's routine), or who wants a one-off session without saving a reusable template.
+
+- Adding an exercise via search just places it in the session's exercise list with a "not started" state — it does not require logging immediately.
+- Logging is a separate action, reached by tapping into any exercise in the list.
+- This means both usage patterns are supported naturally with no extra UI: a user can search → tap an exercise → land straight on the log screen for it (log-as-you-go), or search and add several exercises first, then tap into each one at their own pace (plan-ahead). There's no forced order — it's the same list and the same tap-to-log interaction either way.
+
+### Custom templates
+
+Custom templates sit **outside** the filter and are shown whichever split is selected. With no unfiltered value to fall back on, filing them under one split would make a user's own template invisible from the other two — and a classifier would put a single-muscle custom template under Multi Split while the predefined equivalent sat under 1 Muscle per day, which reads as a bug.
+
+Creating and editing them happens **behind the Profile avatar**, never here; this screen only selects an already-saved template to run. Until that authoring flow exists, the group is always absent.
+
+### What this screen deliberately does not have
+
+- **No empty state.** Eleven templates ship, so there is no zero-data condition for it to be in. An empty state here would be the bug.
+- **No Resume card, and no in-progress session UI.** An active session replaces this tab root entirely — see Step 2b.
+- **No streak, no last-session recall, no body diagram, no muscle-coverage chips.** Each was considered and cut; the screen's job is to be left quickly.
+- **No suggestion of any kind.** Nothing here states or implies a schedule, a rotation, or a recommended workout.
+
+Both paths — a template and ad-hoc — converge into the same underlying session-running experience from Step 2 onward, just with different starting inputs.
 
 ## Step 2 — Workout overview
 
@@ -38,7 +89,7 @@ Both paths converge into the same underlying session-running experience from Ste
 - Both paths show a **muscle map that starts uncolored and heats up live as exercises are logged during the session** — a running visual record of what's actually been worked, not a static preview.
   - **Every time an exercise is marked complete, the muscles that exercise trains fill in on the map**: primary muscles at accent-strong (`#D85A30`), secondary muscles at accent-light (`#F0997B`). See the muscle map live fill animation below.
   - Resolve which diagram region to fill via the `segments` list in `muscle_taxonomy.dart` — not by string-matching the sub-muscle group id against the SVG. Most sub-groups map 1:1, several fill segments in both views, and side delt fills the front shoulder segment. All three cases are handled by the same lookup.
-  - **Start workout (template path):** the template's sub-muscle groups appear as faint outlines from the start, so the user sees at a glance what today covers. Each outlined region heats up once an exercise training it has actually been logged, not just planned.
+  - **Template path:** the template's sub-muscle groups appear as faint outlines from the start, so the user sees at a glance what today covers. Each outlined region heats up once an exercise training it has actually been logged, not just planned.
   - **Ad-hoc workout:** no outlines exist upfront, since there's no predefined plan. The map starts fully neutral and only gains colour as exercises are logged.
 
 - Alongside the map, both paths show a list. **The two paths show different lists — this is intentional, not an inconsistency:**
@@ -66,7 +117,7 @@ Both paths converge into the same underlying session-running experience from Ste
 ## Step 2b — Session persistence and resume
 
 - **An active session persists indefinitely.** It is never auto-discarded on app close, on a date change, or after any timeout.
-- Returning to the Workout tab with a session still open shows **the session itself** — it replaces the landing, so Start workout and Ad-hoc workout are not on screen. There is no Resume card. **Note:** this removes the trigger for the auto-save rule below, which fires when a new workout is started while one is open. The rule stands; the entry point that fires it has to be restored when this screen is built. See `docs/adr/0003-l0-navigation-variant-a.md`.
+- Returning to the Workout tab with a session still open shows **the session itself** — it replaces the landing, so the template list and the ad-hoc entry are not on screen. There is no Resume card. **Note:** this removes the trigger for the auto-save rule below, which fires when a new workout is started while one is open. The rule stands; the entry point that fires it has to be restored when this screen is built. See `docs/adr/0003-l0-navigation-variant-a.md`.
 - **Starting a new workout while one is still open auto-saves the old one** rather than discarding it or blocking the user:
   - If the abandoned session has **at least one completed set**, it is saved to history exactly as if Finish had been tapped. Show a brief toast ("Chest and triceps day saved") — work must not vanish silently into history.
   - If it has **zero completed sets**, discard it silently. Saving it would create an empty session that counts toward the streak, contradicting the rule in `01-app-idea.md`.
@@ -119,13 +170,14 @@ Both paths converge into the same underlying session-running experience from Ste
 
 ## Screen list
 
-1. Workout tab landing (two entry options: Start workout / Ad-hoc workout)
-2. Workout template picker (list of predefined + custom saved templates, for Start workout)
-3. Exercise search + add (for Ad-hoc workout)
-4. Workout overview (muscle map + nested muscle list on the template path, or flat exercise list on the ad-hoc path; editable title; editable session date; Finish and Discard)
-5. Sub-muscle group → exercise options (template path; reachable whether or not the sub-muscle group is already ticked)
-6. Exercise logging screen (sets, reps, weight)
-7. Workout summary (inline-editable title; same composition reused for Session Detail in Profile)
+1. Workout tab landing (the split-filtered template list, the user's own templates, and an ad-hoc entry)
+2. Exercise search + add (for Ad-hoc workout)
+3. Workout overview (muscle map + nested muscle list on the template path, or flat exercise list on the ad-hoc path; editable title; editable session date; Finish and Discard)
+4. Sub-muscle group → exercise options (template path; reachable whether or not the sub-muscle group is already ticked)
+5. Exercise logging screen (sets, reps, weight)
+6. Workout summary (inline-editable title; same composition reused for Session Detail in Profile)
+
+A separate template-picker screen is **not** in this list any more. Whether one comes back as a "see all templates" destination — showing every template regardless of split — is open; the landing works either way.
 
 Note: creating/editing a custom workout template is a separate flow that lives behind the Profile avatar — see that document.
 
@@ -152,23 +204,48 @@ Reference HTML/CSS mockups for this tab's key screens, using the Coral palette d
 
 ### Workout tab landing
 
+Shows the Push-Pull-Legs split selected. The tab bar is Workout / Muscles / History — Profile is the header avatar, not a tab (`docs/adr/0003-l0-navigation-variant-a.md`).
+
 ```html
-<div style="background:#17140F; border-radius:16px; padding:0; max-width:340px; overflow:hidden;">
-<div style="padding:1.25rem 1.25rem 0.5rem;">
-<h1 style="margin:0.5rem 0 1.25rem; color:#F5EFE8;">Workout</h1>
-<button style="width:100%; text-align:left; padding:1rem; margin-bottom:12px; display:flex; align-items:center; gap:12px; background:#211D18; border:0.5px solid #332C22; border-radius:8px; color:#F5EFE8;">
-<i class="ti ti-list" style="font-size:22px; color:#A89C8E;"></i>
-<div><p style="margin:0; font-weight:500; font-size:15px;">Start workout</p><p style="margin:0; font-size:13px; color:#A89C8E;">Pick a saved template</p></div>
-</button>
-<button style="width:100%; text-align:left; padding:1rem; display:flex; align-items:center; gap:12px; background:#211D18; border:0.5px solid #332C22; border-radius:8px; color:#F5EFE8;">
-<i class="ti ti-search" style="font-size:22px; color:#A89C8E;"></i>
-<div><p style="margin:0; font-weight:500; font-size:15px;">Ad-hoc workout</p><p style="margin:0; font-size:13px; color:#A89C8E;">Search and add exercises</p></div>
-</button>
+<div style="background:#17140F; border-radius:16px; max-width:340px; overflow:hidden; font-family:system-ui;">
+<div style="display:flex; align-items:center; justify-content:space-between; padding:1rem 1.125rem 0.75rem;">
+<h1 style="margin:0; color:#F5EFE8; font-size:24px; font-weight:600; letter-spacing:-0.5px;">Workout</h1>
+<div style="width:32px; height:32px; border-radius:50%; background:#211D18; border:1px solid #332C22; display:flex; align-items:center; justify-content:center;"><i class="ti ti-user" style="font-size:17px; color:#A89C8E;"></i></div>
 </div>
-<div style="display:flex; border-top:0.5px solid #332C22; margin-top:1.5rem;">
-<div style="flex:1; text-align:center; padding:10px 0; color:#D85A30;"><i class="ti ti-barbell" style="font-size:20px;"></i><p style="font-size:11px; margin:2px 0 0;">Workout</p></div>
-<div style="flex:1; text-align:center; padding:10px 0; color:#6B6156;"><i class="ti ti-stretching" style="font-size:20px;"></i><p style="font-size:11px; margin:2px 0 0;">Muscles</p></div>
-<div style="flex:1; text-align:center; padding:10px 0; color:#6B6156;"><i class="ti ti-user" style="font-size:20px;"></i><p style="font-size:11px; margin:2px 0 0;">Profile</p></div>
+<div style="padding:0 1.125rem 1rem;">
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+<span style="font-size:10.5px; font-weight:700; letter-spacing:1.1px; color:#6B6156;">TEMPLATES</span>
+<span style="display:inline-flex; align-items:center; gap:7px; background:#211D18; border:1px solid #332C22; border-radius:999px; padding:8px 10px 8px 11px;">
+<i class="ti ti-filter" style="font-size:16px; color:#A89C8E;"></i>
+<span style="font-size:12.5px; font-weight:600; color:#F5EFE8;">Push-Pull-Legs</span>
+<i class="ti ti-chevron-down" style="font-size:14px; color:#6B6156;"></i>
+</span>
+</div>
+<p style="margin:0 0 12px; font-size:11.5px; color:#6B6156;">3 templates</p>
+
+<div style="background:#211D18; border:1px solid #332C22; border-radius:13px; padding:13px 15px; margin-bottom:9px; display:flex; align-items:center;">
+<div style="flex:1;"><p style="margin:0; font-size:15px; font-weight:600; color:#F5EFE8;">Push day</p><p style="margin:3px 0 0; font-size:11.5px; color:#6B6156;">Chest, shoulders, triceps</p></div>
+<i class="ti ti-chevron-right" style="font-size:20px; color:#6B6156;"></i>
+</div>
+<div style="background:#211D18; border:1px solid #332C22; border-radius:13px; padding:13px 15px; margin-bottom:9px; display:flex; align-items:center;">
+<div style="flex:1;"><p style="margin:0; font-size:15px; font-weight:600; color:#F5EFE8;">Pull day</p><p style="margin:3px 0 0; font-size:11.5px; color:#6B6156;">Back, biceps</p></div>
+<i class="ti ti-chevron-right" style="font-size:20px; color:#6B6156;"></i>
+</div>
+<div style="background:#211D18; border:1px solid #332C22; border-radius:13px; padding:13px 15px; margin-bottom:16px; display:flex; align-items:center;">
+<div style="flex:1;"><p style="margin:0; font-size:15px; font-weight:600; color:#F5EFE8;">Leg day</p><p style="margin:3px 0 0; font-size:11.5px; color:#6B6156;">Quads, hamstrings, glutes, calves</p></div>
+<i class="ti ti-chevron-right" style="font-size:20px; color:#6B6156;"></i>
+</div>
+
+<div style="background:#241F19; border:1px solid #332C22; border-radius:13px; padding:13px 15px; display:flex; align-items:center;">
+<div style="flex:1;"><p style="margin:0; font-size:15px; font-weight:600; color:#F5EFE8;">Ad-hoc workout</p><p style="margin:3px 0 0; font-size:11.5px; color:#6B6156;">Search and add as you go</p></div>
+<i class="ti ti-chevron-right" style="font-size:20px; color:#6B6156;"></i>
+</div>
+</div>
+
+<div style="display:flex; gap:6px; margin:1.5rem 1.125rem 1.125rem; padding:7px; background:#211D18; border:1px solid #332C22; border-radius:999px;">
+<div style="flex:1; text-align:center; padding:7px 0; border-radius:999px; background:#241F19; color:#D85A30;"><i class="ti ti-barbell" style="font-size:18px;"></i><p style="font-size:11px; margin:1px 0 0;">Workout</p></div>
+<div style="flex:1; text-align:center; padding:7px 0; color:#6B6156;"><i class="ti ti-stretching" style="font-size:18px;"></i><p style="font-size:11px; margin:1px 0 0;">Muscles</p></div>
+<div style="flex:1; text-align:center; padding:7px 0; color:#6B6156;"><i class="ti ti-clock" style="font-size:18px;"></i><p style="font-size:11px; margin:1px 0 0;">History</p></div>
 </div>
 </div>
 ```

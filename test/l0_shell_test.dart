@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:turtle_lift/src/data/exercise_index.dart';
+import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
@@ -29,7 +31,27 @@ import 'package:turtle_lift/src/ui/workout_root.dart';
 ///
 /// None of those throw. Each is asserted directly below.
 void main() {
+  // The shipped exercise library comes off `rootBundle`.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  /// The shipped library, indexed as `main()` indexes it.
+  ///
+  /// The shell mounts all three roots eagerly in an `IndexedStack`, so the
+  /// Muscles root builds on the very first pump of every test in this file —
+  /// and `exerciseIndexProvider` throws without an override rather than
+  /// defaulting to an empty index.
+  late ExerciseIndex index;
+
+  setUpAll(() async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    index = ExerciseIndex.fromJson(
+      await container.read(exerciseLibraryProvider.future),
+    );
+  });
+
   Widget host() => ProviderScope(
+        overrides: [exerciseIndexProvider.overrideWithValue(index)],
         child: MaterialApp(
           theme: buildAppTheme(),
           home: const L0Shell(),
@@ -74,8 +96,11 @@ void main() {
 
   /// The copy that identifies each root on screen, in tab order.
   const rootText = <String>[
-    'Ready when you are', // WorkoutRoot
-    'Browse by muscle', // MusclesRoot
+    'TEMPLATES', // WorkoutRoot
+    // The front/back control, near the top of the root: the section label over
+    // the 19 rows sits below the body map and is off-screen on the short
+    // viewport `useShortScreen` sets up.
+    'Front', // MusclesRoot
     'No workouts yet', // HistoryRoot
   ];
 
