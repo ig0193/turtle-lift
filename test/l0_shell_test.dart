@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
+import 'package:turtle_lift/src/data/history_preview_data.dart';
 import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
@@ -51,7 +52,14 @@ void main() {
   });
 
   Widget host() => ProviderScope(
-        overrides: [exerciseIndexProvider.overrideWithValue(index)],
+        overrides: [
+          exerciseIndexProvider.overrideWithValue(index),
+          // This file is about the shell -- which root is mounted, where the
+          // bar sits, what the header says -- not about what History lists. An
+          // empty History keeps these tests independent of the session fixture,
+          // so changing that fixture cannot break the shell suite.
+          historySessionsProvider.overrideWithValue(const <HistorySession>[]),
+        ],
         child: MaterialApp(
           theme: buildAppTheme(),
           home: const L0Shell(),
@@ -101,7 +109,7 @@ void main() {
     // the 19 rows sits below the body map and is off-screen on the short
     // viewport `useShortScreen` sets up.
     'Front', // MusclesRoot
-    'No workouts yet', // HistoryRoot
+    'No workouts yet', // HistoryRoot, seeded empty above
   ];
 
   group('tabs', () {

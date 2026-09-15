@@ -113,16 +113,26 @@ are reviewed copy.
   **permanent from the first store upload, including internal test tracks** — the
   scaffold had shipped `com.example.*`, which Play rejects outright, and it was
   corrected before any upload.
+- **App display name: `TurtleLift`.** One word. It is the wordmark on the
+  summary card, which is built to be screenshotted, so it could not stay a
+  bracketed placeholder.
+- **The two overview paths are two widgets, not one with a flag.** They share
+  the title, date control, body map and Finish/Discard as separate widgets and
+  differ only in their list — a nested muscle list against a flat exercise list,
+  which answer different questions.
+- **Session tables took the reserved schema version 2.** The personal-details
+  work landed at 3 and numbered around the gap deliberately. That only worked
+  because nothing had shipped: a device already at 3 never runs the reserved
+  step, so a development install from before it has to have its data cleared
+  once. **No later step may be numbered below the current version.**
+- **A muscle ticks on a completed set as well as on Mark exercise done.** A user
+  who logs three sets and walks to the next machine has trained it.
 - **Destructive actions use `#C4553A`,** the eleventh palette colour (`00` §12,
   `01` §Usage rules). `#D85A30` could not carry "delete": it means "active / this
   has been worked" *"wherever it appears"*, so a delete confirmation painted in it
   reads as approval. `test/theme_palette_test.dart` fails on any colour outside §12.
 
 ## Still undecided — ask, don't guess
-
-- App display name (splash and share card use a placeholder).
-- Whether the ad-hoc overview and the template overview are one widget with a
-  variant flag or two separate widgets.
 - Typeface. The prototypes use Inter; the app currently uses the platform default.
   If Inter is chosen it must be **bundled as an asset** — the app is offline and
   must not fetch a font at runtime. Genuinely open: do not bundle it without asking.

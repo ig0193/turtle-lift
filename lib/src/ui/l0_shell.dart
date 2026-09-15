@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
+import 'l0_tab_chrome.dart';
 import 'stroke_glyph.dart';
 import 'glass_tab_bar.dart';
 import 'history_root.dart';
@@ -10,6 +11,7 @@ import 'muscles_root.dart';
 import 'profile_screen.dart';
 import 'tab_index.dart';
 import 'workout_root.dart';
+import 'workout_tab_chrome.dart';
 
 /// What one L0 tab contributes to the shell's chrome.
 ///
@@ -82,10 +84,10 @@ class L0Shell extends ConsumerWidget {
 
   /// The three tabs, in bar order. **Add a tab here and in [kL0TabCount].**
   ///
-  /// Const today because nothing on these three headers varies yet. When one
-  /// does — the open-session title at build-order step 4 — this becomes a
-  /// method that takes the `WidgetRef` and returns the same list; the shell
-  /// below does not change.
+  /// The structural list stays constant; only the Workout tab's *chrome*
+  /// varies, and it varies through [workoutTabChromeProvider], which the
+  /// Workout feature owns. The shell reads a small value and never learns what
+  /// a workout session is.
   static const List<L0TabSpec> tabs = <L0TabSpec>[
     L0TabSpec(title: 'Workout', body: WorkoutRoot()),
     L0TabSpec(title: 'Muscles', body: MusclesRoot()),
@@ -113,11 +115,21 @@ class L0Shell extends ConsumerWidget {
     final index = ref.watch(tabIndexProvider);
     final tab = tabs[index];
 
+    // A coarse selector, deliberately: this build rebuilds the header, the tab
+    // stack and the animated bar, so watching the whole session would repaint
+    // all of it on every logged set and every keystroke in the title field,
+    // from whichever tab the user happens to be on.
+    // Index 0 is the Workout tab, which is the only one whose header varies.
+    final chrome = index == 0
+        ? ref.watch(workoutTabChromeProvider)
+        : const L0TabChrome();
+
     return AppScreen.root(
-      title: tab.title,
-      titleWidget: tab.titleWidget,
+      title: chrome.title ?? tab.title,
+      titleWidget: chrome.titleWidget ?? tab.titleWidget,
       actions: <Widget>[
         ...?tab.actions,
+        ...?chrome.actions,
         // Profile is a header control, not a fourth tab. AppScreen appends the
         // trailing gutter spacer after this, and the avatar carries the other
         // 8 itself — so it is wrapped in its own target rather than dropped in
@@ -199,6 +211,23 @@ class ProfileAvatarButton extends StatefulWidget {
   /// Ring **and** glyph while pressed — one colour for both.
   static const Color pressedColor = AppPalette.accentStrong;
 
+  /// What the avatar says it opens.
+  ///
+  /// **The label is the whole point of this control having one.** The rule that
+  /// authored things live behind this avatar (KD1) puts the app's only
+  /// template-authoring surface behind a 32pt disc with no words on it, which is
+  /// poor discovery for something a new user may want in week one. A label is
+  /// half of what pays that cost; the other half is the route from the Workout
+  /// tab's template picker.
+  ///
+  /// **Beside the disc, not beneath it.** The header is a fixed-height
+  /// `Scaffold.appBar`, so a second line would either grow it or clip; and the
+  /// label sits *inside* the tap target rather than next to it, because a word
+  /// that names the destination but does not open it is worse than no word.
+  /// The disc keeps its own 32pt size and its own 48pt square inside the row —
+  /// only the target's width grows.
+  static const String label = 'Profile';
+
   /// The 32pt disc, so a test can measure it without guessing which box in the
   /// header it is.
   @visibleForTesting
@@ -233,7 +262,7 @@ class _ProfileAvatarButtonState extends State<ProfileAvatarButton> {
     return MergeSemantics(
       child: Semantics(
         button: true,
-        label: 'Profile',
+        label: ProfileAvatarButton.label,
         child: GestureDetector(
           key: ProfileAvatarButton.tapTargetKey,
           // Opaque, so the whole 48pt box is the target rather than the 32pt
@@ -243,24 +272,46 @@ class _ProfileAvatarButtonState extends State<ProfileAvatarButton> {
           onTapDown: (_) => _setPressed(true),
           onTapUp: (_) => _setPressed(false),
           onTapCancel: () => _setPressed(false),
-          child: SizedBox.square(
-            dimension: ProfileAvatarButton.tapTarget,
-            child: Center(
-              child: Container(
-                key: ProfileAvatarButton.circleKey,
-                width: ProfileAvatarButton.size,
-                height: ProfileAvatarButton.size,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppPalette.surface,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: ring,
-                    width: ProfileAvatarButton.borderWidth,
+          child: SizedBox(
+            height: ProfileAvatarButton.tapTarget,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                // The wrapping Semantics already announces this control as a
+                // button named Profile; leaving the glyph's own label in would
+                // have a screen reader say it twice.
+                ExcludeSemantics(
+                  child: Text(
+                    ProfileAvatarButton.label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.02,
+                      color: tint,
+                    ),
                   ),
                 ),
-                child: ProfileGlyphIcon(color: tint),
-              ),
+                SizedBox.square(
+                  dimension: ProfileAvatarButton.tapTarget,
+                  child: Center(
+                    child: Container(
+                      key: ProfileAvatarButton.circleKey,
+                      width: ProfileAvatarButton.size,
+                      height: ProfileAvatarButton.size,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppPalette.surface,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: ring,
+                          width: ProfileAvatarButton.borderWidth,
+                        ),
+                      ),
+                      child: ProfileGlyphIcon(color: tint),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -325,7 +376,6 @@ class ProfileGlyphPainter extends CustomPainter {
   bool shouldRepaint(ProfileGlyphPainter oldDelegate) =>
       oldDelegate.strokeWidth != strokeWidth || oldDelegate.color != color;
 }
-
 
 /// `<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/>`.
 ///

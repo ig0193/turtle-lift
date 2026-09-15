@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
+import 'package:turtle_lift/src/data/history_preview_data.dart';
 import 'package:turtle_lift/src/ui/app_screen.dart';
 import 'package:turtle_lift/src/data/body_gender.dart';
 import 'package:turtle_lift/src/ui/body_diagram.dart';
@@ -95,7 +96,13 @@ void main() {
     // The index override is not optional: `exerciseIndexProvider` throws
     // without one by design, so the Muscles root would not mount at all.
     return ProviderScope(
-      overrides: [exerciseIndexProvider.overrideWithValue(index)],
+      overrides: [
+        exerciseIndexProvider.overrideWithValue(index),
+        // These roots are hosted to check geometry and the empty state, so
+        // History starts with no sessions. Its populated form is
+        // `test/history_root_test.dart`'s subject.
+        historySessionsProvider.overrideWithValue(const <HistorySession>[]),
+      ],
       child: MaterialApp(
         theme: buildAppTheme(),
         home: Scaffold(

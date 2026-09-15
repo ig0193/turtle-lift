@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
+import 'package:turtle_lift/src/data/session_store.dart';
+import 'package:turtle_lift/src/data/exercise.dart';
+import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/custom_templates.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
 import 'package:turtle_lift/src/data/template_filter.dart';
@@ -11,8 +14,8 @@ import 'package:turtle_lift/src/data/workout_templates.dart';
 import 'package:turtle_lift/src/ui/app_screen.dart';
 import 'package:turtle_lift/src/ui/exercise_search_screen.dart';
 import 'package:turtle_lift/src/ui/template_filter_control.dart';
+import 'package:turtle_lift/src/ui/template_overview_body.dart';
 import 'package:turtle_lift/src/ui/template_row.dart';
-import 'package:turtle_lift/src/ui/workout_overview_screen.dart';
 import 'package:turtle_lift/src/ui/workout_root.dart';
 
 /// The Workout landing: what it lists, what the filter changes, and where a tap
@@ -41,6 +44,10 @@ void main() {
       overrides: [
         initialTemplateFilterProvider.overrideWithValue(initial),
         customTemplatesProvider.overrideWithValue(custom),
+        // The ad-hoc entry now pushes a real search screen rather than the
+        // one-line placeholder it used to, so reaching it needs the library
+        // the app seeds at boot.
+        exerciseIndexProvider.overrideWithValue(ExerciseIndex(const <Exercise>[])),
         if (database != null) appDatabaseProvider.overrideWithValue(database),
       ],
       child: const MaterialApp(
@@ -65,6 +72,10 @@ void main() {
           'Full body day',
           'Chest and triceps day',
           'Back and biceps day',
+          // The route to template authoring. It sits outside the custom-group
+          // conditional on purpose, so it is here even with no custom
+          // templates -- see WorkoutRoot.manageTemplatesKey.
+          'Manage templates',
           'Ad-hoc workout',
         ],
       );
@@ -236,17 +247,31 @@ void main() {
   });
 
   group('where a tap goes', () {
-    testWidgets('a template row opens the overview carrying that template',
-        (tester) async {
-      await tester.pumpWidget(host());
+    // This used to assert that a template row *pushed* an overview screen
+    // carrying the template. An open workout is now the tab root itself
+    // (`docs/adr/0003`), so the row starts the workout in place and the
+    // landing is replaced rather than covered.
+    testWidgets('a template row starts that workout in place', (tester) async {
+      final database = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(database.close);
 
-      await tester.tap(find.text('Chest and triceps day'));
+      await tester.pumpWidget(host(database: database));
+
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Chest and triceps day'));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      });
       await tester.pumpAndSettle();
 
-      final overview = tester.widget<WorkoutOverviewScreen>(
-        find.byType(WorkoutOverviewScreen),
+      expect(find.byType(TemplateOverviewBody), findsOneWidget);
+      expect(find.byType(TemplateRow), findsNothing,
+          reason: 'the landing is replaced, not covered');
+
+      final open = await tester.runAsync(
+        () => SessionStore(database).readOpenSession(),
       );
-      expect(overview.template.id, 'chest-triceps');
+      expect(open!.templateId, 'chest-triceps');
+      expect(open.title, 'Chest and triceps day');
     });
 
     testWidgets('the ad-hoc entry opens exercise search', (tester) async {

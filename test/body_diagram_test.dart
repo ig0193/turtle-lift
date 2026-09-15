@@ -23,7 +23,7 @@ void main() {
 
   Widget host(Widget child, {BodyGender gender = BodyGender.male}) =>
       ProviderScope(
-        overrides: [bodyGenderProvider.overrideWithValue(gender)],
+        overrides: [initialBodyGenderProvider.overrideWithValue(gender)],
         child: MaterialApp(
           theme: buildAppTheme(),
           home: Scaffold(

@@ -73,6 +73,31 @@ history list, stats, templates and personal details to Profile. History moved to
 a tab; the split of everything else between the History tab and the avatar
 destination is unresolved and belongs to whoever builds those screens.
 
+> **Resolved, 2026-09-14.** The rule is **derived lives on the tab; authored
+> lives behind the avatar**: anything computed from session rows (the session
+> list, streak, totals, PB counts, the calorie estimate) is History's, and
+> anything the user typed (bodyweight, gender, the template library) is the
+> avatar's. No figure appears in both places.
+>
+> The test is a single sentence — can you name this field as "computed from
+> `Session`/`SetEntry` rows", or as "typed in by the user and stored as-is"? —
+> and it decides the next field as well as today's four, which is why it is a
+> rule rather than four placements.
+>
+> It is the same axis `lib/src/data/app_database.dart` already sorts storage on
+> ("Everything here is a preference, never a derived value"), so a field's home
+> on screen and its home in the schema can never disagree.
+>
+> **Its cost, and what pays it.** The rule puts the app's only
+> template-authoring surface behind an unlabelled 32pt disc, which is poor
+> discovery for something a new user may want in week one. Two routes offset
+> that without breaking the rule: the Workout tab's template picker carries a
+> visible route to the authoring surface — navigation, not authoring, so
+> "only place templates are authored" still holds — and the avatar itself gains
+> a visible label.
+>
+> See `docs/plans/2026-09-14-2324-feat-profile-split-plan.md`.
+
 **The Resume card is gone, but the rule it sat beside is not.** `docs/02`
 Step 2b also says starting a new workout auto-saves an open session. Under A the
 session takeover removes both Start-workout entry points from the Workout root,

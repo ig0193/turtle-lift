@@ -1,13 +1,18 @@
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/body_gender.dart';
 import '../data/exercise.dart';
+import '../data/active_session.dart';
 import '../data/exercise_index.dart';
+import '../data/load_type.dart';
+import '../data/session_store.dart';
 import '../data/generated/muscle_taxonomy.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'app_screen.dart';
+import 'set_logging_screen.dart';
 import 'body_diagram.dart';
 import 'disclosure_row.dart';
 import 'muscle_exercise_list_screen.dart';
@@ -25,20 +30,37 @@ import 'muscle_exercise_list_screen.dart';
 /// making: a user with zero sessions must see exactly what a user with three
 /// hundred sees.
 ///
-/// **And no way into a workout** (R18). Logging is build-order step 2 and this
-/// tab is step 6; an "Add to workout" button here would have to invent both a
-/// draft session and the screen it leads to.
+/// **The way into a workout depends on how you got here** ([ExerciseDetailEntry]).
+/// Browsed from the Muscles tab it is a reference page and adds nothing, except
+/// during an ad-hoc session, where it offers to add the exercise. Reached as the
+/// first-time gate inside the workout flow it offers to start logging. Reached
+/// from the logging screen's info button it offers neither, because the user is
+/// already there.
 class ExerciseDetailScreen extends ConsumerWidget {
-  const ExerciseDetailScreen({required this.exercise, super.key});
+  const ExerciseDetailScreen({
+    required this.exercise,
+    this.entry = ExerciseDetailEntry.reference,
+    super.key,
+  });
 
   /// The exercise, passed whole rather than by id: every caller already holds
   /// one — the muscle list, the rail, and later the search results — and a
   /// second lookup would only add a way for the id to miss.
   final Exercise exercise;
 
+  /// How the user arrived, which decides which action the page offers.
+  final ExerciseDetailEntry entry;
+
+  /// The key a test taps to start logging this exercise.
+  static const Key startLoggingKey = ValueKey<String>('start-logging');
+
+  /// The key a test taps to add this exercise to an ad-hoc session.
+  static const Key addToWorkoutKey = ValueKey<String>('add-to-workout');
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(exerciseIndexProvider);
+    final session = ref.watch(activeSessionProvider);
     final substitutes = substitutesFor(index, exercise);
     // Bound once so the "which row opens" rule below can be asked positionally
     // rather than by re-typing a field name the compiler would not check.
@@ -67,6 +89,7 @@ class ExerciseDetailScreen extends ConsumerWidget {
           _MuscleChips(exercise: exercise),
           const SizedBox(height: 6),
           _ExerciseDiagrams(exercise: exercise),
+          ..._action(context, ref, session),
           const SizedBox(height: 20),
           for (final field in fields)
             DisclosureRow(
@@ -97,6 +120,115 @@ class ExerciseDetailScreen extends ConsumerWidget {
       ),
     );
   }
+
+  /// The one contextual action, or nothing.
+  ///
+  /// Sits below the diagrams and above the reviewed copy: it is the reason this
+  /// user is here on the workout routes, and burying it under four collapsible
+  /// blocks would make the first-time gate feel like a dead end.
+  List<Widget> _action(
+    BuildContext context,
+    WidgetRef ref,
+    WorkoutSession? session,
+  ) {
+    switch (entry) {
+      case ExerciseDetailEntry.fromLogging:
+        // Already logging it. A second way in from here is a loop.
+        return const <Widget>[];
+
+      case ExerciseDetailEntry.workoutStart:
+        return <Widget>[
+          const SizedBox(height: 16),
+          _DetailAction(
+            actionKey: startLoggingKey,
+            label: 'Start logging',
+            onTap: () => startLoggingFromDetail(context, ref, exercise),
+          ),
+        ];
+
+      case ExerciseDetailEntry.reference:
+        // Offered only during an ad-hoc session: a template session is locked
+        // to its own muscle groups, and with no session there is nothing to add
+        // to. `docs/03` fixes all three cases.
+        if (session == null || session.isTemplateSession) {
+          return const <Widget>[];
+        }
+        return <Widget>[
+          const SizedBox(height: 16),
+          _DetailAction(
+            actionKey: addToWorkoutKey,
+            label: 'Add to current workout',
+            onTap: () async {
+              final loadType = LoadType.fromName(exercise.loadType);
+              if (loadType == null) return;
+              await ref.read(activeSessionProvider.notifier).addExercise(
+                    exerciseId: exercise.id,
+                    loadType: loadType,
+                  );
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('${exercise.name} added')),
+              );
+            },
+          ),
+        ];
+    }
+  }
+}
+
+/// How the user reached the exercise's page, which decides what it offers.
+enum ExerciseDetailEntry {
+  /// Browsed from the Muscles tab. A pure reference page, unless an ad-hoc
+  /// session is open.
+  reference,
+
+  /// The first-time gate inside the workout flow: the user has never completed
+  /// this exercise, so they meet its page before its logging screen.
+  workoutStart,
+
+  /// Opened from the logging screen's info button, mid-set.
+  fromLogging,
+}
+
+/// Adds [exercise] to the open session if needed, then opens its logging
+/// screen, replacing this page so Back does not land on the gate again.
+Future<void> startLoggingFromDetail(
+  BuildContext context,
+  WidgetRef ref,
+  Exercise exercise,
+) async {
+  final loadType = LoadType.fromName(exercise.loadType);
+  if (loadType == null) return;
+  final rowId = await ref.read(activeSessionProvider.notifier).addExercise(
+        exerciseId: exercise.id,
+        loadType: loadType,
+      );
+  if (rowId == null || !context.mounted) return;
+  await Navigator.of(context).pushReplacement(
+    MaterialPageRoute<void>(
+      builder: (_) => SetLoggingScreen(sessionExerciseId: rowId),
+    ),
+  );
+}
+
+/// The page's one contextual action.
+class _DetailAction extends StatelessWidget {
+  const _DetailAction({
+    required this.actionKey,
+    required this.label,
+    required this.onTap,
+  });
+
+  final Key actionKey;
+  final String label;
+  final Future<void> Function() onTap;
+
+  @override
+  Widget build(BuildContext context) => FilledButton(
+        key: actionKey,
+        onPressed: onTap,
+        child: Text(label),
+      );
 }
 
 /// Pushes [exercise]'s page.
@@ -104,10 +236,14 @@ class ExerciseDetailScreen extends ConsumerWidget {
 /// **Opaque, like every push in this app (KTD9).** It is the only kind of
 /// route that covers the floating tab bar; a sheet or a transparent route
 /// leaves "Workout" painted over the reviewed copy and one stray tap away.
-Future<void> pushExerciseDetail(BuildContext context, Exercise exercise) =>
+Future<void> pushExerciseDetail(
+  BuildContext context,
+  Exercise exercise, {
+  ExerciseDetailEntry entry = ExerciseDetailEntry.reference,
+}) =>
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ExerciseDetailScreen(exercise: exercise),
+        builder: (_) => ExerciseDetailScreen(exercise: exercise, entry: entry),
       ),
     );
 
@@ -222,8 +358,16 @@ List<BodyView> bodyViewsForExercise(Exercise exercise) {
 /// works the front delt fills that polygon even though the side delt beside it
 /// is untouched, because there is no second polygon to distinguish them with.
 @immutable
-class ExerciseMuscleFill {
-  ExerciseMuscleFill(Exercise exercise)
+class MuscleFill {
+  /// A fill over two explicit sets, which is what a whole session has.
+  MuscleFill({
+    required Set<String> primary,
+    required Set<String> secondary,
+  })  : primary = Set<String>.unmodifiable(primary),
+        secondary = Set<String>.unmodifiable(secondary);
+
+  /// A fill for one exercise's own muscles.
+  MuscleFill.forExercise(Exercise exercise)
       : primary = Set<String>.unmodifiable(exercise.primary),
         secondary = Set<String>.unmodifiable(exercise.secondary);
 
@@ -235,9 +379,23 @@ class ExerciseMuscleFill {
     if (subMuscleGroupIds.any(secondary.contains)) return AppPalette.accentLight;
     return AppPalette.mutedSurface;
   }
+
+  /// Two fills are the same when they colour the same muscles, so a rebuild
+  /// that produces an equal fill does not repaint 42 polygons.
+  @override
+  bool operator ==(Object other) =>
+      other is MuscleFill &&
+      setEquals(other.primary, primary) &&
+      setEquals(other.secondary, secondary);
+
+  @override
+  int get hashCode => Object.hash(
+        Object.hashAllUnordered(primary),
+        Object.hashAllUnordered(secondary),
+      );
 }
 
-/// The one [ExerciseMuscleFill] for [exercise], the same object every time.
+/// The one [MuscleFill] for [exercise], the same object every time.
 ///
 /// **Identity is the point** — see that class's header. The painter's
 /// `shouldRepaint` can only answer "nothing changed" if the fill it is handed
@@ -246,15 +404,13 @@ class ExerciseMuscleFill {
 ///
 /// Keyed by id and bounded by construction — 260 shipped exercises, read-only
 /// content, and an entry is two small sets, so the whole map has a ceiling it
-/// cannot be argued past. **Unlike `body_diagram.dart`'s scaled-path cache**,
-/// which this used to claim kinship with: that one is keyed partly on a
-/// layout-derived `double`, has no such ceiling, and is held down by an
-/// explicit cap instead. Nothing here needs one.
-ExerciseMuscleFill exerciseMuscleFill(Exercise exercise) =>
-    _muscleFills.putIfAbsent(exercise.id, () => ExerciseMuscleFill(exercise));
+/// cannot be argued past. **A session's fill gets no such cache**: its key is
+/// the set of muscles trained so far, which has no ceiling, so the overview
+/// holds its one fill in its own state instead.
+MuscleFill exerciseMuscleFill(Exercise exercise) =>
+    _muscleFills.putIfAbsent(exercise.id, () => MuscleFill.forExercise(exercise));
 
-final Map<String, ExerciseMuscleFill> _muscleFills =
-    <String, ExerciseMuscleFill>{};
+final Map<String, MuscleFill> _muscleFills = <String, MuscleFill>{};
 
 /// Everything else that trains one of [exercise]'s primary sub-muscle groups,
 /// different equipment first.

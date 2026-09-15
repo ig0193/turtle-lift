@@ -14,9 +14,9 @@
 ### My workout templates
 - View all workout templates available to start a session from: predefined ones (Push day, Pull day, Leg day, Full body day, etc.) plus any custom templates the user has created.
 - **Predefined templates cannot be edited directly** — they stay as-is, so they remain a reliable, unmodified reference.
-- **Duplicate a predefined template** — creates an editable custom copy (e.g. "Push day (mine)"), which the user can then freely adjust. The original predefined template is untouched.
-- **Create a custom template from scratch** — pick muscle groups à la carte, give it a name, save it.
-- **Edit or delete a custom template** the user previously created (whether built from scratch or duplicated from a predefined one).
+- **Duplicate a predefined template** — creates a custom copy (e.g. "Push day (mine)"). The original predefined template is untouched.
+- **Create a custom template from scratch** — pick muscle groups à la carte, give it a name, save it. **Deferred past V1's first Profile build.** It asks a user to design a workout from an empty multi-select, which is the hardest possible starting point and the one thing the app elsewhere refuses to help with.
+- **Rename or delete a custom template** the user previously created. Changing *which muscle groups* a custom template contains is deferred alongside the from-scratch builder — until then a duplicate differs from its original only in name.
 - This list is exactly what populates the user's own templates on the Workout tab landing, shown there beneath the split-filtered predefined ones and unaffected by that filter — this is the only place templates are created or edited; the Workout tab only selects and runs them.
 - Every template is a single, self-contained day — there is no multi-day split system or weekly rotation to configure.
 
@@ -39,6 +39,8 @@
 - **Quick logs count toward the streak** on exactly the same terms as a full session: any session with at least one completed set counts for its `performedOn` date. No minimum sets.
 
 ### Stats
+
+> **These live on the History tab, not behind the avatar.** Every figure below is computed from session rows, and the split resolved in `docs/adr/0003-l0-navigation-variant-a.md` puts derived figures on the tab. The section stays here because it defines what the figures *mean*; it no longer says where they render.
 - **Current streak** — workout days in a row where the user never went more than **3 days** without training. Computed as `streakAsOf(today)`, never read from a stored counter; full definition, rationale for the 3-day tolerance, and data-model notes are in `01-app-idea.md`.
   - Directly below the streak stat, a short explanation of how it works — same transparency pattern as the calorie estimate, and for the same reason: a stat the user can't predict is a stat that generates angry reviews. Draft copy:
 
@@ -53,7 +55,8 @@
 
 ### Personal details (bodyweight + gender)
 - Two optional fields: bodyweight and gender. Together they're the only personal data the app collects in V1 — everything else works with zero input.
-- **Bodyweight**: skippable. Until it's entered, the calorie estimate stat doesn't appear anywhere in the app (workout summary card, session detail, etc.) — that slot shows a lightweight "add weight to see calories" prompt instead, linking here.
+- **Bodyweight**: skippable, and recorded as a **dated series rather than one number**. Each entry is immutable and takes effect from the day it is recorded — no edit, no delete, no backdating; a correction is a new entry that supersedes the old one going forward. One undated number would silently rewrite the calorie figure on every session already logged, because calories are derived on read. `caloriesFor(session)` resolves the weight in effect on that session's `performedOn`.
+- Until a weight is entered, the calorie estimate doesn't appear anywhere in the app (workout summary card, session detail, etc.) — that slot shows a lightweight "add weight to see calories" prompt instead, linking here. A session predating the earliest entry keeps that prompt **permanently**: entering a weight later does not backfill it, because no weight was ever in effect on that day.
 - Directly below the bodyweight field, a short explanation of how the calorie estimate works: the MET-tier table (sets logged → light/moderate/vigorous → MET value) and a one-line honesty note that actual calories burned vary by person and effort. This is the fuller version of the same explanation available via the (i) icon on the calorie stat itself.
 - No units toggle complexity needed for V1 — pick one unit (kg, matching the rest of the app's weight inputs) and keep it simple.
 - **Gender**: determines which body diagram asset set is used everywhere in the app — male or female (see the body diagram requirement in `01-app-idea.md`). Options: Male / Female / Prefer not to say. Skippable, with a sensible default (the male asset set) if left unset — unlike bodyweight, gender doesn't gate any feature, it only changes which diagram renders.
@@ -63,9 +66,9 @@
 
 ## Screen list
 
-1. Profile landing (stats summary + entry into My workout templates + bodyweight field). The history list moved to the History tab.
+1. Profile landing (entry into My workout templates, personal details, and the data actions). **No stats summary** — streak, totals and every other derived figure live on the History tab, per the split resolved in `docs/adr/0003-l0-navigation-variant-a.md`. The history list moved to the History tab too.
 2. My workout templates list (predefined + custom, with a duplicate action on predefined templates)
-3. Template editor (create new / edit an existing custom template — muscle group multi-select, naming)
+3. Template editor (muscle group multi-select, naming) — **deferred**; the first build ships duplicate, rename and delete only.
 4. Session detail (shareable hero card + full scrollable, **editable** log, for a past workout or ad-hoc entry; includes Delete workout)
 
 ## Animations specific to this tab
@@ -81,51 +84,40 @@ Reference HTML/CSS mockups for this tab's key screens, using the Coral palette d
 
 ### Profile landing
 
+Four rows and nothing derived. The stats grid this mockup used to carry — streak,
+workouts, sets — moved to the History tab when the split was resolved; a figure
+computed from session rows may not appear here.
+
 ```html
 <div style="background:#17140F; border-radius:16px; padding:0; max-width:340px; overflow:hidden;">
 <div style="padding:1.25rem 1.25rem 0.5rem;">
-<h1 style="margin:0.5rem 0 1rem; color:#F5EFE8;">Profile</h1>
-<div style="display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin-bottom:1.25rem;">
-<div style="background:#211D18; border-radius:8px; padding:0.6rem; text-align:center;">
-<p style="font-size:18px; font-weight:500; margin:0; color:#F5EFE8;">5</p>
-<p style="font-size:11px; color:#A89C8E; margin:2px 0 0;">Day streak</p>
-</div>
-<div style="background:#211D18; border-radius:8px; padding:0.6rem; text-align:center;">
-<p style="font-size:18px; font-weight:500; margin:0; color:#F5EFE8;">12</p>
-<p style="font-size:11px; color:#A89C8E; margin:2px 0 0;">Workouts</p>
-</div>
-<div style="background:#211D18; border-radius:8px; padding:0.6rem; text-align:center;">
-<p style="font-size:18px; font-weight:500; margin:0; color:#F5EFE8;">247</p>
-<p style="font-size:11px; color:#A89C8E; margin:2px 0 0;">Sets</p>
-</div>
-</div>
-<button style="width:100%; text-align:left; padding:0.85rem; margin-bottom:1rem; display:flex; align-items:center; justify-content:space-between; background:#211D18; border:0.5px solid #332C22; border-radius:8px; color:#F5EFE8;">
-<span style="font-size:14px; font-weight:500;">My workout templates</span>
+<h1 style="margin:0.5rem 0 1.25rem; color:#F5EFE8;">Profile</h1>
+<p style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:#6B6156; margin:0 0 6px;">Yours</p>
+<div style="border-top:0.5px solid #332C22; margin-bottom:1.25rem;">
+<div style="display:flex; align-items:center; justify-content:space-between; padding:0.8rem 0; border-bottom:0.5px solid #332C22;">
+<div><p style="font-size:14px; margin:0; color:#F5EFE8;">My workout templates</p><p style="font-size:12px; color:#6B6156; margin:2px 0 0;">11 predefined &middot; 1 custom</p></div>
 <i class="ti ti-chevron-right" style="font-size:16px; color:#6B6156;"></i>
-</button>
-<p style="font-size:13px; color:#A89C8E; margin:0 0 0.5rem;">History</p>
+</div>
+<div style="display:flex; align-items:center; justify-content:space-between; padding:0.8rem 0;">
+<div><p style="font-size:14px; margin:0; color:#F5EFE8;">Personal details</p><p style="font-size:12px; color:#6B6156; margin:2px 0 0;">Weight log &middot; gender</p></div>
+<i class="ti ti-chevron-right" style="font-size:16px; color:#6B6156;"></i>
+</div>
+</div>
+<p style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:#6B6156; margin:0 0 6px;">Data</p>
 <div style="border-top:0.5px solid #332C22;">
-<div style="padding:0.7rem 0; border-bottom:0.5px solid #332C22;">
-<p style="font-size:14px; margin:0; color:#F5EFE8;">Push day</p>
-<p style="font-size:12px; color:#6B6156; margin:2px 0 0;">Today &middot; 6 exercises &middot; 18 sets</p>
+<div style="display:flex; align-items:center; justify-content:space-between; padding:0.8rem 0; border-bottom:0.5px solid #332C22;">
+<p style="font-size:14px; margin:0; color:#F5EFE8;">Export everything</p>
+<i class="ti ti-chevron-right" style="font-size:16px; color:#6B6156;"></i>
 </div>
-<div style="padding:0.7rem 0; border-bottom:0.5px solid #332C22;">
-<p style="font-size:14px; margin:0; color:#F5EFE8;">Barbell curl</p>
-<p style="font-size:12px; color:#6B6156; margin:2px 0 0;">Yesterday &middot; quick log</p>
-</div>
-<div style="padding:0.7rem 0;">
-<p style="font-size:14px; margin:0; color:#F5EFE8;">Leg day</p>
-<p style="font-size:12px; color:#6B6156; margin:2px 0 0;">2 days ago &middot; 5 exercises &middot; 21 sets</p>
+<div style="display:flex; align-items:center; justify-content:space-between; padding:0.8rem 0;">
+<p style="font-size:14px; margin:0; color:#C4553A;">Delete all data</p>
+<i class="ti ti-chevron-right" style="font-size:16px; color:#6B6156;"></i>
 </div>
 </div>
-</div>
-<div style="display:flex; border-top:0.5px solid #332C22; margin-top:1rem;">
-<div style="flex:1; text-align:center; padding:10px 0; color:#6B6156;"><i class="ti ti-barbell" style="font-size:20px;"></i><p style="font-size:11px; margin:2px 0 0;">Workout</p></div>
-<div style="flex:1; text-align:center; padding:10px 0; color:#6B6156;"><i class="ti ti-stretching" style="font-size:20px;"></i><p style="font-size:11px; margin:2px 0 0;">Muscles</p></div>
-<div style="flex:1; text-align:center; padding:10px 0; color:#D85A30;"><i class="ti ti-user" style="font-size:20px;"></i><p style="font-size:11px; margin:2px 0 0;">Profile</p></div>
 </div>
 </div>
 ```
+
 
 ### My workout templates list
 
