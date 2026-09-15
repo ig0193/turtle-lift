@@ -301,7 +301,13 @@ void main() {
       }
     });
 
-    testWidgets('R18: nothing on the page adds the exercise to a workout',
+    // R18 used to read "nothing on the page adds the exercise to a workout",
+    // and it was absolute because no session existed to add to. Sessions exist
+    // now, so the rule is route-conditional: browsing the Muscles tab with no
+    // workout open still offers nothing, which is what this pins. The three
+    // routes that do offer something are covered in
+    // `test/exercise_detail_entry_test.dart`.
+    testWidgets('R18: browsing with no workout open adds nothing',
         (tester) async {
       useTallScreen(tester);
 

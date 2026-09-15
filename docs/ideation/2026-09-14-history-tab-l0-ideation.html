@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ideation: History Tab L0 Screen</title>
+<style>
+:root{
+  --page:#0E0D0B; --panel:#17140F; --card:#1C1915; --line:#2A251D; --line2:#332C22;
+  --ink:#F5EFE8; --ink2:#A89C8E; --ink3:#6B6156;
+  --accent:#D85A30; --accent2:#F0997B; --onaccent:#1B0C05; --danger:#C4553A;
+  --app-page:#17140F; --app-surface:#211D18; --app-border:#332C22; --app-muted:#241F19;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.62 var(--sans);}
+.wrap{max-width:min(980px,92vw);margin-inline:auto;padding:48px 0 96px}
+p,li{max-width:72ch}
+a{color:var(--accent2);text-decoration:none;border-bottom:1px solid rgba(240,153,123,.3)}
+a:hover{border-bottom-color:var(--accent2)}
+code{font:13px/1.5 var(--mono);background:#211D18;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:#E4D9CC}
+strong{color:inherit;font-weight:650}
+hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:650;margin:0 0 10px}
+h1{font-size:32px;line-height:1.2;letter-spacing:-.02em;margin:0 0 14px;font-weight:680}
+h2{font-size:21px;letter-spacing:-.01em;margin:0 0 16px;font-weight:660;padding-bottom:10px;border-bottom:1px solid var(--line)}
+h3{font-size:17px;margin:0 0 8px;font-weight:650}
+h4{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin:20px 0 8px;font-weight:650}
+section{margin:0 0 52px;scroll-margin-top:20px}
+
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px;color:var(--ink2);margin:0 0 26px}
+.meta b{color:var(--ink3);font-weight:650;letter-spacing:.06em;text-transform:uppercase;font-size:11px;margin-right:6px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:0 0 34px}
+.stat{background:var(--card);padding:14px 16px}
+.stat .n{font-size:24px;font-weight:680;letter-spacing:-.02em;display:block;line-height:1.1}
+.stat .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-top:5px;display:block}
+
+nav.toc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin:0 0 48px}
+nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:32px}
+nav.toc li{margin:3px 0;max-width:none}
+
+.jump{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:0 0 28px}
+.jump ol{margin:0;padding-left:20px}
+.jump li{margin:4px 0;max-width:none}
+
+table{border-collapse:collapse;width:100%;font-size:14px;margin:12px 0}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650}
+td code{font-size:12px}
+
+.chip{display:inline-block;font-size:11px;letter-spacing:.05em;font-weight:650;padding:3px 9px;border-radius:999px;border:1px solid var(--line2);background:#211D18;color:var(--ink2);text-transform:uppercase}
+.chip.id{background:rgba(216,90,48,.14);border-color:rgba(216,90,48,.4);color:var(--accent2)}
+.chip.hi{background:rgba(240,153,123,.12);border-color:rgba(240,153,123,.32);color:var(--accent2)}
+.chip.warn{background:rgba(196,85,58,.14);border-color:rgba(196,85,58,.45);color:#E0907A}
+
+.ruling{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:0 0 14px}
+.ruling h3{font-size:15px;margin-bottom:6px}
+.ruling p{margin:6px 0 0;font-size:14px;color:var(--ink2)}
+.ruling p:first-of-type{color:var(--ink)}
+
+.note{background:rgba(240,153,123,.06);border:1px solid rgba(240,153,123,.22);border-radius:10px;padding:16px 20px;margin:24px 0}
+.note .eyebrow{color:var(--accent2)}
+.note p{margin:0 0 10px;font-size:14px}
+.note p:last-child{margin-bottom:0}
+.note.bug{background:rgba(196,85,58,.07);border-color:rgba(196,85,58,.28)}
+.note.bug .eyebrow{color:#E0907A}
+
+article.variant{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px;margin:0 0 26px;scroll-margin-top:20px}
+.vhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.vhead h3{margin:0;font-size:19px}
+.vsub{color:var(--ink2);font-size:14px;margin:2px 0 18px;max-width:72ch}
+.vbody{display:grid;grid-template-columns:300px 1fr;gap:28px;align-items:start}
+@media(max-width:760px){.vbody{grid-template-columns:1fr}nav.toc ol{columns:1}}
+dl.vmeta{margin:0 0 4px;display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:14px}
+dl.vmeta dt{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650;padding-top:3px}
+dl.vmeta dd{margin:0}
+.vfields p{margin:0 0 12px;font-size:14px}
+.vfields p b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650;display:block;margin-bottom:3px}
+details{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650}
+details p{font-size:14px;margin:10px 0 0}
+
+.mod{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:0 0 14px;scroll-margin-top:20px}
+.mod .mhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.mod h3{margin:0;font-size:16px}
+.mod p{margin:0 0 9px;font-size:14px}
+.mod p:last-child{margin-bottom:0}
+.mod p b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:650;display:block;margin-bottom:2px}
+
+/* ---- phone mockups ---- */
+.phone{width:280px;border:1px solid var(--line2);border-radius:22px;overflow:hidden;background:var(--app-page);box-shadow:0 12px 34px rgba(0,0,0,.45);font-size:13px}
+.ph-bar{display:flex;align-items:center;justify-content:space-between;padding:13px 15px 11px;background:var(--app-page);border-bottom:1px solid var(--app-border)}
+.ph-bar .t{font-size:17px;font-weight:650;color:#F5EFE8;letter-spacing:-.01em}
+.ph-bar .t small{display:block;font-size:10.5px;font-weight:500;color:#A89C8E;letter-spacing:0;margin-top:1px}
+.ph-av{width:26px;height:26px;border-radius:999px;background:var(--app-surface);border:1px solid var(--app-border);flex:none}
+.ph-scr{padding:14px 15px 12px;min-height:342px;display:flex;flex-direction:column;background:var(--app-page)}
+.ph-tabs{display:flex;gap:5px;padding:8px;margin:0 10px 10px;background:rgba(33,29,24,.92);border:1px solid var(--app-border);border-radius:999px}
+.ph-tabs span{flex:1;text-align:center;font-size:10px;letter-spacing:.04em;color:#6B6156;padding:5px 0;border-radius:999px}
+.ph-tabs span.on{background:var(--app-surface);color:#F5EFE8}
+.ph-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6B6156;font-weight:650;margin:0 0 8px}
+.ph-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--app-border)}
+.ph-row b{font-size:13px;color:#F5EFE8;font-weight:600;display:block}
+.ph-row small{font-size:11px;color:#6B6156;display:block;margin-top:2px}
+.ph-row .go{color:#6B6156;font-size:14px;flex:none}
+.ph-search{display:flex;align-items:center;gap:8px;background:var(--app-surface);border:1px solid var(--app-border);border-radius:11px;padding:11px 13px;margin-bottom:14px;color:#6B6156;font-size:12.5px}
+.ph-gap{text-align:center;font-size:10.5px;color:#4E463C;letter-spacing:.06em;padding:9px 0;border-bottom:1px solid var(--app-border)}
+.ph-pb{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:999px;background:rgba(216,90,48,.16);color:var(--accent2);margin-left:6px;vertical-align:1px}
+.ph-tag{display:inline-block;font-size:9.5px;letter-spacing:.06em;padding:2px 7px;border-radius:999px;border:1px solid var(--app-border);color:#6B6156;margin-left:6px;vertical-align:1px}
+.ph-strip{display:flex;gap:6px;margin:0 0 6px}
+.ph-strip i{flex:1;height:26px;border-radius:5px;font-style:normal}
+.ph-strip i.on{background:var(--accent)}
+.ph-strip i.grace{border:1.5px solid var(--accent);background:transparent}
+.ph-strip i.off{background:var(--app-muted);border:1px solid var(--app-border)}
+.ph-days{display:flex;gap:6px;margin:0 0 14px}
+.ph-days span{flex:1;text-align:center;font-size:9px;color:#4E463C;letter-spacing:.04em}
+.ph-hero{font-size:27px;font-weight:700;letter-spacing:-.02em;color:#F5EFE8;line-height:1.1;margin:2px 0 3px}
+.ph-cap{font-size:11px;color:#6B6156;margin:0 0 16px;line-height:1.5}
+.ph-extent{font-size:11.5px;color:#A89C8E;margin:0 0 14px;line-height:1.5}
+.ph-series{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.ph-series i{font-style:normal;font-size:10.5px;padding:6px 10px;border-radius:999px;border:1px solid var(--app-border);background:var(--app-muted);color:#A89C8E}
+.ph-glyph{width:22px;height:34px;flex:none;border-radius:3px;background:var(--app-muted);border:1px solid var(--app-border);position:relative;overflow:hidden}
+.ph-glyph u{position:absolute;left:3px;right:3px;background:var(--accent);border-radius:1px;text-decoration:none}
+.ph-3{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:16px}
+.ph-3 div{background:var(--app-surface);border:1px solid var(--app-border);border-radius:8px;padding:9px 6px;text-align:center}
+.ph-3 b{display:block;font-size:17px;font-weight:650;color:#F5EFE8}
+.ph-3 small{display:block;font-size:9.5px;color:#6B6156;margin-top:2px;letter-spacing:.04em}
+.ph-body{display:flex;justify-content:center;gap:10px;margin:4px 0 12px}
+.ph-fig{width:78px;height:150px;position:relative}
+.ph-fig svg{width:100%;height:100%;display:block}
+figcaption{font-size:11.5px;color:var(--ink3);margin-top:12px;line-height:1.5;max-width:280px}
+footer.composition-signal{border-top:1px solid var(--line);margin-top:60px;padding-top:20px;font-size:12px;color:var(--ink3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">Ideation</p>
+<h1>History Tab L0 Screen</h1>
+<div class="meta">
+  <span><b>Date</b><time datetime="2026-09-14">2026-09-14</time></span>
+  <span><b>Topic</b>history-tab-l0</span>
+  <span><b>Mode</b>repo-grounded</span>
+</div>
+<p><b>Focus:</b> the History tab&rsquo;s L0 landing screen &mdash; and, because <code>docs/adr/0003-l0-navigation-variant-a.md</code> explicitly left it open, which of Profile&rsquo;s contents live on that tab versus behind the header avatar.</p>
+
+<div class="stats">
+  <div class="stat"><span class="n">46</span><span class="l">Raw ideas</span></div>
+  <div class="stat"><span class="n">15</span><span class="l">Survivors</span></div>
+  <div class="stat"><span class="n">14</span><span class="l">Cut</span></div>
+  <div class="stat"><span class="n">4</span><span class="l">Topic axes</span></div>
+  <div class="stat"><span class="n">1</span><span class="l">Confirmed bug</span></div>
+</div>
+
+<nav class="toc">
+  <ol>
+    <li><a href="#grounding-context">Grounding Context</a></li>
+    <li><a href="#topic-axes">Topic Axes</a></li>
+    <li><a href="#the-split">The Split (start here)</a></li>
+    <li><a href="#variants">Screen Variants</a></li>
+    <li><a href="#modifiers">Modifiers</a></li>
+    <li><a href="#foundation">The Foundation</a></li>
+    <li><a href="#findings">Findings &amp; Corrections</a></li>
+    <li><a href="#rejection-summary">Rejection Summary</a></li>
+  </ol>
+</nav>
+
+<section id="grounding-context">
+<h2>Grounding Context</h2>
+
+<h4>Codebase context</h4>
+<p><code>lib/src/ui/history_root.dart:25-34</code> is the whole surface today: a <code>ListView</code> whose only child is an unconditional <code>EmptyState</code> reading &ldquo;No workouts yet&rdquo;. There is not even a branch for &ldquo;has sessions&rdquo;. <code>lib/src/data/app_database.dart</code> holds only a <code>Settings</code> table &mdash; <strong>the <code>Session</code> / <code>SessionExercise</code> / <code>SetEntry</code> tables do not exist yet</strong>, and neither do bodyweight or gender. Everything below is therefore being designed before its data layer is poured, which is the cheapest moment to change your mind.</p>
+<p>L0 roots are a <code>ConsumerWidget</code> wrapping a <code>ListView</code> with <code>screenScrollPadding(context)</code>, never a <code>Scaffold</code>. <code>AppScreen.root</code> supplies a pinned large-title header and the profile avatar, and it accepts a <code>titleWidget</code> (<code>app_screen.dart:74-92</code>). Available building blocks: <code>EmptyState</code>, <code>TemplateRow</code>, <code>DividerRow</code>, <code>DisclosureRow</code>, and <code>BodyDiagram</code>, whose fill hook is <code>typedef BodySegmentFill = Color Function(Set&lt;String&gt; subMuscleGroupIds)</code> (<code>body_diagram.dart:21</code>) &mdash; a pure function from segment ids to a colour, with nothing tying it to a single session.</p>
+
+<h4>The rules that bind this screen</h4>
+<p>Nothing derivable is stored. <code>performedOn</code> is a local calendar date; <code>loggedAt</code> is internal and never rendered. The app bar is pinned everywhere. The tab bar shows only at L0, so no per-tab back stack is observable. And V1 forbids achievements, badges, level-ups, duration, rest timers, notifications and AI.</p>
+
+<h4>External context</h4>
+<p>Apple Fitness and Hevy independently ship the <strong>calendar as a secondary drill-in and a list as the primary surface</strong> &mdash; two well-known products converging. Lists beat calendars for sparse and backdated data, where a mostly-blank month grid reads as failure; calendars win only once training is dense. Boostcamp promotes any past workout into a template directly from history. On streaks, Duolingo&rsquo;s guilt framing produced documented public backlash, while tolerant units (Hevy counts weeks, not days) and Gentler Streak&rsquo;s explicit &ldquo;streak without shame&rdquo; positioning are the counter-pattern. Heatmap research supplies one warning that maps exactly onto this app: <strong>the most-repeated failure is conflating &ldquo;no data&rdquo; with &ldquo;zero activity&rdquo;</strong> &mdash; here, a rest day versus a day the app was never opened &mdash; and colour-only encoding fails colourblind users.</p>
+
+<h4>How the survivors were qualified</h4>
+<p>Six frames generated 46 candidates; a fresh-context verifier that never saw the generation then tried to refute every load-bearing citation against the repo. It confirmed ten claims, refuted three ideas outright, and found one real bug. Where this document overrules that verifier, it says so.</p>
+</section>
+
+<section id="topic-axes">
+<h2>Topic Axes</h2>
+<table>
+<tr><th>Axis</th><th>What it covers</th><th>Survivors</th></tr>
+<tr><td><b>A1</b> &mdash; The history list</td><td>Rows, ordering, grouping, empty and first-run state, deletion, and finding one old session among hundreds.</td><td>V2, V4, V6, M1, M2, M6</td></tr>
+<tr><td><b>A2</b> &mdash; Stats and the streak</td><td>Which computed figures surface at L0 at all, and how a number the user cannot predict gets explained.</td><td>V3, V5, M3, M4, M5</td></tr>
+<tr><td><b>A3</b> &mdash; The avatar split</td><td>What belongs on the tab versus behind the header avatar: templates, bodyweight, gender, lifetime stats.</td><td>D1, M7</td></tr>
+<tr><td><b>A4</b> &mdash; Change over time</td><td>Progress, personal bests, muscle coverage and longitudinal views, all computed on read.</td><td>V1, M8</td></tr>
+</table>
+</section>
+
+<section id="the-split">
+<h2>The Split &mdash; start here</h2>
+<p>Four of the six frames, working independently, arrived at the same rule for ADR 0003&rsquo;s open question. That convergence is the single strongest signal in this run, so it leads.</p>
+
+<article class="variant" id="d1">
+<div class="vhead">
+  <span class="chip id">D1</span>
+  <h3>Derived lives on the tab; authored lives behind the avatar</h3>
+  <span class="chip hi">Top pick</span>
+</div>
+<p class="vsub">One mechanical rule that decides all four disputed items at once, and keeps deciding them for every item added later.</p>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>A3 &mdash; the avatar split</dd>
+  <dt>Confidence</dt><dd>92%</dd>
+  <dt>Complexity</dt><dd>Low &mdash; it is a decision, not a build</dd>
+  <dt>Converged from</dt><dd>Four frames independently (pain, leverage, inversion, cross-domain)</dd>
+</dl>
+<p><b>Description</b>Anything <em>computed from session rows</em> lives on the History tab: the session list, the streak, total workouts, total sets, PB counts, the calorie estimate. Anything the <em>user typed in</em>, which reconfigures how records are rendered, lives behind the avatar: bodyweight, gender, and the template library. No figure appears in both places. The test is one sentence &mdash; can you name this field as &ldquo;computed from <code>Session</code>/<code>SetEntry</code> rows&rdquo;, or as &ldquo;typed in by the user and stored as-is&rdquo;? Nothing is both.</p>
+<p><b>Basis</b><code>direct:</code> the storage layer already wrote this rule down for itself. <code>lib/src/data/app_database.dart:7-14</code> &mdash; &ldquo;<strong>Everything here is a preference, never a derived value.</strong> &hellip; What lives in this database is the opposite: facts that cannot be derived from anything, because the user simply told us (which split they are browsing; later their units, sex and bodyweight).&rdquo; <code>direct:</code> <code>docs/adr/0003-l0-navigation-variant-a.md:71-74</code> &mdash; &ldquo;the split of everything else between the History tab and the avatar destination is unresolved and belongs to whoever builds those screens.&rdquo; <code>direct:</code> <code>docs/04-profile-tab-userflow.md:59</code> &mdash; gender &ldquo;determines which body diagram asset set is used everywhere in the app&rdquo;, which is the clearest case of an authored fact that reconfigures rendering. <code>external:</code> the problem-oriented medical record splits a chart into a face sheet (standing facts that change how every entry is read) and an encounter list (dated events); pilot logbooks split the same way into front matter and flight rows.</p>
+<p><b>Rationale</b>ADR 0003 delegated this to taste. This is a test instead, and it happens to split the four specced Profile sections cleanly three-to-one without anyone arguing case by case. Its real value is forward-looking: the next person who adds a field does not reopen the question, because the rule already answers it &mdash; and it is the <em>same</em> axis the storage layer already sorts on, so a field&rsquo;s home on screen and its home in the schema can never disagree.</p>
+<p><b>Downsides</b>It buries the sole template-authoring surface behind a 32pt disc in the header, which is genuinely poor discovery for the one thing a new user might want to do early. That cost is real and is what M7 exists to offset. It also puts bodyweight behind the avatar while the calorie prompt that needs it lives on the tab &mdash; a hop the spec already accepts, but a hop nonetheless.</p>
+<details><summary>Why this ranks first</summary><p>It is the only item here that a named, Accepted ADR explicitly says is owed and unowned. It costs nothing to adopt, it unblocks every other decision on this screen, and it was reached independently by four frames that could not see each other&rsquo;s output. The verifier cut three of the four framings as duplicates and kept this one specifically because it is the only one anchored to a quote in the code rather than to a preference.</p></details>
+</div>
+</article>
+</section>
+
+<section id="variants">
+<h2>Screen Variants</h2>
+<p>Six structurally different answers to &ldquo;what does this screen look like?&rdquo; They compete for the top of the screen; the list itself survives in all six. Each is ranked, and each names what it gives up.</p>
+
+<div class="jump"><ol>
+<li><a href="#v1">V1 &mdash; The Coverage Map</a></li>
+<li><a href="#v2">V2 &mdash; The Ledger with Named Silences</a></li>
+<li><a href="#v3">V3 &mdash; The Tolerance Strip</a></li>
+<li><a href="#v4">V4 &mdash; The Scannable Trail</a></li>
+<li><a href="#v5">V5 &mdash; The Quiet Log</a></li>
+<li><a href="#v6">V6 &mdash; The Finding Aid</a></li>
+</ol></div>
+
+<article class="variant" id="v1">
+<div class="vhead">
+  <span class="chip id">V1</span>
+  <h3>The Coverage Map</h3>
+  <span class="chip hi">Strongest variant</span>
+</div>
+<p class="vsub">The hero is not a number. It is the body, filled by how recently each region was trained &mdash; the app&rsquo;s most expensive asset doing a second job.</p>
+<div class="vbody">
+<figure style="margin:0">
+<div class="phone">
+  <div class="ph-bar"><span class="t">History</span><span class="ph-av"></span></div>
+  <div class="ph-scr">
+    <div class="ph-body">
+      <div class="ph-fig"><svg viewBox="0 0 78 150" aria-hidden="true">
+        <g fill="#241F19" stroke="#332C22" stroke-width=".8">
+          <ellipse cx="39" cy="13" rx="9" ry="10"/>
+          <rect x="27" y="25" width="24" height="30" rx="4" fill="#D85A30" stroke="#D85A30"/>
+          <rect x="14" y="27" width="11" height="28" rx="5" fill="#D85A30" stroke="#D85A30"/>
+          <rect x="53" y="27" width="11" height="28" rx="5" fill="#D85A30" stroke="#D85A30"/>
+          <rect x="29" y="57" width="20" height="22" rx="4" fill="#8A4028" stroke="#8A4028"/>
+          <rect x="13" y="57" width="11" height="24" rx="5"/>
+          <rect x="54" y="57" width="11" height="24" rx="5"/>
+          <rect x="28" y="82" width="10" height="32" rx="5" fill="#3E342A" stroke="#3E342A"/>
+          <rect x="40" y="82" width="10" height="32" rx="5" fill="#3E342A" stroke="#3E342A"/>
+          <rect x="28" y="117" width="10" height="26" rx="5"/>
+          <rect x="40" y="117" width="10" height="26" rx="5"/>
+        </g>
+      </svg></div>
+    </div>
+    <p class="ph-cap" style="text-align:center;margin-bottom:14px">Chest &amp; shoulders &middot; <b style="color:#F5EFE8;font-weight:600">2 days ago</b><br>Calves &middot; not in 24 days</p>
+    <p class="ph-lbl">Recent</p>
+    <div class="ph-row"><div><b>Push day</b><small>Today &middot; 6 exercises &middot; 18 sets</small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div><b>Barbell curl</b><small>Yesterday<span class="ph-tag">quick log</span></small></div><span class="go">&rsaquo;</span></div>
+  </div>
+  <div class="ph-tabs"><span>Workout</span><span>Muscles</span><span class="on">History</span></div>
+</div>
+<figcaption>Fill is a recency ramp, not a boolean. Tapping a segment names it and says how long ago &mdash; the house idiom, and never a recommendation.</figcaption>
+</figure>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>A4 &mdash; change over time</dd>
+  <dt>Confidence</dt><dd>84%</dd>
+  <dt>Complexity</dt><dd>Medium</dd>
+</dl>
+<p><b>Description</b>Replace the stat block with a single <code>BodyDiagram</code> whose segments are filled by <em>recency</em> rather than by one session&rsquo;s <code>trained</code> tick &mdash; deep accent for trained in the last few days, fading through muted tones toward untouched. Tapping a segment reports &ldquo;Calves &middot; last trained 24 days ago&rdquo;. The session list runs underneath unchanged. Nothing is stored; the fill is a pure function of <code>performedOn</code> dates and primary-muscle mappings.</p>
+<p><b>Basis</b><code>direct:</code> the fill hook is already shaped for exactly this &mdash; <code>typedef BodySegmentFill = Color Function(Set&lt;String&gt; subMuscleGroupIds)</code> (<code>lib/src/ui/body_diagram.dart:21</code>), documented as deliberately generic so that &ldquo;handing over the whole set lets both answer without the diagram knowing that exercises exist.&rdquo; Verified: nothing binds it to a single session&rsquo;s boolean state. <code>direct:</code> the no-suggestion rule this stays inside &mdash; <code>docs/02-workout-tab-userflow.md:7</code>, &ldquo;the app does not suggest or auto-select a workout &hellip; no rotation logic.&rdquo; <code>external:</code> three unrelated hobby domains &mdash; amateur-radio DXCC, peak-bagging, eBird life lists &mdash; converge on the same durable form for a personal record: a fixed named set of entities, each stamped with when you last got it.</p>
+<p><b>Rationale</b>This is the one variant that could not be lifted from another fitness app, because it depends on an asset this repo already paid to build: 42 real hit-testable segments. It answers &ldquo;what have I been neglecting?&rdquo; &mdash; a question the user actually has &mdash; using only facts, never advice, so it stays on the correct side of the no-recommendation line. And it gives the third tab a hero that is neither a number nor a calendar, which is the space the other five variants are all fighting over.</p>
+<p><b>Downsides</b>A recency ramp is a colour gradient, and the research is blunt that colour-only encoding fails colourblind users &mdash; so the tap-to-name affordance is not optional polish here, it is the redundant encoding that makes the ramp legible at all. It also needs a defensible ramp: the bands are descriptive, and the moment anyone picks a threshold that implies &ldquo;you are overdue&rdquo;, this becomes a recommendation and violates <code>02:7</code>.</p>
+<details><summary>What it gives up</summary><p>The streak. There is no obvious place for it in this composition, so V1 either pairs with M3 (streak in the pinned header) or accepts that the streak lives only behind the avatar. That pairing is the most likely real design.</p></details>
+</div>
+</div>
+</article>
+
+<article class="variant" id="v2">
+<div class="vhead">
+  <span class="chip id">V2</span>
+  <h3>The Ledger with Named Silences</h3>
+</div>
+<p class="vsub">A plain chronological list, except that the gaps are drawn. The rest days you took are the content, not the absence of it.</p>
+<div class="vbody">
+<figure style="margin:0">
+<div class="phone">
+  <div class="ph-bar"><span class="t">History</span><span class="ph-av"></span></div>
+  <div class="ph-scr">
+    <p class="ph-lbl">September 2026</p>
+    <div class="ph-row"><div><b>Push day</b><small>Today &middot; 6 exercises &middot; 18 sets</small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div><b>Barbell curl</b><small>Yesterday<span class="ph-tag">quick log</span></small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div><b>Leg day</b><small>11 Sep &middot; 5 exercises &middot; 21 sets</small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-gap">&mdash;&mdash;&mdash;&mdash;&nbsp; 11 days &nbsp;&mdash;&mdash;&mdash;&mdash;</div>
+    <div class="ph-row"><div><b>Pull day</b><small>31 Aug &middot; 5 exercises &middot; 16 sets</small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div><b>Full body</b><small>29 Aug &middot; 7 exercises &middot; 22 sets</small></div><span class="go">&rsaquo;</span></div>
+  </div>
+  <div class="ph-tabs"><span>Workout</span><span>Muscles</span><span class="on">History</span></div>
+</div>
+<figcaption>Only gaps that exceed the 3-day tolerance are drawn. The marker <em>is</em> the streak break &mdash; geometry instead of a number, and no colour is spent on it.</figcaption>
+</figure>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>A1 &mdash; the history list</dd>
+  <dt>Confidence</dt><dd>81%</dd>
+  <dt>Complexity</dt><dd>Low</dd>
+</dl>
+<p><b>Description</b>Between two rows whose <code>performedOn</code> differ by more than the tolerance, render a bare labelled spacer &mdash; <code>&mdash; 11 days &mdash;</code>, <code>textMuted</code>, no icon, no colour, not tappable. Gaps inside the tolerance get no marker at all. Month labels group the runs above it, reusing the section-label idiom <code>muscles_root.dart</code> already ships.</p>
+<p><b>Basis</b><code>direct:</code> the tolerance the spacer encodes &mdash; <code>docs/01-app-idea.md:239</code>, &ldquo;a Friday &rarr; Monday gap is 3 days, so a tighter 2-day rule would break the streak of anyone training weekdays-only, and of anyone running the Push/Pull/Leg split on Mon/Wed/Fri.&rdquo; <code>direct:</code> ordering is already settled &mdash; <code>docs/00-build-spec.md:237</code>, &ldquo;History ordered by <code>performedOn</code>, <code>loggedAt</code> as tiebreaker.&rdquo; <code>external:</code> stratigraphy, where a core&rsquo;s most-read feature is the <em>unconformity</em> &mdash; a gap in deposition that geologists label and date rather than close up; and the heatmap research&rsquo;s central warning that conflating &ldquo;no data&rdquo; with &ldquo;zero activity&rdquo; is the most-repeated failure in this shape of display. A labelled gap is the inverse move: the gap is the datum.</p>
+<p><b>Rationale</b>A flush list erases the difference between three sessions in a week and three in a year, which is most of what a training history actually means. This teaches the 3-day tolerance rule by showing it &mdash; the user sees which gaps the app considered survivable and which it did not &mdash; at the exact moment they are looking at the evidence, with no prose, no calendar grid, and no number. It is also the cheapest variant here by a wide margin.</p>
+<p><b>Downsides</b>It is the most conservative direction on offer: a user who wants coverage or progress gets neither. And because <code>performedOn</code> is editable, a backdated session re-inserts itself mid-column and every spacer below must be recomputed &mdash; so gap rows are derived on every build and can never be memoised against a row index.</p>
+</div>
+</div>
+</article>
+
+<article class="variant" id="v3">
+<div class="vhead">
+  <span class="chip id">V3</span>
+  <h3>The Tolerance Strip</h3>
+</div>
+<p class="vsub">Fourteen marks in three states. It encodes the streak, its forgiveness, and today&rsquo;s standing in one row that needs no paragraph to be read.</p>
+<div class="vbody">
+<figure style="margin:0">
+<div class="phone">
+  <div class="ph-bar"><span class="t">History</span><span class="ph-av"></span></div>
+  <div class="ph-scr">
+    <div class="ph-strip">
+      <i class="on"></i><i class="off"></i><i class="on"></i><i class="grace"></i><i class="on"></i><i class="on"></i><i class="grace"></i>
+    </div>
+    <div class="ph-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+    <p class="ph-cap" style="margin-bottom:16px"><b style="color:#F5EFE8;font-weight:600">12-day streak.</b> Rest days are fine &mdash; miss more than two in a row and it resets.</p>
+    <p class="ph-lbl">Recent</p>
+    <div class="ph-row"><div><b>Push day</b><small>Today &middot; 6 exercises &middot; 18 sets</small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div><b>Barbell curl</b><small>Yesterday<span class="ph-tag">quick log</span></small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div><b>Leg day</b><small>11 Sep &middot; 5 exercises</small></div><span class="go">&rsaquo;</span></div>
+  </div>
+  <div class="ph-tabs"><span>Workout</span><span>Muscles</span><span class="on">History</span></div>
+</div>
+<figcaption>Filled = trained. Outlined = a rest day still inside the grace window. Empty = outside it. Shape carries the distinction, so the encoding survives without colour.</figcaption>
+</figure>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>A2 &mdash; stats and the streak</dd>
+  <dt>Confidence</dt><dd>79%</dd>
+  <dt>Complexity</dt><dd>Medium</dd>
+</dl>
+<p><b>Description</b>Replace the three-tile stat grid with a strip of the last 7&ndash;14 calendar days in three visually distinct states: filled <code>accentStrong</code> for trained, <strong>outlined</strong> for a rest day still inside the 3-day grace window, empty <code>mutedSurface</code> for outside it. The streak number and the explainer sentence sit below it as caption, not as headline.</p>
+<p><b>Basis</b><code>direct:</code> the rule the strip must encode &mdash; <code>docs/01-app-idea.md:238</code>, the streak is &ldquo;the count of workout days in a row where the user never went more than <strong>3 days</strong> without training&rdquo;; and the sanctioned nudge at <code>01:253</code>, &ldquo;a &lsquo;streak ends tomorrow&rsquo; hint on the final grace day.&rdquo; <code>external:</code> two findings that jointly determine the encoding &mdash; colour-only encoding fails colourblind users, and conflating &ldquo;no data&rdquo; with &ldquo;zero activity&rdquo; is the most-repeated failure of this display shape. A fill/outline/empty triple separates rest-within-tolerance from lapsed <em>by shape</em>, where colour alone could not.</p>
+<p><b>Rationale</b>The 3-day tolerance is the least predictable thing on this screen, and the current plan explains it with a paragraph the user will not read. A strip where the grace days are visibly <em>different marks</em> teaches the rule structurally: you see two outlined days and understand that a third breaks it. It also sidesteps the blank-month-grid failure that makes calendars read as failure for sparse training, while keeping the glanceability that makes people want a calendar in the first place.</p>
+<p><b>Downsides</b>It is a bespoke component in an app that has so far assembled itself from four reusable rows, and three-state legibility at 14 marks on a narrow phone is genuinely hard to get right. Fourteen days is also a short horizon &mdash; it says nothing to a user who trained hard for a year and stopped last month, which is precisely the user M4 is about.</p>
+</div>
+</div>
+</article>
+
+<article class="variant" id="v4">
+<div class="vhead">
+  <span class="chip id">V4</span>
+  <h3>The Scannable Trail</h3>
+</div>
+<p class="vsub">No stats block at all. Instead, every row earns its own garnish, so records and muscle coverage are visible while scrolling rather than found by opening things.</p>
+<div class="vbody">
+<figure style="margin:0">
+<div class="phone">
+  <div class="ph-bar"><span class="t">History</span><span class="ph-av"></span></div>
+  <div class="ph-scr">
+    <p class="ph-lbl">September 2026</p>
+    <div class="ph-row"><div class="ph-glyph"><u style="top:5px;height:10px"></u><u style="top:17px;height:7px"></u></div><div style="flex:1"><b>Push day<span class="ph-pb">2 PB</span></b><small>Today &middot; 6 exercises &middot; 18 sets</small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div class="ph-glyph"><u style="top:14px;height:6px"></u></div><div style="flex:1"><b>Barbell curl</b><small>Yesterday<span class="ph-tag">quick log</span></small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div class="ph-glyph"><u style="top:22px;height:11px"></u></div><div style="flex:1"><b>Leg day<span class="ph-pb">1 PB</span></b><small>11 Sep &middot; 5 exercises &middot; 21 sets</small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div class="ph-glyph"><u style="top:6px;height:8px"></u><u style="top:16px;height:9px"></u></div><div style="flex:1"><b>Pull day</b><small>8 Sep &middot; 5 exercises &middot; 16 sets</small></div><span class="go">&rsaquo;</span></div>
+  </div>
+  <div class="ph-tabs"><span>Workout</span><span>Muscles</span><span class="on">History</span></div>
+</div>
+<figcaption>The glyph is a pre-rasterised silhouette, not a live <code>CustomPainter</code> per row &mdash; see the cost note. The PB pill appears only when the count is at least one.</figcaption>
+</figure>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>A1 &mdash; the history list</dd>
+  <dt>Confidence</dt><dd>72%</dd>
+  <dt>Complexity</dt><dd>High &mdash; gated on the foundation below</dd>
+</dl>
+<p><b>Description</b>Push the derived content down into the rows instead of sitting it on top of them. Each row gains a PB pill when <code>pbCountFor(session) &gt;= 1</code>, and a small muscle silhouette filled where that session&rsquo;s primary muscles were trained. Scrolling becomes the stat display: a trail of records and body regions rather than a column of titles and counts.</p>
+<p><b>Basis</b><code>direct:</code> the pill already exists one screen deeper &mdash; <code>docs/00-build-spec.md:233</code>, &ldquo;Per-session PB count &mdash; <code>pbCountFor(session)</code>. Rendered as a pill on the hero card <strong>only when &gt;= 1</strong> (never &lsquo;0 personal bests&rsquo;).&rdquo; <code>direct:</code> the <code>trained</code> derivation the glyph needs &mdash; <code>docs/01-app-idea.md:102</code>, &ldquo;a sub-muscle group is <code>trained</code> in a session when at least one completed exercise in that session lists it among its <strong>primary</strong> muscles.&rdquo; <code>direct:</code> the row metadata specced today carries no muscle information at all &mdash; <code>docs/04-profile-tab-userflow.md:24</code> lists only date, muscles trained, exercises, sets, and the prototype renders just &ldquo;6 exercises &middot; 18 sets&rdquo;.</p>
+<p><b>Rationale</b>&ldquo;Which of my last fifty sessions had a record?&rdquo; and &ldquo;which day did I train legs?&rdquo; are both currently answerable only by opening rows one at a time. Both answers are already computed. Moving them one screen earlier costs no new derivation and turns a flat scroll into something worth scrolling.</p>
+<p><b>Downsides</b><strong>This is the most expensive variant and the verifier demoted it for that reason.</strong> Instantiating the app&rsquo;s heaviest custom-painted widget once per row, in a list that may run to hundreds of sessions, with per-session segment computation on top, is not viable as written. It is only meeting-ready as a pre-rasterised glyph &mdash; a handful of cached silhouettes keyed by muscle-group combination &mdash; and the PB pill is impossible at all until the single-pass projection below exists, because per-row PB derivation is the O(n&sup2;) the spec explicitly forbids.</p>
+<details><summary>Why it still ranks</summary><p>Because the cost is a design problem, not a rule conflict, and the cheaper design is known. It is also the only variant whose value grows with history length rather than staying flat.</p></details>
+</div>
+</div>
+</article>
+
+<article class="variant" id="v5">
+<div class="vhead">
+  <span class="chip id">V5</span>
+  <h3>The Quiet Log</h3>
+  <span class="chip">Restraint pole</span>
+</div>
+<p class="vsub">Nothing above the list. The one derived figure moves into the pinned header, where it survives three hundred rows of scrolling.</p>
+<div class="vbody">
+<figure style="margin:0">
+<div class="phone">
+  <div class="ph-bar"><span class="t">History<small>12-day streak &middot; 48 sessions</small></span><span class="ph-av"></span></div>
+  <div class="ph-scr">
+    <p class="ph-lbl">September 2026</p>
+    <div class="ph-row"><div><b>Push day</b><small>Today &middot; 6 exercises &middot; 18 sets</small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div><b>Barbell curl</b><small>Yesterday<span class="ph-tag">quick log</span></small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div><b>Leg day</b><small>11 Sep &middot; 5 exercises &middot; 21 sets</small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div><b>Pull day</b><small>8 Sep &middot; 5 exercises &middot; 16 sets</small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div><b>Full body</b><small>5 Sep &middot; 7 exercises &middot; 22 sets</small></div><span class="go">&rsaquo;</span></div>
+  </div>
+  <div class="ph-tabs"><span>Workout</span><span>Muscles</span><span class="on">History</span></div>
+</div>
+<figcaption>The header is the only permanently visible real estate in the app. Spending it on a static noun the tab bar already says is a waste.</figcaption>
+</figure>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>A2 &mdash; stats and the streak</dd>
+  <dt>Confidence</dt><dd>83%</dd>
+  <dt>Complexity</dt><dd>Low</dd>
+</dl>
+<p><b>Description</b>The body is nothing but the list. The derived summary moves into <code>AppScreen.root</code>&rsquo;s <code>titleWidget</code> as a subtitle under the large title, so it stays on screen permanently instead of scrolling away. The word &ldquo;History&rdquo; survives as the semantics label.</p>
+<p><b>Basis</b><code>direct:</code> verified to exist &mdash; <code>AppScreen.root({..., Widget? titleWidget, ...})</code> at <code>lib/src/ui/app_screen.dart:74-92</code>, under the class doc at lines 37-43: &ldquo;<strong>The header is pinned. It does not scroll &mdash; anywhere in the app</strong> &hellip; the header is the <code>Scaffold.appBar</code>, which sits outside the body.&rdquo; <code>reasoned:</code> the pinned-header rule has so far been treated purely as a constraint to obey. It is also a structural advantage no competitor has, because every one of them puts its headline stat in a card that scrolls away &mdash; and this codebase already ships the hook to exploit it.</p>
+<p><b>Rationale</b>It is the direction most consistent with what the Workout tab already decided: one derived line, no dashboard, nothing that congratulates. It is also the only variant that costs essentially nothing to build and nothing to undo, which makes it the sane default if the team wants to ship the list first and decide the hero later.</p>
+<p><b>Downsides</b>It settles for less than the screen could do, and it sets an app-wide precedent &mdash; once the header carries live data on one tab, the other two roots will be asked for the same, and the pinned header is a small space to start crowding. A subtitle also competes with the large-title type scale and needs real design attention to not read as clutter.</p>
+</div>
+</div>
+</article>
+
+<article class="variant" id="v6">
+<div class="vhead">
+  <span class="chip id">V6</span>
+  <h3>The Finding Aid</h3>
+</div>
+<p class="vsub">Borrowed from archives: state the extent of the collection, offer two or three ways in, and let the chronological list be the container list underneath.</p>
+<div class="vbody">
+<figure style="margin:0">
+<div class="phone">
+  <div class="ph-bar"><span class="t">History</span><span class="ph-av"></span></div>
+  <div class="ph-scr">
+    <p class="ph-extent"><b style="color:#F5EFE8;font-weight:600">48 sessions</b> &middot; Mar 2026 &ndash; today &middot; 611 sets</p>
+    <div class="ph-series"><i>By exercise</i><i>By muscle</i><i>By template</i></div>
+    <p class="ph-lbl">All sessions</p>
+    <div class="ph-row"><div><b>Push day</b><small>Today &middot; 6 exercises &middot; 18 sets</small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div><b>Barbell curl</b><small>Yesterday<span class="ph-tag">quick log</span></small></div><span class="go">&rsaquo;</span></div>
+    <div class="ph-row"><div><b>Leg day</b><small>11 Sep &middot; 5 exercises &middot; 21 sets</small></div><span class="go">&rsaquo;</span></div>
+  </div>
+  <div class="ph-tabs"><span>Workout</span><span>Muscles</span><span class="on">History</span></div>
+</div>
+<figcaption>The extent line is three derived figures doing the work of a stat grid, in one sentence, without tiles.</figcaption>
+</figure>
+<div class="vfields">
+<dl class="vmeta">
+  <dt>Axis</dt><dd>A1 &mdash; the history list</dd>
+  <dt>Confidence</dt><dd>70%</dd>
+  <dt>Complexity</dt><dd>Medium</dd>
+</dl>
+<p><b>Description</b>Open with a derived extent statement &mdash; &ldquo;48 sessions &middot; Mar 2026 &ndash; today &middot; 611 sets&rdquo; &mdash; then a short row of browse-by entries, each pushing a filtered list. <strong>By exercise</strong> is the important one: it lists every exercise you have logged, ordered by recency, each routing into the Exercise history screen that the spec already designs.</p>
+<p><b>Basis</b><code>direct:</code> that destination exists in spec with two entry points, neither chronological &mdash; <code>docs/03-muscle-groups-tab-userflow.md:72</code>, &ldquo;One destination, one component, reached from two places&rdquo;; and its content at <code>03:99-113</code>, &ldquo;<strong>This screen is the only place the whole progression arc is visible</strong>.&rdquo; <code>external:</code> archival practice never hands a reader a search box over 400 boxes; it hands them a finding aid &mdash; an extent statement plus a container list arranged into series.</p>
+<p><b>Rationale</b>The spec&rsquo;s own words say the progression arc is visible in exactly one place, and both existing routes to that place require the user to <em>already know which exercise they want</em> &mdash; via the muscle taxonomy, or mid-set. But &ldquo;am I getting stronger?&rdquo; is asked at rest, on this tab, with no specific exercise in mind. Today there is no door from that question to the only screen that answers it. This builds the door, and reframes the hard findability question from &ldquo;do we need search?&rdquo; to the cheaper &ldquo;what are the three series?&rdquo;</p>
+<p><b>Downsides</b>It adds a second structural element above a list the spec describes as list-only, and it overlaps the Muscles tab&rsquo;s existing route to the same screen &mdash; two doors to one room, which needs justifying rather than assuming. The extent line is also the weakest part: it risks reading as a vanity stat grid in prose clothing.</p>
+</div>
+</div>
+</article>
+</section>
+
+<section id="modifiers">
+<h2>Modifiers</h2>
+<p>Composable with any variant above. These are not competing directions; several should be adopted together.</p>
+
+<div class="mod" id="m1">
+<div class="mhead"><span class="chip id">M1</span><h3>A tappable search field, pushed as an opaque route</h3><span class="chip">A1</span></div>
+<p><b>What</b>A search field at the top of the list that is not editable in place &mdash; tapping it pushes a full search screen over the tab bar. Queries resolved titles, exercise names and dates.</p>
+<p><b>Basis</b><code>direct:</code> the pattern is already shipped one tab over, with its reasoning written down &mdash; <code>muscles_root.dart:90-99</code>: opaque &ldquo;is the only kind of route that covers the floating tab bar, and a search screen with the tab bar still floating over its results would offer to leave mid-query.&rdquo;</p>
+<p><b>Why</b>The history list is the <em>only</em> unbounded list in the app &mdash; Muscles is fixed at 19 rows, templates at a handful &mdash; and it is the one surface with no search. A user two years in looking for &ldquo;the session where I first benched 80&rdquo; has no path at all.</p>
+</div>
+
+<div class="mod" id="m2">
+<div class="mhead"><span class="chip id">M2</span><h3>Group same-day sessions under one date header</h3><span class="chip">A1</span></div>
+<p><b>What</b>When two sessions share a <code>performedOn</code> &mdash; a quick log plus a full workout, say &mdash; render them as two rows under a single date heading rather than as two independently dated rows.</p>
+<p><b>Basis</b><code>direct:</code> <code>docs/00-build-spec.md:52</code> &mdash; <code>loggedAt</code> is &ldquo;internal only. Tiebreaker when two sessions share <code>performedOn</code>. Never shown.&rdquo;</p>
+<p><b>Why</b>This is the survivable remnant of a larger idea (make the <em>day</em> the row unit) that the verifier correctly refuted &mdash; a day-row needs aggregate-title logic, an ambiguous tap target, and edit/delete that resolves to one of several sessions, none of which the one-line pitch accounted for. Grouping under a shared header buys the visual coherence without any of that cost.</p>
+</div>
+
+<div class="mod" id="m3">
+<div class="mhead"><span class="chip id">M3</span><h3>Never render a streak of zero</h3><span class="chip">A2</span></div>
+<p><b>What</b>The streak slot shows a count only while a streak exists. At zero it shows something true and non-punitive in the same slot &mdash; &ldquo;Last trained: Leg day, 6 days ago&rdquo;. No red, no reset language.</p>
+<p><b>Basis</b><code>direct:</code> <code>docs/01-app-idea.md:251</code> &mdash; &ldquo;The streak must decay against today &hellip; If the last session was 5 days ago, <code>streakAsOf(today)</code> returns 0 even though nothing in storage changed.&rdquo; The spec already forbids &ldquo;0 personal bests&rdquo; on the hero pill for the same instinct. <code>external:</code> Duolingo&rsquo;s guilt framing and its documented backlash; Gentler Streak&rsquo;s entire positioning.</p>
+<p><b>Why</b>A derived streak returns 0 for exactly the user who has been away and is opening the app to come back &mdash; the screen&rsquo;s most important visitor. A zero in the hero slot tells that person their history is worthless at the moment they are least able to argue.</p>
+</div>
+
+<div class="mod" id="m4">
+<div class="mhead"><span class="chip id">M4</span><h3>A tenure line &mdash; a span, not a count</h3><span class="chip">A2</span></div>
+<p><b>What</b>One derived line stating how long the user has been training with the app: &ldquo;Training since March &mdash; 7 months.&rdquo; Derived from <code>min(performedOn)</code>; no schema cost.</p>
+<p><b>Basis</b><code>reasoned:</code> every figure currently specced for this surface is a count or a chain, and both go to zero. Tenure is a span, and a span is the only figure a user with a broken streak can still be proud of &mdash; it is monotonic by construction, so it can never become discouraging.</p>
+<p><b>Why</b>Nothing in the app currently reflects duration of practice back to the user. It is the cheapest possible answer to &ldquo;am I still in this?&rdquo;, and it pairs naturally with M3 as what fills the slot when the streak is gone.</p>
+</div>
+
+<div class="mod" id="m5">
+<div class="mhead"><span class="chip id">M5</span><h3>Absence is never painted in <code>accentStrong</code></h3><span class="chip">A2</span></div>
+<p><b>What</b>A standing rule: a lapsed streak, a zero streak, a long gap and the grace-day hint are all advisory &mdash; <code>textMuted</code>, no accent, no <code>danger</code>, no icon, never animated. <code>accentStrong</code> means &ldquo;this has been worked&rdquo;, so it may never mark an <em>absence</em>.</p>
+<p><b>Basis</b><code>direct:</code> <code>CLAUDE.md</code>&rsquo;s palette contract &mdash; <code>#D85A30</code> &ldquo;means &lsquo;active / this has been worked&rsquo; <em>wherever it appears</em>&rdquo;, with <code>test/theme_palette_test.dart</code> already failing on any colour outside &sect;12. <code>external:</code> cockpit alerting philosophy tiers alerts strictly by the response they require, and promoting a condition above its required response is a certification failure because it trains the operator to ignore alerts.</p>
+<p><b>Why</b>The palette already enforces half of this by accident &mdash; there is no colour available for &ldquo;you are failing&rdquo;. Writing it down converts every future streak-shame argument into a rendering rule a widget test can enforce next to the existing palette test. <em>The verifier called this low-information because &sect;12 already decides colour meanings; that is overruled here, because &sect;12 decides what the colours mean and this decides what they may be pointed at, which is the thing about to be drawn.</em></p>
+</div>
+
+<div class="mod" id="m6">
+<div class="mhead"><span class="chip id">M6</span><h3>Multi-select batch delete</h3><span class="chip">A1</span></div>
+<p><b>What</b>Long-press a row to enter selection mode; delete several behind one confirmation, instead of repeating swipe-confirm per row.</p>
+<p><b>Basis</b><code>direct:</code> <code>docs/04-profile-tab-userflow.md:28</code> &mdash; &ldquo;Confirmation dialog, then permanent removal (hard delete; no tombstone in V1).&rdquo;</p>
+<p><b>Why</b>Hard delete with no tombstone is exactly the situation where per-row confirm does not scale. A user clearing a run of test entries or accidental quick logs pays the full cost once per row, and there is no soft delete to fall back on.</p>
+</div>
+
+<div class="mod" id="m7">
+<div class="mhead"><span class="chip id">M7</span><h3>Promote a past session into a template</h3><span class="chip warn">Needs a spec exception</span><span class="chip">A3</span></div>
+<p><b>What</b>A row action that opens the template editor pre-filled from that session&rsquo;s exercises, reusing the same &ldquo;duplicate &rarr; editable copy&rdquo; mechanism predefined templates already have.</p>
+<p><b>Basis</b><code>external:</code> Boostcamp promotes any past workout to a template directly from history &mdash; history feeding forward into planning, not just a record. <code>direct:</code> <strong>and this is why it is flagged</strong> &mdash; <code>docs/04-profile-tab-userflow.md:20</code> states templates are &ldquo;the <strong>only place</strong> templates are created or edited&rdquo;, matched by <code>00:241</code>, &ldquo;Only place templates are authored.&rdquo;</p>
+<p><b>Why</b>The specced authoring flow asks a user to design a workout from an empty muscle-group multi-select &mdash; the hardest possible starting point, and the one thing the app elsewhere refuses to help with. Promotion from history is authoring with the blank page already filled. It also offsets D1&rsquo;s real cost, which is burying template authoring behind an avatar. <strong>But it cannot be built as written:</strong> it needs an explicit amendment to the only-place-authored rule, not a quiet UI addition.</p>
+</div>
+
+<div class="mod" id="m8">
+<div class="mhead"><span class="chip id">M8</span><h3>&ldquo;On this day&rdquo; resurfacing</h3><span class="chip">A4</span></div>
+<p><b>What</b>Computed on read: if today is an exact-date anniversary of a past session, one quiet line above the list &mdash; &ldquo;A year ago today: Leg day&rdquo; &mdash; tapping into that session.</p>
+<p><b>Basis</b><code>external:</code> Day One and photo libraries both pair a timeline with &ldquo;On This Day&rdquo; resurfacing; it is the durable pattern for making an archive re-readable. <code>direct:</code> stays inside the no-notifications rule, matching the in-app-only precedent at <code>01:253</code>.</p>
+<p><b>Why</b>It is the only item here that makes <em>elapsed time itself</em> the content rather than styling the list, and it costs no storage. It is also the weakest of the eight: it fires rarely, and it does nothing at all in the first year.</p>
+</div>
+</section>
+
+<section id="foundation">
+<h2>The Foundation</h2>
+<p>One architectural decision gates what the rows above are allowed to contain. It is not a look, but deciding it after the layout would quietly rule several of these variants out.</p>
+
+<div class="ruling">
+<h3>F1 &mdash; One chronological projection, not per-row derivation</h3>
+<p>Build a single provider that walks all sessions once in <code>performedOn</code> order, carrying a running per-exercise best and a running streak chain, and emits per session: PB count, <code>streakAsOf</code> at that date, set and exercise counts, and trained segments. Rows then read from the projection instead of each doing its own lookup, and the whole screen invalidates as one unit when a session is edited or deleted.</p>
+<p><b>Basis</b> <code>direct:</code> the spec already mandates the algorithm without naming a surface &mdash; <code>docs/00-build-spec.md:235</code>, &ldquo;Compute in one chronological pass with a running per-exercise best. <strong>Not O(n^2).</strong>&rdquo; Confirmed verbatim, and echoed at <code>01:235</code>: &ldquo;Do not evaluate each session against full history independently &mdash; that is O(n&sup2;).&rdquo; <code>direct:</code> <code>streakAsOf</code> is already designed as one function taking a date &mdash; <code>01:249</code>, &ldquo;Same function, one parameter.&rdquo;</p>
+<p><b>Why it decides layout</b> Whether a history row may show a PB pill looks like a visual question and is actually an architecture question: per-row derivation is the O(n&sup2;) the spec forbids, so <strong>V4 is impossible unless this exists</strong>. Build the projection first and a whole class of row content becomes affordable; build the rows first and it is quietly ruled out. The same projection is what the still-unbuilt Session Detail and Summary screens will need for <code>streakAsOf(session.performedOn)</code> &mdash; the historical streak, not today&rsquo;s.</p>
+</div>
+</section>
+
+<section id="findings">
+<h2>Findings &amp; Corrections</h2>
+
+<div class="note bug">
+<p class="eyebrow">Confirmed bug &mdash; not a design idea</p>
+<p><strong>Updating bodyweight silently rewrites the calorie figure on every session ever logged.</strong> Bodyweight exists in exactly one place: a single optional, undated field in the one-row <code>Settings</code> table. The calorie formula at <code>00:154</code> is <code>kcal = (MET &times; 3.5 &times; bodyweightKg / 200) &times; minutes</code> &mdash; it takes <code>bodyweightKg</code>, because there is no <code>bodyweightAtTimeKg</code> to take. Calories are on the derived-on-read list. Put those two independently-stated facts together and the consequence is mechanical: opening any past session recomputes its calories from <em>today&rsquo;s</em> weight. Change 78 &rarr; 84 kg and every historical figure moves, including one the user screenshotted, and including sessions logged before they had entered a weight at all.</p>
+<p><strong>The fix is nearly free today and a migration later:</strong> make bodyweight a small append-only dated series and have <code>caloriesFor(session)</code> resolve the weight in effect on <code>session.performedOn</code>. This does <em>not</em> violate the derived-values rule &mdash; that rule forbids storing what can be recomputed, and a past bodyweight cannot be recomputed from anything. The <code>Session</code> tables do not exist yet, so this costs a schema decision now and a migration if deferred. It also hands the avatar destination a second surface with genuine content &mdash; a weight log &mdash; instead of a settings form.</p>
+<p>The verifier judged this &ldquo;real, currently unaddressed, and arguably <em>understated</em> rather than overstated &mdash; it isn&rsquo;t a hypothetical edge case, it&rsquo;s the default behaviour of the two rules as written.&rdquo;</p>
+</div>
+
+<div class="note">
+<p class="eyebrow">Two reported conflicts that dissolved</p>
+<p>Generation flagged two apparent contradictions in <code>docs/00-build-spec.md</code>. Verification against <code>01</code> &mdash; which wins per <code>CLAUDE.md</code> &mdash; dissolved both, so <strong>no conflict needs resolving</strong>:</p>
+<p><b>&ldquo;Set count is the headline stat&rdquo; (00:88) vs. listing it third (00:232).</b> Not a rule conflict. <code>01:220</code> reads &ldquo;Set count is the headline <em>volume proxy</em> instead&rdquo; &mdash; a stand-in for the banned kg figure, not a claim about tile order. The digest dropped &ldquo;volume proxy&rdquo; and the shortened phrase reads, in isolation, like a layout instruction. That is a wording defect in <code>00</code> worth a one-word fix, and it is the exact failure mode <code>CLAUDE.md</code> warns about when <code>00</code> is read alone.</p>
+<p><b><code>loggedAt</code> &ldquo;never shown&rdquo; (00:52) vs. tiebreaker (00:237).</b> A misreading. Using a field as a sort key is not displaying it; no doc anywhere says the value is rendered. <code>01:203</code> matches <code>00:52</code> verbatim.</p>
+</div>
+</section>
+
+<section id="rejection-summary">
+<h2>Rejection Summary</h2>
+<p>Fourteen cut from 46. Merges are listed separately below, since a merged idea was not rejected.</p>
+<table>
+<tr><th>Idea</th><th>Reason cut</th></tr>
+<tr><td>Bust-outs and debuts &mdash; a third kind of noteworthy beside the PB</td><td>Hard-rule violation. <code>00:236</code> / <code>01:255</code>: &ldquo;Not an achievements system. No milestones, trophies or unlockables in V1&rdquo;, and <code>01:234</code> deliberately gives a first occurrence no badge. This reverses that outright.</td></tr>
+<tr><td>No empty state &mdash; first run shows the same screen with zeros</td><td>Refuted. Rests on the Muscles-tab rule at <code>muscles_root.dart:61-63</code>, but that rule&rsquo;s own stated reason is &ldquo;the landing is shipped reference content&rdquo; &mdash; History&rsquo;s landing is nothing but session data, so the analogy does not transfer.</td></tr>
+<tr><td>Rename the tab to Profile; the avatar becomes Settings</td><td>Reverses an Accepted decision. ADR 0003 specifically made History the tab and Profile the avatar; this un-decides it with no new information.</td></tr>
+<tr><td>Set count as the sole hero number</td><td>Built on the <code>00:88</code> misreading above. Its goal survives in V5, on solid ground.</td></tr>
+<tr><td>Tap the streak to print the <code>streakAsOf</code> walk</td><td>Fails the meeting test as a consumer feature &mdash; showing algorithm internals to an end user of a workout app. Good debug affordance, not a product one.</td></tr>
+<tr><td>Rows expand in place via <code>DisclosureRow</code></td><td>The component does not fit: <code>DisclosureRow.body</code> is typed <code>String</code> (verbatim exercise copy), and a history row needs sets, pills and edit affordances. Needs a new component, so the cheapness that motivated it is illusory.</td></tr>
+<tr><td>Delete the Profile landing entirely</td><td>Incomplete &mdash; leaves gender, bodyweight and template authoring with no stated home.</td></tr>
+<tr><td>Capture bodyweight inline at the calorie prompt</td><td>Blocked, not wrong. It multiplies the surfaces that edit bodyweight, which <em>amplifies</em> the retroactive-rewrite bug above. Revisit once that is fixed.</td></tr>
+<tr><td>Relocate the whole template library to the History tab</td><td>Contradicts &ldquo;only place templates are authored&rdquo; and conflicts with D1, which puts authored things behind the avatar. M7 keeps the useful half.</td></tr>
+<tr><td>Edge scrubber for direct-manipulation jumping</td><td>Duplicates M1 and V6 as findability answers, and is the weakest of the three on a list whose rows are not uniformly sized.</td></tr>
+<tr><td>One <code>SessionCard</code> at three densities</td><td>Obvious componentisation, not a decision. Fails the meeting test.</td></tr>
+<tr><td>One filterable <code>sessionsQuery</code> provider</td><td>Same. Folded into F1 as an implementation detail.</td></tr>
+<tr><td>One <code>SessionBadges</code> decoration set</td><td>Same. Generic grouping with low information content.</td></tr>
+<tr><td>Make the <em>day</em> the row unit instead of the session</td><td>Premise refuted (the <code>loggedAt</code> conflict it cited is not real) and cost understated: aggregate titles, an ambiguous tap target, and edit/delete resolving to one of several sessions. Re-scoped down to M2.</td></tr>
+</table>
+
+<h4>Merged, not rejected</h4>
+<table>
+<tr><th>Merged into</th><th>From</th></tr>
+<tr><td><b>D1</b> the split rule</td><td>Four independent framings of the same line: recall-vs-configure, derived-vs-authored, configuration-vs-record, face-sheet-vs-encounter-list. Kept the one anchored to a code quote.</td></tr>
+<tr><td><b>V3</b> the tolerance strip</td><td>Three overlapping recency-strip designs plus a copy-only &ldquo;grace window&rdquo; variant.</td></tr>
+<tr><td><b>V4</b> the scannable trail</td><td>PB-pill-on-row (two frames) and per-row muscle glyph (two frames).</td></tr>
+<tr><td><b>V6</b> the finding aid</td><td>Browse-by-series and the browse-by-exercise second lens.</td></tr>
+<tr><td><b>F1</b> the projection</td><td>The single-pass projection, the date-parameterised <code>streakAsOf</code> family, and one shared <code>trainedSegmentsForSession</code>.</td></tr>
+</table>
+
+<h4>Axis coverage</h4>
+<p>All four axes carry survivors: A1 six, A2 five, A3 two, A4 two. A3 is thin by nature &mdash; it is a single binary decision (D1) plus its one offsetting affordance (M7), not a space of designs.</p>
+</section>
+
+<footer class="composition-signal">Composed 2026-09-14 by ce-ideate from the user prompt &ldquo;design the history/Profile screen&rdquo;, grounded in <code>docs/00</code>&ndash;<code>04</code>, <code>docs/adr/0003</code>, and <code>lib/src/</code>. 46 raw candidates from six frames; bases verified against the repo by a fresh-context critic.</footer>
+
+</div>
+</body>
+</html>

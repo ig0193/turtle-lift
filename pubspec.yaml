@@ -18,6 +18,11 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Drives the real app on a simulator or device. The widget suite proves the
+  # screens in isolation; this proves the flow through them against the real
+  # database and the real boot path.
+  integration_test:
+    sdk: flutter
   flutter_lints: ^6.0.0
   drift_dev: ^2.35.0
   build_runner: ^2.16.1

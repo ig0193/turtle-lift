@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE — History tab variants</title>
+<!--
+  THROWAWAY PROTOTYPE. Not production code, not the visual reference.
+
+  Question: what should the History tab L0 look like, and which of Profile's
+  contents sit on the tab vs behind the header avatar?
+
+  Six structurally different variants of the History tab landing, switchable
+  via ?variant=A|B|C|D|E|F and the floating bottom bar (arrow keys work too).
+
+    A — Coverage map      V1  body diagram filled by RECENCY, not by one session
+    B — Named silences    V2  gaps beyond the 3-day tolerance drawn as spacers
+    C — Tolerance strip   V3  14 days in three states: filled / outlined / empty
+    D — Scannable trail   V4  no stats block; PB pills + muscle glyphs on rows
+    E — Quiet log         V5  nothing above the list; figure in the pinned header
+    F — Finding aid       V6  extent line + browse-by-series above the list
+
+  (The skill caps variants at 5; six are kept because each changes the screen's
+  structure, not its styling. The modifier toggles below are not variants.)
+
+  Deeper screens — session detail, profile-behind-avatar, templates, search,
+  exercise history — are SHARED by all six, so the flow can be walked end to end.
+
+  MODIFIERS (left panel) toggle the composable ideas M1-M8 on any variant.
+  STATE (left panel) switches between fresh / warm / lapsed, which is where
+  most of these designs actually succeed or fail.
+
+  Synthetic data: 48 sessions generated in-memory from a seeded PRNG. Nothing
+  persists. Every figure on screen — streak, PB count, set/exercise counts,
+  trained muscles, calories — is DERIVED ON READ in a single chronological
+  pass (see buildProjection), exactly as idea F1 argues it must be. Edit or
+  delete a session and watch every number move.
+
+  The body diagram is a SIMPLIFIED silhouette, not the real 42-segment
+  body_paths.dart geometry. Shape fidelity is not what this prototype tests.
+
+  Ideas are from docs/ideation/2026-09-14-history-tab-l0-ideation.html
+-->
+<style>
+:root{
+  --page:#17140F; --surface:#211D18; --line:#332C22; --muted:#241F19;
+  --ink:#F5EFE8; --ink2:#A89C8E; --ink3:#6B6156;
+  --accent:#D85A30; --accent2:#F0997B; --onaccent:#1B0C05; --danger:#C4553A;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#0E0D0B;color:var(--ink);font:14px/1.5 var(--sans);
+  display:flex;justify-content:center;min-height:100vh;padding:26px 16px 132px}
+.stage{display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;justify-content:center;max-width:1180px}
+
+/* ---------- side panels ---------- */
+.panel{width:248px;background:#1C1915;border:1px solid #2A251D;border-radius:12px;padding:16px 18px}
+.panel h4{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin:0 0 10px;font-weight:700}
+.panel h4+h4{margin-top:20px}
+.panel label{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--ink2);padding:5px 0;cursor:pointer;line-height:1.4}
+.panel label:hover{color:var(--ink)}
+.panel input{margin:2px 0 0;accent-color:var(--accent);flex:none}
+.panel label b{color:var(--ink);font-weight:600}
+.panel .seg{display:flex;gap:4px;background:var(--muted);border:1px solid var(--line);border-radius:9px;padding:3px}
+.panel .seg button{flex:1;background:none;border:0;color:var(--ink3);font:600 11px var(--sans);padding:6px 2px;border-radius:6px;cursor:pointer}
+.panel .seg button.on{background:var(--surface);color:var(--ink)}
+.panel p.hint{font-size:11px;color:var(--ink3);margin:10px 0 0;line-height:1.5}
+.panel hr{border:0;border-top:1px solid #2A251D;margin:18px 0}
+
+/* ---------- readout ---------- */
+.readout{width:248px;background:#1C1915;border:1px solid #2A251D;border-radius:12px;padding:16px 18px}
+.readout h4{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin:0 0 10px;font-weight:700}
+.readout dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font:12px/1.5 var(--mono)}
+.readout dt{color:var(--ink3)}
+.readout dd{margin:0;color:var(--ink2);text-align:right}
+.readout dd b{color:var(--ink);font-weight:600}
+.readout .note{font-size:11px;color:var(--ink3);line-height:1.5;margin:12px 0 0;font-family:var(--sans)}
+
+/* ---------- phone ---------- */
+.phonewrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+.phone{width:320px;height:660px;border:1px solid var(--line);border-radius:26px;overflow:hidden;
+  background:var(--page);box-shadow:0 18px 48px rgba(0,0,0,.55);display:flex;flex-direction:column;position:relative}
+.vname{font-size:12px;color:var(--ink3);text-align:center;max-width:320px;line-height:1.5}
+.vname b{color:var(--ink2);font-weight:600}
+
+.bar{display:flex;align-items:center;gap:10px;padding:14px 16px 12px;border-bottom:1px solid var(--line);flex:none;background:var(--page)}
+.bar .back{color:var(--ink2);font-size:19px;cursor:pointer;line-height:1;flex:none}
+.bar .t{font-size:19px;font-weight:650;letter-spacing:-.015em;flex:1;min-width:0}
+.bar .t.sm{font-size:15px;font-weight:600}
+.bar .t small{display:block;font-size:11px;font-weight:500;color:var(--ink2);letter-spacing:0;margin-top:2px}
+.bar .av{width:29px;height:29px;border-radius:999px;background:var(--surface);border:1px solid var(--line);
+  cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink3)}
+.bar .act{font-size:12px;color:var(--accent2);cursor:pointer;flex:none}
+
+.scr{flex:1;overflow-y:auto;padding:14px 16px 16px;scrollbar-width:thin}
+.scr::-webkit-scrollbar{width:0}
+
+.tabs{display:flex;gap:5px;padding:7px;margin:0 12px 12px;background:rgba(33,29,24,.94);
+  border:1px solid var(--line);border-radius:999px;flex:none}
+.tabs span{flex:1;text-align:center;font-size:10.5px;color:var(--ink3);padding:6px 0;border-radius:999px;cursor:pointer}
+.tabs span.on{background:var(--surface);color:var(--ink)}
+
+/* ---------- app bits ---------- */
+.lbl{font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3);font-weight:700;margin:0 0 9px}
+.lbl.mt{margin-top:18px}
+.row{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.row:hover{background:rgba(255,255,255,.015)}
+.row .tx{flex:1;min-width:0}
+.row b{font-size:13.5px;font-weight:600;display:block}
+.row small{font-size:11px;color:var(--ink3);display:block;margin-top:2px}
+.row .go{color:var(--ink3);font-size:15px;flex:none}
+.row.sel{background:rgba(216,90,48,.09)}
+.row .chk{width:17px;height:17px;border-radius:999px;border:1.5px solid var(--line);flex:none}
+.row.sel .chk{background:var(--accent);border-color:var(--accent)}
+
+.pb{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.05em;padding:2px 7px;border-radius:999px;
+  background:rgba(216,90,48,.17);color:var(--accent2);margin-left:6px;vertical-align:1px}
+.tag{display:inline-block;font-size:9.5px;letter-spacing:.05em;padding:2px 7px;border-radius:999px;
+  border:1px solid var(--line);color:var(--ink3);margin-left:6px;vertical-align:1px}
+.gap{text-align:center;font-size:10.5px;color:#4E463C;letter-spacing:.07em;padding:10px 0;border-bottom:1px solid var(--line)}
+.glyph{width:23px;height:36px;flex:none;border-radius:3px;background:var(--muted);border:1px solid var(--line);position:relative;overflow:hidden}
+.glyph u{position:absolute;left:3px;right:3px;background:var(--accent);border-radius:1px;text-decoration:none}
+
+.search{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);
+  border-radius:11px;padding:11px 13px;margin-bottom:15px;color:var(--ink3);font-size:12.5px;cursor:pointer}
+.strip{display:flex;gap:5px;margin:0 0 5px}
+.strip i{flex:1;height:30px;border-radius:5px;font-style:normal}
+.strip i.on{background:var(--accent)}
+.strip i.grace{border:1.5px solid var(--accent);background:transparent}
+.strip i.off{background:var(--muted);border:1px solid var(--line)}
+.days{display:flex;gap:5px;margin:0 0 13px}
+.days span{flex:1;text-align:center;font-size:9px;color:#4E463C}
+.cap{font-size:11.5px;color:var(--ink3);line-height:1.55;margin:0 0 17px}
+.cap b{color:var(--ink);font-weight:600}
+.extent{font-size:12px;color:var(--ink2);margin:0 0 14px;line-height:1.55}
+.extent b{color:var(--ink);font-weight:600}
+.series{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:17px}
+.series i{font-style:normal;font-size:11px;padding:7px 11px;border-radius:999px;border:1px solid var(--line);
+  background:var(--muted);color:var(--ink2);cursor:pointer}
+.series i:hover{color:var(--ink);border-color:var(--ink3)}
+.onthis{font-size:11.5px;color:var(--ink2);padding:10px 12px;background:var(--muted);border:1px solid var(--line);
+  border-radius:9px;margin-bottom:15px;cursor:pointer;line-height:1.5}
+.onthis b{color:var(--ink);font-weight:600}
+.tenure{font-size:11.5px;color:var(--ink3);margin:0 0 15px}
+.tenure b{color:var(--ink2);font-weight:600}
+
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:17px}
+.grid3 div{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 6px;text-align:center}
+.grid3 b{display:block;font-size:18px;font-weight:650}
+.grid3 small{display:block;font-size:9.5px;color:var(--ink3);margin-top:2px}
+
+.bodywrap{display:flex;justify-content:center;gap:14px;margin:2px 0 12px}
+.bodywrap svg{width:96px;height:184px;display:block}
+.bodywrap svg .seg{cursor:pointer}
+.legend{display:flex;justify-content:center;gap:12px;font-size:9.5px;color:var(--ink3);margin-bottom:6px}
+.legend i{font-style:normal;display:inline-flex;align-items:center;gap:4px}
+.legend u{width:9px;height:9px;border-radius:2px;display:inline-block;text-decoration:none}
+
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:16px;margin-bottom:16px}
+.hero h3{margin:0 0 3px;font-size:17px;font-weight:650}
+.hero .sub{font-size:11.5px;color:var(--ink3);margin:0 0 13px}
+.hero .four{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)}
+.hero .four div{text-align:center}
+.hero .four b{display:block;font-size:15px;font-weight:650}
+.hero .four small{display:block;font-size:9px;color:var(--ink3);margin-top:2px;letter-spacing:.03em}
+
+.ex{padding:11px 0;border-bottom:1px solid var(--line)}
+.ex .n{font-size:13px;font-weight:600;margin-bottom:6px}
+.sets{display:flex;flex-wrap:wrap;gap:5px}
+.sets i{font-style:normal;font-size:10.5px;padding:4px 8px;border-radius:6px;background:var(--muted);
+  border:1px solid var(--line);color:var(--ink2)}
+.sets i.best{background:rgba(216,90,48,.17);border-color:rgba(216,90,48,.42);color:var(--accent2);font-weight:650}
+
+.empty{text-align:center;padding:52px 20px}
+.empty .disc{width:52px;height:52px;border-radius:999px;background:var(--muted);border:1px solid var(--line);
+  margin:0 auto 15px;display:flex;align-items:center;justify-content:center;font-size:21px}
+.empty h3{font-size:15px;font-weight:600;margin:0 0 7px}
+.empty p{font-size:12.5px;color:var(--ink2);line-height:1.55;margin:0;max-width:230px;margin-inline:auto}
+
+.btn{display:block;width:100%;text-align:center;background:var(--accent);color:var(--onaccent);border:0;
+  border-radius:11px;padding:13px;font:650 13.5px var(--sans);cursor:pointer;margin-top:16px}
+.btn.ghost{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+.btn.del{background:none;border:1px solid rgba(196,85,58,.5);color:var(--danger)}
+.dlg{position:absolute;inset:0;background:rgba(10,9,7,.78);display:flex;align-items:center;justify-content:center;padding:26px;z-index:5}
+.dlg div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:19px;width:100%}
+.dlg h4{margin:0 0 7px;font-size:14.5px;font-weight:650}
+.dlg p{margin:0 0 15px;font-size:12.5px;color:var(--ink2);line-height:1.5}
+.dlg .btns{display:flex;gap:8px}
+.dlg .btns button{flex:1;border-radius:9px;padding:11px;font:600 12.5px var(--sans);cursor:pointer;border:1px solid var(--line);
+  background:var(--muted);color:var(--ink)}
+.dlg .btns button.d{background:var(--danger);border-color:var(--danger);color:#1B0C05}
+
+/* ---------- switcher ---------- */
+.switcher{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:20;display:flex;align-items:center;
+  gap:3px;background:#F5EFE8;color:#17140F;border-radius:999px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+.switcher button{background:none;border:0;font:700 17px var(--sans);color:#17140F;cursor:pointer;
+  width:36px;height:34px;border-radius:999px}
+.switcher button:hover{background:rgba(0,0,0,.09)}
+.switcher .cur{font:650 12.5px var(--sans);padding:0 12px;white-space:nowrap}
+.switcher .cur em{font-style:normal;opacity:.55;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- ===== left: controls ===== -->
+  <div class="panel">
+    <h4>State</h4>
+    <div class="seg" id="stateSeg">
+      <button data-state="fresh">Fresh</button>
+      <button data-state="warm" class="on">Warm</button>
+      <button data-state="lapsed">Lapsed</button>
+    </div>
+    <p class="hint">Fresh = no sessions. Warm = 48 sessions ending today. Lapsed = the same history, last session 9 days ago — so <code>streakAsOf(today)</code> returns 0 while nothing in storage changed. The streak is never asserted here; read it off the panel on the right.</p>
+
+    <hr>
+    <h4>Modifiers</h4>
+    <label><input type="checkbox" id="m1"> <span><b>M1</b> Search field (opaque push)</span></label>
+    <label><input type="checkbox" id="m2" checked> <span><b>M2</b> Group same-day sessions</span></label>
+    <label><input type="checkbox" id="m3" checked> <span><b>M3</b> Never render a zero streak</span></label>
+    <label><input type="checkbox" id="m4"> <span><b>M4</b> Tenure line</span></label>
+    <label><input type="checkbox" id="m6"> <span><b>M6</b> Multi-select batch delete</span></label>
+    <label><input type="checkbox" id="m8"> <span><b>M8</b> "On this day" resurfacing</span></label>
+    <p class="hint">M5 (absence never in accent) and M7 (promote to template) are visible in the flow rather than as toggles — M7 sits on session detail.</p>
+  </div>
+
+  <!-- ===== centre: phone ===== -->
+  <div class="phonewrap">
+    <div class="phone" id="phone"></div>
+    <p class="vname" id="vname"></p>
+  </div>
+
+  <!-- ===== right: derived-state readout ===== -->
+  <div class="readout">
+    <h4>Derived on read</h4>
+    <dl id="readout"></dl>
+    <p class="note" id="rnote"></p>
+  </div>
+
+</div>
+
+<div class="switcher">
+  <button id="prev" title="Previous variant">&#8249;</button>
+  <span class="cur" id="cur"></span>
+  <button id="next" title="Next variant">&#8250;</button>
+</div>
+
+<script>
+/* ============================================================
+   1. Seeded synthetic data. Nothing persists.
+   ============================================================ */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+const TODAY = new Date(2026,8,14);           // 14 Sep 2026, local calendar date
+const DAY   = 86400000;
+const dnum  = d => Math.round((d-new Date(2026,0,1))/DAY);
+const fromN = n => new Date(2026,0,1+n);
+
+// exercise pool: [name, primary sub-muscle ids, loadType]
+const POOL = [
+  ['Barbell bench press',['chest_mid','delt_front','triceps'],'weighted'],
+  ['Incline dumbbell press',['chest_upper','delt_front'],'weighted'],
+  ['Overhead press',['delt_front','delt_side','triceps'],'weighted'],
+  ['Lateral raise',['delt_side'],'weighted'],
+  ['Triceps pushdown',['triceps'],'weighted'],
+  ['Pull-up',['lats','biceps'],'bodyweight'],
+  ['Barbell row',['lats','traps_mid','biceps'],'weighted'],
+  ['Lat pulldown',['lats','biceps'],'weighted'],
+  ['Barbell curl',['biceps'],'weighted'],
+  ['Face pull',['delt_rear','traps_mid'],'weighted'],
+  ['Back squat',['quads','glutes'],'weighted'],
+  ['Romanian deadlift',['hamstrings','glutes','erectors'],'weighted'],
+  ['Leg press',['quads','glutes'],'weighted'],
+  ['Standing calf raise',['calves'],'weighted'],
+  ['Plank',['abs'],'timed'],
+  ['Assisted dip',['chest_mid','triceps'],'assisted'],
+];
+const TEMPLATES = {
+  push:['Push day',[0,1,2,3,4]], pull:['Pull day',[5,6,7,8,9]],
+  legs:['Leg day',[10,11,12,13]], full:['Full body',[0,6,10,11,14]],
+};
+const MUSCLE_LABEL = {chest_mid:'Chest',chest_upper:'Upper chest',delt_front:'Front delts',delt_side:'Side delts',
+  delt_rear:'Rear delts',triceps:'Triceps',biceps:'Biceps',lats:'Lats',traps_mid:'Mid traps',quads:'Quads',
+  glutes:'Glutes',hamstrings:'Hamstrings',calves:'Calves',abs:'Abs',erectors:'Lower back'};
+
+function generate(state){
+  if(state==='fresh') return [];
+  const rnd = mulberry32(20260914);
+  const keys = Object.keys(TEMPLATES);
+  const out = [];
+  // walk back ~200 days from an end point, leaving realistic gaps
+  const endOffset = state==='lapsed' ? 9 : 0;
+  let cur = dnum(TODAY) - endOffset;
+  const stop = cur - 200;
+  let k = 0;
+  while(cur > stop && out.length < 48){
+    const quick = rnd() < 0.16;
+    const tkey  = keys[k++ % keys.length];
+    const [tname, idxs] = TEMPLATES[tkey];
+    let exercises;
+    if(quick){
+      exercises = [POOL[Math.floor(rnd()*POOL.length)]];
+    } else {
+      exercises = idxs.map(i=>POOL[i]);
+    }
+    const age = dnum(TODAY) - cur;               // older sessions are weaker
+    out.push({
+      id: 's'+out.length,
+      performedOn: cur,
+      title: quick ? null : tname,
+      quick,
+      exercises: exercises.map(([name,prim,lt])=>{
+        const nSets = quick ? 3 : 3 + Math.floor(rnd()*2);
+        const base  = lt==='timed' ? 40 : lt==='bodyweight' ? 0 : lt==='assisted' ? 30 : 40;
+        const drift = lt==='assisted' ? +Math.round(age/22) : -Math.round(age/16);
+        return {name, primary:prim, loadType:lt,
+          sets: Array.from({length:nSets},(_,i)=>({
+            weight: Math.max(0, base + drift + (lt==='assisted' ? i*2 : -i*2) + Math.round(rnd()*4)),
+            reps:   lt==='timed' ? 0 : 6 + Math.floor(rnd()*5),
+            secs:   lt==='timed' ? 30 + Math.floor(rnd()*30) : 0,
+          }))};
+      })
+    });
+    // gap: mostly 1-3 days. Long lapses only in the older half of the history, so
+    // recent weeks carry a live chain (C and E have something to show) while the
+    // back catalogue still has real gaps for B to draw.
+    const ageNow = dnum(TODAY) - cur;
+    cur -= (ageNow > 45 && rnd() < 0.18) ? 6 + Math.floor(rnd()*10) : 1 + Math.floor(rnd()*3);
+  }
+  return out.sort((a,b)=> b.performedOn - a.performedOn || 0);
+}
+
+/* ============================================================
+   2. THE PROJECTION — idea F1.
+   One chronological pass, running per-exercise best. Not O(n^2).
+   Everything downstream reads from here; nothing is stored.
+   ============================================================ */
+function scoreOf(ex,set){ return ex.loadType==='timed' ? set.secs : ex.loadType==='bodyweight' ? set.reps : set.weight; }
+function betterThan(loadType,a,b){ return loadType==='assisted' ? a < b : a > b; }   // assisted PB is INVERTED
+
+function buildProjection(sessions){
+  const asc = [...sessions].sort((a,b)=>a.performedOn-b.performedOn);
+  const best = {};                 // exercise name -> running best score
+  const proj = {};
+  for(const s of asc){
+    let pbCount = 0; const pbSets = {};
+    for(const ex of s.exercises){
+      let exBest = null;
+      for(const set of ex.sets){
+        const v = scoreOf(ex,set);
+        if(exBest===null || betterThan(ex.loadType,v,exBest)) exBest = v;
+      }
+      const prior = best[ex.name];
+      if(prior !== undefined && betterThan(ex.loadType,exBest,prior)){ pbCount++; pbSets[ex.name]=exBest; }
+      if(prior === undefined || betterThan(ex.loadType,exBest,prior)) best[ex.name]=exBest;
+    }
+    const trained = new Set(); s.exercises.forEach(e=>e.primary.forEach(m=>trained.add(m)));
+    const setCount = s.exercises.reduce((n,e)=>n+e.sets.length,0);
+    proj[s.id] = {pbCount, pbSets, trained:[...trained], setCount,
+                  exCount:s.exercises.length, streakAsOf: streakAsOf(sessions, s.performedOn)};
+  }
+  return proj;
+}
+
+// Streak: workout days in a row where the user never went more than 3 days without training.
+function streakAsOf(sessions, dayN){
+  const days = [...new Set(sessions.map(s=>s.performedOn))].filter(d=>d<=dayN).sort((a,b)=>b-a);
+  if(!days.length) return 0;
+  if(dayN - days[0] > 3) return 0;              // decays against the reference date
+  let count = 1;
+  for(let i=1;i<days.length;i++){
+    if(days[i-1]-days[i] > 3) break;
+    count++;
+  }
+  return count;
+}
+function daysSinceLast(sessions){ return sessions.length ? dnum(TODAY)-sessions[0].performedOn : null; }
+
+// resolved title — session.title, else single exercise name, else primary muscle groups
+function titleOf(s){
+  if(s.title) return s.title;
+  if(s.exercises.length===1) return s.exercises[0].name;
+  const ms=[...new Set(s.exercises.flatMap(e=>e.primary))].slice(0,3).map(m=>MUSCLE_LABEL[m]||m);
+  return ms.join(', ');
+}
+function fmtDate(n){
+  const d=fromN(n), t=dnum(TODAY);
+  if(n===t) return 'Today';
+  if(n===t-1) return 'Yesterday';
+  return d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+}
+function monthOf(n){ const d=fromN(n); return ['January','February','March','April','May','June','July','August','September','October','November','December'][d.getMonth()]+' '+d.getFullYear(); }
+function calories(setCount){ const met = setCount<10?3:setCount<21?5:6; return Math.round(met*3.5*78/200*(setCount*3.5)); }
+
+/* ============================================================
+   3. App state
+   ============================================================ */
+const VARIANTS = {
+  A:['Coverage map','V1 — the body diagram is the hero, filled by how recently each region was trained. No number above the list.'],
+  B:['Named silences','V2 — a plain chronological list where every gap beyond the 3-day tolerance is drawn as a labelled spacer.'],
+  C:['Tolerance strip','V3 — fourteen days in three states. Filled = trained, outlined = rest inside the grace window, empty = lapsed.'],
+  D:['Scannable trail','V4 — no stats block at all. Each row carries a PB pill and a muscle glyph, so scrolling is the stat display.'],
+  E:['Quiet log','V5 — nothing above the list. The one derived figure lives in the pinned header, where it never scrolls away.'],
+  F:['Finding aid','V6 — a derived extent line plus browse-by-series entries, with the chronological list as the container list.'],
+};
+const KEYS = Object.keys(VARIANTS);
+
+let S = {
+  variant: (new URLSearchParams(location.search).get('variant')||'A').toUpperCase(),
+  state:'warm', screen:'l0', sessionId:null, exerciseName:null,
+  selecting:false, selected:new Set(), dialog:null, deleted:new Set(),
+};
+if(!KEYS.includes(S.variant)) S.variant='A';
+let SESSIONS=[], PROJ={};
+
+function rebuild(){
+  SESSIONS = generate(S.state).filter(s=>!S.deleted.has(s.id));
+  PROJ = buildProjection(SESSIONS);
+}
+const mod = id => document.getElementById(id).checked;
+
+/* ============================================================
+   4. Render
+   ============================================================ */
+const el = document.getElementById('phone');
+
+function render(){
+  rebuild();
+  let html='';
+  if(S.screen==='l0')            html = screenL0();
+  else if(S.screen==='session')  html = screenSession();
+  else if(S.screen==='profile')  html = screenProfile();
+  else if(S.screen==='templates')html = screenTemplates();
+  else if(S.screen==='details')  html = screenDetails();
+  else if(S.screen==='search')   html = screenSearch();
+  else if(S.screen==='exercise') html = screenExercise();
+  else if(S.screen==='stub')     html = screenStub();
+  if(S.dialog) html += dialogHTML();
+  el.innerHTML = html;
+  wire();
+  renderReadout();
+  document.getElementById('cur').innerHTML = S.variant+' <em>'+VARIANTS[S.variant][0]+'</em>';
+  document.getElementById('vname').innerHTML = '<b>'+S.variant+' — '+VARIANTS[S.variant][0]+'.</b> '+VARIANTS[S.variant][1];
+}
+
+/* ---------- shared chrome ---------- */
+const tabsHTML = () => `<div class="tabs"><span data-stub="Workout">Workout</span><span data-stub="Muscles">Muscles</span><span class="on">History</span></div>`;
+
+function headerL0(){
+  const streak = streakAsOf(SESSIONS, dnum(TODAY));
+  let sub='';
+  if(S.variant==='E' && SESSIONS.length){
+    sub = (streak>0 || !mod('m3'))
+      ? `<small>${streak}-day streak · ${SESSIONS.length} sessions</small>`
+      : `<small>Last trained ${daysSinceLast(SESSIONS)} days ago · ${SESSIONS.length} sessions</small>`;
+  }
+  return `<div class="bar"><span class="t">History${sub}</span><span class="av" data-go="profile">◕</span></div>`;
+}
+
+/* ---------- L0 ---------- */
+function screenL0(){
+  if(!SESSIONS.length){
+    return headerL0()+`<div class="scr"><div class="empty">
+      <div class="disc">▤</div><h3>No workouts yet</h3>
+      <p>Finish your first session and it'll show up here.</p></div></div>`+tabsHTML();
+  }
+  let top='';
+  if(S.variant==='A') top = blockCoverage();
+  if(S.variant==='C') top = blockStrip();
+  if(S.variant==='F') top = blockFindingAid();
+  if(S.variant==='B'||S.variant==='E') top = '';
+  if(S.variant==='D') top = '';
+
+  let pre='';
+  if(mod('m1')) pre += `<div class="search" data-go="search">⌕ Search sessions and exercises</div>`;
+  if(mod('m8') && SESSIONS.length>20){
+    const old = SESSIONS[SESSIONS.length-3];
+    pre += `<div class="onthis" data-session="${old.id}">On this day · <b>${titleOf(old)}</b>, ${Math.round((dnum(TODAY)-old.performedOn)/30)} months ago</div>`;
+  }
+  if(mod('m4')){
+    const first = SESSIONS[SESSIONS.length-1];
+    pre += `<p class="tenure">Training since <b>${monthOf(first.performedOn).split(' ')[0]}</b> — ${Math.round((dnum(TODAY)-first.performedOn)/30)} months</p>`;
+  }
+  return headerL0()+`<div class="scr">${pre}${top}${listHTML()}</div>`+tabsHTML();
+}
+
+function blockCoverage(){
+  // recency per muscle, derived on read
+  const last={};
+  SESSIONS.forEach(s=>PROJ[s.id].trained.forEach(m=>{ if(last[m]===undefined) last[m]=dnum(TODAY)-s.performedOn; }));
+  const fill = m => {
+    const d=last[m];
+    if(d===undefined) return '#241F19';
+    if(d<=3) return '#D85A30'; if(d<=7) return '#A8452581'; if(d<=14) return '#6E3220'; return '#3E342A';
+  };
+  const named = Object.entries(last).sort((a,b)=>a[1]-b[1]);
+  const fresh = named[0], stale = named[named.length-1];
+  return `<div class="bodywrap">${silhouette(fill)}</div>
+    <div class="legend">
+      <i><u style="background:#D85A30"></u>0–3d</i><i><u style="background:#A84525"></u>4–7d</i>
+      <i><u style="background:#6E3220"></u>8–14d</i><i><u style="background:#3E342A"></u>15d+</i>
+    </div>
+    <p class="cap" style="text-align:center">${fresh?`<b>${MUSCLE_LABEL[fresh[0]]}</b> · ${fresh[1]===0?'today':fresh[1]+' days ago'}`:''}<br>
+      ${stale?`${MUSCLE_LABEL[stale[0]]} · not in ${stale[1]} days`:''}</p>
+    <p class="lbl">Recent</p>`;
+}
+
+function silhouette(fill){
+  const seg=(id,x,y,w,h,r)=>`<rect class="seg" data-muscle="${id}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill(id)}" stroke="#332C22" stroke-width=".7"/>`;
+  return `<svg viewBox="0 0 96 184" aria-label="Body coverage by recency">
+    <ellipse cx="48" cy="15" rx="10.5" ry="12" fill="#241F19" stroke="#332C22" stroke-width=".7"/>
+    ${seg('traps_mid',36,29,24,7,3)}
+    ${seg('chest_upper',33,37,30,11,4)}
+    ${seg('chest_mid',33,49,30,14,4)}
+    ${seg('delt_front',18,34,13,15,6)}${seg('delt_side',65,34,13,15,6)}
+    ${seg('biceps',17,51,12,17,5)}${seg('triceps',67,51,12,17,5)}
+    ${seg('lats',34,64,28,16,4)}
+    ${seg('abs',37,81,22,20,4)}
+    ${seg('erectors',34,102,28,8,3)}
+    ${seg('glutes',35,111,26,12,5)}
+    ${seg('quads',35,124,12,31,5)}${seg('hamstrings',49,124,12,31,5)}
+    ${seg('calves',35,157,12,22,5)}${seg('delt_rear',49,157,12,22,5)}
+  </svg>`;
+}
+
+function blockStrip(){
+  const days=[]; const t=dnum(TODAY);
+  const trainedDays=new Set(SESSIONS.map(s=>s.performedOn));
+  for(let i=13;i>=0;i--){
+    const d=t-i;
+    if(trainedDays.has(d)) days.push('on');
+    else {
+      // outlined if a trained day exists within 3 days on BOTH sides of the chain
+      const prev=[...trainedDays].filter(x=>x<d).sort((a,b)=>b-a)[0];
+      days.push(prev!==undefined && d-prev<=3 ? 'grace':'off');
+    }
+  }
+  const streak=streakAsOf(SESSIONS,t);
+  const lab=['S','M','T','W','T','F','S'];
+  const head = (streak>0||!mod('m3'))
+    ? `<b>${streak}-day streak.</b> Rest days are fine — miss more than two in a row and it resets.`
+    : `<b>Last trained ${daysSinceLast(SESSIONS)} days ago.</b> Any session starts a new chain — including a single quick log.`;
+  return `<div class="strip">${days.map(c=>`<i class="${c}"></i>`).join('')}</div>
+    <div class="days">${days.map((_,i)=>`<span>${lab[(fromN(t-13+i).getDay())]}</span>`).join('')}</div>
+    <p class="cap">${head}</p><p class="lbl">Recent</p>`;
+}
+
+function blockFindingAid(){
+  const sets=SESSIONS.reduce((n,s)=>n+PROJ[s.id].setCount,0);
+  const first=SESSIONS[SESSIONS.length-1];
+  return `<p class="extent"><b>${SESSIONS.length} sessions</b> · ${monthOf(first.performedOn).replace(/ \d+$/,'')} ${fromN(first.performedOn).getFullYear()} – today · ${sets} sets</p>
+    <div class="series"><i data-go="details">By exercise</i><i data-go="details">By muscle</i><i data-go="details">By template</i></div>
+    <p class="lbl">All sessions</p>`;
+}
+
+function listHTML(){
+  let out=''; let lastMonth=null; let prevDay=null; let lastDateKey=null;
+  const showGaps = S.variant==='B';
+  const showGlyph= S.variant==='D';
+  const showMonth= S.variant!=='F';
+
+  SESSIONS.forEach(s=>{
+    const p=PROJ[s.id];
+    if(showGaps && prevDay!==null){
+      const g=prevDay-s.performedOn;
+      if(g>3) out+=`<div class="gap">———— ${g} days ————</div>`;
+    }
+    const m=monthOf(s.performedOn);
+    if(showMonth && m!==lastMonth){ out+=`<p class="lbl${lastMonth?' mt':''}">${m}</p>`; lastMonth=m; }
+
+    // M2 — same-day grouping: show the date only on the first row of that day
+    const sameDay = mod('m2') && lastDateKey===s.performedOn;
+    lastDateKey = s.performedOn;
+
+    const glyph = showGlyph ? `<div class="glyph">${glyphBars(p.trained)}</div>` : '';
+    const chk   = (S.selecting) ? `<div class="chk"></div>` : '';
+    const pb    = p.pbCount>0 ? `<span class="pb">${p.pbCount} PB</span>` : '';
+    const tag   = s.quick ? `<span class="tag">quick log</span>` : '';
+    const meta  = sameDay
+      ? `${p.exCount} exercise${p.exCount>1?'s':''} · ${p.setCount} sets`
+      : `${fmtDate(s.performedOn)} · ${p.exCount} exercise${p.exCount>1?'s':''} · ${p.setCount} sets`;
+    out += `<div class="row${S.selected.has(s.id)?' sel':''}" data-session="${s.id}">
+      ${chk}${glyph}<div class="tx"><b>${titleOf(s)}${S.variant==='D'?pb:''}${tag}</b><small>${meta}</small></div>
+      <span class="go">${S.selecting?'':'›'}</span></div>`;
+    prevDay=s.performedOn;
+  });
+
+  if(mod('m6')){
+    out += S.selecting
+      ? `<button class="btn del" id="doDelete">Delete ${S.selected.size} session${S.selected.size===1?'':'s'}</button>
+         <button class="btn ghost" id="cancelSel">Cancel</button>`
+      : `<button class="btn ghost" id="startSel">Select sessions…</button>`;
+  }
+  return out;
+}
+function glyphBars(trained){
+  const map={chest_upper:[4,7],chest_mid:[10,8],delt_front:[4,5],delt_side:[4,5],lats:[13,8],
+    biceps:[14,6],triceps:[14,6],abs:[19,7],glutes:[24,5],quads:[26,8],hamstrings:[26,8],calves:[31,4],
+    traps_mid:[2,4],erectors:[22,4],delt_rear:[5,4]};
+  return trained.map(m=>map[m]).filter(Boolean)
+    .map(([t,h])=>`<u style="top:${t}px;height:${h}px"></u>`).join('');
+}
+
+/* ---------- session detail ---------- */
+function screenSession(){
+  const s=SESSIONS.find(x=>x.id===S.sessionId); if(!s) { S.screen='l0'; return screenL0(); }
+  const p=PROJ[s.id];
+  const exs=s.exercises.map(ex=>{
+    const bestScore=p.pbSets[ex.name];
+    return `<div class="ex"><div class="n">${ex.name}${bestScore!==undefined?'<span class="pb">PB</span>':''}</div>
+      <div class="sets">${ex.sets.map(set=>{
+        const v=scoreOf(ex,set);
+        const txt = ex.loadType==='timed' ? `${set.secs}s`
+                  : ex.loadType==='bodyweight' ? `${set.reps} reps`
+                  : ex.loadType==='assisted' ? `−${set.weight}kg × ${set.reps}`
+                  : `${set.weight}kg × ${set.reps}`;
+        return `<i class="${bestScore!==undefined&&v===bestScore?'best':''}">${txt}</i>`;
+      }).join('')}</div></div>`;
+  }).join('');
+  return `<div class="bar"><span class="back" data-go="l0">‹</span><span class="t sm">${titleOf(s)}</span><span class="act" id="promote">Save as template</span></div>
+  <div class="scr">
+    <div class="hero">
+      <h3>${titleOf(s)}</h3><p class="sub">${fmtDate(s.performedOn)}${s.quick?' · quick log':''}</p>
+      <div class="bodywrap">${silhouette(m=>p.trained.includes(m)?'#D85A30':'#241F19')}</div>
+      <div class="four">
+        <div><b>${p.setCount}</b><small>SETS</small></div>
+        <div><b>${p.exCount}</b><small>EXERCISES</small></div>
+        <div><b>${p.streakAsOf}</b><small>STREAK</small></div>
+        <div><b>${calories(p.setCount)}</b><small>KCAL</small></div>
+      </div>
+    </div>
+    <p class="lbl">Logged${p.pbCount?` · ${p.pbCount} personal best${p.pbCount>1?'s':''}`:''}</p>
+    ${exs}
+    <button class="btn del" id="delOne">Delete workout</button>
+    <p class="cap" style="margin-top:14px">The streak above is <code>streakAsOf(${fmtDate(s.performedOn)})</code> — the streak as it stood that day, not today's. Delete a session and every figure on every screen recomputes.</p>
+  </div>`;
+}
+
+/* ---------- profile behind the avatar (idea D1) ---------- */
+function screenProfile(){
+  return `<div class="bar"><span class="back" data-go="l0">‹</span><span class="t sm">Profile</span></div>
+  <div class="scr">
+    <p class="cap"><b>D1 in effect.</b> Everything here is <i>authored</i> — the user typed it in, and it reconfigures how records render. Nothing derived from sessions appears on this screen; that all lives on the History tab.</p>
+    <p class="lbl">Authored</p>
+    <div class="row" data-go="templates"><div class="tx"><b>My workout templates</b><small>4 predefined · 1 custom</small></div><span class="go">›</span></div>
+    <div class="row" data-go="details"><div class="tx"><b>Personal details</b><small>Bodyweight · gender</small></div><span class="go">›</span></div>
+    <p class="lbl mt">Data</p>
+    <div class="row"><div class="tx"><b>Export</b><small>Everything, as a file</small></div><span class="go">›</span></div>
+    <div class="row"><div class="tx"><b>Delete all data</b><small>Permanent</small></div><span class="go">›</span></div>
+  </div>`;
+}
+function screenTemplates(){
+  return `<div class="bar"><span class="back" data-go="profile">‹</span><span class="t sm">My workout templates</span></div>
+  <div class="scr"><p class="lbl">Predefined</p>
+    ${['Push day|Chest, shoulders, triceps','Pull day|Back, biceps','Leg day|Quads, hamstrings, glutes, calves','Full body|All major groups']
+      .map(t=>{const[a,b]=t.split('|');return `<div class="row"><div class="tx"><b>${a}</b><small>${b}</small></div><span class="go">⧉</span></div>`}).join('')}
+    <p class="lbl mt">Custom</p>
+    <div class="row"><div class="tx"><b>Push day (mine)</b><small>From a session on 11 Sep · M7</small></div><span class="go">✎</span></div>
+    <button class="btn ghost">＋ Create custom template</button>
+    <p class="cap" style="margin-top:14px"><b>M7.</b> The custom template above was promoted from a history row. That is the affordance that offsets D1's real cost — burying template authoring behind an avatar.</p>
+  </div>`;
+}
+function screenDetails(){
+  return `<div class="bar"><span class="back" data-go="profile">‹</span><span class="t sm">Personal details</span></div>
+  <div class="scr">
+    <p class="lbl">Bodyweight</p>
+    <div class="row"><div class="tx"><b>78 kg</b><small>Set 2 Mar 2026</small></div><span class="go">›</span></div>
+    <div class="row"><div class="tx"><b>81 kg</b><small>Set 14 Jun 2026</small></div><span class="go">›</span></div>
+    <div class="row"><div class="tx"><b>84 kg</b><small>Set 1 Sep 2026 · current</small></div><span class="go">›</span></div>
+    <p class="cap" style="margin-top:14px"><b>This is the fix, not the spec.</b> Bodyweight is shown here as a dated series. The spec stores one undated number, which means changing it silently rewrites the calorie figure on every session ever logged — including ones already screenshotted. See "Findings" in the ideation doc.</p>
+    <p class="lbl mt">Gender</p>
+    <div class="row"><div class="tx"><b>Male</b><small>Chooses the body diagram used app-wide</small></div><span class="go">›</span></div>
+  </div>`;
+}
+
+/* ---------- search / exercise history / stub ---------- */
+function screenSearch(){
+  const hits=SESSIONS.slice(0,7);
+  return `<div class="bar"><span class="back" data-go="l0">‹</span><span class="t sm">Search</span></div>
+  <div class="scr"><div class="search">⌕ bench</div>
+    <p class="cap"><b>M1.</b> Pushed as an opaque route, so the tab bar is covered — a search screen with the bar still floating would offer to leave mid-query.</p>
+    <p class="lbl">Sessions</p>
+    ${hits.map(s=>`<div class="row" data-session="${s.id}"><div class="tx"><b>${titleOf(s)}</b><small>${fmtDate(s.performedOn)}</small></div><span class="go">›</span></div>`).join('')}
+  </div>`;
+}
+function screenExercise(){
+  const name=S.exerciseName||'Barbell bench press';
+  const rows=SESSIONS.filter(s=>s.exercises.some(e=>e.name===name)).slice(0,8);
+  return `<div class="bar"><span class="back" data-go="l0">‹</span><span class="t sm">${name}</span></div>
+  <div class="scr"><p class="cap">The only place the whole progression arc is visible. V6 is what builds a door to it from this tab.</p>
+  ${rows.map(s=>{const ex=s.exercises.find(e=>e.name===name);const p=PROJ[s.id];
+    return `<div class="ex"><div class="n">${fmtDate(s.performedOn)}${p.pbSets[name]!==undefined?'<span class="pb">PB</span>':''}</div>
+    <div class="sets">${ex.sets.map(st=>`<i class="${p.pbSets[name]===scoreOf(ex,st)?'best':''}">${st.weight}kg × ${st.reps}</i>`).join('')}</div></div>`}).join('')}
+  </div>`;
+}
+function screenStub(){
+  return `<div class="bar"><span class="t">${S.stubName}</span><span class="av" data-go="profile">◕</span></div>
+  <div class="scr"><div class="empty"><div class="disc">—</div><h3>${S.stubName} tab</h3>
+  <p>Already designed and built. Out of scope for this prototype.</p></div></div>`+tabsHTML();
+}
+function dialogHTML(){
+  return `<div class="dlg"><div><h4>${S.dialog.title}</h4><p>${S.dialog.body}</p>
+    <div class="btns"><button id="dlgNo">Cancel</button><button class="d" id="dlgYes">${S.dialog.ok}</button></div></div></div>`;
+}
+
+/* ---------- readout ---------- */
+function renderReadout(){
+  const t=dnum(TODAY);
+  const streak=streakAsOf(SESSIONS,t);
+  const sets=SESSIONS.reduce((n,s)=>n+PROJ[s.id].setCount,0);
+  const pbs=Object.values(PROJ).reduce((n,p)=>n+p.pbCount,0);
+  const rows=[['sessions',SESSIONS.length],['streakAsOf(today)',streak],
+    ['days since last',daysSinceLast(SESSIONS)??'—'],['total sets',sets],['lifetime PBs',pbs],
+    ['deleted this run',S.deleted.size]];
+  document.getElementById('readout').innerHTML =
+    rows.map(([k,v])=>`<dt>${k}</dt><dd><b>${v}</b></dd>`).join('');
+  document.getElementById('rnote').textContent =
+    'None of these is stored. All six recompute from the session rows on every render, in one chronological pass — delete a session and watch them all move.';
+}
+
+/* ---------- wiring ---------- */
+function wire(){
+  el.querySelectorAll('[data-go]').forEach(n=>n.onclick=()=>{ S.screen=n.dataset.go; S.selecting=false; S.selected.clear(); render(); });
+  el.querySelectorAll('[data-stub]').forEach(n=>n.onclick=()=>{ S.stubName=n.dataset.stub; S.screen='stub'; render(); });
+  el.querySelectorAll('[data-session]').forEach(n=>n.onclick=()=>{
+    const id=n.dataset.session;
+    if(S.selecting){ S.selected.has(id)?S.selected.delete(id):S.selected.add(id); render(); return; }
+    S.sessionId=id; S.screen='session'; render();
+  });
+  el.querySelectorAll('[data-muscle]').forEach(n=>n.onclick=()=>{
+    const m=n.dataset.muscle;
+    const s=SESSIONS.find(x=>PROJ[x.id].trained.includes(m));
+    const d=s?dnum(TODAY)-s.performedOn:null;
+    S.dialog={title:MUSCLE_LABEL[m]||m, ok:'Close',
+      body: d===null?'Not trained in any logged session.':`Last trained ${d===0?'today':d===1?'yesterday':d+' days ago'} — ${titleOf(s)}. A fact, never a suggestion.`};
+    render();
+  });
+  const on=(id,fn)=>{const n=document.getElementById(id); if(n) n.onclick=fn;};
+  on('startSel',()=>{S.selecting=true;render()});
+  on('cancelSel',()=>{S.selecting=false;S.selected.clear();render()});
+  on('doDelete',()=>{ if(!S.selected.size) return;
+    S.dialog={title:`Delete ${S.selected.size} session${S.selected.size===1?'':'s'}?`,ok:'Delete',
+      body:'Permanent — there is no soft delete in V1. Every derived figure recomputes immediately.',act:'batch'}; render(); });
+  on('delOne',()=>{ S.dialog={title:'Delete this workout?',ok:'Delete',
+    body:'Permanent. The streak, PB counts and totals all recompute on read.',act:'one'}; render(); });
+  on('promote',()=>{ S.dialog={title:'Save as template',ok:'Save',
+    body:'M7 — opens the template editor pre-filled from this session. Needs an explicit amendment to the "only place templates are authored" rule.',act:'tpl'}; render(); });
+  on('dlgNo',()=>{S.dialog=null;render()});
+  on('dlgYes',()=>{
+    const a=S.dialog.act;
+    if(a==='batch'){ S.selected.forEach(id=>S.deleted.add(id)); S.selected.clear(); S.selecting=false; }
+    if(a==='one'){ S.deleted.add(S.sessionId); S.screen='l0'; }
+    if(a==='tpl'){ S.screen='templates'; }
+    S.dialog=null; render();
+  });
+}
+
+/* ---------- switcher + controls ---------- */
+function go(v){ S.variant=v; S.screen='l0'; S.selecting=false; S.selected.clear();
+  const u=new URL(location); u.searchParams.set('variant',v); history.replaceState({},'',u); render(); }
+document.getElementById('prev').onclick=()=>go(KEYS[(KEYS.indexOf(S.variant)-1+KEYS.length)%KEYS.length]);
+document.getElementById('next').onclick=()=>go(KEYS[(KEYS.indexOf(S.variant)+1)%KEYS.length]);
+addEventListener('keydown',e=>{
+  if(/^(INPUT|TEXTAREA)$/.test(e.target.tagName)||e.target.isContentEditable) return;
+  if(e.key==='ArrowLeft')  document.getElementById('prev').click();
+  if(e.key==='ArrowRight') document.getElementById('next').click();
+});
+document.querySelectorAll('#stateSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#stateSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); S.state=b.dataset.state; S.deleted.clear(); S.screen='l0'; render();
+});
+['m1','m2','m3','m4','m6','m8'].forEach(id=>document.getElementById(id).onchange=render);
+
+render();
+</script>
+</body>
+</html>

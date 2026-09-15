@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'src/data/active_session.dart';
 import 'src/data/app_database.dart';
+import 'src/data/body_gender.dart';
+import 'src/data/custom_templates.dart';
 import 'src/data/exercise_index.dart';
 import 'src/data/exercise_library.dart';
+import 'src/data/personal_details_store.dart';
+import 'src/data/session_store.dart';
 import 'src/data/settings_store.dart';
 import 'src/data/template_filter.dart';
 import 'src/theme/app_theme.dart';
 import 'src/ui/l0_shell.dart';
+import 'src/ui/session_summary_screen.dart' show kAppDisplayName;
 
 /// Boots the app with its stored preferences already resolved.
 ///
@@ -32,6 +38,21 @@ import 'src/ui/l0_shell.dart';
 /// throws rather than defaulting if this wiring is ever dropped — and
 /// `test/boot_test.dart`, which runs this function so that dropping it fails
 /// there rather than on a device.
+///
+/// **The personal details join the same list for the same reason.** The Muscles
+/// tab paints a body map on the first frame, so a gender resolved a frame later
+/// is a user watching the wrong artwork get replaced; and the calorie estimate's
+/// "add your weight" prompt is a real state for someone who has never weighed
+/// in, so flashing it at someone who has is not a cosmetic glitch — it says
+/// something false. Both are small reads off the one database handle, and they
+/// join the `.wait` rather than being awaited in turn because the boot cost
+/// should stay the slowest read rather than their sum.
+///
+/// **The user's own templates are the fifth read, and the most visible.** The
+/// Workout landing is what the app opens on, and its custom group is absent
+/// entirely when the user has none — so resolving that list a frame late means
+/// the group appears after the first paint and pushes the ad-hoc entry down
+/// under a thumb already on its way to it. See [initialCustomTemplatesProvider].
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -41,9 +62,23 @@ Future<void> main() async {
   // either. It is disposed before the scope below is built, so the raw maps are
   // collected once the index has been folded out of them.
   final boot = ProviderContainer();
-  final (initialFilter, exercises) = await (
+  final personalDetails = PersonalDetailsStore(database);
+  final (
+    initialFilter,
+    exercises,
+    initialGender,
+    initialBodyweight,
+    initialCustomTemplates,
+    initialSession,
+    initialSavedSessions,
+  ) = await (
     readStoredTemplateFilter(SettingsStore(database)),
     boot.read(exerciseLibraryProvider.future),
+    readStoredBodyGender(personalDetails),
+    readStoredBodyweightLog(personalDetails),
+    readStoredCustomTemplates(CustomTemplateStore(database)),
+    readOpenSession(SessionStore(database)),
+    readSavedSessions(SessionStore(database)),
   ).wait;
   boot.dispose();
 
@@ -52,6 +87,12 @@ Future<void> main() async {
       overrides: [
         appDatabaseProvider.overrideWithValue(database),
         initialTemplateFilterProvider.overrideWithValue(initialFilter),
+        initialBodyGenderProvider.overrideWithValue(initialGender),
+        initialBodyweightLogProvider.overrideWithValue(initialBodyweight),
+        initialActiveSessionProvider.overrideWithValue(initialSession),
+        initialSavedSessionsProvider.overrideWithValue(initialSavedSessions),
+        initialCustomTemplatesProvider
+            .overrideWithValue(initialCustomTemplates),
         exerciseIndexProvider.overrideWithValue(
           ExerciseIndex.fromJson(exercises),
         ),
@@ -90,7 +131,7 @@ class TurtleLiftApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       // Placeholder name -- see CLAUDE.md "Still undecided".
-      title: 'Turtle Lift',
+      title: kAppDisplayName,
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       // Straight into the shell, with no splash route ahead of it. Anything

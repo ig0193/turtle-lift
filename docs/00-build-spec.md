@@ -52,7 +52,9 @@ Male and female assets have different coordinate spaces — never assume a value
 | `loggedAt` | timestamp | Internal only. Tiebreaker when two sessions share `performedOn`. Never shown. |
 | `templateId` | id? | `null` = ad-hoc session. |
 
-**SessionExercise** — `exerciseId`, `order`, state ∈ `not_started | in_progress | done`.
+**SessionExercise** — `exerciseId`, `order`, `loadType` (snapshotted at add time), and a stored `markedDone` flag.
+
+⚠ **Conflict, resolved.** This line used to give `SessionExercise` a stored `state ∈ not_started | in_progress | done`, which contradicts §3 and `01` §Derived values: delete every set from an `in_progress` exercise and the stored state is simply wrong. Only the user's Mark-exercise-done tap is stored; the tri-state the list renders is derived from that flag and the sets. `loadType` *is* stored, and is the one exception worth stating — it lives in regenerated content, so a set row whose meaning is resolved at read time would be reinterpreted by a later build, and an assisted record read as a maximum is silently backwards.
 **SetEntry** — `completed`, plus fields determined by the exercise's `loadType`:
 
 | `loadType` | Count | Required | Optional | Set complete when | PB metric |
@@ -85,7 +87,7 @@ Average 76 words per exercise across all four. Every entry mentions breathing; 1
 
 `streak` · exercise count · set count · personal bests · **per-session PB count** · calorie estimate · `trained` ticks · resolved title.
 
-**No lifted-volume (kg) metric anywhere in V1** — it cannot include bodyweight or timed exercises. Set count is the headline stat in its place. → `01` §Derived values.
+**No lifted-volume (kg) metric anywhere in V1** — it cannot include bodyweight or timed exercises. Set count is the headline **volume proxy** in its place. → `01` §Derived values. (It stands in for the banned kg figure; it is not an instruction about which stat renders largest.)
 
 Deleting or editing a session must change all of the above automatically, including the inline "Last time: 22kg × 10" hint. Do not introduce a stored counter. → `01` §Derived values.
 
@@ -227,9 +229,9 @@ streakAsOf(date) -> int
 
 ## 11. Profile and History
 
-History is a tab; Profile is reached from the header avatar (`docs/adr/0003-l0-navigation-variant-a.md`). The split of the contents below between the two is unresolved.
+History is a tab; Profile is reached from the header avatar (`docs/adr/0003-l0-navigation-variant-a.md`). **The split is decided: anything computed from session rows lives on the History tab; anything the user typed lives behind the avatar. No figure appears in both places.** → `04`, and `docs/plans/2026-09-14-2324-feat-profile-split-plan.md`.
 
-- Stats: streak, total workouts, total sets. Streak explainer copy sits below the stat. No volume stat.
+- Stats: streak, total workouts, total sets. Streak explainer copy sits below the stat. No volume stat. **These are derived, so they live on the History tab — never on the Profile landing.**
 - **Per-session PB count** — `pbCountFor(session)`. Rendered as a pill on the hero card **only when >= 1** (never "0 personal bests"). Individual PB exercises are marked in the session's exercise log below the card.
 - PB requires >= 1 prior session of that exercise (no badge on first-ever occurrence) and must be **strictly** greater than the previous best. Counted per exercise, not per set.
 - Compute in one chronological pass with a running per-exercise best. Not O(n^2).
@@ -237,8 +239,11 @@ History is a tab; Profile is reached from the header avatar (`docs/adr/0003-l0-n
 - History ordered by `performedOn`, `loggedAt` as tiebreaker. Rows show resolved title.
 - **Session detail is the same component as the live workout card**, not a read-only viewer. Editable: title, `performedOn`, set weight/reps, add/remove set, remove exercise.
 - Delete workout: session detail + history swipe. Confirm dialog. **Hard delete, no tombstone.**
-- Templates: predefined are immutable; duplicate → editable custom copy. Create/edit/delete custom. **Only place templates are authored.**
-- Personal details: bodyweight (optional, kg, gates calories) and gender (Male / Female / Prefer not to say, default male, selects asset pair).
+- Templates: predefined are immutable; duplicate → custom copy. **Duplicate, rename, delete custom**; building one from scratch by muscle-group multi-select is deferred. **Only place templates are authored** — but the Workout tab's picker carries a visible route *to* that surface, since navigation is not authoring.
+- Personal details: bodyweight and gender, both behind the avatar because the user types them.
+  - **Bodyweight is a dated series, not one number** (optional, kg, gates calories). An entry is immutable and takes effect from the day it is recorded: no edit, no delete, no backdating. A correction is a new entry that supersedes the old one going forward. One undated number plus derive-on-read would rewrite the calorie figure on every session already logged. → `04`.
+  - `caloriesFor(session)` resolves the weight in effect on that session's `performedOn`. A session predating the earliest entry shows the add-weight prompt and never a figure, permanently — entering a weight later does not backfill it.
+  - Gender (Male / Female / Prefer not to say, default male, selects asset pair).
 
 → `04`.
 
