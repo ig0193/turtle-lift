@@ -99,6 +99,8 @@ class SessionStore {
           // renders its sets; it just cannot claim a type it does not know.
           loadType: LoadType.fromName(exerciseRow.loadType),
           markedDone: exerciseRow.markedDone,
+          notes: exerciseRow.notes,
+          restTimerSec: exerciseRow.restTimerSec,
           sets: <SetEntry>[
             for (final s in setRows)
               SetEntry(
@@ -125,6 +127,9 @@ class SessionStore {
       templateName: row.templateName,
       groupIds: decodeGroupIds(row.groupIds),
       isOpen: row.openMarker != null,
+      startedAt: row.startedAt,
+      endedAt: row.endedAt,
+      notes: row.notes,
       exercises: exercises,
     );
   }
@@ -159,6 +164,7 @@ class SessionStore {
                   title: Value<String?>(templateName),
                   performedOn: _clamped(date),
                   loggedAt: DateTime.now(),
+                  startedAt: Value<DateTime?>(DateTime.now()),
                   templateId: Value<String?>(templateId),
                   templateName: Value<String?>(templateName),
                   groupIds: Value<String?>(
@@ -199,8 +205,30 @@ class SessionStore {
                 .go();
           }
 
+          // **A session with nothing completed is deleted, not saved.**
+          // `00` §9, enforced here rather than in a button, because the rule
+          // outlived the screen that used to hold it: Finish moved into the
+          // header and then into the Save workout screen (`adr/0004`), and the
+          // guard was left behind on the widget both replaced. In the single
+          // writer it cannot be bypassed by the next screen that wants a Finish
+          // of its own. An empty session would otherwise count toward the
+          // streak.
+          final remaining = await (_db.select(_db.setEntries)
+                ..where((s) => s.sessionExerciseId.isIn(exerciseIds)))
+              .get();
+          if (remaining.isEmpty) {
+            await (_db.delete(_db.sessions)..where((s) => s.id.equals(row.id)))
+                .go();
+            return;
+          }
+
           await (_db.update(_db.sessions)..where((s) => s.id.equals(row.id)))
-              .write(const SessionsCompanion(openMarker: Value<int?>(null)));
+              .write(SessionsCompanion(
+            openMarker: const Value<int?>(null),
+            // Stamped once, on the way out. Re-editing a saved session must not
+            // restamp it, or a workout grows every time it is corrected.
+            endedAt: Value<DateTime?>(row.endedAt ?? DateTime.now()),
+          ));
         });
       });
 
@@ -316,6 +344,18 @@ class SessionStore {
             .write(SessionsCompanion(title: Value<String?>(title)));
       });
 
+  /// Writes the user's note about the session. Empty clears it.
+  Future<void> setSessionNotes(String sessionId, String? notes) =>
+      _serialized(() async {
+        final trimmed = notes?.trim();
+        await (_db.update(_db.sessions)..where((s) => s.id.equals(sessionId)))
+            .write(SessionsCompanion(
+          notes: Value<String?>(
+            trimmed == null || trimmed.isEmpty ? null : trimmed,
+          ),
+        ));
+      });
+
   /// Moves a session to another calendar day.
   ///
   /// **Clamped to today or earlier**, because a future-dated session makes the
@@ -326,6 +366,108 @@ class SessionStore {
       _serialized(() async {
         await (_db.update(_db.sessions)..where((s) => s.id.equals(sessionId)))
             .write(SessionsCompanion(performedOn: Value<LocalDate>(_clamped(date))));
+      });
+
+  /// Corrects how long a session took, by moving [startedAt] back from its end.
+  ///
+  /// **The end is the fixed point, not the start.** A user correcting a
+  /// duration is saying "this took 45 minutes", and anchoring to the end keeps
+  /// a still-running session ticking from the right place the instant they
+  /// close the sheet. An open session has no end yet, so now stands in for it.
+  ///
+  /// **`performedOn` is never touched.** It is a calendar day the user chose;
+  /// pushing a start time back across midnight must not silently refile a
+  /// workout onto the previous day.
+  Future<void> setSessionDuration({
+    required String sessionId,
+    required Duration duration,
+  }) =>
+      _serialized(() async {
+        if (duration.isNegative) return;
+        final row = await (_db.select(_db.sessions)
+              ..where((s) => s.id.equals(sessionId)))
+            .getSingleOrNull();
+        if (row == null) return;
+        final end = row.endedAt ?? DateTime.now();
+        await (_db.update(_db.sessions)..where((s) => s.id.equals(sessionId)))
+            .write(SessionsCompanion(
+          startedAt: Value<DateTime?>(end.subtract(duration)),
+          endedAt: Value<DateTime?>(row.endedAt),
+        ));
+      });
+
+  /// Writes an explicit exercise order for one session, renumbering from zero.
+  ///
+  /// One transaction, because a half-applied reorder leaves two exercises
+  /// claiming the same position and the list silently stops being stable.
+  Future<void> reorderExercises({
+    required String sessionId,
+    required List<String> idsInOrder,
+  }) =>
+      _serialized(() async {
+        await _db.transaction(() async {
+          for (var i = 0; i < idsInOrder.length; i++) {
+            await (_db.update(_db.sessionExercises)
+                  ..where((e) =>
+                      e.id.equals(idsInOrder[i]) &
+                      e.sessionId.equals(sessionId)))
+                .write(SessionExercisesCompanion(position: Value<int>(i)));
+          }
+        });
+      });
+
+  /// Swaps which library exercise a row logs, keeping the row and its sets.
+  ///
+  /// **The load type is re-snapshotted with it.** Sets already written belong
+  /// to the old exercise's shape, so a replace that kept the old type would
+  /// reinterpret them — the exact failure the snapshot exists to prevent. The
+  /// UI offers this on an exercise the user has not logged against yet.
+  Future<void> replaceExercise({
+    required String sessionExerciseId,
+    required String exerciseId,
+    required LoadType loadType,
+  }) =>
+      _serialized(() async {
+        await (_db.update(_db.sessionExercises)
+              ..where((e) => e.id.equals(sessionExerciseId)))
+            .write(SessionExercisesCompanion(
+          exerciseId: Value<String>(exerciseId),
+          loadType: Value<String>(loadType.name),
+        ));
+      });
+
+  /// Writes the user's note for one exercise. Empty text clears it, so a note
+  /// deleted down to nothing does not linger as an empty block on the card.
+  Future<void> setExerciseNotes({
+    required String sessionExerciseId,
+    required String? notes,
+  }) =>
+      _serialized(() async {
+        final trimmed = notes?.trim();
+        await (_db.update(_db.sessionExercises)
+              ..where((e) => e.id.equals(sessionExerciseId)))
+            .write(SessionExercisesCompanion(
+          notes: Value<String?>(
+            trimmed == null || trimmed.isEmpty ? null : trimmed,
+          ),
+        ));
+      });
+
+  /// Sets one exercise's rest timer. **Null turns it off**, which is also where
+  /// it starts; a non-positive value is treated as off rather than stored as a
+  /// timer that would fire instantly.
+  Future<void> setExerciseRestTimer({
+    required String sessionExerciseId,
+    required int? seconds,
+  }) =>
+      _serialized(() async {
+        await (_db.update(_db.sessionExercises)
+              ..where((e) => e.id.equals(sessionExerciseId)))
+            .write(SessionExercisesCompanion(
+          restTimerSec: Value<int?>(
+            seconds == null || seconds <= 0 ? null : seconds,
+          ),
+        ));
       });
 
   static LocalDate _clamped(LocalDate date) {
@@ -385,6 +527,8 @@ class SessionExercise {
     required this.loadType,
     required this.markedDone,
     required this.sets,
+    this.notes,
+    this.restTimerSec,
   });
 
   final String id;
@@ -396,7 +540,18 @@ class SessionExercise {
 
   /// Whether the user tapped "Mark exercise done". The tri-state the list
   /// renders is derived from this and the sets, never stored.
+  ///
+  /// **Nothing writes this any more.** The control was removed with the
+  /// push-per-exercise flow (`adr/0004`); the field stays for rows written
+  /// before that and for editing a saved session. In practice a muscle now
+  /// ticks on a completed set.
   final bool markedDone;
+
+  /// The user's own note for this exercise, in this session.
+  final String? notes;
+
+  /// Rest between sets, in seconds. **Null is OFF**, and OFF is the default.
+  final int? restTimerSec;
 
   final List<SetEntry> sets;
 
@@ -417,6 +572,9 @@ class WorkoutSession {
     required this.groupIds,
     required this.isOpen,
     required this.exercises,
+    this.startedAt,
+    this.endedAt,
+    this.notes,
   });
 
   final String id;
@@ -441,6 +599,16 @@ class WorkoutSession {
   final List<String> groupIds;
 
   final bool isOpen;
+
+  /// When the session began, and when Finish stamped it. The length between
+  /// them is derived by `durationOf` — see `derived.dart`. Both are null on a
+  /// session logged before `adr/0004`.
+  final DateTime? startedAt;
+  final DateTime? endedAt;
+
+  /// The user's note about the whole session, from the Save workout screen.
+  final String? notes;
+
   final List<SessionExercise> exercises;
 
   /// Whether this session is a template run rather than an ad-hoc one.

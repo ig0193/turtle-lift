@@ -6,6 +6,7 @@ import 'app_screen.dart';
 import 'l0_tab_chrome.dart';
 import 'stroke_glyph.dart';
 import 'glass_tab_bar.dart';
+import 'mini_workout_bar.dart';
 import 'history_root.dart';
 import 'muscles_root.dart';
 import 'profile_screen.dart';
@@ -143,13 +144,23 @@ class L0Shell extends ConsumerWidget {
       // What makes the bar float and what makes every root's bottom clearance
       // real. See the class doc before touching either of these two lines.
       extendBody: true,
-      bottomBar: GlassTabBar(
+      // The mini workout bar and the rest countdown ride above the tab bar,
+      // not inside it: both are about a session that keeps running while the
+      // user is on another tab, so they belong to the shell rather than to the
+      // Workout tab's body. See `mini_workout_bar.dart`.
+      bottomBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const MiniWorkoutBar(),
+          GlassTabBar(
         selectedIndex: index,
         // Fires on every tap, including one on the current tab. Storing the
         // same index again is a no-op in Riverpod; when pop-to-root lands
         // (build-order step 4) it hangs off this callback, which is why the
         // bar reports the repeat rather than swallowing it.
         onSelected: (i) => ref.read(tabIndexProvider.notifier).select(i),
+          ),
+        ],
       ),
       body: IndexedStack(
         index: index,

@@ -14,6 +14,10 @@ import 'package:turtle_lift/src/ui/muscle_search_field.dart';
 import 'package:turtle_lift/src/ui/muscles_root.dart';
 import 'package:turtle_lift/src/ui/tab_glyph.dart';
 import 'package:turtle_lift/src/ui/workout_root.dart';
+import 'package:turtle_lift/src/data/active_session.dart';
+import 'package:turtle_lift/src/data/load_type.dart';
+import 'package:turtle_lift/src/data/local_date.dart';
+import 'package:turtle_lift/src/data/session_store.dart';
 
 /// Two invariants, and both fail silently in the app.
 ///
@@ -55,6 +59,45 @@ void main() {
     );
   });
 
+  /// A workout in progress, long enough that the takeover overflows a short
+  /// viewport and has a bottom of the scroll to inspect.
+  ///
+  /// The exercise ids are the shipped library's, because the takeover looks
+  /// every one of them up to render a name; an invented id would render the
+  /// unknown-exercise fallback and shorten the list.
+  WorkoutSession seededSession() {
+    final ids = index.all.take(8).map((e) => e.id).toList();
+    return WorkoutSession(
+      id: 'open',
+      title: 'Push day',
+      performedOn: LocalDate.today(),
+      loggedAt: DateTime.now(),
+      templateId: null,
+      templateName: null,
+      groupIds: const <String>['chest'],
+      isOpen: true,
+      exercises: <SessionExercise>[
+        for (final (position, id) in ids.indexed)
+          SessionExercise(
+            id: 'e\$position',
+            exerciseId: id,
+            position: position,
+            loadType: LoadType.weighted,
+            markedDone: false,
+            sets: <SetEntry>[
+              SetEntry(
+                id: 's\$position',
+                position: 0,
+                completed: true,
+                weightKg: 40,
+                reps: 8,
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
   /// Every L0 tab root. **Add a root here when you add a root.** The clearance
   /// and scroll contracts below iterate this map; a root missing from it is a
   /// root with no proof that its last item is reachable.
@@ -65,15 +108,46 @@ void main() {
   /// all. The two empty-state roots hold a screenful of copy; the Workout
   /// landing holds a list of rows and needs a taller window to satisfy both
   /// ends of that band.
-  final roots = <String, ({Widget Function() build, double clearanceHeight})>{
-    'WorkoutRoot': (build: () => const WorkoutRoot(), clearanceHeight: 300),
-    // The Muscles landing is the tallest root by far -- a search field, a
-    // front/back control, a full-height body map and 19 rows -- so it needs
-    // the same taller window the Workout landing does. At 120 the map alone
-    // overflows the viewport and no row is ever reached.
-    'MusclesRoot': (build: () => const MusclesRoot(), clearanceHeight: 300),
-    'HistoryRoot': (build: () => const HistoryRoot(), clearanceHeight: 120),
-  };
+  final roots =
+      <
+        String,
+        ({
+          Widget Function() build,
+          double clearanceHeight,
+          WorkoutSession? Function() openSession,
+        })
+      >{
+        'WorkoutRoot': (
+          build: () => const WorkoutRoot(),
+          clearanceHeight: 300,
+          openSession: () => null,
+        ),
+        // **The Workout tab has two roots, not one.** With a workout open the
+        // same tab renders the session takeover instead of the landing, and
+        // that variant has its own scrollable with its own padding. Registering
+        // only the landing is how the takeover shipped with its Finish button
+        // sitting at the very bottom of the scroll and nothing to prove it was
+        // reachable.
+        'WorkoutRoot (session open)': (
+          build: () => const WorkoutRoot(),
+          clearanceHeight: 300,
+          openSession: seededSession,
+        ),
+        // The Muscles landing is the tallest root by far -- a search field, a
+        // front/back control, a full-height body map and 19 rows -- so it needs
+        // the same taller window the Workout landing does. At 120 the map alone
+        // overflows the viewport and no row is ever reached.
+        'MusclesRoot': (
+          build: () => const MusclesRoot(),
+          clearanceHeight: 300,
+          openSession: () => null,
+        ),
+        'HistoryRoot': (
+          build: () => const HistoryRoot(),
+          clearanceHeight: 120,
+          openSession: () => null,
+        ),
+      };
 
   /// Hosts a root as the shell does: a bare body inside a fixed viewport, with
   /// [padding] standing in for the safe area plus the floating bar.
@@ -86,6 +160,8 @@ void main() {
     double width = 360,
     double height = 80,
     EdgeInsets padding = EdgeInsets.zero,
+    WorkoutSession? openSession,
+    Key? scopeKey,
   }) {
     // The Workout root reads providers (the split filter, the user's own
     // templates), so every root in this registry now needs a scope around it --
@@ -96,12 +172,18 @@ void main() {
     // The index override is not optional: `exerciseIndexProvider` throws
     // without one by design, so the Muscles root would not mount at all.
     return ProviderScope(
+      key: scopeKey,
       overrides: [
         exerciseIndexProvider.overrideWithValue(index),
         // These roots are hosted to check geometry and the empty state, so
         // History starts with no sessions. Its populated form is
         // `test/history_root_test.dart`'s subject.
         historySessionsProvider.overrideWithValue(const <HistorySession>[]),
+        // Always overridden, never conditionally. The registry loops re-pump
+        // into the same `ProviderScope` element, and Riverpod asserts that the
+        // override *count* never changes between builds -- so "no open session"
+        // is an override carrying null, not an absent override.
+        initialActiveSessionProvider.overrideWithValue(openSession),
       ],
       child: MaterialApp(
         theme: buildAppTheme(),
@@ -143,28 +225,89 @@ void main() {
 
   // --- Content ---------------------------------------------------------
 
-  testWidgets('Workout root lists templates rather than an empty state',
-      (tester) async {
+  testWidgets('Workout root offers a way to start before it has routines', (
+    tester,
+  ) async {
     await tester.pumpWidget(hostTall(const WorkoutRoot()));
 
-    expect(find.text('TEMPLATES'), findsOneWidget,
-        reason: 'the group label the filter control sits beside');
-    expect(find.text('Ad-hoc workout'), findsOneWidget,
-        reason: 'the ad-hoc entry sits below every template group');
-    expect(find.byType(EmptyState), findsNothing,
-        reason: 'eleven templates ship with the app, so this landing has '
-            'content on day one -- it has no zero-data condition to be in, and '
-            'an empty state here would be the bug');
-    expect(find.byType(TabGlyphIcon), findsNothing,
-        reason: 'tab-bar icons belong to the bar only');
+    expect(
+      find.text('ROUTINES'),
+      findsOneWidget,
+      reason: 'the group label the New routine / Templates pair sits under',
+    );
+    expect(
+      find.text('Start empty workout'),
+      findsOneWidget,
+      reason: 'the way past the routine list, and the way in on day one',
+    );
+    expect(
+      find.byType(EmptyState),
+      findsNothing,
+      reason:
+          'the landing lists routines now (`adr/0004`) and a new user has '
+          'none, so day one IS zero-data here -- but the screen above the '
+          'list is not empty, so it gets one line of copy rather than the '
+          'full empty state with artwork. See `docs/02` [0004].',
+    );
+    expect(
+      find.byType(TabGlyphIcon),
+      findsNothing,
+      reason: 'tab-bar icons belong to the bar only',
+    );
   });
 
-  testWidgets('History root renders its empty state on the logbook disc',
-      (tester) async {
+  testWidgets('Workout root becomes the session takeover while one is open', (
+    tester,
+  ) async {
+    // The guard on the registry entry below. Every geometry check in this file
+    // runs against `const WorkoutRoot()` either way, so a takeover that stopped
+    // mounting would leave those checks quietly re-testing the landing and
+    // passing.
+    await tester.pumpWidget(
+      host(const WorkoutRoot(), height: 640, openSession: seededSession()),
+    );
+    await tester.pump();
+
+    expect(
+      find.text('Barbell bench press'),
+      findsOneWidget,
+      reason: 'the open workout lists its own exercises, not the templates',
+    );
+
+    final position = positionOf(tester);
+    for (var pass = 0; pass < 10; pass++) {
+      if ((position.pixels - position.maxScrollExtent).abs() < 0.5) break;
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pump();
+    }
+
+    expect(
+      find.text('Discard workout'),
+      findsOneWidget,
+      // Finish moved into the pinned header with `adr/0004`, which this host
+      // does not mount — so the foot of the body is where Discard is, alone.
+      // Ending a workout and throwing it away are no longer neighbours.
+      reason: 'the takeover ends with Discard; the landing has no such button',
+    );
+    expect(
+      find.text('ROUTINES'),
+      findsNothing,
+      reason:
+          'an open workout replaces the landing rather than sitting above '
+          'it -- both on screen would offer to start a second workout',
+    );
+  });
+
+  testWidgets('History root renders its empty state on the logbook disc', (
+    tester,
+  ) async {
     await tester.pumpWidget(hostTall(const HistoryRoot()));
 
-    expect(find.text('No workouts yet'), findsOneWidget,
-        reason: 'the History empty-state heading, verbatim from the prototype');
+    expect(
+      find.text('No workouts yet'),
+      findsOneWidget,
+      reason: 'the History empty-state heading, verbatim from the prototype',
+    );
     expect(
       find.text("Finish your first session and it'll show up here."),
       findsOneWidget,
@@ -174,57 +317,90 @@ void main() {
     final glyph = tester.widget<EmptyStateGlyphIcon>(
       find.byType(EmptyStateGlyphIcon),
     );
-    expect(glyph.glyph, EmptyStateGlyph.logbook,
-        reason: "History's disc is a logbook page, not the clock its tab wears "
-            '-- the wrong glyph here renders a plausible screen and says '
-            'nothing, so the glyph is asserted rather than the disc');
-    expect(find.byType(TabGlyphIcon), findsNothing,
-        reason: 'TabGlyph.history is the clock and belongs to the bar only');
+    expect(
+      glyph.glyph,
+      EmptyStateGlyph.logbook,
+      reason:
+          "History's disc is a logbook page, not the clock its tab wears "
+          '-- the wrong glyph here renders a plausible screen and says '
+          'nothing, so the glyph is asserted rather than the disc',
+    );
+    expect(
+      find.byType(TabGlyphIcon),
+      findsNothing,
+      reason: 'TabGlyph.history is the clock and belongs to the bar only',
+    );
   });
 
   testWidgets('Muscles root renders the reference landing and has no empty '
       'state', (tester) async {
     await tester.pumpWidget(hostTall(const MusclesRoot()));
 
-    expect(find.byType(MuscleSearchField), findsOneWidget,
-        reason: 'the landing leads with the search field (R1)');
-    expect(find.byType(BodyDiagram), findsOneWidget,
-        reason: 'and carries the body map itself, not a picture of one');
+    expect(
+      find.byType(MuscleSearchField),
+      findsOneWidget,
+      reason: 'the landing leads with the search field (R1)',
+    );
+    expect(
+      find.byType(BodyDiagram),
+      findsOneWidget,
+      reason: 'and carries the body map itself, not a picture of one',
+    );
     // The front/back control, not the list label: the map is taller than any
     // viewport, so everything below it is off-screen and unbuilt here. The 19
     // rows are `test/muscles_root_test.dart`'s subject.
-    expect(find.text(bodyViewLabel(BodyView.front)), findsOneWidget,
-        reason: 'the front/back control sits between the field and the map');
-    expect(find.byType(EmptyState), findsNothing,
-        reason: 'the Muscles landing is static reference content -- there is '
-            'no zero-data condition for it to be empty of');
-    expect(find.byType(TabGlyphIcon), findsNothing,
-        reason: 'tab-bar icons belong to the bar only');
-  });
-
-  testWidgets('the empty-state block holds its mascot slot open above the disc',
-      (tester) async {
-    // Hosted on History: it is the root that still carries an EmptyState now
-    // that the Workout landing lists templates instead.
-    await tester.pumpWidget(hostTall(const HistoryRoot()));
-
-    final slot = find.byKey(EmptyState.mascotSlotKey);
-    expect(slot, findsOneWidget,
-        reason: 'the reserved mascot band must survive a refactor of the block');
-    expect(tester.getSize(slot).height, kEmptyStateMascotSlot,
-        reason: 'the band is the full reserved height, not a token gap');
     expect(
-      tester.getRect(slot).bottom,
-      lessThanOrEqualTo(tester.getRect(find.byType(EmptyStateGlyphIcon)).top),
-      reason: 'docs/05-mascot-brief.md places the resting turtle above the '
-          'empty-state copy, so the band sits above the disc',
+      find.text(bodyViewLabel(BodyView.front)),
+      findsOneWidget,
+      reason: 'the front/back control sits between the field and the map',
+    );
+    expect(
+      find.byType(EmptyState),
+      findsNothing,
+      reason:
+          'the Muscles landing is static reference content -- there is '
+          'no zero-data condition for it to be empty of',
+    );
+    expect(
+      find.byType(TabGlyphIcon),
+      findsNothing,
+      reason: 'tab-bar icons belong to the bar only',
     );
   });
 
+  testWidgets(
+    'the empty-state block holds its mascot slot open above the disc',
+    (tester) async {
+      // Hosted on History: it is the root that still carries an EmptyState now
+      // that the Workout landing lists templates instead.
+      await tester.pumpWidget(hostTall(const HistoryRoot()));
+
+      final slot = find.byKey(EmptyState.mascotSlotKey);
+      expect(
+        slot,
+        findsOneWidget,
+        reason: 'the reserved mascot band must survive a refactor of the block',
+      );
+      expect(
+        tester.getSize(slot).height,
+        kEmptyStateMascotSlot,
+        reason: 'the band is the full reserved height, not a token gap',
+      );
+      expect(
+        tester.getRect(slot).bottom,
+        lessThanOrEqualTo(tester.getRect(find.byType(EmptyStateGlyphIcon)).top),
+        reason:
+            'docs/05-mascot-brief.md places the resting turtle above the '
+            'empty-state copy, so the band sits above the disc',
+      );
+    },
+  );
+
   // --- Clearance and scrolling, over the registry -----------------------
 
-  testWidgets("every root's last item clears the floating tab bar",
-      (tester) async {
+  testWidgets("every root's last item clears the floating tab bar", (
+    tester,
+  ) async {
     for (final entry in roots.entries) {
       await tester.pumpWidget(
         // The height is squeezed between two failures. Below 81 -- the
@@ -236,18 +412,24 @@ void main() {
           entry.value.build(),
           height: entry.value.clearanceHeight,
           padding: const EdgeInsets.only(bottom: barInset),
+          openSession: entry.value.openSession(),
+          scopeKey: ValueKey<String>(entry.key),
         ),
       );
       await tester.pump();
 
       final scrollable = rootScrollable();
       final position = positionOf(tester);
-      expect(position.maxScrollExtent, greaterThan(0),
-          reason: '${entry.key}: nothing scrolls, so the bottom of the scroll '
-              'cannot be inspected -- either the harness viewport grew taller '
-              'than the content, or this root stopped spending the bottom '
-              'inset on its scrollable, which is most of what makes this '
-              'content overflow in the first place');
+      expect(
+        position.maxScrollExtent,
+        greaterThan(0),
+        reason:
+            '${entry.key}: nothing scrolls, so the bottom of the scroll '
+            'cannot be inspected -- either the harness viewport grew taller '
+            'than the content, or this root stopped spending the bottom '
+            'inset on its scrollable, which is most of what makes this '
+            'content overflow in the first place',
+      );
 
       // The bottom of the scroll is the only place the failure shows, and
       // reaching it takes more than one jump. `SliverList` *estimates*
@@ -263,20 +445,29 @@ void main() {
         position.jumpTo(position.maxScrollExtent);
         await tester.pump();
       }
-      expect(position.pixels, moreOrLessEquals(position.maxScrollExtent),
-          reason: '${entry.key}: the scroll never settled at its own bottom, '
-              'so whatever is measured below is not the last item');
+      expect(
+        position.pixels,
+        moreOrLessEquals(position.maxScrollExtent),
+        reason:
+            '${entry.key}: the scroll never settled at its own bottom, '
+            'so whatever is measured below is not the last item',
+      );
 
       final viewportBottom = tester.getRect(scrollable).bottom;
-      final lastItem =
-          find.descendant(of: scrollable, matching: find.byType(Text)).last;
+      final lastItem = find
+          .descendant(of: scrollable, matching: find.byType(Text))
+          .last;
       final clearance = viewportBottom - tester.getRect(lastItem).bottom;
 
-      expect(clearance, greaterThanOrEqualTo(barInset),
-          reason: '${entry.key}: scrolled to the very end, the last item still '
-              'has to sit clear of the floating bar. A root that drops '
-              'screenScrollPadding lands it flush against the viewport edge '
-              'and hides it behind the bar, with nothing else failing');
+      expect(
+        clearance,
+        greaterThanOrEqualTo(barInset),
+        reason:
+            '${entry.key}: scrolled to the very end, the last item still '
+            'has to sit clear of the floating bar. A root that drops '
+            'screenScrollPadding lands it flush against the viewport edge '
+            'and hides it behind the bar, with nothing else failing',
+      );
     }
   });
 
@@ -286,13 +477,18 @@ void main() {
         host(
           entry.value.build(),
           padding: const EdgeInsets.only(bottom: barInset),
+          openSession: entry.value.openSession(),
+          scopeKey: ValueKey<String>(entry.key),
         ),
       );
       await tester.pump();
 
       final position = positionOf(tester);
-      expect(position.pixels, 0,
-          reason: '${entry.key}: a root opens at the top of its content');
+      expect(
+        position.pixels,
+        0,
+        reason: '${entry.key}: a root opens at the top of its content',
+      );
 
       // Well past the drag slop, and deliberately so. The Workout landing now
       // has a tap target (the filter control) sitting under the centre of this
@@ -302,14 +498,19 @@ void main() {
       await tester.drag(rootScrollable(), const Offset(0, -60));
       await tester.pump();
 
-      expect(position.pixels, greaterThan(0),
-          reason: '${entry.key}: the root owns a real scrollable, so content '
-              'taller than the viewport can be reached');
+      expect(
+        position.pixels,
+        greaterThan(0),
+        reason:
+            '${entry.key}: the root owns a real scrollable, so content '
+            'taller than the viewport can be reached',
+      );
     }
   });
 
-  testWidgets('every root spends the safe-area inset on its own scrollable',
-      (tester) async {
+  testWidgets('every root spends the safe-area inset on its own scrollable', (
+    tester,
+  ) async {
     // The direct guard on the trap in the roots' doc comments: a ListView with
     // no padding absorbs the inset for you, but one that passes any padding of
     // its own does not, so the padding has to carry the inset explicitly.
@@ -317,21 +518,33 @@ void main() {
       late EdgeInsets expected;
       await tester.pumpWidget(
         host(
-          Builder(builder: (context) {
-            expected = screenScrollPadding(context);
-            return entry.value.build();
-          }),
+          Builder(
+            builder: (context) {
+              expected = screenScrollPadding(context);
+              return entry.value.build();
+            },
+          ),
           padding: const EdgeInsets.fromLTRB(11, 47, 13, barInset),
+          openSession: entry.value.openSession(),
+          scopeKey: ValueKey<String>(entry.key),
         ),
       );
 
       final view = tester.widget<ListView>(find.byType(ListView));
-      expect(view.padding, expected,
-          reason: '${entry.key}: the scrollable pads itself with '
-              'screenScrollPadding -- one rule, applied at the scrollable');
-      expect((view.padding! as EdgeInsets).bottom, kScreenGutter + barInset,
-          reason: '${entry.key}: the bottom edge carries the gutter plus the '
-              'floating bar');
+      expect(
+        view.padding,
+        expected,
+        reason:
+            '${entry.key}: the scrollable pads itself with '
+            'screenScrollPadding -- one rule, applied at the scrollable',
+      );
+      expect(
+        (view.padding! as EdgeInsets).bottom,
+        kScreenGutter + barInset,
+        reason:
+            '${entry.key}: the bottom edge carries the gutter plus the '
+            'floating bar',
+      );
     }
   });
 
@@ -347,18 +560,25 @@ void main() {
       const Size(kEmptyStateDiscSize, kEmptyStateDiscSize),
       reason: '.empty .ico is a 46px disc',
     );
-    expect(tester.getSize(find.byType(EmptyStateGlyphIcon)),
-        const Size(kEmptyStateGlyphSize, kEmptyStateGlyphSize),
-        reason: '.empty .ico svg is 22px');
+    expect(
+      tester.getSize(find.byType(EmptyStateGlyphIcon)),
+      const Size(kEmptyStateGlyphSize, kEmptyStateGlyphSize),
+      reason: '.empty .ico svg is 22px',
+    );
 
-    final icon =
-        tester.widget<EmptyStateGlyphIcon>(find.byType(EmptyStateGlyphIcon));
-    expect(icon.strokeWidth, kEmptyStateGlyphStrokeWidth,
-        reason: '.empty .ico svg strokes at 1.6, lighter than the tab bar');
+    final icon = tester.widget<EmptyStateGlyphIcon>(
+      find.byType(EmptyStateGlyphIcon),
+    );
+    expect(
+      icon.strokeWidth,
+      kEmptyStateGlyphStrokeWidth,
+      reason: '.empty .ico svg strokes at 1.6, lighter than the tab bar',
+    );
   });
 
-  testWidgets('heading and body use the two empty-state type styles',
-      (tester) async {
+  testWidgets('heading and body use the two empty-state type styles', (
+    tester,
+  ) async {
     // Also re-homed to History for the same reason as the mascot slot above.
     await tester.pumpWidget(hostTall(const HistoryRoot()));
 

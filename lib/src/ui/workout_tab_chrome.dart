@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/active_session.dart';
 import '../theme/app_palette.dart';
 import 'l0_tab_chrome.dart';
+import 'log_workout_screen.dart';
 import 'session_header.dart';
 import 'template_list_screen.dart';
 
@@ -25,7 +26,10 @@ final workoutTabChromeProvider = Provider<L0TabChrome>((ref) {
   return const L0TabChrome(
     title: 'Workout in progress',
     titleWidget: SessionTitleField(),
-    actions: <Widget>[_StartAnotherButton()],
+    // Finish sits in the header, as Hevy's does (`adr/0004`), and the
+    // Discard beside it stays at the foot of the body — ending a workout and
+    // throwing it away must not be neighbours.
+    actions: <Widget>[_StartAnotherButton(), _FinishButton()],
   );
 });
 
@@ -59,3 +63,12 @@ class _StartAnotherButton extends StatelessWidget {
 
 /// The key a test taps to reach the template list mid-workout.
 const Key startAnotherWorkoutKey = ValueKey<String>('start-another-workout');
+
+
+/// Finishes the open workout, by way of the Save workout screen.
+class _FinishButton extends StatelessWidget {
+  const _FinishButton();
+
+  @override
+  Widget build(BuildContext context) => const FinishAction();
+}

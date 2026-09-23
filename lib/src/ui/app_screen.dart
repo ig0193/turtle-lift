@@ -67,6 +67,7 @@ class AppScreen extends StatelessWidget {
     this.bottomBar,
     this.extendBody = false,
     this.onBack,
+    this.leadingIcon,
     super.key,
   });
 
@@ -100,6 +101,7 @@ class AppScreen extends StatelessWidget {
     Widget? bottomBar,
     bool extendBody = false,
     VoidCallback? onBack,
+    IconData? leadingIcon,
     Key? key,
   }) : this._(
           title: title,
@@ -111,6 +113,7 @@ class AppScreen extends StatelessWidget {
           bottomBar: bottomBar,
           extendBody: extendBody,
           onBack: onBack,
+          leadingIcon: leadingIcon,
           key: key,
         );
 
@@ -137,6 +140,13 @@ class AppScreen extends StatelessWidget {
   final bool largeTitle;
   final VoidCallback? onBack;
 
+  /// Replaces the back chevron's glyph on a pushed screen. The Log Workout
+  /// screen collapses rather than pops, and a back arrow would promise the
+  /// wrong thing — the session is not left behind, it keeps running. Only the
+  /// glyph changes: the control is still the leading one, still the same size,
+  /// and still the only one there.
+  final IconData? leadingIcon;
+
   @override
   Widget build(BuildContext context) {
     final titleStyle = largeTitle
@@ -161,7 +171,7 @@ class AppScreen extends StatelessWidget {
         titleSpacing: showBack ? 0 : kScreenGutter,
         leading: showBack
             ? IconButton(
-                icon: const Icon(Icons.chevron_left, size: 28),
+                icon: Icon(leadingIcon ?? Icons.chevron_left, size: 28),
                 color: AppPalette.textSecondary,
                 tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                 onPressed: onBack ?? () => Navigator.of(context).maybePop(),

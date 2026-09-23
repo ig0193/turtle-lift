@@ -8,6 +8,8 @@ import 'src/data/custom_templates.dart';
 import 'src/data/exercise_index.dart';
 import 'src/data/exercise_library.dart';
 import 'src/data/personal_details_store.dart';
+import 'src/data/routine_store.dart';
+import 'src/data/routines.dart';
 import 'src/data/session_store.dart';
 import 'src/data/settings_store.dart';
 import 'src/data/template_filter.dart';
@@ -71,6 +73,8 @@ Future<void> main() async {
     initialCustomTemplates,
     initialSession,
     initialSavedSessions,
+    initialRoutines,
+    initialRoutineFolders,
   ) = await (
     readStoredTemplateFilter(SettingsStore(database)),
     boot.read(exerciseLibraryProvider.future),
@@ -79,6 +83,11 @@ Future<void> main() async {
     readStoredCustomTemplates(CustomTemplateStore(database)),
     readOpenSession(SessionStore(database)),
     readSavedSessions(SessionStore(database)),
+    // Routines and their folders join the before-first-frame read for the same
+    // reason as everything else here: the landing lists them, and one that
+    // started empty would flash "no routines yet" at a user who has ten.
+    RoutineStore(database).readRoutines(),
+    RoutineStore(database).readFolders(),
   ).wait;
   boot.dispose();
 
@@ -93,6 +102,9 @@ Future<void> main() async {
         initialSavedSessionsProvider.overrideWithValue(initialSavedSessions),
         initialCustomTemplatesProvider
             .overrideWithValue(initialCustomTemplates),
+        initialRoutinesProvider.overrideWithValue(initialRoutines),
+        initialRoutineFoldersProvider
+            .overrideWithValue(initialRoutineFolders),
         exerciseIndexProvider.overrideWithValue(
           ExerciseIndex.fromJson(exercises),
         ),

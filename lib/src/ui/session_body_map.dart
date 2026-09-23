@@ -26,7 +26,12 @@ import 'exercise_detail_screen.dart' show MuscleFill;
 /// polygons every frame. The fill is kept in state and replaced only when the
 /// muscles it colours actually change.
 class SessionBodyMap extends ConsumerStatefulWidget {
-  const SessionBodyMap({super.key});
+  const SessionBodyMap({this.compact = false, super.key});
+
+  /// Renders as the two small figures in the Log Workout summary bar rather
+  /// than as the full-width pair on an overview screen. Same fill, same source
+  /// of truth — only the size changes.
+  final bool compact;
 
   @override
   ConsumerState<SessionBodyMap> createState() => _SessionBodyMapState();
@@ -46,15 +51,17 @@ class _SessionBodyMapState extends ConsumerState<SessionBodyMap> {
 
     _syncFill(session, index);
 
+    final height =
+        widget.compact ? kCompactDiagramHeight : kSessionDiagramHeight;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: EdgeInsets.symmetric(vertical: widget.compact ? 0 : 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           for (final view in BodyView.values)
             Expanded(
               child: SizedBox(
-                height: kSessionDiagramHeight,
+                height: height,
                 child: BodyDiagram(view: view, fill: _fill.colorFor),
               ),
             ),
@@ -80,3 +87,7 @@ class _SessionBodyMapState extends ConsumerState<SessionBodyMap> {
 /// Shorter than the exercise page's, because this screen has a list under it
 /// that the user is coming back to between sets.
 const double kSessionDiagramHeight = 170;
+
+/// How tall the two figures stand in the Log Workout summary bar — a glance,
+/// not a diagram. Tapping them opens the full overview.
+const double kCompactDiagramHeight = 40;

@@ -89,6 +89,21 @@ void main() {
         groupIds: <String>['chest'],
       );
 
+      // A completed set, because a session with none is deleted rather than
+      // saved (`00` §9, enforced in `saveOpenSession`). What this test is about
+      // is the tab clearing back to its landing either way.
+      final rowId = await notifier.addExercise(
+        exerciseId: 'barbell-bench-press',
+        loadType: LoadType.weighted,
+      );
+      await notifier.writeSet(
+        sessionExerciseId: rowId!,
+        position: 0,
+        completed: true,
+        weightKg: 60,
+        reps: 8,
+      );
+
       await notifier.finish();
 
       expect(container.read(activeSessionProvider), isNull);

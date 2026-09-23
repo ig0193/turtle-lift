@@ -104,7 +104,7 @@ void main() {
 
   /// The copy that identifies each root on screen, in tab order.
   const rootText = <String>[
-    'TEMPLATES', // WorkoutRoot
+    'ROUTINES', // WorkoutRoot
     // The front/back control, near the top of the root: the section label over
     // the 19 rows sits below the body map and is off-screen on the short
     // viewport `useShortScreen` sets up.

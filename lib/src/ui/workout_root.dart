@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/custom_templates.dart';
-import '../data/template_filter.dart';
-import '../data/workout_templates.dart';
+import '../data/routines.dart';
 import '../theme/app_palette.dart';
 import '../data/active_session.dart';
 import '../data/derived.dart';
 import '../data/exercise_index.dart';
-import 'adhoc_overview_body.dart';
 import 'app_screen.dart';
 import 'destructive_confirmation.dart';
-import 'exercise_search_screen.dart';
-import 'template_filter_control.dart';
-import 'template_library_screen.dart';
-import 'session_summary_screen.dart';
-import 'template_overview_body.dart';
+import 'name_prompt.dart';
+import 'routine_builder_screen.dart';
+import 'routine_card.dart';
+import 'routine_folder_section.dart';
+import 'template_list_screen.dart';
+import 'log_workout_screen.dart';
 import 'template_row.dart';
 
 /// The Workout tab's body: the templates you can start, filtered by split.
@@ -60,25 +58,19 @@ class WorkoutRoot extends ConsumerWidget {
     final session = ref.watch(activeSessionProvider);
     if (session != null) {
       // An open workout replaces the landing entirely, at stack depth zero.
-      // Which body it is follows from the session itself, not from a flag:
-      // a template run answers "which muscles have I trained", an ad-hoc one
-      // answers "which exercises have I done", and those are different lists.
-      return session.isTemplateSession
-          ? TemplateOverviewBody(onFinished: (id) => _openSummary(context, id))
-          : AdHocOverviewBody(onFinished: (id) => _openSummary(context, id));
+      //
+      // **One screen for both paths now** (`adr/0004`). The two overview
+      // bodies used to branch here — a template run answering "which muscles
+      // have I trained", an ad-hoc one "which exercises have I done". Both
+      // questions still have their screen, reached from the summary bar's body
+      // figures; what changed is that neither is the surface a set is logged
+      // on any more.
+      return const LogWorkoutBody();
     }
 
     return const WorkoutLandingBody();
   }
 
-  /// Where a finished workout lands.
-  ///
-  /// **Pushed, and only then is the tab root rebuilt.** The overview *is* this
-  /// tab, so clearing the workout before the push would rebuild the landing
-  /// underneath the outgoing transition.
-  void _openSummary(BuildContext context, String sessionId) {
-    pushSessionSummary(context, sessionId, celebrate: true);
-  }
 }
 
 /// The templates you can start, filtered by split.
@@ -95,141 +87,140 @@ class WorkoutLandingBody extends ConsumerWidget {
   /// and then return to the root.
   final bool isPushed;
 
-  /// The group heading over the user's own templates.
-  @visibleForTesting
-  static const String customGroupLabel = 'YOUR TEMPLATES';
+  /// The keys a test reaches the landing's three routine controls by.
+  static const Key newFolderKey = ValueKey<String>('new-folder');
+  static const Key newRoutineKey = ValueKey<String>('new-routine');
+  static const Key templatesKey = ValueKey<String>('open-templates');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-
-    final filter = ref.watch(templateFilterProvider);
-    final templates = templatesFor(filter);
-    final custom = ref.watch(customTemplatesProvider);
+    final routines = ref.watch(routinesProvider);
+    final folders = ref.watch(routineFoldersProvider);
+    final unfiled = routines.where((r) => r.folderId == null).toList();
 
     return ListView(
       padding: screenScrollPadding(context),
       children: <Widget>[
+        const SizedBox(height: 2),
+        _StartEmptyWorkout(onTap: () => _startEmpty(context, ref)),
+        const SizedBox(height: 22),
         Row(
           children: <Widget>[
             Expanded(
               child: Semantics(
                 header: true,
-                child: const Text(
-                  'TEMPLATES',
-                  style: kLandingSectionLabelStyle,
-                ),
+                child: const Text('ROUTINES', style: kLandingSectionLabelStyle),
               ),
             ),
-            TemplateFilterControl(
-              current: filter,
-              onSelected: (chosen) =>
-                  ref.read(templateFilterProvider.notifier).select(chosen),
+            IconButton(
+              key: newFolderKey,
+              tooltip: 'New folder',
+              icon: const Icon(Icons.create_new_folder_outlined,
+                  size: 20, color: AppPalette.textSecondary),
+              onPressed: () => _newFolder(context, ref),
             ),
           ],
         ),
-        Padding(
-          // Says how many templates this filter yields. With no unfiltered
-          // value to fall back to, this line is part of how the user can tell
-          // the list is a subset rather than everything the app has.
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Text(_countLabel(templates.length), style: kLandingCountStyle),
-        ),
-        for (final template in templates)
-          TemplateRow(
-            key: ValueKey<String>('template-${template.id}'),
-            title: template.name,
-            subtitle: template.subtitle,
-            onTap: () => _openTemplate(context, ref, template),
-          ),
-
-        // Absent entirely when the user has none -- not a heading standing over
-        // nothing. `docs/03-muscle-groups-tab-userflow.md` makes the same call
-        // for the muscle grid: an empty group reads as broken, one line reads
-        // as a state, and no group at all reads as nothing to say.
-        if (custom.isNotEmpty) ...<Widget>[
-          const SizedBox(height: 10),
-          Semantics(
-            header: true,
-            child: const Text(
-              customGroupLabel,
-              style: kLandingSectionLabelStyle,
-            ),
-          ),
-          const SizedBox(height: 10),
-          for (final template in custom)
-            TemplateRow(
-              key: ValueKey<String>('custom-template-${template.id}'),
-              title: template.name,
-              subtitle: template.subtitle,
-              onTap: () => _openTemplate(context, ref, template),
-            ),
-        ],
-
-        const SizedBox(height: 7),
-        // **Outside the `custom.isNotEmpty` block above, deliberately.** This
-        // row is the visible route to template authoring, which otherwise sits
-        // behind an unlabelled disc in the header (KD2). Nested inside that
-        // conditional it would be invisible to everyone who has never made a
-        // custom template — which is exactly the user who needs to find it.
-        //
-        // It does not break "only place templates are authored"
-        // (`docs/00-build-spec.md` §11): this is navigation, not authoring. The
-        // Workout tab still only selects and runs.
-        TemplateRow(
-          key: WorkoutRoot.manageTemplatesKey,
-          title: 'Manage templates',
-          subtitle: 'Duplicate, rename or delete your own',
-          background: AppPalette.mutedSurface,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => const TemplateLibraryScreen(),
-            ),
-          ),
-        ),
-        const SizedBox(height: 7),
-        TemplateRow(
-          key: const ValueKey<String>('ad-hoc-entry'),
-          title: 'Ad-hoc workout',
-          subtitle: 'Search and add as you go',
-          // A different kind of thing from a template, so a different surface.
-          background: AppPalette.mutedSurface,
-          onTap: () async {
-            // The ad-hoc workout is created by the first exercise added, so
-            // closing the running one waits until then too — backing out of
-            // search must not have cost the user their workout.
-            if (!context.mounted) return;
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const ExerciseSearchScreen(),
+        const SizedBox(height: 6),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: _SecondaryAction(
+                actionKey: newRoutineKey,
+                icon: Icons.assignment_outlined,
+                label: 'New routine',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const RoutineBuilderScreen(),
+                  ),
+                ),
               ),
-            );
-          },
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _SecondaryAction(
+                // **Where Hevy puts "Explore Routines".** That one reaches a
+                // cloud library; this app has no network, so the local
+                // equivalent is the eleven shipped templates — muscle-group
+                // starting points, not routines. See `CONTEXT.md`.
+                actionKey: templatesKey,
+                icon: Icons.grid_view_outlined,
+                label: 'Templates',
+                onTap: () => pushTemplateList(context),
+              ),
+            ),
+          ],
         ),
+        const SizedBox(height: 18),
+        for (final folder in folders)
+          RoutineFolderSection(
+            folder: folder,
+            routines: routines.where((r) => r.folderId == folder.id).toList(),
+          ),
+        if (folders.isNotEmpty) const SizedBox(height: 4),
+        Semantics(
+          header: true,
+          child: Text('MY ROUTINES (${unfiled.length})',
+              style: kLandingSectionLabelStyle),
+        ),
+        const SizedBox(height: 10),
+        if (unfiled.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Text(
+              'Routines you build appear here. Start an empty workout any '
+              'time without one.',
+              style: TextStyle(color: AppPalette.textSecondary),
+            ),
+          )
+        else
+          // **Long-press to drag, inside the landing's own scrollable.**
+          // `shrinkWrap` with no physics of its own, so this list measures its
+          // children and hands scrolling back to the page — two competing
+          // scrollables on one screen is how a drag near the edge starts
+          // fighting the finger.
+          ReorderableListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            // `onReorderItem`, not the deprecated `onReorder`: it reports the
+            // index the row actually lands on, rather than the one it would
+            // have had before the row was taken out.
+            onReorderItem: (oldIndex, newIndex) {
+              final ids = unfiled.map((r) => r.id).toList();
+              ids.insert(newIndex, ids.removeAt(oldIndex));
+              ref.read(routineListProvider.notifier).reorder(ids);
+            },
+            children: <Widget>[
+              for (final (i, routine) in unfiled.indexed)
+                ReorderableDelayedDragStartListener(
+                  key: ValueKey<String>('reorder-${routine.id}'),
+                  index: i,
+                  child: RoutineCard(routine: routine),
+                ),
+            ],
+          ),
       ],
     );
   }
 
-  /// Starts [template]'s workout, closing whatever was already running.
+  /// Starts a workout with nothing in it.
   ///
-  /// **Starting a new workout never loses the old one.** One with at least one
-  /// completed set is saved exactly as if Finish had been tapped — keeping its
-  /// own date, so a Monday workout abandoned on Wednesday still files as
-  /// Monday — and the user is told. One with nothing completed is dropped, and
-  /// asked about first when values were typed but never ticked.
-  Future<void> _openTemplate(
-    BuildContext context,
-    WidgetRef ref,
-    WorkoutTemplate template,
-  ) async {
+  /// **The session is created here, unlike the old ad-hoc entry.** That one
+  /// deferred creation to the first exercise added, because it opened a search
+  /// screen and backing out of a search must not cost the user the workout they
+  /// already had. This control says "start a workout" and nothing else, so
+  /// deferring would leave the duration unstarted and the empty log screen with
+  /// nothing to render.
+  Future<void> _startEmpty(BuildContext context, WidgetRef ref) async {
     if (!await _closeOpenWorkout(context, ref)) return;
-    await ref.read(activeSessionProvider.notifier).startFromTemplate(
-          templateId: template.id,
-          templateName: template.name,
-          groupIds: template.groupIds,
-        );
-    if (isPushed && context.mounted) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    }
+    await ref.read(activeSessionProvider.notifier).startAdHoc();
+  }
+
+  Future<void> _newFolder(BuildContext context, WidgetRef ref) async {
+    final name = await promptForName(context, title: 'New folder');
+    if (name == null || name.isEmpty) return;
+    await ref.read(routineFolderListProvider.notifier).create(name);
   }
 
   /// Saves or drops the workout already running. Returns false when the user
@@ -265,6 +256,143 @@ class WorkoutLandingBody extends ConsumerWidget {
     return true;
   }
 
-  static String _countLabel(int count) =>
-      '$count template${count == 1 ? '' : 's'}';
+}
+
+/// `+ Start empty workout` — the way past the routine list.
+///
+/// **Neutral, not accent-filled, and that is a change.** The landing's one
+/// accent used to live here because nothing else on the screen read as an
+/// action. Routine cards now each carry their own `Start routine`, which is the
+/// primary action *of that card*; a second accent-filled control above them
+/// would compete with every one of them at once. The meaning of `#D85A30` is
+/// unchanged — it still marks the control that starts a workout.
+class _StartEmptyWorkout extends StatelessWidget {
+  const _StartEmptyWorkout({required this.onTap});
+
+  final VoidCallback onTap;
+
+  /// Unchanged from when this was the sixth row: it is the same destination,
+  /// and the tests that reach the ad-hoc path reach it by this key.
+  static const Key entryKey = ValueKey<String>('ad-hoc-entry');
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Start empty workout. Add exercises as you go',
+        excludeSemantics: true,
+        child: GestureDetector(
+          key: entryKey,
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppPalette.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppPalette.border),
+            ),
+            child: Row(
+              children: <Widget>[
+                const Icon(Icons.add_rounded,
+                    size: 22, color: AppPalette.textPrimary),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: const <Widget>[
+                      Text('Start empty workout', style: _kCtaTitleStyle),
+                      SizedBox(height: 2),
+                      Text(
+                        'Add exercises as you go',
+                        style: _kCtaSubtitleStyle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right_rounded,
+                    size: 20, color: AppPalette.textSecondary),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+/// The quiet route to template authoring, at the foot of the list.
+// **Both colours followed the surface.** These read `onAccent` and a faded
+// `onAccent` while this control was accent-filled; on the neutral surface it
+// wears now, near-black text on a near-black card is invisible rather than
+// merely low-contrast. A palette entry named for the ground it sits on has to
+// move when that ground does.
+const TextStyle _kCtaTitleStyle = TextStyle(
+  fontSize: 16,
+  fontWeight: FontWeight.w700,
+  letterSpacing: -0.2,
+  color: AppPalette.textPrimary,
+);
+
+/// The same colour as the title at two-thirds the size. The palette has one
+/// colour for text on accent (§12, "No other colours"), so the second line is
+/// made secondary by scale rather than by tint.
+const TextStyle _kCtaSubtitleStyle = TextStyle(
+  fontSize: 11.5,
+  fontWeight: FontWeight.w500,
+  color: AppPalette.textSecondary,
+);
+
+
+
+/// `New routine` and `Templates` — the pair under the Routines heading.
+///
+/// Neutral surfaces: both are navigation, and neither starts a workout.
+class _SecondaryAction extends StatelessWidget {
+  const _SecondaryAction({
+    required this.actionKey,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final Key actionKey;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        key: actionKey,
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: AppPalette.surface,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(icon, size: 18, color: AppPalette.textSecondary),
+              const SizedBox(width: 8),
+              // Flexible, because two of these share a 360pt row with a gutter
+              // either side — and a label that overflows is a red-striped box
+              // on the narrowest phone rather than a layout that merely looks
+              // tight.
+              Flexible(
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: AppPalette.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+      );
 }

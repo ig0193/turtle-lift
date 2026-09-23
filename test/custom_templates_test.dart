@@ -8,7 +8,8 @@ import 'package:turtle_lift/src/data/custom_templates.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
 import 'package:turtle_lift/src/data/template_filter.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
-import 'package:turtle_lift/src/ui/workout_root.dart';
+import 'package:turtle_lift/src/ui/template_row.dart';
+import 'package:turtle_lift/src/ui/template_list_screen.dart';
 
 /// Proves the user's own templates survive a restart, that renaming and
 /// deleting touch exactly one template, and that the Workout landing still
@@ -361,7 +362,18 @@ void main() {
     });
   });
 
-  group('the Workout landing', () {
+  // The custom group moved to the Templates screen with `adr/0004`; the
+  // landing lists routines. What this group proves is unchanged: the user's
+  // own templates are read through the one provider, and survive a restart.
+  group('the Templates screen', () {
+    /// Room for the whole list. The landing's rows are cards now, and a
+    /// `ListView` only builds what fits -- see `test/workout_root_test.dart`.
+    void useTallViewport(WidgetTester tester) {
+      tester.view.physicalSize = const Size(1200, 4200);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+    }
+
     /// The landing hosted the way the shell hosts it, on a real database.
     Widget host() {
       return ProviderScope(
@@ -370,7 +382,7 @@ void main() {
           initialTemplateFilterProvider
               .overrideWithValue(TemplateFilter.multiSplit),
         ],
-        child: const MaterialApp(home: Scaffold(body: WorkoutRoot())),
+        child: const MaterialApp(home: TemplateListScreen()),
       );
     }
 
@@ -379,7 +391,7 @@ void main() {
       await tester.pumpWidget(host());
 
       expect(
-        find.text(WorkoutRoot.customGroupLabel),
+        find.text(TemplateListScreen.customGroupLabel),
         findsNothing,
         reason: 'a heading standing over nothing reads as broken',
       );
@@ -387,27 +399,39 @@ void main() {
 
     testWidgets('the custom group appears once a template is saved',
         (tester) async {
+      useTallViewport(tester);
       await tester.pumpWidget(host());
 
       final container = ProviderScope.containerOf(
-        tester.element(find.byType(WorkoutRoot)),
+        tester.element(find.byType(TemplateListScreen)),
       );
       await container
           .read(customTemplateListProvider.notifier)
           .add(name: 'My arm blaster', groupIds: <String>['biceps']);
       await tester.pump();
 
-      expect(find.text(WorkoutRoot.customGroupLabel), findsOneWidget);
+      expect(find.text(TemplateListScreen.customGroupLabel), findsOneWidget);
       expect(find.text('My arm blaster'), findsOneWidget);
+      // Scoped to this card: "Back and biceps day" is in the same filter and
+      // carries a Biceps chip of its own, which is the point -- the chips are
+      // derived from group ids wherever they appear, predefined or custom.
       expect(
-        find.text('Biceps'),
+        find.descendant(
+          of: find.ancestor(
+            of: find.text('My arm blaster'),
+            matching: find.byType(TemplateRow),
+          ),
+          matching: find.text('Biceps'),
+        ),
         findsOneWidget,
-        reason: 'the row renders the derived subtitle, not a stored one',
+        reason: 'the card derives its muscle chips from the group ids, and '
+            'stores no subtitle of its own',
       );
     });
 
     testWidgets('a saved template is on the first frame of the next launch',
         (tester) async {
+      useTallViewport(tester);
       await store.insertCustomTemplate(
         id: 'tpl-1',
         name: 'My arm blaster',
@@ -424,7 +448,7 @@ void main() {
             initialCustomTemplatesProvider
                 .overrideWithValue(await readStoredCustomTemplates(store)),
           ],
-          child: const MaterialApp(home: Scaffold(body: WorkoutRoot())),
+          child: const MaterialApp(home: TemplateListScreen()),
         ),
       );
 

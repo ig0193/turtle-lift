@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
+import 'package:turtle_lift/src/data/derived.dart';
 import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
@@ -106,6 +107,14 @@ void main() {
 
     test('saved sessions exclude the one still open', () async {
       final first = await store.createSession(templateName: 'Push day');
+      final rowId = await addBench(first.id);
+      await store.writeSet(
+        sessionExerciseId: rowId,
+        position: 0,
+        completed: true,
+        weightKg: 60,
+        reps: 8,
+      );
       await store.saveOpenSession();
       await store.createSession(templateName: 'Pull day');
 
@@ -161,7 +170,17 @@ void main() {
     });
 
     test('saving twice produces one saved workout and no exception', () async {
-      await store.createSession(templateName: 'Push day');
+      final session = await store.createSession(templateName: 'Push day');
+      // A completed set, because `saveOpenSession` now deletes a session that
+      // has none (`00` §9) — this test is about the double tap, not the rule.
+      final rowId = await addBench(session.id);
+      await store.writeSet(
+        sessionExerciseId: rowId,
+        position: 0,
+        completed: true,
+        weightKg: 60,
+        reps: 8,
+      );
 
       await store.saveOpenSession();
       await store.saveOpenSession();
@@ -383,6 +402,100 @@ void main() {
           .get();
 
       expect(open, hasLength(1));
+    });
+  });
+
+  group('session timing (adr/0004)', () {
+    test('a new session is stamped started, and not yet ended', () async {
+      final before = DateTime.now();
+      final session = await store.createSession();
+
+      expect(session.startedAt, isNotNull);
+      expect(
+        session.startedAt!.isBefore(before.subtract(const Duration(seconds: 1))),
+        isFalse,
+      );
+      expect(session.endedAt, isNull, reason: 'still running');
+      expect(durationOf(session), isNull, reason: 'no end, so no fixed length');
+    });
+
+    test('finishing stamps the end, and the duration stops moving', () async {
+      final created = await store.createSession();
+      final rowId = await addBench(created.id);
+      await store.writeSet(
+        sessionExerciseId: rowId,
+        position: 0,
+        completed: true,
+        weightKg: 60,
+        reps: 8,
+      );
+      await store.saveOpenSession();
+
+      final saved = (await store.readSavedSessions()).single;
+      expect(saved.endedAt, isNotNull);
+      final first = durationOf(saved);
+      expect(first, isNotNull);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(durationOf(saved), first, reason: 'a saved length is fixed');
+    });
+
+    test('the duration can be corrected without moving performedOn', () async {
+      final created = await store.createSession();
+      final day = created.performedOn;
+
+      await store.setSessionDuration(
+        sessionId: created.id,
+        duration: const Duration(minutes: 42),
+      );
+
+      final reread = (await store.readOpenSession())!;
+      // Still running, so it has no *final* duration — but it now reads as
+      // having been going for 42 minutes, and keeps ticking from there.
+      expect(durationOf(reread), isNull);
+      final elapsed = elapsedOf(reread, DateTime.now())!;
+      expect(elapsed.inSeconds, closeTo(const Duration(minutes: 42).inSeconds, 2));
+      expect(reread.performedOn, day, reason: 'a date is not a timestamp');
+    });
+  });
+
+  group('per-exercise notes and rest timer (adr/0004)', () {
+    test('both default to unset, and round-trip when written', () async {
+      final session = await store.createSession();
+      final exerciseRowId = await addBench(session.id);
+
+      final fresh = (await store.readOpenSession())!.exercises.single;
+      expect(fresh.notes, isNull);
+      expect(fresh.restTimerSec, isNull, reason: 'null is the OFF the UI shows');
+
+      await store.setExerciseNotes(
+        sessionExerciseId: exerciseRowId,
+        notes: 'Bar felt heavy, dropped to 60kg',
+      );
+      await store.setExerciseRestTimer(
+        sessionExerciseId: exerciseRowId,
+        seconds: 90,
+      );
+
+      final written = (await store.readOpenSession())!.exercises.single;
+      expect(written.notes, 'Bar felt heavy, dropped to 60kg');
+      expect(written.restTimerSec, 90);
+    });
+
+    test('the rest timer can be turned back off', () async {
+      final session = await store.createSession();
+      final exerciseRowId = await addBench(session.id);
+      await store.setExerciseRestTimer(
+        sessionExerciseId: exerciseRowId,
+        seconds: 90,
+      );
+
+      await store.setExerciseRestTimer(
+        sessionExerciseId: exerciseRowId,
+        seconds: null,
+      );
+
+      expect((await store.readOpenSession())!.exercises.single.restTimerSec,
+          isNull);
     });
   });
 }

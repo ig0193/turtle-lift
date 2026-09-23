@@ -15,23 +15,24 @@ part 'app_database.g.dart';
 /// units, sex and bodyweight). If you find yourself adding a column that could
 /// be recomputed from session rows, that is the rule catching you.
 ///
-/// Schema version 3, and the app's **first** migration — so the shape here is
-/// the one every later migration will be copied from.
+/// Schema version 4.
 ///
 /// **Version 2 is the session tables and it has now landed.** Step 2 creates
 /// `Sessions`, `SessionExercises` and `SetEntries`; step 3 is the bodyweight
-/// log, the user's own templates and the gender field. Numbering around the gap
-/// rather than taking 2 kept the chain in the order the two pieces of work
-/// actually landed, so a user upgrading from 1 runs the session step and then
-/// the personal-details one.
+/// log, the user's own templates and the gender field; step 4 is the Workout
+/// tab's rebuild to Hevy's shape (`adr/0004`) — routines, folders, session
+/// timings, per-exercise notes and rest timers. Numbering around the gap rather
+/// than taking 2 kept the chain in the order the two pieces of work actually
+/// landed, so a user upgrading from 1 runs the session step and then the
+/// personal-details one.
 ///
-/// **The reserved slot only worked because nothing had shipped.** A device that
-/// had already installed a version-3 build is past step 2 and never runs it, so
-/// it opens with no session tables at all. No build has reached any track, so no
-/// user is in that state — but a development install from before this change
-/// is, and its app data has to be cleared once. That is the one-time cost of
-/// the reserved slot, and it is why no later step may be numbered below the
-/// current version.
+/// **The reserved slot's one casualty is now repaired rather than documented.**
+/// A device stamped at version 3 by a build from before the session step is
+/// past step 2 and never runs it, so it opened with no session tables at all —
+/// which used to mean clearing its app data by hand. Step 4 creates them if
+/// they are missing, so that install fixes itself on the next launch. The rule
+/// the slot taught still stands: **no later step may be numbered below the
+/// current version**, because the next gap may not be this recoverable.
 ///
 /// Each step therefore guards on its own range and creates only what it owns.
 @DriftDatabase(
@@ -42,6 +43,10 @@ part 'app_database.g.dart';
     Sessions,
     SessionExercises,
     SetEntries,
+    RoutineFolders,
+    Routines,
+    RoutineExercises,
+    RoutineSets,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -59,7 +64,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   /// **The first migration in the app's history.** There was no
   /// [MigrationStrategy] before this one, so the shape here is the precedent:
@@ -108,6 +113,76 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(bodyweightEntries);
             await m.createTable(customTemplates);
             await m.addColumn(settings, settings.bodyGender);
+          }
+          // Step 4 — the Workout tab rebuilt to Hevy's shape (`adr/0004`).
+          //
+          // Every column added here is nullable and every table is new, so this
+          // step reads nothing and rewrites nothing: a session logged before the
+          // rebuild keeps all its sets and simply has no timings, and the user's
+          // own templates are left exactly where they are. Routines are a new,
+          // separate concept — a template names muscle groups, a routine names
+          // exercises — so `CustomTemplates` is **not** migrated into
+          // `Routines`; converting one would have to invent the exercise list
+          // that is the whole difference between them.
+          if (from < 4) {
+            // **And it repairs the reserved slot's one casualty.** A database
+            // stamped 3 by a build from before the session step is past step 2
+            // and never ran it, so it has no session tables at all — the
+            // one-time "clear your app data" cost recorded in `CLAUDE.md`.
+            // Creating them here costs one query and removes the footgun.
+            final tables = await m.database
+                .customSelect(
+                  "SELECT name FROM sqlite_master "
+                  "WHERE type = 'table' AND name = 'sessions'",
+                )
+                .get();
+            if (tables.isEmpty) {
+              await m.createTable(sessions);
+              await m.createTable(sessionExercises);
+              await m.createTable(setEntries);
+            }
+
+            // **Every add is guarded on the column, not on the version.**
+            // `createTable` always builds today's shape, so an install coming
+            // from version 1 runs step 2 and already arrives here with these
+            // four columns, while one coming from version 3 does not. Keying on
+            // `from` would be right for exactly one of those two paths, and
+            // SQLite answers the question directly.
+            Future<bool> hasColumn(String table, String column) async {
+              final rows = await m.database
+                  .customSelect('PRAGMA table_info($table)')
+                  .get();
+              return rows.any((r) => r.read<String>('name') == column);
+            }
+
+            if (!await hasColumn('sessions', 'started_at')) {
+              await m.addColumn(sessions, sessions.startedAt);
+              await m.addColumn(sessions, sessions.endedAt);
+            }
+            if (!await hasColumn('sessions', 'notes')) {
+              await m.addColumn(sessions, sessions.notes);
+            }
+            if (!await hasColumn('session_exercises', 'notes')) {
+              await m.addColumn(sessionExercises, sessionExercises.notes);
+              await m.addColumn(
+                  sessionExercises, sessionExercises.restTimerSec);
+            }
+
+            await m.createTable(routineFolders);
+            await m.createTable(routines);
+            await m.createTable(routineExercises);
+            await m.createTable(routineSets);
+          }
+          // Step 5 — the session note on the Save workout screen. Guarded on
+          // the column like step 4, because a database created fresh at 4
+          // already has it while one upgraded to 4 does not.
+          if (from < 5) {
+            final columns = await m.database
+                .customSelect('PRAGMA table_info(sessions)')
+                .get();
+            final hasNotes =
+                columns.any((r) => r.read<String>('name') == 'notes');
+            if (!hasNotes) await m.addColumn(sessions, sessions.notes);
           }
         },
       );
@@ -266,6 +341,31 @@ class Sessions extends Table {
   /// from its sets, or it gains a second source of truth for what it trained.
   TextColumn get groupIds => text().nullable()();
 
+  /// When the session was started, and when Finish stamped it.
+  ///
+  /// **Two timestamps, because the duration between them is derived, not
+  /// stored.** `docs/00` §3's rule is that nothing computable from other rows
+  /// is kept, and a stored `durationSec` would be exactly that — plus it would
+  /// go stale the moment either end is corrected. While [endedAt] is null the
+  /// session is still running and the UI ticks from [startedAt].
+  ///
+  /// **Neither is a date.** [performedOn] alone decides which calendar day a
+  /// session files under; an 11pm session that ends at 00:20 still files on the
+  /// day it started. Correcting the duration moves [startedAt], never
+  /// [performedOn]. Nullable because every session that existed before
+  /// `adr/0004` has neither.
+  DateTimeColumn get startedAt => dateTime().nullable()();
+
+  DateTimeColumn get endedAt => dateTime().nullable()();
+
+  /// The user's note about the session as a whole — "how did it go" — written
+  /// on the Save workout screen.
+  ///
+  /// Distinct from `SessionExercises.notes`, which is about one lift. Both are
+  /// the user's own words; neither is ever the reviewed copy that lives on an
+  /// `Exercise`.
+  TextColumn get notes => text().nullable()();
+
   /// Set on the one open session, null on every saved one.
   ///
   /// **A nullable column with a unique index, so "one at a time" is the
@@ -324,6 +424,16 @@ class SessionExercises extends Table {
   /// in-progress exercise would otherwise leave a stored state that is simply
   /// wrong, which is exactly what `docs/01` §Derived values exists to prevent.
   BoolColumn get markedDone => boolean().withDefault(const Constant(false))();
+
+  /// The user's free text for this exercise in this session. Not reviewed copy
+  /// — `Exercise.setup`/`posture`/`execution` are, and are never written here.
+  TextColumn get notes => text().nullable()();
+
+  /// This exercise's rest timer, in seconds. **Null is OFF**, which is the
+  /// default and what the row renders until the user sets one. Per exercise
+  /// rather than per session because that is where the user sets it, and a
+  /// heavy squat and a cable fly do not rest alike.
+  IntColumn get restTimerSec => integer().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};
@@ -386,5 +496,111 @@ class SetEntries extends Table {
         'CHECK (added_kg IS NULL OR added_kg >= 0)',
         'CHECK (assist_kg IS NULL OR assist_kg >= 0)',
         'CHECK (duration_sec IS NULL OR duration_sec >= 0)',
+      ];
+}
+
+/// A named group of routines on the Workout landing.
+///
+/// **A container, never an owner.** Deleting one must not take the routines
+/// inside it — see the `setNull` on [Routines.folderId]. Folders do not nest;
+/// one level is what the landing renders and what the user asked for.
+@DataClassName('RoutineFolderRow')
+class RoutineFolders extends Table {
+  TextColumn get id => text()();
+
+  TextColumn get name => text()();
+
+  /// Ascending. Folders read in the order they were made until dragged.
+  IntColumn get position => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+}
+
+/// One of the user's own routines: an **ordered list of exercises**.
+///
+/// **Not a template, and deliberately not stored as one.** A template
+/// (`CustomTemplates`) names parent muscle groups; a routine names exercises in
+/// an order with target sets. Neither converts into the other — a template has
+/// no exercise list to convert, and inventing one would be the app prescribing
+/// a workout, which `docs/02` refuses to do. See `CONTEXT.md` and `adr/0004`.
+@DataClassName('RoutineRow')
+class Routines extends Table {
+  TextColumn get id => text()();
+
+  TextColumn get name => text()();
+
+  /// Null means unfiled, which is where every routine starts and where it
+  /// returns when its folder is deleted.
+  TextColumn get folderId =>
+      text().nullable().references(RoutineFolders, #id, onDelete: KeyAction.setNull)();
+
+  /// Ascending, and negative for newly created routines so the newest reads
+  /// first without rewriting every other row on every create.
+  IntColumn get position => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+}
+
+/// One exercise inside a routine.
+///
+/// **No snapshotted `loadType` here, unlike `SessionExercises`.** That column
+/// exists on a session because a session is a record of what happened, and
+/// reinterpreting a logged set against changed content ships a record
+/// backwards. A routine is a *plan*: if the library reclassifies an exercise,
+/// the plan should follow it, so the load type is resolved from the library on
+/// read.
+@DataClassName('RoutineExerciseRow')
+class RoutineExercises extends Table {
+  TextColumn get id => text()();
+
+  TextColumn get routineId =>
+      text().references(Routines, #id, onDelete: KeyAction.cascade)();
+
+  TextColumn get exerciseId => text()();
+
+  IntColumn get position => integer()();
+
+  /// The user's note, carried onto the session when the routine is started.
+  TextColumn get notes => text().nullable()();
+
+  /// Rest between sets, in seconds. Null is OFF.
+  IntColumn get restTimerSec => integer().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+}
+
+/// One planned set under a routine exercise.
+///
+/// **Every target is nullable.** A routine that says "3 sets of bench" without
+/// naming a weight is a real and common plan; forcing numbers here would make
+/// the builder demand information the user does not have yet.
+@DataClassName('RoutineSetRow')
+class RoutineSets extends Table {
+  TextColumn get id => text()();
+
+  TextColumn get routineExerciseId =>
+      text().references(RoutineExercises, #id, onDelete: KeyAction.cascade)();
+
+  IntColumn get position => integer()();
+
+  RealColumn get targetWeightKg => real().nullable()();
+
+  IntColumn get targetReps => integer().nullable()();
+
+  IntColumn get targetDurationSec => integer().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+
+  /// The same unsigned-positive rule the set rows carry: the sign is the load
+  /// type's job, never a negative number's.
+  @override
+  List<String> get customConstraints => <String>[
+        'CHECK (target_weight_kg IS NULL OR target_weight_kg >= 0)',
+        'CHECK (target_reps IS NULL OR target_reps >= 0)',
+        'CHECK (target_duration_sec IS NULL OR target_duration_sec >= 0)',
       ];
 }

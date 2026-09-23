@@ -1,0 +1,310 @@
+import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:turtle_lift/src/data/active_session.dart';
+import 'package:turtle_lift/src/data/app_database.dart';
+import 'package:turtle_lift/src/data/exercise.dart';
+import 'package:turtle_lift/src/data/exercise_index.dart';
+import 'package:turtle_lift/src/data/routine_store.dart';
+import 'package:turtle_lift/src/data/routines.dart';
+import 'package:turtle_lift/src/data/session_store.dart';
+import 'package:turtle_lift/src/data/settings_store.dart'
+    show appDatabaseProvider;
+import 'package:turtle_lift/src/theme/app_theme.dart';
+import 'package:turtle_lift/src/ui/log_workout_screen.dart';
+import 'package:turtle_lift/src/ui/routine_card.dart';
+import 'package:turtle_lift/src/ui/routine_folder_section.dart';
+import 'package:turtle_lift/src/ui/workout_root.dart';
+
+/// The Workout landing, rebuilt around routines (`adr/0004`).
+///
+/// **The rule this file guards is that a routine is not a template.** A
+/// template names muscle groups and ships with the app; a routine names
+/// exercises the user chose, in an order, and starting one fills the workout
+/// with them. A regression that quietly started an *empty* session from a
+/// routine would render identically on the landing and lose the whole feature.
+void main() {
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late AppDatabase database;
+  late RoutineStore routines;
+  late SessionStore sessions;
+
+  setUp(() {
+    database = AppDatabase.forTesting(NativeDatabase.memory());
+    routines = RoutineStore(database);
+    sessions = SessionStore(database);
+  });
+  tearDown(() => database.close());
+
+  final index = ExerciseIndex(<Exercise>[
+    Exercise(
+      id: 'bench',
+      name: 'Barbell bench press',
+      equipment: 'Barbell',
+      loadType: 'weighted',
+      primary: const <String>['chest/mid'],
+      secondary: const <String>[],
+      setup: '',
+      posture: '',
+      execution: '',
+      commonMistakes: '',
+    ),
+    Exercise(
+      id: 'ohp',
+      name: 'Overhead press',
+      equipment: 'Barbell',
+      loadType: 'weighted',
+      primary: const <String>['shoulders/front-delt'],
+      secondary: const <String>[],
+      setup: '',
+      posture: '',
+      execution: '',
+      commonMistakes: '',
+    ),
+  ]);
+
+  Future<void> pumpLanding(WidgetTester tester) async {
+    late List<Routine> seededRoutines;
+    late List<RoutineFolder> seededFolders;
+    late WorkoutSession? open;
+    await tester.runAsync(() async {
+      seededRoutines = await routines.readRoutines();
+      seededFolders = await routines.readFolders();
+      open = await sessions.readOpenSession();
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        key: UniqueKey(),
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          exerciseIndexProvider.overrideWithValue(index),
+          initialRoutinesProvider.overrideWithValue(seededRoutines),
+          initialRoutineFoldersProvider.overrideWithValue(seededFolders),
+          initialActiveSessionProvider.overrideWithValue(open),
+          initialSavedSessionsProvider.overrideWithValue(<WorkoutSession>[]),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          home: const Scaffold(body: WorkoutRoot()),
+        ),
+      ),
+    );
+    await tester.pump();
+  }
+
+  Future<void> act(WidgetTester tester, Future<void> Function() body) async {
+    await tester.runAsync(() async {
+      await body();
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+    });
+    await tester.pump();
+  }
+
+  /// A routine of two lifts, two planned sets on the first.
+  Future<Routine> pushDay() async {
+    final routine = await routines.createRoutine(name: 'Push day');
+    final bench =
+        await routines.addExercise(routineId: routine.id, exerciseId: 'bench');
+    await routines.addSet(
+        routineExerciseId: bench, targetWeightKg: 60, targetReps: 8);
+    await routines.addSet(
+        routineExerciseId: bench, targetWeightKg: 60, targetReps: 8);
+    await routines.addExercise(routineId: routine.id, exerciseId: 'ohp');
+    return (await routines.readRoutines()).single;
+  }
+
+  group('what the landing lists', () {
+    testWidgets('leads with Start empty workout, then the routine controls',
+        (tester) async {
+      await pumpLanding(tester);
+
+      expect(find.text('Start empty workout'), findsOneWidget);
+      expect(find.text('ROUTINES'), findsOneWidget);
+      expect(find.byKey(WorkoutLandingBody.newRoutineKey), findsOneWidget);
+      expect(find.byKey(WorkoutLandingBody.templatesKey), findsOneWidget);
+      expect(find.byKey(WorkoutLandingBody.newFolderKey), findsOneWidget);
+    });
+
+    testWidgets('a routine card names its exercises', (tester) async {
+      await tester.runAsync(pushDay);
+      await pumpLanding(tester);
+
+      expect(find.text('Push day'), findsOneWidget);
+      expect(
+        find.text('Barbell bench press, Overhead press'),
+        findsOneWidget,
+        reason: 'the card says what is in the routine, in order',
+      );
+    });
+
+    testWidgets('an empty routine cannot be started', (tester) async {
+      await tester.runAsync(
+          () => routines.createRoutine(name: 'Nothing in here'));
+      await pumpLanding(tester);
+
+      final start = tester.widget<FilledButton>(find.descendant(
+        of: find.byType(RoutineCard),
+        matching: find.byType(FilledButton),
+      ));
+      // Starting it would open a workout with nothing in it, which is what
+      // Start empty workout is already for.
+      expect(start.onPressed, isNull);
+      expect(find.text('No exercises yet'), findsOneWidget);
+    });
+
+    testWidgets('with no routines it points at Start empty workout',
+        (tester) async {
+      await pumpLanding(tester);
+
+      expect(find.byType(RoutineCard), findsNothing);
+      expect(find.textContaining('Routines you build appear here'),
+          findsOneWidget);
+    });
+  });
+
+  group('starting a routine', () {
+    testWidgets('copies its exercises and planned sets into the session',
+        (tester) async {
+      await tester.runAsync(pushDay);
+      await pumpLanding(tester);
+
+      await act(tester, () async {
+        await tester.tap(find.text('Start routine'));
+      });
+
+      final open = await tester.runAsync(() => sessions.readOpenSession());
+      expect(open, isNotNull);
+      expect(
+        open!.exercises.map((e) => e.exerciseId),
+        <String>['bench', 'ohp'],
+        reason: 'in the routine\'s order',
+      );
+      // The targets arrive as uncompleted rows: the numbers are already there
+      // and the user ticks them off. `saveOpenSession` drops whatever is still
+      // unticked at Finish.
+      final bench = open.exercises.first;
+      expect(bench.sets, hasLength(2));
+      expect(bench.sets.first.weightKg, 60);
+      expect(bench.sets.first.reps, 8);
+      expect(bench.sets.every((s) => !s.completed), isTrue);
+    });
+
+    testWidgets('the landing is replaced by the log screen', (tester) async {
+      await tester.runAsync(pushDay);
+      await pumpLanding(tester);
+
+      await act(tester, () async {
+        await tester.tap(find.text('Start routine'));
+      });
+
+      expect(find.byType(LogWorkoutBody), findsOneWidget);
+      expect(find.byType(RoutineCard), findsNothing,
+          reason: 'an open workout replaces the landing, never covers it');
+    });
+
+    testWidgets('the session takes the routine\'s name', (tester) async {
+      await tester.runAsync(pushDay);
+      await pumpLanding(tester);
+
+      await act(tester, () async {
+        await tester.tap(find.text('Start routine'));
+      });
+
+      final open = await tester.runAsync(() => sessions.readOpenSession());
+      expect(open!.title, 'Push day');
+    });
+  });
+
+  group('reordering', () {
+    testWidgets('a long-press drag writes a new order that survives a re-read',
+        (tester) async {
+      await tester.runAsync(() async {
+        await routines.createRoutine(name: 'First');
+        await routines.createRoutine(name: 'Second');
+      });
+      await pumpLanding(tester);
+
+      // Newest first until the user drags one.
+      expect(
+        tester
+            .widgetList<RoutineCard>(find.byType(RoutineCard))
+            .map((c) => c.routine.name),
+        <String>['Second', 'First'],
+      );
+
+      final cards = find.byType(RoutineCard);
+      final cardHeight = tester.getSize(cards.first).height;
+      final gesture = await tester.startGesture(tester.getCenter(cards.first));
+      // The delayed listener wants a real long press before it will drag.
+      await tester.pump(const Duration(milliseconds: 700));
+      // Then move in steps: one jump past the target does not register as a
+      // drag across the row it has to swap with.
+      for (var i = 0; i < 6; i++) {
+        await gesture.moveBy(Offset(0, cardHeight / 4));
+        await tester.pump(const Duration(milliseconds: 30));
+      }
+      await act(tester, () async {
+        await gesture.up();
+      });
+      await tester.pumpAndSettle();
+
+      final stored = await tester.runAsync(routines.readRoutines);
+      expect(
+        stored!.map((r) => r.name),
+        <String>['First', 'Second'],
+        reason: 'the order is on disk, not only in the widget tree',
+      );
+    });
+  });
+
+  group('folders', () {
+    testWidgets('a folder lists its own routines and counts them',
+        (tester) async {
+      await tester.runAsync(() async {
+        final folder = await routines.createFolder(name: 'Abc');
+        final routine = await pushDay();
+        await routines.moveRoutineToFolder(
+            routineId: routine.id, folderId: folder.id);
+      });
+      await pumpLanding(tester);
+
+      expect(find.text('Abc (1)'), findsOneWidget);
+      expect(find.text('MY ROUTINES (0)'), findsOneWidget,
+          reason: 'a filed routine leaves the unfiled group');
+    });
+
+    testWidgets('an empty folder offers a routine rather than sitting blank',
+        (tester) async {
+      await tester.runAsync(() => routines.createFolder(name: 'Abc'));
+      await pumpLanding(tester);
+
+      expect(find.text('Abc (0)'), findsOneWidget);
+      expect(find.text('+ Add new routine'), findsOneWidget);
+    });
+
+    testWidgets('collapsing a folder hides its routines, not its heading',
+        (tester) async {
+      await tester.runAsync(() async {
+        final folder = await routines.createFolder(name: 'Abc');
+        final routine = await pushDay();
+        await routines.moveRoutineToFolder(
+            routineId: routine.id, folderId: folder.id);
+      });
+      await pumpLanding(tester);
+      expect(find.byType(RoutineCard), findsOneWidget);
+
+      final folders = await tester.runAsync(() => routines.readFolders());
+      await tester.tap(
+          find.byKey(RoutineFolderSection.headerKey(folders!.single.id)));
+      await tester.pump();
+
+      expect(find.byType(RoutineCard), findsNothing);
+      expect(find.text('Abc (1)'), findsOneWidget);
+    });
+  });
+}
