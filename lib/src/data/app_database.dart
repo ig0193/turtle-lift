@@ -64,7 +64,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   /// **The first migration in the app's history.** There was no
   /// [MigrationStrategy] before this one, so the shape here is the precedent:
@@ -176,6 +176,13 @@ class AppDatabase extends _$AppDatabase {
           // Step 5 — the session note on the Save workout screen. Guarded on
           // the column like step 4, because a database created fresh at 4
           // already has it while one upgraded to 4 does not.
+          if (from < 6) {
+            final columns = await m.database
+                .customSelect('PRAGMA table_info(sessions)')
+                .get();
+            final has = columns.any((r) => r.read<String>('name') == 'routine_id');
+            if (!has) await m.addColumn(sessions, sessions.routineId);
+          }
           if (from < 5) {
             final columns = await m.database
                 .customSelect('PRAGMA table_info(sessions)')
@@ -365,6 +372,17 @@ class Sessions extends Table {
   /// the user's own words; neither is ever the reviewed copy that lives on an
   /// `Exercise`.
   TextColumn get notes => text().nullable()();
+
+  /// The routine this workout was started from, or null.
+  ///
+  /// **Separate from [templateId], not folded into it.** A template names
+  /// muscle groups and a routine names exercises; `isTemplateSession` branches
+  /// on the former, so a routine id sitting in that column would send a routine
+  /// run down the template path. **No foreign key, and deliberately not
+  /// cascading**: deleting a routine must not delete the workouts done from it.
+  /// A dangling id here simply means the question "update the routine?" has
+  /// nothing left to ask about.
+  TextColumn get routineId => text().nullable()();
 
   /// Set on the one open session, null on every saved one.
   ///

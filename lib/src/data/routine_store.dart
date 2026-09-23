@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart' show immutable;
 import 'package:uuid/uuid.dart';
 
 import 'app_database.dart';
+import 'session_store.dart';
+import 'set_format.dart';
 
 /// The one writer of routines — the user's own ordered exercise lists.
 ///
@@ -309,6 +311,44 @@ class RoutineStore {
   Future<void> deleteSet(String setId) async {
     await (_db.delete(_db.routineSets)..where((s) => s.id.equals(setId))).go();
   }
+}
+
+/// Whether [session] stopped matching the [routine] it was started from.
+///
+/// **Only the shape is compared — which exercises, in which order, and how many
+/// sets each.** Not the weights: a routine that plans 60kg and a day you managed
+/// 62.5 is the routine working, not a routine that needs rewriting, and asking
+/// after every good session would train the user to dismiss the question
+/// without reading it.
+///
+/// **Uncompleted sets are invisible here**, because `saveOpenSession` drops them
+/// a moment later. A row the user opened and never did must not provoke a
+/// question about a change that is about to disappear.
+///
+/// A session that logged nothing at all never diverges: it is not saved either
+/// (`00` §9), so there is nothing to have learned from it.
+bool routineDiverges(Routine routine, WorkoutSession session) {
+  final done = <(String, int)>[
+    for (final exercise in session.exercises)
+      if (exercise.sets.where((s) => isSetComplete(exercise.loadType, s)).isNotEmpty)
+        (
+          exercise.exerciseId,
+          exercise.sets
+              .where((s) => isSetComplete(exercise.loadType, s))
+              .length,
+        ),
+  ];
+  if (done.isEmpty) return false;
+
+  final planned = <(String, int)>[
+    for (final exercise in routine.exercises)
+      (exercise.exerciseId, exercise.sets.length),
+  ];
+  if (done.length != planned.length) return true;
+  for (var i = 0; i < done.length; i++) {
+    if (done[i] != planned[i]) return true;
+  }
+  return false;
 }
 
 /// One of the user's routines: an ordered exercise list with target sets.

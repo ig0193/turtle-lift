@@ -130,6 +130,7 @@ class SessionStore {
       startedAt: row.startedAt,
       endedAt: row.endedAt,
       notes: row.notes,
+      routineId: row.routineId,
       exercises: exercises,
     );
   }
@@ -145,6 +146,7 @@ class SessionStore {
   Future<WorkoutSession> createSession({
     String? templateId,
     String? templateName,
+    String? routineId,
     List<String> groupIds = const <String>[],
     LocalDate? performedOn,
   }) =>
@@ -166,6 +168,7 @@ class SessionStore {
                   loggedAt: DateTime.now(),
                   startedAt: Value<DateTime?>(DateTime.now()),
                   templateId: Value<String?>(templateId),
+                  routineId: Value<String?>(routineId),
                   templateName: Value<String?>(templateName),
                   groupIds: Value<String?>(
                     groupIds.isEmpty ? null : encodeGroupIds(groupIds),
@@ -575,6 +578,7 @@ class WorkoutSession {
     this.startedAt,
     this.endedAt,
     this.notes,
+    this.routineId,
   });
 
   final String id;
@@ -608,6 +612,10 @@ class WorkoutSession {
 
   /// The user's note about the whole session, from the Save workout screen.
   final String? notes;
+
+  /// The routine this workout was started from, if any. Not the same thing as
+  /// [templateId] — see `CONTEXT.md`.
+  final String? routineId;
 
   final List<SessionExercise> exercises;
 

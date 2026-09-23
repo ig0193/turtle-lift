@@ -115,7 +115,10 @@ class ActiveSession extends Notifier<WorkoutSession?> {
   /// row still uncompleted at Finish, so a plan the user did not get to leaves
   /// no trace in history.
   Future<void> startFromRoutine(Routine routine, ExerciseIndex index) async {
-    final session = await _store.createSession(templateName: routine.name);
+    final session = await _store.createSession(
+      templateName: routine.name,
+      routineId: routine.id,
+    );
     for (final exercise in routine.exercises) {
       final library = index.byId(exercise.exerciseId);
       if (library == null) continue;

@@ -163,8 +163,9 @@ are marked in `docs/00` §3, §9, §13 and `docs/02`.
   celebration takeover — ours stays `FinishCelebration` + `SessionSummaryScreen`.
 - **Not built:** set types (warm-up / drop / to-failure), supersets, RPE, plate
   calculator, custom exercises.
-- **Schema is at 5.** Step 4 is the rebuild (routines, folders, session timings,
-  per-exercise notes and rest timers); step 5 is the session note. Both guard on
+- **Schema is at 6.** Step 4 is the rebuild (routines, folders, session timings,
+  per-exercise notes and rest timers); step 5 is the session note; step 6 is
+  `Sessions.routineId`, which the "update routine?" prompt reads. Both guard on
   the *column*, not on `from`, because `createTable` always builds today's shape —
   an install coming from version 1 arrives with those columns already on it and one
   from version 3 does not.

@@ -960,6 +960,17 @@ class $SessionsTable extends Sessions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _routineIdMeta = const VerificationMeta(
+    'routineId',
+  );
+  @override
+  late final GeneratedColumn<String> routineId = GeneratedColumn<String>(
+    'routine_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _openMarkerMeta = const VerificationMeta(
     'openMarker',
   );
@@ -983,6 +994,7 @@ class $SessionsTable extends Sessions
     startedAt,
     endedAt,
     notes,
+    routineId,
     openMarker,
   ];
   @override
@@ -1055,6 +1067,12 @@ class $SessionsTable extends Sessions
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('routine_id')) {
+      context.handle(
+        _routineIdMeta,
+        routineId.isAcceptableOrUnknown(data['routine_id']!, _routineIdMeta),
+      );
+    }
     if (data.containsKey('open_marker')) {
       context.handle(
         _openMarkerMeta,
@@ -1111,6 +1129,10 @@ class $SessionsTable extends Sessions
       notes: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
+      ),
+      routineId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}routine_id'],
       ),
       openMarker: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -1189,6 +1211,17 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
   /// `Exercise`.
   final String? notes;
 
+  /// The routine this workout was started from, or null.
+  ///
+  /// **Separate from [templateId], not folded into it.** A template names
+  /// muscle groups and a routine names exercises; `isTemplateSession` branches
+  /// on the former, so a routine id sitting in that column would send a routine
+  /// run down the template path. **No foreign key, and deliberately not
+  /// cascading**: deleting a routine must not delete the workouts done from it.
+  /// A dangling id here simply means the question "update the routine?" has
+  /// nothing left to ask about.
+  final String? routineId;
+
   /// Set on the one open session, null on every saved one.
   ///
   /// **A nullable column with a unique index, so "one at a time" is the
@@ -1210,6 +1243,7 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     this.startedAt,
     this.endedAt,
     this.notes,
+    this.routineId,
     this.openMarker,
   });
   @override
@@ -1243,6 +1277,9 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
     }
+    if (!nullToAbsent || routineId != null) {
+      map['routine_id'] = Variable<String>(routineId);
+    }
     if (!nullToAbsent || openMarker != null) {
       map['open_marker'] = Variable<int>(openMarker);
     }
@@ -1275,6 +1312,9 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      routineId: routineId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(routineId),
       openMarker: openMarker == null && nullToAbsent
           ? const Value.absent()
           : Value(openMarker),
@@ -1297,6 +1337,7 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
       startedAt: serializer.fromJson<DateTime?>(json['startedAt']),
       endedAt: serializer.fromJson<DateTime?>(json['endedAt']),
       notes: serializer.fromJson<String?>(json['notes']),
+      routineId: serializer.fromJson<String?>(json['routineId']),
       openMarker: serializer.fromJson<int?>(json['openMarker']),
     );
   }
@@ -1314,6 +1355,7 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
       'startedAt': serializer.toJson<DateTime?>(startedAt),
       'endedAt': serializer.toJson<DateTime?>(endedAt),
       'notes': serializer.toJson<String?>(notes),
+      'routineId': serializer.toJson<String?>(routineId),
       'openMarker': serializer.toJson<int?>(openMarker),
     };
   }
@@ -1329,6 +1371,7 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     Value<DateTime?> startedAt = const Value.absent(),
     Value<DateTime?> endedAt = const Value.absent(),
     Value<String?> notes = const Value.absent(),
+    Value<String?> routineId = const Value.absent(),
     Value<int?> openMarker = const Value.absent(),
   }) => SessionRow(
     id: id ?? this.id,
@@ -1341,6 +1384,7 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     startedAt: startedAt.present ? startedAt.value : this.startedAt,
     endedAt: endedAt.present ? endedAt.value : this.endedAt,
     notes: notes.present ? notes.value : this.notes,
+    routineId: routineId.present ? routineId.value : this.routineId,
     openMarker: openMarker.present ? openMarker.value : this.openMarker,
   );
   SessionRow copyWithCompanion(SessionsCompanion data) {
@@ -1361,6 +1405,7 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
       startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
       endedAt: data.endedAt.present ? data.endedAt.value : this.endedAt,
       notes: data.notes.present ? data.notes.value : this.notes,
+      routineId: data.routineId.present ? data.routineId.value : this.routineId,
       openMarker: data.openMarker.present
           ? data.openMarker.value
           : this.openMarker,
@@ -1380,6 +1425,7 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
           ..write('startedAt: $startedAt, ')
           ..write('endedAt: $endedAt, ')
           ..write('notes: $notes, ')
+          ..write('routineId: $routineId, ')
           ..write('openMarker: $openMarker')
           ..write(')'))
         .toString();
@@ -1397,6 +1443,7 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     startedAt,
     endedAt,
     notes,
+    routineId,
     openMarker,
   );
   @override
@@ -1413,6 +1460,7 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
           other.startedAt == this.startedAt &&
           other.endedAt == this.endedAt &&
           other.notes == this.notes &&
+          other.routineId == this.routineId &&
           other.openMarker == this.openMarker);
 }
 
@@ -1427,6 +1475,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
   final Value<DateTime?> startedAt;
   final Value<DateTime?> endedAt;
   final Value<String?> notes;
+  final Value<String?> routineId;
   final Value<int?> openMarker;
   final Value<int> rowid;
   const SessionsCompanion({
@@ -1440,6 +1489,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     this.startedAt = const Value.absent(),
     this.endedAt = const Value.absent(),
     this.notes = const Value.absent(),
+    this.routineId = const Value.absent(),
     this.openMarker = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1454,6 +1504,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     this.startedAt = const Value.absent(),
     this.endedAt = const Value.absent(),
     this.notes = const Value.absent(),
+    this.routineId = const Value.absent(),
     this.openMarker = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1470,6 +1521,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     Expression<DateTime>? startedAt,
     Expression<DateTime>? endedAt,
     Expression<String>? notes,
+    Expression<String>? routineId,
     Expression<int>? openMarker,
     Expression<int>? rowid,
   }) {
@@ -1484,6 +1536,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
       if (startedAt != null) 'started_at': startedAt,
       if (endedAt != null) 'ended_at': endedAt,
       if (notes != null) 'notes': notes,
+      if (routineId != null) 'routine_id': routineId,
       if (openMarker != null) 'open_marker': openMarker,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1500,6 +1553,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     Value<DateTime?>? startedAt,
     Value<DateTime?>? endedAt,
     Value<String?>? notes,
+    Value<String?>? routineId,
     Value<int?>? openMarker,
     Value<int>? rowid,
   }) {
@@ -1514,6 +1568,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
       startedAt: startedAt ?? this.startedAt,
       endedAt: endedAt ?? this.endedAt,
       notes: notes ?? this.notes,
+      routineId: routineId ?? this.routineId,
       openMarker: openMarker ?? this.openMarker,
       rowid: rowid ?? this.rowid,
     );
@@ -1554,6 +1609,9 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (routineId.present) {
+      map['routine_id'] = Variable<String>(routineId.value);
+    }
     if (openMarker.present) {
       map['open_marker'] = Variable<int>(openMarker.value);
     }
@@ -1576,6 +1634,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
           ..write('startedAt: $startedAt, ')
           ..write('endedAt: $endedAt, ')
           ..write('notes: $notes, ')
+          ..write('routineId: $routineId, ')
           ..write('openMarker: $openMarker, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -4780,6 +4839,7 @@ typedef $$SessionsTableCreateCompanionBuilder = SessionsCompanion Function({
   Value<DateTime?> startedAt,
   Value<DateTime?> endedAt,
   Value<String?> notes,
+  Value<String?> routineId,
   Value<int?> openMarker,
   Value<int> rowid,
 });
@@ -4794,6 +4854,7 @@ typedef $$SessionsTableUpdateCompanionBuilder = SessionsCompanion Function({
   Value<DateTime?> startedAt,
   Value<DateTime?> endedAt,
   Value<String?> notes,
+  Value<String?> routineId,
   Value<int?> openMarker,
   Value<int> rowid,
 });
@@ -4880,6 +4941,11 @@ class $$SessionsTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get routineId => $composableBuilder(
+    column: $table.routineId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4973,6 +5039,11 @@ class $$SessionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get routineId => $composableBuilder(
+    column: $table.routineId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get openMarker => $composableBuilder(
     column: $table.openMarker,
     builder: (column) => ColumnOrderings(column),
@@ -5024,6 +5095,9 @@ class $$SessionsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get routineId =>
+      $composableBuilder(column: $table.routineId, builder: (column) => column);
 
   GeneratedColumn<int> get openMarker => $composableBuilder(
     column: $table.openMarker,
@@ -5094,6 +5168,7 @@ class $$SessionsTableTableManager
                 Value<DateTime?> startedAt = const Value.absent(),
                 Value<DateTime?> endedAt = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> routineId = const Value.absent(),
                 Value<int?> openMarker = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SessionsCompanion(
@@ -5107,6 +5182,7 @@ class $$SessionsTableTableManager
                 startedAt: startedAt,
                 endedAt: endedAt,
                 notes: notes,
+                routineId: routineId,
                 openMarker: openMarker,
                 rowid: rowid,
               ),
@@ -5122,6 +5198,7 @@ class $$SessionsTableTableManager
                 Value<DateTime?> startedAt = const Value.absent(),
                 Value<DateTime?> endedAt = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> routineId = const Value.absent(),
                 Value<int?> openMarker = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SessionsCompanion.insert(
@@ -5135,6 +5212,7 @@ class $$SessionsTableTableManager
                 startedAt: startedAt,
                 endedAt: endedAt,
                 notes: notes,
+                routineId: routineId,
                 openMarker: openMarker,
                 rowid: rowid,
               ),

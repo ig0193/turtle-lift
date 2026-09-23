@@ -54,6 +54,7 @@ Male and female assets have different coordinate spaces — never assume a value
 | `startedAt` | timestamp? | **[0004]** Internal. When the workout began; the live duration ticks from it. |
 | `endedAt` | timestamp? | **[0004]** Internal. Stamped once by Finish, never re-stamped by an edit. Duration is `endedAt − startedAt`, derived — see §3. |
 | `notes` | string? | **[0004]** The user's note about the session, from the Save workout screen. |
+| `routineId` | id? | **[0004]** The routine this workout was started from. **Not** `templateId` — that column branches the template path. No foreign key and no cascade: deleting a routine must not delete the workouts done from it. |
 
 **SessionExercise** — `exerciseId`, `order`, `loadType` (snapshotted at add time), a stored `markedDone` flag, and **[0004]** `notes` (the user's note for this lift) and `restTimerSec` (null = OFF).
 
@@ -208,7 +209,9 @@ streakAsOf(date) -> int
 
 **No template lock.** `+ Add exercise` is unrestricted everywhere. A routine is an ordered exercise list, not a claim over a set of muscle groups, so there is nothing for a lock to enforce. (Reversed in `adr/0004`; it previously read *"exercises outside the template's muscle groups cannot be added to a template session"*.)
 
-**Finish** — available any time. **A session with 0 completed sets must not save.**
+**Finish** — available any time. **A session with 0 completed sets must not save**, enforced in `SessionStore.saveOpenSession` rather than on a button, because the button has moved twice.
+
+**[0004] Update routine?** — after finishing a workout started from a routine, offer to rewrite that routine to what was actually done. Asked **only when the shape diverged** — different exercises, a different order, or a different number of completed sets — never when only the weights differed, which is the routine working rather than a routine needing a rewrite. Keep is the quiet default.
 
 **Session persistence** — an active session persists indefinitely; never auto-discarded. Returning to the Workout tab shows the session in place of the landing; no Resume card. Starting a new workout auto-saves the open one (>=1 completed set, keeping its **original `performedOn`**, with a toast) or discards it silently (0 sets). One active session at a time.
 

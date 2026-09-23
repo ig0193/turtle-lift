@@ -262,6 +262,111 @@ void main() {
     });
   });
 
+  group('updating a routine from what was done', () {
+    /// A routine of one exercise, two planned sets.
+    ///
+    /// Deliberately not [pushDay], whose second exercise has no planned sets:
+    /// skipping a planned exercise *is* a divergence, so that fixture could
+    /// never produce the "ran it as planned" case.
+    Future<void> benchOnly() async {
+      final routine = await routines.createRoutine(name: 'Bench day');
+      final bench = await routines.addExercise(
+          routineId: routine.id, exerciseId: 'bench');
+      await routines.addSet(
+          routineExerciseId: bench, targetWeightKg: 60, targetReps: 8);
+      await routines.addSet(
+          routineExerciseId: bench, targetWeightKg: 60, targetReps: 8);
+    }
+
+    /// Runs the routine, optionally adds a set beyond the plan, and finishes.
+    Future<void> runAndFinish(WidgetTester tester, {required bool diverge}) async {
+      await tester.runAsync(benchOnly);
+      await pumpLanding(tester);
+      await act(tester, () async {
+        await tester.tap(find.text('Start routine'));
+      });
+
+      final open = (await tester.runAsync(() => sessions.readOpenSession()))!;
+      final bench = open.exercises.first;
+      await act(tester, () async {
+        for (final set in bench.sets) {
+          await sessions.writeSet(
+            sessionExerciseId: bench.id,
+            setId: set.id,
+            position: set.position,
+            completed: true,
+            weightKg: 60,
+            reps: 8,
+          );
+        }
+        if (diverge) {
+          await sessions.writeSet(
+            sessionExerciseId: bench.id,
+            position: 2,
+            completed: true,
+            weightKg: 62.5,
+            reps: 6,
+          );
+        }
+        await sessions.saveOpenSession();
+      });
+    }
+
+    testWidgets('the session remembers which routine it came from',
+        (tester) async {
+      await tester.runAsync(benchOnly);
+      await pumpLanding(tester);
+      await act(tester, () async {
+        await tester.tap(find.text('Start routine'));
+      });
+
+      final open = await tester.runAsync(() => sessions.readOpenSession());
+      final stored = await tester.runAsync(routines.readRoutines);
+      expect(open!.routineId, stored!.single.id);
+      // Not folded into templateId: that column branches the template path.
+      expect(open.templateId, isNull);
+    });
+
+    testWidgets('a third set makes the routine diverge', (tester) async {
+      await runAndFinish(tester, diverge: true);
+
+      final saved =
+          (await tester.runAsync(() => sessions.readSavedSessions()))!.single;
+      final routine = (await tester.runAsync(routines.readRoutines))!.single;
+      expect(routineDiverges(routine, saved), isTrue);
+    });
+
+    testWidgets('running it as planned does not', (tester) async {
+      await runAndFinish(tester, diverge: false);
+
+      final saved =
+          (await tester.runAsync(() => sessions.readSavedSessions()))!.single;
+      final routine = (await tester.runAsync(routines.readRoutines))!.single;
+      expect(routineDiverges(routine, saved), isFalse);
+    });
+
+    testWidgets('updating rewrites the plan to what was lifted',
+        (tester) async {
+      await runAndFinish(tester, diverge: true);
+      final saved =
+          (await tester.runAsync(() => sessions.readSavedSessions()))!.single;
+      final routineId = (await tester.runAsync(routines.readRoutines))!.single.id;
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(WorkoutRoot)),
+      );
+      await tester.runAsync(() => container
+          .read(routineListProvider.notifier)
+          .updateFromSession(routineId, saved));
+
+      final routine = (await tester.runAsync(routines.readRoutines))!.single;
+      expect(routine.exercises.single.sets, hasLength(3));
+      // The new targets are what was lifted, not what was planned.
+      expect(routine.exercises.single.sets.last.targetWeightKg, 62.5);
+      expect(routine.exercises.single.sets.last.targetReps, 6);
+    });
+  });
+
   group('folders', () {
     testWidgets('a folder lists its own routines and counts them',
         (tester) async {

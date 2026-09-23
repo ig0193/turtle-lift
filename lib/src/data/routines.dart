@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'load_type.dart';
 import 'routine_store.dart';
+import 'session_store.dart';
+import 'set_format.dart';
 import 'settings_store.dart' show appDatabaseProvider;
 
 /// The store, wired to the one database.
@@ -84,6 +87,64 @@ class RoutineList extends Notifier<List<Routine>> {
           targetWeightKg: set.targetWeightKg,
           targetReps: set.targetReps,
           targetDurationSec: set.targetDurationSec,
+        );
+      }
+    }
+    await _refresh();
+  }
+
+  /// Rewrites a routine to match the workout that was actually done.
+  ///
+  /// **A replace, not a merge.** The session already carries the routine's
+  /// notes and rest timers — they were copied onto it at the start, and edited
+  /// there if the user changed them — so rebuilding from the session keeps
+  /// everything the user touched and drops only what they dropped. Merging
+  /// would have to guess which of two orderings won.
+  ///
+  /// The new targets are what was lifted, not what was planned: that is the
+  /// whole point of the question this answers.
+  Future<void> updateFromSession(
+    String routineId,
+    WorkoutSession session,
+  ) async {
+    final existing = state.where((r) => r.id == routineId).firstOrNull;
+    if (existing == null) return;
+
+    for (final exercise in existing.exercises) {
+      await _store.deleteExercise(exercise.id);
+    }
+
+    for (final exercise in session.exercises) {
+      final done = exercise.sets
+          .where((s) => isSetComplete(exercise.loadType, s))
+          .toList(growable: false);
+      if (done.isEmpty) continue;
+
+      final rowId = await _store.addExercise(
+        routineId: routineId,
+        exerciseId: exercise.exerciseId,
+      );
+      if (exercise.notes != null) {
+        await _store.setExerciseNotes(
+            routineExerciseId: rowId, notes: exercise.notes);
+      }
+      if (exercise.restTimerSec != null) {
+        await _store.setExerciseRestTimer(
+            routineExerciseId: rowId, seconds: exercise.restTimerSec);
+      }
+      for (final set in done) {
+        await _store.addSet(
+          routineExerciseId: rowId,
+          // Which field held the load depends on the type, and the routine
+          // builder reads column 0 for all of weight, assistance and time.
+          targetWeightKg: switch (exercise.loadType) {
+            LoadType.weighted => set.weightKg,
+            LoadType.bodyweight => set.addedKg,
+            LoadType.assisted => set.assistKg,
+            LoadType.timed || null => null,
+          },
+          targetReps: exercise.loadType == LoadType.timed ? null : set.reps,
+          targetDurationSec: set.durationSec,
         );
       }
     }

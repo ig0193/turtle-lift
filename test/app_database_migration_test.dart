@@ -161,7 +161,7 @@ void main() {
       final database = openUpgraded();
       await database.select(database.settings).get();
 
-      expect(database.schemaVersion, 5);
+      expect(database.schemaVersion, 6);
     });
 
     test('adds a usable bodyweight table', () async {
@@ -546,6 +546,9 @@ void main() {
       expect(exercise.notes, isNull);
       expect(exercise.restTimerSec, isNull);
       expect(exercise.markedDone, isTrue, reason: 'old rows keep what they had');
+      // A workout logged before routines existed came from no routine, and
+      // there is nothing to infer from its template.
+      expect(session.routineId, isNull);
     });
 
     test('settings and the user own templates are untouched', () async {
@@ -570,7 +573,7 @@ void main() {
       await openUpgraded().close();
 
       final reopened = openUpgraded();
-      expect(reopened.schemaVersion, 5);
+      expect(reopened.schemaVersion, 6);
       expect((await reopened.select(reopened.sessions).get()), hasLength(1));
     });
   });

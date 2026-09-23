@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/active_session.dart';
 import '../data/derived.dart';
+import '../data/routine_store.dart';
+import '../data/routines.dart';
 import '../data/session_store.dart';
 import '../data/set_format.dart';
 import '../theme/app_palette.dart';
@@ -29,6 +31,7 @@ class SaveWorkoutScreen extends ConsumerStatefulWidget {
   static const Key discardKey = ValueKey<String>('save-discard');
   static const Key notesKey = ValueKey<String>('save-notes');
   static const Key titleKey = ValueKey<String>('save-title');
+  static const Key updateRoutineKey = ValueKey<String>('save-update-routine');
 
   @override
   ConsumerState<SaveWorkoutScreen> createState() => _SaveWorkoutScreenState();
@@ -154,8 +157,66 @@ class _SaveWorkoutScreenState extends ConsumerState<SaveWorkoutScreen> {
     await notifier.finish();
 
     if (!context.mounted) return;
+    await _offerRoutineUpdate(context, session);
+
+    if (!context.mounted) return;
     Navigator.of(context).pop();
     if (hadSets) pushSessionSummary(context, id, celebrate: true);
+  }
+
+  /// Asks whether the routine should learn from what was actually done.
+  ///
+  /// **Only when the shape changed**, per `routineDiverges` — not after every
+  /// session. A question that appears every time is a question that gets
+  /// dismissed without reading, and this one rewrites a thing the user built.
+  ///
+  /// **Keep is the quiet default**: doing nothing leaves the routine as it was,
+  /// so the destructive reading of the two answers is the one that takes a
+  /// deliberate tap.
+  Future<void> _offerRoutineUpdate(
+    BuildContext context,
+    WorkoutSession session,
+  ) async {
+    final routineId = session.routineId;
+    if (routineId == null) return;
+    final routine =
+        ref.read(routinesProvider).where((r) => r.id == routineId).firstOrNull;
+    if (routine == null) return;
+    if (!routineDiverges(routine, session)) return;
+
+    final update = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppPalette.surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text('Update ${routine.name}?',
+            style: const TextStyle(color: AppPalette.textPrimary)),
+        content: const Text(
+          'This workout no longer matches the routine. Update the routine to '
+          'what you just did, or keep it as it is.',
+          style: TextStyle(color: AppPalette.textSecondary),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep routine',
+                style: TextStyle(color: AppPalette.textSecondary)),
+          ),
+          TextButton(
+            key: SaveWorkoutScreen.updateRoutineKey,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Update routine',
+                style: TextStyle(color: AppPalette.accentLight)),
+          ),
+        ],
+      ),
+    );
+    if (update ?? false) {
+      await ref
+          .read(routineListProvider.notifier)
+          .updateFromSession(routineId, session);
+    }
   }
 
   Future<void> _discard(BuildContext context) async {
