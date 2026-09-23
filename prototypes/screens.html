@@ -33,6 +33,15 @@ figure{margin:0}
 figcaption{font-size:11px;color:var(--t3);margin-top:8px;text-align:center;letter-spacing:.04em;
            text-transform:uppercase}
 
+/* ---- superseded by adr/0004 ---- */
+.banner{border:1px solid #6B3A2A;background:#1E120C;border-radius:12px;padding:12px 14px;
+        margin-bottom:20px;font-size:12px;line-height:1.55;color:var(--t2)}
+.banner b{color:var(--t1)}
+.banner code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--acc2)}
+figure.stale .phone{opacity:.42;filter:saturate(.5)}
+figure.stale figcaption{color:#8A5540}
+figure.stale figcaption::after{content:" \2014 superseded";color:#8A5540}
+
 /* ---- phone ---- */
 .phone{width:330px;height:660px;background:var(--bg);border-radius:30px;overflow:hidden;
        position:relative;border:1px solid #2A241C;display:flex;flex-direction:column}
@@ -94,6 +103,37 @@ h2.sc{font-size:23px;font-weight:600;letter-spacing:-.02em;
 .bodymap .muscle-segment.on path{fill:var(--acc)}
 .bodymap .muscle-segment.on2 path{fill:var(--acc2)}
 .bodymap [aria-hidden=true]{fill:#2A241C}
+
+/* Workout landing (figure 2). The accent appears exactly once here, on .cta. */
+.cta{width:100%;display:flex;align-items:center;gap:11px;background:var(--acc);color:var(--on-acc);
+     border:0;border-radius:14px;padding:12px 14px;cursor:pointer;text-align:left;font:inherit}
+.cta .plus{font-size:22px;line-height:1}
+.cta b{display:block;font-size:16px;font-weight:700;letter-spacing:-.012em}
+.cta small{display:block;font-size:11.5px;font-weight:500;margin-top:2px}
+.cta .chev{margin-left:auto;font-size:17px}
+.thead{display:flex;align-items:center;justify-content:space-between;margin:22px 0 3px}
+.fchip{display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);
+       border-radius:99px;color:var(--t1);font:inherit;font-size:13px;padding:8px 13px;cursor:pointer}
+.cnt{font-size:12px;color:var(--t2);margin-bottom:13px}
+.tcard{display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--line);
+       border-radius:16px;padding:12px;margin-bottom:10px;cursor:pointer}
+.tmini{display:flex;gap:4px;flex-shrink:0;background:var(--bg);border-radius:9px;padding:3px 2px}
+.tmini svg{width:28px;height:46px;display:block}
+.tcard .nm{font-size:17px;font-weight:600;letter-spacing:-.012em}
+.chips{display:flex;gap:5px;margin-top:6px;overflow:hidden}
+.chips span{background:var(--bg);color:var(--t2);font-size:10.5px;font-weight:500;
+            padding:3px 7px;border-radius:6px;white-space:nowrap}
+.rec{font-size:11px;color:var(--t3);margin-top:7px}
+.golink{margin-left:auto;flex-shrink:0;width:30px;height:30px;border-radius:50%;background:var(--bg);
+        border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+        color:var(--t2);font-size:15px}
+.mlink{display:flex;align-items:center;justify-content:center;gap:7px;min-height:48px;width:100%;
+       background:none;border:0;color:var(--t2);font:inherit;font-size:12.5px;font-weight:500;
+       cursor:pointer}
+/* No separators at this size: a 2pt stroke is wider than most of the muscles
+   it would divide. Matches BodyDiagramPainter.separatorWidth = null. */
+.tmini .muscle-segment path{fill:var(--off);stroke:none;cursor:default}
+.tmini .muscle-segment.cov path{fill:var(--t2)}
 .flip{display:flex;justify-content:center;gap:6px;margin-bottom:6px}
 .flip button{background:var(--card);border:1px solid var(--line);color:var(--t3);font:inherit;
              font-size:11px;font-weight:500;padding:5px 15px;border-radius:99px;cursor:pointer}
@@ -280,6 +320,20 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--acc2);outl
   <span class="note">Screens 1–22 · complete app flow</span>
 </div>
 
+<div class="banner">
+  <b>The Workout tab screens below are superseded.</b> The tab was rebuilt to the
+  Hevy app's shape in <code>docs/adr/0004-workout-tab-hevy-parity.md</code>: the landing lists
+  <b>routines</b> (ordered exercise lists, in folders) instead of muscle-group templates, and a
+  live session runs on <b>one scrolling Log workout screen</b> with every exercise and set inline
+  &mdash; there is no push-per-exercise step any more.
+  <br><br>
+  The faded screens are kept as the record of what came before. <b>They are not the reference for
+  the Workout tab.</b> The Dart widgets are &mdash; <code>log_workout_screen.dart</code>,
+  <code>log_exercise_block.dart</code>, <code>set_table_row.dart</code>,
+  <code>routine_card.dart</code>, <code>routine_builder_screen.dart</code>,
+  <code>save_workout_screen.dart</code> &mdash; and so is the app itself, which runs.
+  Every other screen here still stands.
+</div>
 <div class="grid">
 
 <figure>
@@ -301,27 +355,55 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--acc2);outl
   <div class="status"><span>9:41</span><span>▮▮▮</span></div>
   <div class="body">
     <h2 class="sc">Workout</h2>
-    <div id="w-new">
-      <div class="empty">
-        <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 12h16M7 8v8M17 8v8"/></svg></div>
-        <h3>Ready when you are</h3>
-        <p>Pick a template for a planned session, or go ad-hoc and add exercises as you find them.</p>
-      </div>
+    <button class="cta"><span class="plus">+</span><span style="flex:1"><b>Ad-hoc workout</b><small>Search and add exercises as you go</small></span><span class="chev">&#8250;</span></button>
+
+    <div class="thead">
+      <p class="lbl" style="margin:0">Templates</p>
+      <button class="fchip"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--t2);fill:none;stroke-width:1.8;stroke-linecap:round"><path d="M4 7h16M7 12h10M10 17h4"/></svg>Multi Split <span style="color:var(--t3)">&#8964;</span></button>
     </div>
-    <div id="w-old" class="hidden">
-      <div class="listbtn" style="border-color:var(--acc);background:#33221A;margin-bottom:14px">
-        <span style="color:var(--acc2)">Resume · Push day</span>
-        <span class="num" style="font-size:12px;color:var(--acc2)">3 exercises</span>
+    <p class="cnt">4 templates</p>
+
+    <div class="tcard">
+      <div class="tmini" id="t-upper"></div>
+      <div style="flex:1;min-width:0">
+        <p class="nm">Upper body day</p>
+        <div class="chips"><span>Chest</span><span>Back</span><span>Shoulders</span><span>+2</span></div>
+        <p class="rec" data-new="Not done yet" data-old="Last done 6 days ago">Not done yet</p>
       </div>
-      <p class="lbl" style="margin-top:0">Last time</p>
-      <div class="hrow" style="border-top:1px solid var(--line)">
-        <p>Chest and triceps day</p><small>2 days ago · 6 exercises · 18 sets</small>
+      <span class="golink">&#8250;</span>
+    </div>
+
+    <div class="tcard">
+      <div class="tmini" id="t-full"></div>
+      <div style="flex:1;min-width:0">
+        <p class="nm">Full body day</p>
+        <div class="chips"><span style="background:none;padding:3px 0;font-size:11.5px">A mix across all major groups</span></div>
+        <p class="rec" data-new="Not done yet" data-old="Last done 2 weeks ago">Not done yet</p>
       </div>
+      <span class="golink">&#8250;</span>
     </div>
-    <div style="display:flex;flex-direction:column;gap:9px;margin-top:18px">
-      <button class="big">Start workout</button>
-      <button class="ghost">Ad-hoc workout</button>
+
+    <div class="tcard">
+      <div class="tmini" id="t-chesttri"></div>
+      <div style="flex:1;min-width:0">
+        <p class="nm">Chest and triceps day</p>
+        <div class="chips"><span>Chest</span><span>Triceps</span></div>
+        <p class="rec" data-new="Not done yet" data-old="Last done 2 days ago">Not done yet</p>
+      </div>
+      <span class="golink">&#8250;</span>
     </div>
+
+    <div class="tcard">
+      <div class="tmini" id="t-backbi"></div>
+      <div style="flex:1;min-width:0">
+        <p class="nm">Back and biceps day</p>
+        <div class="chips"><span>Back</span><span>Biceps</span></div>
+        <p class="rec" data-new="Not done yet" data-old="Last done yesterday">Not done yet</p>
+      </div>
+      <span class="golink">&#8250;</span>
+    </div>
+
+    <button class="mlink"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--t3);fill:none;stroke-width:1.8;stroke-linecap:round"><path d="M4 7h16M7 12h10M10 17h4"/></svg>Manage templates</button>
   </div>
   __TABS_A__
 </div>
@@ -484,31 +566,31 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--acc2);outl
 <figcaption>4 · Profile</figcaption>
 </figure>
 
-<figure><div class="phone">
+<figure class="stale"><div class="phone">
 <div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
 <div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Choose a template</h3></div><p class="lbl" style="margin-top:6px">Predefined</p><div class="tpl"><div><p>Push day</p><small>Chest, shoulders, triceps</small></div><span class="chev">&#8250;</span></div><div class="tpl"><div><p>Pull day</p><small>Back, biceps</small></div><span class="chev">&#8250;</span></div><div class="tpl"><div><p>Leg day</p><small>Quads, hamstrings, glutes, calves</small></div><span class="chev">&#8250;</span></div><div class="tpl sel"><div><p>Chest and triceps day</p><small>Chest, triceps</small></div><span class="chev">&#8250;</span></div><p class="lbl">Custom</p><div class="tpl"><div><p>Push day (mine)</p><small>Duplicated from Push day</small></div><span class="chev">&#8250;</span></div></div>
 __TABS_D__</div><figcaption>5 &middot; Template picker</figcaption></figure>
-<figure><div class="phone">
+<figure class="stale"><div class="phone">
 <div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
 <div class="body"><div class="hdr"><button class="back">&#8249;</button><h3 contenteditable="true" spellcheck="false">Chest and triceps day</h3><span class="pencil">&#9998;</span></div><button class="datechip">Today</button><div id="mini-slot" style="display:flex;justify-content:center;margin:2px 0 6px"></div><div class="acc"><button class="acch"><span>Chest</span><span class="chev">&#8964;</span></button><div class="accb"><div class="sub done"><span>Upper chest</span><span class="tick">&#10003;</span></div><div class="sub done"><span>Mid chest</span><span class="tick">&#10003;</span></div><div class="sub"><span>Lower chest</span><span class="chev">&#8250;</span></div></div></div><div class="sub flat"><span>Triceps</span><span class="chev">&#8250;</span></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:20px"><button class="big">Finish workout</button><button class="ghost" style="color:var(--t2)">Discard workout</button></div></div>
 __TABS_E__</div><figcaption>6 &middot; Workout overview</figcaption></figure>
-<figure><div class="phone">
+<figure class="stale"><div class="phone">
 <div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
 <div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Lower chest</h3></div><p class="ghosthint" style="margin:0 0 8px">9 exercises &mdash; pick whichever kit is free</p><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M4 16h24"/><path d="M7 11v10M10 9v14M22 9v14M25 11v10"/></svg></div><div><p>Decline barbell bench press</p><small>Barbell &middot; Last 60kg &times; 8</small></div></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M11 16h10"/><path d="M8 11v10M5 13v6M24 11v10M27 13v6"/></svg></div><div><p>Decline dumbbell press</p><small>Dumbbell &middot; Last 24kg &times; 10</small></div></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3"/><path d="M16 11v9M16 20l-5 6M16 20l5 6M9 14h14"/></svg></div><div><p>Chest dip</p><small>Bodyweight &middot; Last 12 reps</small></div></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M16 4v12"/><circle cx="16" cy="19" r="3"/><path d="M11 26h10"/></svg></div><div><p>High-to-low cable crossover</p><small>Cable &middot; Last 15kg &times; 12</small></div></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><rect x="6" y="6" width="20" height="20" rx="3"/><path d="M11 12h10M11 16h10M11 20h5"/></svg></div><div><p>Decline machine press</p><small>Machine &middot; not logged yet</small></div></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3"/><path d="M16 11v9M16 20l-5 6M16 20l5 6M9 14h14"/></svg></div><div><p>Hands-elevated push-up</p><small>Bodyweight &middot; not logged yet</small></div></div></div>
 __TABS_F__</div><figcaption>7 &middot; Exercise list</figcaption></figure>
-<figure><div class="phone">
+<figure class="stale"><div class="phone">
 <div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
 <div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Decline barbell bench press</h3><button class="info" title="How to do it">i</button></div><div class="chips"><span class="chip">Barbell</span><span class="chip">Weight &times; reps</span></div><div class="sets"><div class="setrow done"><span class="sn num">1</span><input class="in num" value="60"><span class="u">kg</span><input class="in num" value="8"><span class="u">reps</span><button class="ck on">&#10003;</button></div><div class="setrow done"><span class="sn num">2</span><input class="in num" value="60"><span class="u">kg</span><input class="in num" value="8"><span class="u">reps</span><button class="ck on">&#10003;</button></div><div class="setrow"><span class="sn num">3</span><input class="in num ghosted" value="60"><span class="u">kg</span><input class="in num ghosted" value="8"><span class="u">reps</span><button class="ck">&#10003;</button></div></div><p class="ghosthint">Greyed values are guesses from last time &mdash; tap to change</p><button class="ghost" style="margin-top:12px">+ Add set</button><button class="big" style="margin-top:8px">Mark exercise done</button><p class="lbl">Recent</p><div class="histrow"><span>12 Jul</span><span>60&times;8 &middot; 60&times;8 &middot; 55&times;10</span></div><div class="histrow"><span>8 Jul</span><span>57.5&times;8 &middot; 57.5&times;7</span></div><button class="seemore">See all 11 sessions &#8250;</button></div>
 __TABS_G__</div><figcaption>8 &middot; Log sets &mdash; weighted</figcaption></figure>
-<figure><div class="phone">
+<figure class="stale"><div class="phone">
 <div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
 <div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Pull-up</h3><button class="info" title="How to do it">i</button></div><div class="chips"><span class="chip">Bodyweight</span><span class="chip">Reps</span></div><div class="sets"><div class="setrow done"><span class="sn num">1</span><input class="in num wide" value="9"><span class="u">reps</span><button class="addw">+ weight</button><button class="ck on">&#10003;</button></div><div class="setrow done"><span class="sn num">2</span><input class="in num wide" value="7"><span class="u">reps</span><button class="addw on">+5 kg</button><button class="ck on">&#10003;</button></div><div class="setrow"><span class="sn num">3</span><input class="in num wide ghosted" value="7"><span class="u">reps</span><button class="addw">+ weight</button><button class="ck">&#10003;</button></div></div><p class="ghosthint">Added weight is optional &mdash; most sets never use it</p><button class="ghost" style="margin-top:12px">+ Add set</button><button class="big" style="margin-top:8px">Mark exercise done</button><p class="lbl">Recent</p><div class="histrow"><span>13 Jul</span><span>9 &middot; 8 &middot; 6 reps</span></div><div class="histrow"><span>9 Jul</span><span>+5kg &times; 6 &middot; 8 reps</span></div><button class="seemore">See all 21 sessions &#8250;</button></div>
 __TABS_H__</div><figcaption>9 &middot; Log sets &mdash; bodyweight</figcaption></figure>
-<figure><div class="phone">
+<figure class="stale"><div class="phone">
 <div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
 <div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Assisted pull-up machine</h3><button class="info" title="How to do it">i</button></div><div class="chips"><span class="chip">Machine</span><span class="chip">Assist &times; reps</span></div><div class="banner"><span>&#8600;</span><p>Less assistance is better. Your record is the lightest assist you&rsquo;ve used.</p></div><div class="sets"><div class="setrow done"><span class="sn num">1</span><input class="in num" value="25"><span class="u">assist</span><input class="in num" value="8"><span class="u">reps</span><button class="ck on">&#10003;</button></div><div class="setrow"><span class="sn num">2</span><input class="in num ghosted" value="25"><span class="u">assist</span><input class="in num ghosted" value="8"><span class="u">reps</span><button class="ck">&#10003;</button></div></div><button class="ghost" style="margin-top:12px">+ Add set</button><button class="big" style="margin-top:8px">Mark exercise done</button><p class="lbl">Recent</p><div class="histrow"><span>11 Jul</span><span>25kg assist &times; 8</span></div><div class="histrow"><span>4 Jul</span><span>30kg assist &times; 7</span></div><button class="seemore">See all 6 sessions &#8250;</button></div>
 __TABS_I__</div><figcaption>10 &middot; Log sets &mdash; assisted</figcaption></figure>
-<figure><div class="phone">
+<figure class="stale"><div class="phone">
 <div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div>
 <div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Plank</h3><button class="info" title="How to do it">i</button></div><div class="chips"><span class="chip">Bodyweight</span><span class="chip">Duration</span></div><div class="sets"><div class="setrow done"><span class="sn num">1</span><input class="in num wide" value="1:00"><button class="addw">+ weight</button><button class="ck on">&#10003;</button></div><div class="setrow"><span class="sn num">2</span><input class="in num wide ghosted" value="1:00"><button class="addw">+ weight</button><button class="ck">&#10003;</button></div></div><div class="quick"><button>30s</button><button>45s</button><button>60s</button><button>90s</button></div><p class="ghosthint">No stopwatch in V1 &mdash; type it or tap a preset</p><button class="ghost" style="margin-top:12px">+ Add set</button><button class="big" style="margin-top:8px">Mark exercise done</button><p class="lbl">Recent</p><div class="histrow"><span>12 Jul</span><span>1:00 &middot; 0:45 &middot; 0:45</span></div><div class="histrow"><span>8 Jul</span><span>0:50 &middot; 0:45</span></div><button class="seemore">See all 9 sessions &#8250;</button></div>
 __TABS_J__</div><figcaption>11 &middot; Log sets &mdash; timed</figcaption></figure>
@@ -541,11 +623,11 @@ __TABS_K__</div><figcaption>12 &middot; Exercise detail</figcaption></figure>
 <figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Decline barbell bench press</h3></div><div class="hsum"><span>11 sessions</span>&middot;<span>best <b>62.5kg &times; 6</b></span>&middot;<span>first logged <b>2 Mar</b></span></div><div class="hsess"><div class="top"><span class="dt">12 Jul</span><span class="ago">3 days ago</span></div><div class="sets"><span class="pill">60&times;10</span><span class="pill">60&times;8</span><span class="pill">55&times;10</span></div></div><div class="hsess"><div class="top"><span class="dt">8 Jul</span><span class="ago">1 week ago</span></div><div class="sets"><span class="pill">57.5&times;8</span><span class="pill">57.5&times;7</span></div></div><div class="hsess"><div class="top"><span class="dt">1 Jul</span><span class="ago">2 weeks ago</span><span class="pb">&#9733; PB</span></div><div class="sets"><span class="pill best">62.5&times;6</span><span class="pill">57.5&times;8</span><span class="pill">55&times;8</span></div></div><div class="hsess"><div class="top"><span class="dt">24 Jun</span><span class="ago">3 weeks ago</span></div><div class="sets"><span class="pill">57.5&times;6</span><span class="pill">55&times;8</span></div></div><div class="hsess"><div class="top"><span class="dt">17 Jun</span><span class="ago">1 month ago</span><span class="pb">&#9733; PB</span></div><div class="sets"><span class="pill best">55&times;8</span><span class="pill">55&times;7</span><span class="pill">50&times;10</span></div></div><button class="seemore">See more &#8250;</button><p class="ghosthint">Tap any session to open the full workout it was part of.</p></div>__TABS_L__</div><figcaption>13 &middot; Exercise history</figcaption></figure>
 <figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="cel"><div class="celmark">&#10003;</div><p class="celtitle">Workout saved</p><p class="celsub">Chest and triceps day</p><div class="celstats"><div><p class="n">18</p><p class="l">Sets</p></div><div><p class="n">6</p><p class="l">Exercises</p></div><div><p class="n">5</p><p class="l">Day streak</p></div><div><p class="n">78</p><p class="l">kcal</p></div></div><div class="pbpill">&#9733; 2 personal bests</div></div></div><figcaption>14 &middot; Celebration</figcaption></figure>
 <figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3 style="font-size:15px">Summary</h3><button class="info" title="Share">&#8593;</button></div><div class="share"><p class="eyebrow">Today</p><p class="sharetitle" contenteditable="true" spellcheck="false">Chest and triceps day <span class="pencil">&#9998;</span></p><div class="sharemaps"><div><div class="m" id="sum-front"></div><p class="cap">Front</p></div><div><div class="m" id="sum-back"></div><p class="cap">Back</p></div></div><div class="pbpill">&#9733; 2 personal bests</div><div class="sharegrid"><div><p class="n">18</p><p class="l">Sets</p></div><div><p class="n">6</p><p class="l">Exercises</p></div><div><p class="n">5</p><p class="l">Day streak</p></div><div><p class="n">78</p><p class="l">kcal</p></div></div><p class="wordm">[ APP NAME ]</p></div><p class="lbl">What you did</p><div class="hsess"><div class="top"><span class="dt">Decline barbell bench press</span><span class="pb">&#9733; PB</span></div><div class="sets"><span class="pill best">62.5&times;6</span><span class="pill">60&times;8</span><span class="pill">60&times;8</span></div></div><div class="hsess"><div class="top"><span class="dt">Incline dumbbell press</span></div><div class="sets"><span class="pill">24&times;10</span><span class="pill">24&times;9</span><span class="pill">22&times;10</span></div></div><div class="hsess"><div class="top"><span class="dt">Cable rope pushdown</span><span class="pb">&#9733; PB</span></div><div class="sets"><span class="pill best">32&times;12</span><span class="pill">30&times;12</span></div></div><div class="foot"><button class="ghost">Edit</button><button class="big">Done</button></div></div>__TABS_M__</div><figcaption>15 &middot; Summary / share card</figcaption></figure>
-<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Add exercise</h3></div><div class="searchwrap" style="margin-bottom:14px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="search" value="curl"></div><p class="ghosthint" style="margin:0 0 8px">18 matches</p><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M4 16h24"/><path d="M7 11v10M10 9v14M22 9v14M25 11v10"/></svg></div><div><p>Barbell curl</p><small>Barbell &middot; Biceps &middot; Last 30kg &times; 10</small></div><button class="ck">+</button></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M11 16h10"/><path d="M8 11v10M5 13v6M24 11v10M27 13v6"/></svg></div><div><p>Dumbbell curl</p><small>Dumbbell &middot; Biceps &middot; Last 14kg &times; 12</small></div><button class="ck">+</button></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M11 16h10"/><path d="M8 11v10M5 13v6M24 11v10M27 13v6"/></svg></div><div><p>Hammer curl</p><small>Dumbbell &middot; Biceps, forearms</small></div><button class="ck">+</button></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M16 4v12"/><circle cx="16" cy="19" r="3"/><path d="M11 26h10"/></svg></div><div><p>Cable curl</p><small>Cable &middot; Biceps</small></div><button class="ck">+</button></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3"/><path d="M16 11v9M16 20l-5 6M16 20l5 6M9 14h14"/></svg></div><div><p>Nordic hamstring curl</p><small>Bodyweight &middot; Hamstrings</small></div><button class="ck">+</button></div></div>__TABS_N__</div><figcaption>16 &middot; Ad-hoc &mdash; add exercise</figcaption></figure>
-<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3 contenteditable="true" spellcheck="false" style="color:var(--t3)">Name this workout</h3><span class="pencil">&#9998;</span></div><button class="datechip">Today</button><div id="adhoc-map" style="display:flex;justify-content:center;margin:2px 0 10px"></div><p class="lbl" style="margin-top:0">This session</p><div class="exrow"><div style="flex:1"><p>Barbell curl</p><small>3 sets &middot; 30kg &times; 10</small></div><span class="state done">Done</span></div><div class="exrow"><div style="flex:1"><p>Hammer curl</p><small>1 set logged</small></div><span class="state doing">In progress</span></div><div class="exrow"><div style="flex:1"><p>Cable rope pushdown</p><small>not started</small></div><span class="state todo">To do</span></div><button class="ghost" style="margin-top:14px">+ Add exercise</button><button class="big" style="margin-top:8px">Finish workout</button><button class="ghost" style="margin-top:8px;color:var(--t2)">Discard workout</button></div>__TABS_O__</div><figcaption>17 &middot; Ad-hoc overview</figcaption></figure>
+<figure class="stale"><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Add exercise</h3></div><div class="searchwrap" style="margin-bottom:14px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="search" value="curl"></div><p class="ghosthint" style="margin:0 0 8px">18 matches</p><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M4 16h24"/><path d="M7 11v10M10 9v14M22 9v14M25 11v10"/></svg></div><div><p>Barbell curl</p><small>Barbell &middot; Biceps &middot; Last 30kg &times; 10</small></div><button class="ck">+</button></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M11 16h10"/><path d="M8 11v10M5 13v6M24 11v10M27 13v6"/></svg></div><div><p>Dumbbell curl</p><small>Dumbbell &middot; Biceps &middot; Last 14kg &times; 12</small></div><button class="ck">+</button></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M11 16h10"/><path d="M8 11v10M5 13v6M24 11v10M27 13v6"/></svg></div><div><p>Hammer curl</p><small>Dumbbell &middot; Biceps, forearms</small></div><button class="ck">+</button></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><path d="M16 4v12"/><circle cx="16" cy="19" r="3"/><path d="M11 26h10"/></svg></div><div><p>Cable curl</p><small>Cable &middot; Biceps</small></div><button class="ck">+</button></div><div class="exrow"><div class="glyph"><svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3"/><path d="M16 11v9M16 20l-5 6M16 20l5 6M9 14h14"/></svg></div><div><p>Nordic hamstring curl</p><small>Bodyweight &middot; Hamstrings</small></div><button class="ck">+</button></div></div>__TABS_N__</div><figcaption>16 &middot; Ad-hoc &mdash; add exercise</figcaption></figure>
+<figure class="stale"><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3 contenteditable="true" spellcheck="false" style="color:var(--t3)">Name this workout</h3><span class="pencil">&#9998;</span></div><button class="datechip">Today</button><div id="adhoc-map" style="display:flex;justify-content:center;margin:2px 0 10px"></div><p class="lbl" style="margin-top:0">This session</p><div class="exrow"><div style="flex:1"><p>Barbell curl</p><small>3 sets &middot; 30kg &times; 10</small></div><span class="state done">Done</span></div><div class="exrow"><div style="flex:1"><p>Hammer curl</p><small>1 set logged</small></div><span class="state doing">In progress</span></div><div class="exrow"><div style="flex:1"><p>Cable rope pushdown</p><small>not started</small></div><span class="state todo">To do</span></div><button class="ghost" style="margin-top:14px">+ Add exercise</button><button class="big" style="margin-top:8px">Finish workout</button><button class="ghost" style="margin-top:8px;color:var(--t2)">Discard workout</button></div>__TABS_O__</div><figcaption>17 &middot; Ad-hoc overview</figcaption></figure>
 <figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Chest</h3></div><div id="chest-map" style="display:flex;justify-content:center;margin:2px 0 12px"></div><div class="exrow"><div style="flex:1"><p>Upper chest</p><small>11 exercises</small></div><span class="chev">&#8250;</span></div><div class="exrow"><div style="flex:1"><p>Mid chest</p><small>15 exercises</small></div><span class="chev">&#8250;</span></div><div class="exrow"><div style="flex:1"><p>Lower chest</p><small>9 exercises</small></div><span class="chev">&#8250;</span></div><p class="ghosthint">Full body, not a zoomed crop &mdash; same call as exercise detail.</p></div>__TABS_P__</div><figcaption>18 &middot; Sub-muscle groups</figcaption></figure>
-<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>My workout templates</h3></div><p class="lbl" style="margin-top:4px">Predefined</p><div class="tpl"><div><p>Push day</p><small>Chest, shoulders, triceps</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><div class="tpl"><div><p>Pull day</p><small>Back, biceps</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><div class="tpl"><div><p>Leg day</p><small>Quads, hamstrings, glutes, calves</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><div class="tpl"><div><p>Full body day</p><small>All major groups</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><div class="tpl"><div><p>Chest and triceps day</p><small>Chest, triceps</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><p class="lbl">Custom</p><div class="tpl"><div><p>Push day (mine)</p><small>Duplicated from Push day</small></div><button class="icobtn" title="Edit">&#9998;</button></div><button class="ghost" style="margin-top:16px">+ Create custom template</button><p class="ghosthint">Predefined templates can&rsquo;t be edited &mdash; duplicate one to make it yours.</p></div>__TABS_Q__</div><figcaption>19 &middot; My workout templates</figcaption></figure>
-<figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Edit template</h3></div><p class="lbl" style="margin-top:4px">Name</p><input class="fld" value="Push day (mine)"><p class="lbl" style="margin-top:0">Muscle groups</p><div class="mg"><span>Chest &#215;</span><span>Shoulders &#215;</span><span>Triceps &#215;</span><span class="add">+ Add</span></div><p class="ghosthint" style="margin-top:-8px">Parent groups only. Sub-muscle groups are derived &mdash; picking Chest gives you upper, mid and lower.</p><button class="big" style="margin-top:16px">Save template</button><button class="danger">Delete template</button></div>__TABS_R__</div><figcaption>20 &middot; Template editor</figcaption></figure>
+<figure class="stale"><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>My workout templates</h3></div><p class="lbl" style="margin-top:4px">Predefined</p><div class="tpl"><div><p>Push day</p><small>Chest, shoulders, triceps</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><div class="tpl"><div><p>Pull day</p><small>Back, biceps</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><div class="tpl"><div><p>Leg day</p><small>Quads, hamstrings, glutes, calves</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><div class="tpl"><div><p>Full body day</p><small>All major groups</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><div class="tpl"><div><p>Chest and triceps day</p><small>Chest, triceps</small></div><button class="icobtn" title="Duplicate to edit">&#128203;</button></div><p class="lbl">Custom</p><div class="tpl"><div><p>Push day (mine)</p><small>Duplicated from Push day</small></div><button class="icobtn" title="Edit">&#9998;</button></div><button class="ghost" style="margin-top:16px">+ Create custom template</button><p class="ghosthint">Predefined templates can&rsquo;t be edited &mdash; duplicate one to make it yours.</p></div>__TABS_Q__</div><figcaption>19 &middot; My workout templates</figcaption></figure>
+<figure class="stale"><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Edit template</h3></div><p class="lbl" style="margin-top:4px">Name</p><input class="fld" value="Push day (mine)"><p class="lbl" style="margin-top:0">Muscle groups</p><div class="mg"><span>Chest &#215;</span><span>Shoulders &#215;</span><span>Triceps &#215;</span><span class="add">+ Add</span></div><p class="ghosthint" style="margin-top:-8px">Parent groups only. Sub-muscle groups are derived &mdash; picking Chest gives you upper, mid and lower.</p><button class="big" style="margin-top:16px">Save template</button><button class="danger">Delete template</button></div>__TABS_R__</div><figcaption>20 &middot; Template editor</figcaption></figure>
 <figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Personal details</h3></div><p class="lbl" style="margin-top:4px">Gender (optional)</p><div class="pick"><button aria-pressed="true">Male</button><button>Female</button><button>Skip</button></div><p class="helper">Chooses which body diagram is used throughout the app. Nothing else.</p><p class="lbl" style="margin-top:0">Bodyweight (optional)</p><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><input class="fld num" style="width:84px;margin:0;text-align:center" value="70"><span class="u" style="font-size:13px">kg</span></div><p class="helper">Used only to estimate calories. Skip it and the calorie stat simply won&rsquo;t appear.</p><div class="kcal"><h4>How the calorie estimate works</h4><div class="kr"><span>1&ndash;9 sets</span><span>Light effort</span></div><div class="kr"><span>10&ndash;20 sets</span><span>Moderate effort</span></div><div class="kr" style="border:0"><span>21+ sets</span><span>Vigorous effort</span></div><p>Based on standard exercise-science averages for resistance training. Actual calories burned vary by person and effort.</p></div><button class="big">Save</button></div>__TABS_S__</div><figcaption>21 &middot; Personal details</figcaption></figure>
 <figure><div class="phone"><div class="status"><span>9:41</span><span>&#9646;&#9646;&#9646;</span></div><div class="body"><div class="hdr"><button class="back">&#8249;</button><h3>Summary</h3><button class="info" title="Share">&#8593;</button></div><div class="share"><p class="eyebrow">Tue 8 Jul</p><p class="sharetitle">Leg day <span class="pencil">&#9998;</span></p><div class="sharemaps"><div><div class="m" id="past-front"></div><p class="cap">Front</p></div><div><div class="m" id="past-back"></div><p class="cap">Back</p></div></div><div class="sharegrid"><div><p class="n">21</p><p class="l">Sets</p></div><div><p class="n">5</p><p class="l">Exercises</p></div><div><p class="n">3</p><p class="l">Day streak</p></div><div><p class="n">96</p><p class="l">kcal</p></div></div><p class="wordm">[ APP NAME ]</p></div><p class="lbl">What you did</p><div class="hsess"><div class="top"><span class="dt">Barbell back squat</span></div><div class="sets"><span class="pill">80&times;8</span><span class="pill">80&times;8</span><span class="pill">75&times;10</span></div></div><div class="hsess"><div class="top"><span class="dt">Romanian deadlift</span></div><div class="sets"><span class="pill">70&times;10</span><span class="pill">70&times;10</span></div></div><div class="hsess"><div class="top"><span class="dt">Standing calf raise machine</span></div><div class="sets"><span class="pill">60&times;15</span><span class="pill">60&times;15</span></div></div><div class="foot"><button class="ghost">Edit</button><button class="ghost">Change date</button></div><button class="danger">Delete workout</button></div>__TABS_T__</div><figcaption>22 &middot; Session detail (past)</figcaption></figure>
 </div></div>
@@ -565,7 +647,9 @@ document.querySelectorAll('.phone').forEach((p,i)=>{
 const $ = id => document.getElementById(id);
 const setState = (fresh)=>{
   $('b-new').setAttribute('aria-pressed',fresh); $('b-old').setAttribute('aria-pressed',!fresh);
-  $('w-new').classList.toggle('hidden',!fresh); $('w-old').classList.toggle('hidden',fresh);
+  document.querySelectorAll('.rec').forEach(n=>{
+    n.textContent = fresh ? n.dataset.new : n.dataset.old;
+  });
   $('p-new').classList.toggle('hidden',!fresh); $('p-old').classList.toggle('hidden',fresh);
   const v = fresh ? ['0','0','0'] : ['5','12','247'];
   ['s1','s2','s3'].forEach((id,i)=>$(id).textContent=v[i]);
@@ -609,6 +693,25 @@ if(mini){
   c.style.maxWidth='108px';
   mini.appendChild(c);
 }
+
+/* landing thumbnails: both views, template coverage, never accent */
+function thumb(slot,groups){
+  const host=$(slot); if(!host) return;
+  ['svg-front','svg-back'].forEach(src=>{
+    const c=$(src).cloneNode(true);
+    c.removeAttribute('id');
+    c.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+    c.querySelectorAll('[tabindex]').forEach(n=>{n.removeAttribute('tabindex');n.removeAttribute('role');});
+    groups.forEach(g=>c.querySelectorAll('[data-muscle-group="'+g+'"]')
+                       .forEach(n=>n.classList.add('cov')));
+    host.appendChild(c);
+  });
+}
+thumb('t-upper',['chest','back','shoulders','biceps','triceps']);
+thumb('t-full',['chest','back','shoulders','biceps','triceps','forearms','abs','obliques',
+                'quads','hamstrings','glutes','calves']);
+thumb('t-chesttri',['chest','triceps']);
+thumb('t-backbi',['back','biceps']);
 
 /* exercise detail: real diagrams, real crop values */
 function crop(slot,src,vb,prim,sec){

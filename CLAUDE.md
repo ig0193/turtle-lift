@@ -15,6 +15,11 @@ than picking one.
 reference and is **ahead of the docs on layout**. Where they differ on how a
 screen looks, follow the prototype. Where they differ on a rule, follow the docs.
 
+**Except the Workout tab.** Eleven of those screens are faded and marked
+superseded: they mock the push-per-exercise flow `adr/0004` replaced. For that
+tab the reference is the Dart and the running app, not the prototype. Everything
+else in the file still stands.
+
 ## Generated data — never hand-edit
 
 | Path | What |
@@ -121,16 +126,55 @@ are reviewed copy.
   differ only in their list — a nested muscle list against a flat exercise list,
   which answer different questions.
 - **Session tables took the reserved schema version 2.** The personal-details
-  work landed at 3 and numbered around the gap deliberately. That only worked
-  because nothing had shipped: a device already at 3 never runs the reserved
-  step, so a development install from before it has to have its data cleared
-  once. **No later step may be numbered below the current version.**
-- **A muscle ticks on a completed set as well as on Mark exercise done.** A user
-  who logs three sets and walks to the next machine has trained it.
+  work landed at 3 and numbered around the gap deliberately. A device already at
+  3 never runs the reserved step, so it had no session tables at all —
+  **step 4 now creates them if they are missing**, so such an install repairs
+  itself instead of needing its data cleared. **No later step may be numbered
+  below the current version** all the same; the next gap may not be this
+  recoverable.
+- ~~**A muscle ticks on a completed set as well as on Mark exercise done.**~~ **Half
+  reversed in session 2** (`adr/0004`): Mark exercise done is gone with the
+  push-per-exercise flow, so a muscle ticks on a completed set. The reasoning stands —
+  a user who logs three sets and walks to the next machine has trained it.
 - **Destructive actions use `#C4553A`,** the eleventh palette colour (`00` §12,
   `01` §Usage rules). `#D85A30` could not carry "delete": it means "active / this
   has been worked" *"wherever it appears"*, so a delete confirmation painted in it
   reads as approval. `test/theme_palette_test.dart` fails on any colour outside §12.
+
+## Decided in session 2 — Workout tab rebuilt to Hevy's shape
+
+Full reasoning in **`docs/adr/0004-workout-tab-hevy-parity.md`**; the rules it amends
+are marked in `docs/00` §3, §9, §13 and `docs/02`.
+
+- **A live session is one scrolling `LogWorkoutScreen`** — every exercise and set
+  inline, `SET · PREVIOUS · KG · REPS · ✓`. No push-per-exercise step.
+  `SetLoggingScreen` survives **only** for editing a saved session from History, and
+  both surfaces must keep rendering sets through the one shared formatter.
+- **Routine ≠ Template.** A *routine* is a user's ordered exercise list (in folders);
+  a *template* is one of the 11 shipped muscle-group starting points. See `CONTEXT.md`.
+- **Rest timer and session duration are built** — they left the out-of-scope list. The
+  rest timer is foreground-only and raises no notification, so that ban still holds.
+- **Lifted volume is back, derived on read**, in the Log Workout summary bar only —
+  never on the screenshot-shaped summary card. Set count is still the headline stat.
+- **No template lock**, and **no Mark exercise done**. `markedDone` stays on the row
+  for schema stability but nothing live writes it.
+- **Not copied from Hevy, deliberately:** anything needing cloud or login (Explore
+  Routines, PRO, share sheet, visibility, gym, photo upload), and the achievement-style
+  celebration takeover — ours stays `FinishCelebration` + `SessionSummaryScreen`.
+- **Not built:** set types (warm-up / drop / to-failure), supersets, RPE, plate
+  calculator, custom exercises.
+- **Schema is at 5.** Step 4 is the rebuild (routines, folders, session timings,
+  per-exercise notes and rest timers); step 5 is the session note. Both guard on
+  the *column*, not on `from`, because `createTable` always builds today's shape —
+  an install coming from version 1 arrives with those columns already on it and one
+  from version 3 does not.
+- **Where the Workout tab lives now:** `log_workout_screen.dart` (`LogWorkoutBody`
+  is the tab root, `LogWorkoutScreen` the pushed wrapper) · `log_exercise_block.dart`
+  · `set_table_row.dart` · `rest_timer.dart` · `exercise_picker_screen.dart` ·
+  `routine_card.dart` / `routine_builder_screen.dart` / `routine_detail_screen.dart`
+  / `routine_folder_section.dart` · `save_workout_screen.dart` ·
+  `mini_workout_bar.dart`. The template list moved out of the landing into
+  `template_list_screen.dart`.
 
 ## Still undecided — ask, don't guess
 - Typeface. The prototypes use Inter; the app currently uses the platform default.
@@ -139,8 +183,7 @@ are reviewed copy.
 
 ## Out of scope for V1 — do not build
 
-No login · no cloud sync · no soft delete · no rest timer · no workout duration ·
-no notifications · no wearables · no AI features · no premium tier · no ads ·
+No login · no cloud sync · no soft delete · no notifications · no wearables · no AI features · no premium tier · no ads ·
 no multi-day splits · no per-exercise illustrations ·
 no achievements, badges or level-ups.
 
@@ -164,5 +207,5 @@ See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. Neither exists yet;
-that is expected. See `docs/agents/domain.md`.
+Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. Both exist now —
+`CONTEXT.md` is a glossary only, never a spec. See `docs/agents/domain.md`.

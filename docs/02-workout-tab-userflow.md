@@ -1,5 +1,14 @@
 # Workout tab — user flow
 
+> **Superseded in part by `adr/0004` (Hevy parity, session 2).** The tab was
+> rebuilt around Hevy's shape: the landing lists **routines** (ordered exercise
+> lists, in folders) rather than muscle-group templates, and a live session runs
+> on **one scrolling Log Workout screen** with every exercise and set inline,
+> instead of pushing into a screen per exercise. Steps 1–5 below still hold for
+> *why* each rule exists, and every rule not named in `adr/0004` still binds.
+> Where this file and `adr/0004` disagree on flow, the ADR wins. Sections
+> amended in place are marked **[0004]**.
+
 **Purpose:** start and run a workout session — either by choosing a saved single-day workout template, or by building a one-off ad-hoc session via exercise search.
 
 **Entry point:** Home → Workout tab.
@@ -17,11 +26,12 @@
 | Row | What it is |
 |---|---|
 | Pinned header | `Workout`, with the Profile avatar trailing. Outside the scroll body — it never moves. |
+| `Ad-hoc workout` | **The screen's primary action, and its only accent-filled element.** See The ad-hoc action below. |
 | `TEMPLATES` | A quiet small-caps group label, with the split filter control on its right. |
-| Count line | `4 templates` — how many the current split yields. |
-| Template rows | The predefined templates for the selected split, in a curated order. |
+| Count line | `4 templates` — how many the current split yields. Tucked directly under the label it qualifies. |
+| Template cards | The predefined templates for the selected split, in a curated order. |
 | `YOUR TEMPLATES` | The user's own templates, in their own group. **Absent entirely when they have none** — not a heading over nothing. |
-| `Ad-hoc workout` | A single entry below every group, on the muted surface so it reads as a different kind of thing rather than one more template. |
+| `Manage templates` | A quiet link at the foot of the list — navigation to the authoring surface, not a card. |
 | Floating tab bar | Over the content, as on every L0 root. |
 
 The body is the scrollable and carries the gutter plus the tab bar's inset itself; the header is the `Scaffold.appBar` and sits outside it.
@@ -40,17 +50,48 @@ The control shows a filter glyph, the current split's name, and a caret. **The n
 
 Tapping it opens a **dropdown anchored under the control**, right edges aligned — the menu belongs to the chip that opened it. Three options, the current one marked. It is painted from the app's own surfaces rather than taking Material's popup defaults, which would bring an elevation and surface tint used nowhere else here. The accepted trade is reach: a dropdown lands at the top of the screen, which is the harder half to touch one-handed, and the control's 48pt target is what keeps that round trip manageable.
 
-### A template row
+### A template card
 
-Each row is the template's **name** over its **parent muscle groups**, with a chevron, and is tappable across a comfortable target — this screen is used standing, often one-handed, between sets.
+Each card carries four things, and each answers a different question:
 
-The muscle line is derived from the taxonomy at render time, never stored: the labels are joined in taxonomy order, in sentence case (`Chest, shoulders, triceps`). **Full body day is the one exception** — it spans all twelve parent groups, so the literal join would run about four times longer than any other row, and it carries the bespoke line `A mix across all major groups` instead.
+| Element | Answers |
+|---|---|
+| **Body thumbnail** — front and back, the template's muscles lit | *what does this work* — before a word is read |
+| **Name** | *which template is this* |
+| **Muscle chips** | *which muscles, precisely* |
+| **Recency line** | *when did I last do this* |
 
-Tapping a row opens the workout overview for that template. It does **not** create a session yet; see Step 2.
+It is tappable across the whole card — this screen is used standing, often one-handed, between sets.
 
-### Ad-hoc workout
+**The thumbnail is both views, always.** A front-only silhouette renders Back day and Leg day as almost nothing, which are the two templates whose whole point is the posterior chain.
+
+**The thumbnail is never drawn in the accent colour.** `01` §Usage rules gives `#D85A30` one meaning — "this is active / this has been worked" — with the same meaning wherever it appears. A template is a menu of muscles the user has not touched yet, so coverage is drawn in `#A89C8E` (text-secondary) against the untrained `#241F19`. The accent's one appearance on this screen is the primary action.
+
+**The chips are derived from the taxonomy at render time, never stored**, in taxonomy order, so two templates naming the same groups always render the same strip. As many as fit are shown on one line and the rest are counted in a trailing `+N` chip — measured, not guessed, so the list never grows a second row height. **Full body day is the one exception** — it spans all twelve parent groups, so it carries the bespoke line `A mix across all major groups` instead of chips.
+
+**The trailing control is a bounded circle, not a bare chevron.** A chevron at the edge of a row is the platform's disclosure idiom and promises a sub-screen you can come back from; this tap starts a session and auto-saves or discards whatever was open.
+
+Tapping a card **starts that workout in place** — the open session replaces this landing at stack depth zero rather than being pushed over it (`docs/adr/0003-l0-navigation-variant-a.md`). See Step 2.
+
+#### The recency line
+
+Each card says when that template was last performed — `Last done 3 days ago`, or `Not done yet`.
+
+- **Derived on read from `sessions.templateId`**, never stored, like every other figure in the app.
+- **Sessions with no completed set do not count**, matching `timesPerformed` and the streak: an opened-and-abandoned template was not performed.
+- **Compared on `performedOn`, never `loggedAt`** — a Monday workout entered on Wednesday reads as Monday here too.
+- **Relative wording throughout**, unlike the History tab's list, which falls back to an absolute date after yesterday. The question here is "how long has it been", not "which session was that".
+- **Every card keeps the line**, so the list has one row height, and a template the user has never run is a fact worth telling them.
+
+**This is recall, not recommendation, and the distinction is the whole reason it is allowed.** This document forbids the tab from stating or implying a schedule; it does not forbid the tab from remembering. The line says what the user did. It never says what to do: it does not rank the list, does not reorder it, does not mark anything overdue, and reads the same whether the gap is one day or one year. If it ever grows a "due", an "overdue" or a "time for", it has become the suggestion engine this app does not have. `test/template_row_test.dart` fails on any of those words.
+
+### The ad-hoc action
 
 Search for exercises directly and add them to a session. No template or muscle-group structure required — for a user who already knows exactly what they want to do (e.g. following a YouTube trainer's routine), or who wants a one-off session without saving a reusable template.
+
+**It leads the screen, as the one accent-filled control on it.** It was originally a row below every group — last in reading order, on a surface one percent lighter than the templates above it, which is to say invisible. It is the screen's only *action*: everything else is a choice between templates. It is also the fastest path for someone who already knows what they are doing.
+
+**Promoting it is not a suggestion.** The rule at the top of this document is that nothing here may imply what to train. An ad-hoc workout implies nothing — it is the one entry with no opinion at all about which muscles you are about to work.
 
 - Adding an exercise via search just places it in the session's exercise list with a "not started" state — it does not require logging immediately.
 - Logging is a separate action, reached by tapping into any exercise in the list.
@@ -60,14 +101,19 @@ Search for exercises directly and add them to a session. No template or muscle-g
 
 Custom templates sit **outside** the filter and are shown whichever split is selected. With no unfiltered value to fall back on, filing them under one split would make a user's own template invisible from the other two — and a classifier would put a single-muscle custom template under Multi Split while the predefined equivalent sat under 1 Muscle per day, which reads as a bug.
 
-Creating and editing them happens **behind the Profile avatar**, never here; this screen only selects an already-saved template to run. Until that authoring flow exists, the group is always absent.
+Creating and editing them happens on the **template library**, never here; this screen only selects an already-saved template to run.
+
+**`Manage templates` is a link at the foot of the list, not a card.** It is the visible route to that library, which otherwise sits behind an unlabelled disc in the header. It sits *outside* the `YOUR TEMPLATES` group deliberately — nested inside it, it would be invisible to everyone who has never made a custom template, which is exactly the user who needs to find it. As a full card it claimed the same weight as "Full body day" while being the one row on the screen that starts no workout at all. This does not break "the library is the only place templates are authored" (`00` §11): this is navigation, not authoring. The Workout tab still only selects and runs.
 
 ### What this screen deliberately does not have
 
-- **No empty state.** Eleven templates ship, so there is no zero-data condition for it to be in. An empty state here would be the bug.
+- **[0004] The landing now has a zero-data day one.** This rule read *"No empty state. Eleven templates ship, so there is no zero-data condition for it to be in. An empty state here would be the bug."* — true while the landing listed templates. It lists **routines**, and a new user has none. So `My routines` carries one line of copy pointing at `Start empty workout`; it is not a full empty state with artwork, because the screen above it is not empty. The old rule still binds the **Templates** screen, which does ship with eleven.
 - **No Resume card, and no in-progress session UI.** An active session replaces this tab root entirely — see Step 2b.
-- **No streak, no last-session recall, no body diagram, no muscle-coverage chips.** Each was considered and cut; the screen's job is to be left quickly.
+- **No streak, and no session recap block.** A "Last time: Chest and triceps day · 2 days ago · 18 sets" block was considered and cut: it is a summary of a *session*, and sessions are what the History tab is for. Per-card recency is a different thing — a fact about a template, attached to the template — and is above.
+- **No hero body diagram.** The map that answers "what have I worked lately" belongs to the Muscles tab and to the session overview. The per-card thumbnails are not that: each answers "what does *this template* cover", says nothing about the user, and is never drawn in a colour that could claim otherwise.
 - **No suggestion of any kind.** Nothing here states or implies a schedule, a rotation, or a recommended workout.
+
+> **Revised.** This list previously read "no last-session recall, no body diagram, no muscle-coverage chips", which ruled out three things by their shape rather than by what they would say. The screen that resulted was six identically weighted rows with no primary action and the accent colour absent, and it was rebuilt. The rule that survives is about *meaning*, not about widgets: nothing on this screen may claim the user has trained something, and nothing may tell them what to train. Within that, the screen is allowed to be worth looking at.
 
 Both paths — a template and ad-hoc — converge into the same underlying session-running experience from Step 2 onward, just with different starting inputs.
 
@@ -142,24 +188,26 @@ Both paths — a template and ad-hoc — converge into the same underlying sessi
   - `timed` (14) — `[m:ss]`, plus a collapsed "add weight" chip
 - **Every numeric input is an unsigned positive number.** The user never types a minus sign anywhere in the app; assistance is its own field on its own load type.
 - Previous session's values for the chosen exercise prefill the fields and render muted (`#6B6156`) until touched, so guessed values stay visually distinct from entered ones.
-- Minimal-typing input: steppers or number pad. Duration uses quick-fill chips (`30s` `45s` `60s` `90s`); no live stopwatch in V1.
+- Minimal-typing input: steppers or number pad. Duration uses quick-fill chips (`30s` `45s` `60s` `90s`), **and a play control that counts the set live** — **[0004]**, previously "no live stopwatch in V1".
 - **A set completes when the checkmark is tapped AND its required field is > 0.** Tapping the checkmark on an empty required field focuses it rather than completing the set. This is the same "completed set" that gates the streak and feeds the calorie MET tier.
-- **Screen order is: sets → Add set → Mark exercise done → Recent history → See all.** The set rows are the first thing on screen; reference material sits below the actions. An earlier draft put a "Last time" line above the sets and it pushed the actual inputs down for information the ghosted prefills already convey inline.
+- **[0004] Screen order is: sets → Add set → Recent history → See all** — and this screen now serves **editing a saved session from History only**. Mark exercise done is gone (Log Workout has no equivalent), and the inline exercise block on Log Workout carries no Recent section. Live logging is Log Workout; the rest of this rule stands for it: The set rows are the first thing on screen; reference material sits below the actions. An earlier draft put a "Last time" line above the sets and it pushed the actual inputs down for information the ghosted prefills already convey inline.
 - **Recent history shows the last 2 sessions**, each with all of that session's sets (`60x10 · 60x8 · 55x10`), followed by **"See all N sessions"**, which opens the Exercise history screen described in `03-muscle-groups-tab-userflow.md`.
 - **Info button (i) in the header** opens exercise detail for form cues, without leaving the session.
-- Mark set complete → mark exercise complete → return to workout overview.
+- **[0004] Rest timer.** Each exercise block carries a rest timer, off by default. Ticking a set starts it; it counts down in a bar with skip and ±15s. Foreground only, one at a time, and it raises no notification.
+- **[0004] `PREVIOUS` column.** Each set row shows what was done on that set last time (`10kg × 15`), beside the live inputs rather than as a ghosted prefill only.
 
 ## Step 5 — Repeat
 
 - Repeat Steps 3–4 for any sub-muscle group (template path) or added exercise (ad-hoc path), in any order, as many or as few as the user wants. Nothing needs to be exhausted before finishing.
-- For the ad-hoc path, the user can keep adding new exercises mid-session via search at any point. On the template path, exercises outside the template's muscle groups cannot be added — see Step 2.
+- The user can keep adding exercises mid-session at any point. **[0004] There is no template lock** — `+ Add exercise` is unrestricted. A routine is an ordered exercise list, not a claim over muscle groups, so there is nothing for a lock to enforce.
 
 ## Step 6 — Finish workout
 
 - Available at any time — not gated behind completing everything, and not gated behind every muscle group being ticked.
 - **Discard workout** sits alongside Finish as a **secondary** button (neutral surface, not accent), so ending a session and throwing it away are visually distinct actions. Discarding requires a confirmation dialog and permanently drops the session and all its sets.
 - **A session with zero completed sets must not be saved.** If the user taps Finish having logged nothing, discard silently rather than creating an empty session — an empty session would otherwise count toward the streak, contradicting the "at least one completed set" rule in `01-app-idea.md`.
-- No additional input required. Set count, exercise count, streak and calories are derived from what was already logged. There is no volume figure.
+- **[0004]** Finish opens a **Save workout** screen — title, description, the session date control, and **Discard workout** — before the summary. Set count, exercise count, streak and calories are still derived from what was already logged.
+- **[0004] Lifted volume and duration are shown live, on Log Workout's summary bar only** (`Duration · Volume · Sets`). Neither appears on the screenshot-shaped summary card, which is unchanged — see the retrospective-logging note below.
 - **Personal best pill.** When the session set one or more personal bests, a pill renders directly above the stat grid: a trophy icon plus `2 personal bests` (or `1 personal best`). **It is omitted entirely when the count is zero** — never render "0 personal bests" on a card designed to be screenshotted. Definition, the first-occurrence exclusion, and the strictly-greater rule are in `01-app-idea.md` §Progress tracking.
   - It is a pill, not a fifth stat tile, precisely because most sessions won't have one and a 4-tile grid shouldn't collapse to 3 and back.
 - **The session title is inline-editable on the summary card itself** — there is no separate naming step between finishing and the summary. The session saves immediately; the title is optional and can be typed, changed, or left blank. If left blank it is resolved for display via the fallback chain in `01-app-idea.md`.
@@ -194,7 +242,7 @@ Note: creating/editing a custom workout template is a separate flow that lives b
 
 ## Explicitly out of scope for V1
 
-- No rest timer, so no rest timer countdown/ring animation.
+- **[0004] The rest timer is built** — as a plain countdown bar with skip and ±15s. Still no ring animation.
 - Keep the workout-saved celebration small and brief — no confetti, badges, sound effects, or full-screen takeovers.
 
 ---
