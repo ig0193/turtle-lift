@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/active_session.dart';
 import '../data/session_store.dart';
 import '../data/set_format.dart';
+import '../theme/app_metrics.dart';
 import '../theme/app_palette.dart';
 
 /// The rest timer's live state. Null means nothing is resting.
@@ -81,12 +82,14 @@ class RestTimer extends Notifier<RestTimerState?> {
 final restTimerProvider =
     NotifierProvider<RestTimer, RestTimerState?>(RestTimer.new);
 
-/// The `Rest timer: OFF` line under an exercise's title.
+/// The rest timer as a chip, rather than a permanent `Rest timer: OFF` line.
 ///
-/// Off is the default and stays the default: most sets do not want a countdown,
-/// and one that armed itself would start a clock the user never asked for.
-class RestTimerLine extends ConsumerWidget {
-  const RestTimerLine({required this.exercise, super.key});
+/// **Off is the default, so off should be quiet.** The line it replaces stated
+/// the absence of a feature on every exercise of every workout — a row of
+/// furniture per block, forever, saying nothing the user did not know. Set, it
+/// becomes a real value and earns its weight.
+class RestTimerChip extends ConsumerWidget {
+  const RestTimerChip({required this.exercise, super.key});
 
   final SessionExercise exercise;
 
@@ -96,23 +99,43 @@ class RestTimerLine extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final seconds = exercise.restTimerSec;
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: TextButton.icon(
-        key: lineKey(exercise.id),
-        onPressed: () => _pick(context, ref),
-        style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          minimumSize: const Size(0, 36),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        icon: const Icon(Icons.timer_outlined,
-            size: 16, color: AppPalette.textSecondary),
-        label: Text(
-          seconds == null
-              ? 'Rest timer: OFF'
-              : 'Rest timer: ${formatDuration(seconds)}',
-          style: const TextStyle(color: AppPalette.textSecondary, fontSize: 13),
+    final isSet = seconds != null;
+
+    return Semantics(
+      button: true,
+      label: isSet
+          ? 'Rest timer, ${formatDuration(seconds)}'
+          : 'Set a rest timer',
+      excludeSemantics: true,
+      child: SizedBox(
+        height: AppMetrics.touchTarget,
+        child: InkWell(
+          key: lineKey(exercise.id),
+          borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
+          onTap: () => _pick(context, ref),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: AppMetrics.gapSnug),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(Icons.timer_outlined,
+                    size: 15,
+                    color:
+                        isSet ? AppPalette.accentLight : AppPalette.textMuted),
+                const SizedBox(width: AppMetrics.gapTight + 2),
+                Text(
+                  isSet ? formatDuration(seconds) : 'Rest',
+                  style: TextStyle(
+                    color:
+                        isSet ? AppPalette.accentLight : AppPalette.textMuted,
+                    fontSize: 13,
+                    fontWeight: isSet ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

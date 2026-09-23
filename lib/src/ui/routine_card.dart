@@ -5,6 +5,7 @@ import '../data/active_session.dart';
 import '../data/exercise_index.dart';
 import '../data/routine_store.dart';
 import '../data/routines.dart';
+import '../theme/app_metrics.dart';
 import '../theme/app_palette.dart';
 import 'destructive_confirmation.dart';
 import 'routine_builder_screen.dart';
@@ -35,70 +36,85 @@ class RoutineCard extends ConsumerWidget {
     final names = routine.exercises
         .map((e) => index.byId(e.exerciseId)?.name)
         .whereType<String>()
-        .join(', ');
+        .toList(growable: false);
+    final setCount = routine.exercises
+        .fold<int>(0, (total, e) => total + e.sets.length);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppMetrics.gap),
       child: Material(
         color: AppPalette.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
         child: InkWell(
           key: cardKey(routine.id),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
               builder: (_) => RoutineDetailScreen(routineId: routine.id),
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: AppMetrics.cardPadding,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
                         routine.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: AppPalette.textPrimary,
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
+                          letterSpacing: -0.2,
                         ),
                       ),
-                    ),
-                    _RoutineMenu(routine: routine),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  // An empty routine says so rather than rendering a blank
-                  // line the user cannot interpret.
-                  names.isEmpty ? 'No exercises yet' : names,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      color: AppPalette.textSecondary, fontSize: 14),
-                ),
-                const SizedBox(height: 12),
-                FilledButton(
-                  key: startKey(routine.id),
-                  onPressed: routine.isEmpty
-                      ? null
-                      : () => _start(context, ref),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppPalette.accentStrong,
-                    foregroundColor: AppPalette.onAccent,
-                    minimumSize: const Size.fromHeight(44),
+                      const SizedBox(height: AppMetrics.gapTight),
+                      // **A count, then the names.** The count is the fact a
+                      // user scanning six routines actually wants; the names
+                      // are the reminder of which one this is. Names alone,
+                      // wrapped to two lines, made every card the same height
+                      // and none of them scannable.
+                      Text(
+                        _summary(names, setCount),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppPalette.textSecondary,
+                          fontSize: 13,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
                   ),
-                  child: const Text('Start routine'),
                 ),
+                const SizedBox(width: AppMetrics.gap),
+                _StartButton(
+                  buttonKey: startKey(routine.id),
+                  onPressed: routine.isEmpty ? null : () => _start(context, ref),
+                ),
+                _RoutineMenu(routine: routine),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// `4 exercises · 12 sets` over `Arnold press, Back extension, …`.
+  ///
+  /// An empty routine says so instead of rendering a blank line the user
+  /// cannot interpret.
+  static String _summary(List<String> names, int setCount) {
+    if (names.isEmpty) return 'No exercises yet';
+    final exercises = '${names.length} exercise${names.length == 1 ? '' : 's'}';
+    final sets = setCount == 0 ? '' : ' · $setCount set${setCount == 1 ? '' : 's'}';
+    return '$exercises$sets · ${names.join(', ')}';
   }
 
   Future<void> _start(BuildContext context, WidgetRef ref) async {
@@ -156,4 +172,56 @@ class _RoutineMenu extends ConsumerWidget {
     );
   }
 
+}
+
+
+/// The one accent on a routine card, and it is a pill rather than a slab.
+///
+/// **Two full-width accent buttons made the landing unreadable.** The palette
+/// gives `#D85A30` one job — it marks the control that starts a workout — and
+/// a list of six routines would have spent it six times, at full bleed, which
+/// is the same as spending it nowhere. A pill keeps the meaning and gives it
+/// back its weight; the card itself stays tappable for reading the routine.
+class _StartButton extends StatelessWidget {
+  const _StartButton({required this.buttonKey, required this.onPressed});
+
+  final Key buttonKey;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: 'Start routine',
+      excludeSemantics: true,
+      child: SizedBox(
+        height: AppMetrics.touchTarget,
+        child: Material(
+          color: enabled ? AppPalette.accentStrong : AppPalette.mutedSurface,
+          borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
+          child: InkWell(
+            key: buttonKey,
+            borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
+            onTap: onPressed,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Center(
+                child: Text(
+                  'Start',
+                  style: TextStyle(
+                    color:
+                        enabled ? AppPalette.onAccent : AppPalette.textMuted,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

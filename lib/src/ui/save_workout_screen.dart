@@ -7,6 +7,7 @@ import '../data/routine_store.dart';
 import '../data/routines.dart';
 import '../data/session_store.dart';
 import '../data/set_format.dart';
+import '../theme/app_metrics.dart';
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
 import 'destructive_confirmation.dart';
@@ -76,62 +77,113 @@ class _SaveWorkoutScreenState extends ConsumerState<SaveWorkoutScreen> {
       body: ListView(
         padding: screenScrollPadding(context),
         children: <Widget>[
+          const SizedBox(height: AppMetrics.gapSnug),
+          // **The three facts, as a card.** They were a bare row wedged under
+          // an oversized placeholder, reading as debris. Given a surface they
+          // become the summary of what is about to be filed.
+          Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppMetrics.gapCard, vertical: AppMetrics.gapCard),
+            decoration: BoxDecoration(
+              color: AppPalette.surface,
+              borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
+            ),
+            child: Row(
+              children: <Widget>[
+                if (elapsed != null)
+                  _Stat(
+                      label: 'Duration',
+                      value: formatDuration(elapsed.inSeconds)),
+                _Stat(
+                    label: 'Volume',
+                    value: '${formatWeight(volumeOf(session))} kg'),
+                _Stat(label: 'Sets', value: '${setCountOf(session)}'),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppMetrics.gapSection),
+          const _FieldLabel('WORKOUT NAME'),
           TextField(
             key: SaveWorkoutScreen.titleKey,
             controller: _title,
             maxLength: 40,
             style: const TextStyle(
                 color: AppPalette.textPrimary,
-                fontSize: 22,
+                fontSize: 17,
                 fontWeight: FontWeight.w600),
-            decoration: const InputDecoration(
-              counterText: '',
-              border: InputBorder.none,
-              hintText: 'Workout title',
-              hintStyle: TextStyle(color: AppPalette.textMuted, fontSize: 22),
+            decoration: _fieldDecoration(
+              // A real hint, not a 22pt placeholder pretending to be a title.
+              // The name is optional and resolves on read (`00` §6), so the
+              // hint says what happens if it is left alone.
+              hint: 'Optional — named from its muscles if left blank',
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: <Widget>[
-              if (elapsed != null)
-                _Stat(label: 'Duration', value: formatDuration(elapsed.inSeconds)),
-              _Stat(
-                  label: 'Volume',
-                  value: '${formatWeight(volumeOf(session))} kg'),
-              _Stat(label: 'Sets', value: '${setCountOf(session)}'),
-            ],
-          ),
-          const Divider(color: AppPalette.border, height: 32),
+          const SizedBox(height: AppMetrics.gapSection),
+          const _FieldLabel('HOW DID IT GO?'),
           TextField(
             key: SaveWorkoutScreen.notesKey,
             controller: _notes,
             maxLines: null,
             minLines: 3,
-            style: const TextStyle(color: AppPalette.textSecondary),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              hintText: 'How did your workout go? Leave some notes here…',
-              hintStyle: TextStyle(color: AppPalette.textMuted),
+            style: const TextStyle(
+                color: AppPalette.textSecondary, fontSize: 15, height: 1.4),
+            decoration: _fieldDecoration(hint: 'Optional notes'),
+          ),
+          const SizedBox(height: AppMetrics.gapSection),
+          const _FieldLabel('DATE'),
+          // Retrospective logging is first-class, and the date is the one field
+          // here that is wrong in a way the user cannot fix later without
+          // hunting for it.
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: SessionDateControl(),
+          ),
+          const SizedBox(height: AppMetrics.gapBlock),
+          Center(
+            child: TextButton(
+              key: SaveWorkoutScreen.discardKey,
+              onPressed: () => _discard(context),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, AppMetrics.touchTarget),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppMetrics.gapCard),
+              ),
+              child: const Text('Discard workout',
+                  style: TextStyle(
+                      color: AppPalette.danger, fontWeight: FontWeight.w600)),
             ),
           ),
-          const Divider(color: AppPalette.border, height: 32),
-          // The same control the overview carries, because retrospective
-          // logging is first-class and the date is the one field here that can
-          // be wrong in a way the user cannot fix later without hunting.
-          const SessionDateControl(),
-          const SizedBox(height: 28),
-          TextButton(
-            key: SaveWorkoutScreen.discardKey,
-            onPressed: () => _discard(context),
-            style: TextButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-            child: const Text('Discard workout',
-                style: TextStyle(color: AppPalette.danger)),
-          ),
+          const SizedBox(height: AppMetrics.gapSection),
         ],
       ),
     );
   }
+
+  /// One field decoration for the screen, so the two inputs cannot drift.
+  static InputDecoration _fieldDecoration({required String hint}) =>
+      InputDecoration(
+        counterText: '',
+        isDense: true,
+        filled: true,
+        fillColor: AppPalette.mutedSurface,
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppMetrics.gap, vertical: AppMetrics.gap),
+        hintText: hint,
+        hintStyle: const TextStyle(color: AppPalette.textMuted, fontSize: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+          borderSide:
+              const BorderSide(color: AppPalette.accentStrong, width: 1.5),
+        ),
+      );
 
   Future<void> _save(BuildContext context, WorkoutSession session) async {
     final notifier = ref.read(activeSessionProvider.notifier);
@@ -232,6 +284,26 @@ class _SaveWorkoutScreenState extends ConsumerState<SaveWorkoutScreen> {
   }
 }
 
+/// A section label. **Visible, not a placeholder.** A field whose only label
+/// is its own hint text loses that label the moment the user types.
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: AppMetrics.gapLabel),
+        child: Text(text,
+            style: const TextStyle(
+              color: AppPalette.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.6,
+            )),
+      );
+}
+
 class _Stat extends StatelessWidget {
   const _Stat({required this.label, required this.value});
 
@@ -244,14 +316,19 @@ class _Stat extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(label,
-                style:
-                    const TextStyle(color: AppPalette.textMuted, fontSize: 12)),
-            const SizedBox(height: 2),
+                style: const TextStyle(
+                    color: AppPalette.textMuted,
+                    fontSize: 11,
+                    letterSpacing: 0.3)),
+            const SizedBox(height: AppMetrics.gapTight),
             Text(value,
                 style: const TextStyle(
-                    color: AppPalette.textPrimary,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600)),
+                  color: AppPalette.textPrimary,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                  fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                )),
           ],
         ),
       );

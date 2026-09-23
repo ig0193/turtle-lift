@@ -286,18 +286,27 @@ class _RoutineNotesFieldState extends ConsumerState<_RoutineNotesField> {
   @override
   void initState() {
     super.initState();
-    _focus.addListener(() {
-      if (!_focus.hasFocus) {
-        ref.read(routineListProvider.notifier).setExerciseNotes(
-              routineExerciseId: widget.exercise.id,
-              notes: _controller.text,
-            );
-      }
-    });
+    _focus.addListener(_commitOnBlur);
   }
 
+  void _commitOnBlur() {
+    if (_focus.hasFocus || !mounted) return;
+    ref.read(routineListProvider.notifier).setExerciseNotes(
+          routineExerciseId: widget.exercise.id,
+          notes: _controller.text,
+        );
+  }
+
+  /// **Removed before the node is disposed, and guarded on `mounted`.**
+  /// Disposing a `FocusNode` that currently has focus notifies its listeners,
+  /// and a listener that reaches for `ref` at that moment is reading the
+  /// element tree while it is being torn down — which throws "Looking up a
+  /// deactivated widget's ancestor is unsafe". The commit has to happen while
+  /// the widget is still alive, so it happens on blur and the teardown path is
+  /// made silent.
   @override
   void dispose() {
+    _focus.removeListener(_commitOnBlur);
     _controller.dispose();
     _focus.dispose();
     super.dispose();

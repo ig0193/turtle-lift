@@ -135,11 +135,12 @@ class L0Shell extends ConsumerWidget {
         // trailing gutter spacer after this, and the avatar carries the other
         // 8 itself — so it is wrapped in its own target rather than dropped in
         // as a bare IconButton.
-        ProfileAvatarButton(
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
+        if (!chrome.hideProfile)
+          ProfileAvatarButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
+            ),
           ),
-        ),
       ],
       // What makes the bar float and what makes every root's bottom clearance
       // real. See the class doc before touching either of these two lines.

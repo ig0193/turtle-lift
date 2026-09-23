@@ -7,6 +7,7 @@ import '../data/load_type.dart';
 import '../data/routine_store.dart';
 import '../data/routines.dart';
 import '../data/set_format.dart';
+import '../theme/app_metrics.dart';
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
 import 'routine_builder_screen.dart';
@@ -41,7 +42,13 @@ class RoutineDetailScreen extends ConsumerWidget {
       body: ListView(
         padding: screenScrollPadding(context),
         children: <Widget>[
-          const SizedBox(height: 8),
+          const SizedBox(height: AppMetrics.gapSnug),
+          Text(
+            _meta(routine),
+            style: const TextStyle(
+                color: AppPalette.textSecondary, fontSize: 14),
+          ),
+          const SizedBox(height: AppMetrics.gapCard),
           FilledButton(
             key: startKey,
             onPressed: routine.isEmpty
@@ -55,11 +62,21 @@ class RoutineDetailScreen extends ConsumerWidget {
             style: FilledButton.styleFrom(
               backgroundColor: AppPalette.accentStrong,
               foregroundColor: AppPalette.onAccent,
-              minimumSize: const Size.fromHeight(48),
+              disabledBackgroundColor: AppPalette.mutedSurface,
+              disabledForegroundColor: AppPalette.textMuted,
+              minimumSize:
+                  const Size.fromHeight(AppMetrics.controlHeight),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppMetrics.radiusControl),
+              ),
+              textStyle: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w700),
             ),
+            // The one accent on the screen, and the one thing this screen is
+            // for. Everything below it is reference.
             child: const Text('Start routine'),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppMetrics.gapSection),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
@@ -84,6 +101,7 @@ class RoutineDetailScreen extends ConsumerWidget {
           ),
           for (final exercise in routine.exercises)
             _ExerciseSummary(exercise: exercise),
+          const SizedBox(height: AppMetrics.gapSection),
           if (routine.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 32),
@@ -108,63 +126,66 @@ class _ExerciseSummary extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final library = ref.watch(exerciseIndexProvider).byId(exercise.exerciseId);
     final type = LoadType.fromName(library?.loadType ?? '') ?? LoadType.weighted;
+    final targets = exercise.sets.map((s) => _target(type, s)).toList();
+    final named = targets.where((t) => t != '—').toList();
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
+      padding: const EdgeInsets.symmetric(vertical: AppMetrics.gap),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            library?.name ?? exercise.exerciseId,
-            style: const TextStyle(
-                color: AppPalette.accentLight,
-                fontSize: 16,
-                fontWeight: FontWeight.w600),
-          ),
-          if (exercise.notes != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(exercise.notes!,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  library?.name ?? exercise.exerciseId,
+                  // Not accent: a name is not a state. See `00` §12.
                   style: const TextStyle(
-                      color: AppPalette.textSecondary, fontSize: 13)),
-            ),
-          const SizedBox(height: 6),
-          for (final (i, set) in exercise.sets.indexed)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: <Widget>[
-                  SizedBox(
-                    width: 34,
-                    child: Text('${i + 1}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppPalette.textPrimary)),
+                      color: AppPalette.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.2),
+                ),
+                const SizedBox(height: AppMetrics.gapTight),
+                Text(
+                  // **One line, not a column of `1  —` rows.** A plan with no
+                  // numbers yet says "3 sets"; one with numbers says them.
+                  // Numbering rows that hold nothing was a table of nothing.
+                  named.isEmpty
+                      ? '${targets.length} set${targets.length == 1 ? '' : 's'}'
+                      : named.join('  ·  '),
+                  style: const TextStyle(
+                      color: AppPalette.textSecondary, fontSize: 14),
+                ),
+                if (exercise.notes != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppMetrics.gapTight),
+                    child: Text(exercise.notes!,
+                        style: const TextStyle(
+                            color: AppPalette.textMuted, fontSize: 13)),
                   ),
-                  Text(
-                    _target(type, set),
-                    style: const TextStyle(color: AppPalette.textSecondary),
-                  ),
-                ],
-              ),
+              ],
             ),
+          ),
         ],
       ),
     );
   }
 
-  /// A planned set with no numbers reads as `-`, not as `0kg × 0`: the routine
+  /// A planned set with no numbers reads as `—`, not as `0kg × 0`: the routine
   /// is saying "do a set here", not "lift nothing".
   static String _target(LoadType type, RoutineSet set) {
     switch (type) {
       case LoadType.timed:
         return set.targetDurationSec == null
-            ? '-'
+            ? '—'
             : formatDuration(set.targetDurationSec!);
       case LoadType.bodyweight:
-        return set.targetReps == null ? '-' : '${set.targetReps} reps';
+        return set.targetReps == null ? '—' : '${set.targetReps} reps';
       case LoadType.weighted:
       case LoadType.assisted:
-        if (set.targetWeightKg == null && set.targetReps == null) return '-';
+        if (set.targetWeightKg == null && set.targetReps == null) return '—';
         final weight = set.targetWeightKg == null
             ? ''
             : '${formatWeight(set.targetWeightKg)}kg';
@@ -172,4 +193,15 @@ class _ExerciseSummary extends ConsumerWidget {
         return '$weight$reps'.trim();
     }
   }
+}
+
+
+/// `4 exercises · 12 sets`, under the routine's name.
+String _meta(Routine routine) {
+  if (routine.isEmpty) return 'No exercises yet';
+  final exercises = routine.exercises.length;
+  final sets =
+      routine.exercises.fold<int>(0, (total, e) => total + e.sets.length);
+  return '$exercises exercise${exercises == 1 ? '' : 's'}'
+      ' · $sets set${sets == 1 ? '' : 's'}';
 }

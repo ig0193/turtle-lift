@@ -131,9 +131,10 @@ void main() {
 
       expect(find.text('Push day'), findsOneWidget);
       expect(
-        find.text('Barbell bench press, Overhead press'),
+        find.text('2 exercises · 2 sets · Barbell bench press, Overhead press'),
         findsOneWidget,
-        reason: 'the card says what is in the routine, in order',
+        reason: 'the count is what a user scanning six routines wants; the '
+            'names are the reminder of which one this is',
       );
     });
 
@@ -142,13 +143,13 @@ void main() {
           () => routines.createRoutine(name: 'Nothing in here'));
       await pumpLanding(tester);
 
-      final start = tester.widget<FilledButton>(find.descendant(
-        of: find.byType(RoutineCard),
-        matching: find.byType(FilledButton),
-      ));
+      final routineId = (await tester.runAsync(routines.readRoutines))!.single.id;
+      final start = tester.widget<InkWell>(
+        find.byKey(RoutineCard.startKey(routineId)),
+      );
       // Starting it would open a workout with nothing in it, which is what
       // Start empty workout is already for.
-      expect(start.onPressed, isNull);
+      expect(start.onTap, isNull);
       expect(find.text('No exercises yet'), findsOneWidget);
     });
 
@@ -169,7 +170,7 @@ void main() {
       await pumpLanding(tester);
 
       await act(tester, () async {
-        await tester.tap(find.text('Start routine'));
+        await tester.tap(find.text('Start'));
       });
 
       final open = await tester.runAsync(() => sessions.readOpenSession());
@@ -194,7 +195,7 @@ void main() {
       await pumpLanding(tester);
 
       await act(tester, () async {
-        await tester.tap(find.text('Start routine'));
+        await tester.tap(find.text('Start'));
       });
 
       expect(find.byType(LogWorkoutBody), findsOneWidget);
@@ -207,7 +208,7 @@ void main() {
       await pumpLanding(tester);
 
       await act(tester, () async {
-        await tester.tap(find.text('Start routine'));
+        await tester.tap(find.text('Start'));
       });
 
       final open = await tester.runAsync(() => sessions.readOpenSession());
@@ -278,7 +279,7 @@ void main() {
       await tester.runAsync(benchOnly);
       await pumpLanding(tester);
       await act(tester, () async {
-        await tester.tap(find.text('Start routine'));
+        await tester.tap(find.text('Start'));
       });
 
       final open = (await tester.runAsync(() => sessions.readOpenSession()))!;
@@ -312,7 +313,7 @@ void main() {
       await tester.runAsync(benchOnly);
       await pumpLanding(tester);
       await act(tester, () async {
-        await tester.tap(find.text('Start routine'));
+        await tester.tap(find.text('Start'));
       });
 
       final open = await tester.runAsync(() => sessions.readOpenSession());

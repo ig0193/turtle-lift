@@ -103,35 +103,37 @@ void main() {
     testWidgets('reads OFF until the user sets one', (tester) async {
       await pumpLog(tester);
 
-      expect(find.text('Rest timer: OFF'), findsOneWidget);
+      // Off is quiet: a ghost chip, not a row stating the absence of a feature.
+      expect(find.text('Rest'), findsOneWidget);
     });
 
     testWidgets('a chosen rest shows on the line and survives a re-read',
         (tester) async {
       final rowId = await pumpLog(tester);
 
-      await tester.tap(find.byKey(RestTimerLine.lineKey(rowId)));
+      await tester.tap(find.byKey(RestTimerChip.lineKey(rowId)));
       await tester.pumpAndSettle();
       await act(tester, () async {
         await tester.tap(find.text('1:30'));
       });
 
-      expect(find.text('Rest timer: 1:30'), findsOneWidget);
+      expect(find.text('1:30'), findsWidgets);
       final reread = await tester.runAsync(store.readOpenSession);
       expect(reread!.exercises.single.restTimerSec, 90);
     });
 
     testWidgets('it can be turned back off', (tester) async {
       final rowId = await pumpLog(tester, restSeconds: 90);
-      expect(find.text('Rest timer: 1:30'), findsOneWidget);
+      expect(find.text('1:30'), findsWidgets);
 
-      await tester.tap(find.byKey(RestTimerLine.lineKey(rowId)));
+      await tester.tap(find.byKey(RestTimerChip.lineKey(rowId)));
       await tester.pumpAndSettle();
       await act(tester, () async {
         await tester.tap(find.text('Off'));
       });
 
-      expect(find.text('Rest timer: OFF'), findsOneWidget);
+      // Off is quiet: a ghost chip, not a row stating the absence of a feature.
+      expect(find.text('Rest'), findsOneWidget);
       final reread = await tester.runAsync(store.readOpenSession);
       expect(reread!.exercises.single.restTimerSec, isNull);
     });

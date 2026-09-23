@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../data/load_type.dart';
 import '../data/session_store.dart';
 import '../data/set_format.dart';
+import '../theme/app_metrics.dart';
 import '../theme/app_palette.dart';
 
 /// One set, as a row in its exercise's table.
@@ -221,8 +222,13 @@ class _SetTableRowState extends State<SetTableRow> {
         key: SetTableRow.rowKey(widget.exerciseRowId, widget.index),
         // A completed row fills accent, which here means exactly what the
         // palette says it means everywhere: this has been worked.
-        color: done ? AppPalette.accentStrong.withValues(alpha: 0.18) : null,
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          color: done ? AppPalette.accentStrong.withValues(alpha: 0.16) : null,
+          borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+        ),
+        constraints:
+            const BoxConstraints(minHeight: AppMetrics.setRowHeight),
+        padding: const EdgeInsets.symmetric(vertical: AppMetrics.gapTight),
         child: Row(
           children: <Widget>[
             SizedBox(
@@ -230,19 +236,29 @@ class _SetTableRowState extends State<SetTableRow> {
               child: Text(
                 '${widget.index + 1}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppPalette.textPrimary,
+                style: TextStyle(
+                  color:
+                      done ? AppPalette.textPrimary : AppPalette.textSecondary,
                   fontWeight: FontWeight.w600,
+                  fontFeatures: const <FontFeature>[
+                    FontFeature.tabularFigures()
+                  ],
                 ),
               ),
             ),
             Expanded(
               flex: 3,
               child: Text(
-                widget.previous ?? '-',
+                // An em dash, not a hyphen: `-` in a column of numbers reads as
+                // a minus sign or a failed render. This is "nothing recorded".
+                widget.previous ?? '—',
                 key: SetTableRow.previousKey(widget.exerciseRowId, widget.index),
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppPalette.textMuted),
+                style: const TextStyle(
+                  color: AppPalette.textMuted,
+                  fontSize: 13,
+                  fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                ),
               ),
             ),
             Expanded(
@@ -273,30 +289,53 @@ class _SetTableRowState extends State<SetTableRow> {
                   semanticsLabel: headings.last,
                 ),
               ),
-            SizedBox(
-              width: 44,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
-                  if (widget.isPersonalBest)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 2),
-                      child: Icon(Icons.emoji_events_outlined,
-                          size: 16, color: AppPalette.accentLight),
-                    ),
-                  IconButton(
-                    key: SetTableRow.checkKey(
-                        widget.exerciseRowId, widget.index),
-                    onPressed: _handleTick,
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(
-                      done ? Icons.check_box : Icons.check_box_outline_blank,
-                      size: 20,
-                      color:
-                          done ? AppPalette.accentStrong : AppPalette.textMuted,
+            if (widget.isPersonalBest)
+              const Padding(
+                padding: EdgeInsets.only(left: AppMetrics.gapTight),
+                child: Icon(Icons.emoji_events_outlined,
+                    size: 15, color: AppPalette.accentLight),
+              ),
+            // **The whole square is the target, not the glyph.** A 20pt
+            // checkbox is the single most-pressed control in the app and was
+            // less than half the 44pt floor.
+            Semantics(
+              button: true,
+              checked: done,
+              label: 'Set ${widget.index + 1} complete',
+              excludeSemantics: true,
+              child: SizedBox(
+                width: AppMetrics.touchTarget,
+                height: AppMetrics.touchTarget,
+                child: InkWell(
+                  key: SetTableRow.checkKey(
+                      widget.exerciseRowId, widget.index),
+                  borderRadius:
+                      BorderRadius.circular(AppMetrics.radiusControl),
+                  onTap: _handleTick,
+                  child: Center(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 120),
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: done
+                            ? AppPalette.accentStrong
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: done
+                              ? AppPalette.accentStrong
+                              : AppPalette.border,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: done
+                          ? const Icon(Icons.check,
+                              size: 17, color: AppPalette.onAccent)
+                          : null,
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ],
@@ -348,22 +387,27 @@ class _Cell extends StatelessWidget {
                     : r'[0-9]'),
           ),
         ],
-        style: const TextStyle(color: AppPalette.textPrimary),
+        style: const TextStyle(
+          color: AppPalette.textPrimary,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+        ),
         decoration: InputDecoration(
           isDense: true,
           contentPadding:
-              const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              const EdgeInsets.symmetric(vertical: 11, horizontal: 4),
           filled: true,
           fillColor: AppPalette.mutedSurface,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: AppPalette.border),
+            borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+            borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: AppPalette.border),
+            borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+            borderSide: BorderSide.none,
           ),
-          hintText: '-',
+          hintText: '—',
           hintStyle: const TextStyle(color: AppPalette.textMuted),
         ),
       ),

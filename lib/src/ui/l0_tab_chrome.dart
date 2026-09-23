@@ -13,7 +13,12 @@ import 'package:flutter/widgets.dart';
 /// knows only that a tab may contribute a title and some actions.
 @immutable
 class L0TabChrome {
-  const L0TabChrome({this.title, this.titleWidget, this.actions});
+  const L0TabChrome({
+    this.title,
+    this.titleWidget,
+    this.actions,
+    this.hideProfile = false,
+  });
 
   /// Replaces the tab's name as the header's semantics label.
   final String? title;
@@ -23,4 +28,12 @@ class L0TabChrome {
 
   /// Controls added before the profile avatar, which stays trailing-most.
   final List<Widget>? actions;
+
+  /// Suppresses the profile avatar for the duration.
+  ///
+  /// **For a tab that has become a task rather than a place.** A workout in
+  /// progress owns the whole header; an avatar to a screen the user cannot
+  /// usefully visit mid-set is one more thing to read and one more thing to
+  /// hit by accident.
+  final bool hideProfile;
 }

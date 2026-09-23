@@ -8,6 +8,7 @@ import '../data/load_type.dart';
 import '../data/personal_best.dart';
 import '../data/session_store.dart';
 import '../data/set_format.dart';
+import '../theme/app_metrics.dart';
 import '../theme/app_palette.dart';
 import 'destructive_confirmation.dart';
 import 'exercise_detail_screen.dart';
@@ -76,7 +77,7 @@ class _LogExerciseBlockState extends ConsumerState<LogExerciseBlock> {
 
     return Padding(
       key: LogExerciseBlock.blockKey(exercise.id),
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(bottom: AppMetrics.gapSection),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -94,10 +95,19 @@ class _LogExerciseBlockState extends ConsumerState<LogExerciseBlock> {
                           ),
                   child: Text(
                     library?.name ?? exercise.exerciseId,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    // **Not accent.** `#D85A30` and its light partner mean
+                    // "active / this has been worked" wherever they appear
+                    // (`00` §12). An exercise title is neither; painting every
+                    // heading in it spent the one colour that carries state on
+                    // decoration, and left a screen where nothing stood out
+                    // because everything did.
                     style: const TextStyle(
-                      color: AppPalette.accentLight,
+                      color: AppPalette.textPrimary,
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
+                      letterSpacing: -0.2,
                     ),
                   ),
                 ),
@@ -105,10 +115,14 @@ class _LogExerciseBlockState extends ConsumerState<LogExerciseBlock> {
               _ExerciseMenu(exercise: exercise, session: widget.session),
             ],
           ),
-          const SizedBox(height: 6),
-          _NotesField(exercise: exercise),
-          RestTimerLine(exercise: exercise),
-          const SizedBox(height: 8),
+          // The meta chips carry their own 44pt height, so the title needs no
+          // gap of its own beneath it.
+          // **Both of these are empty on almost every exercise**, and as a
+          // bordered field plus an always-on "Rest timer: OFF" line they cost
+          // two rows of noise each, on every block, forever. They collapse to
+          // one quiet row and open only when there is something to show.
+          _ExerciseMeta(exercise: exercise),
+          const SizedBox(height: AppMetrics.gapSnug),
           _HeadingRow(headings: headings),
           for (var i = 0; i < rowCount; i++)
             Builder(
@@ -143,14 +157,28 @@ class _LogExerciseBlockState extends ConsumerState<LogExerciseBlock> {
                 );
               },
             ),
-          const SizedBox(height: 6),
-          TextButton.icon(
-            key: LogExerciseBlock.addSetKey(exercise.id),
-            onPressed: () => setState(() => _addedRows++),
-            icon:
-                const Icon(Icons.add, size: 18, color: AppPalette.textSecondary),
-            label: const Text('Add set',
-                style: TextStyle(color: AppPalette.textSecondary)),
+          const SizedBox(height: AppMetrics.gapSnug),
+          // A quiet row, not a filled block. It repeats under every exercise;
+          // given a surface of its own it out-weighed the set table it belongs
+          // to.
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              height: AppMetrics.touchTarget,
+              child: TextButton.icon(
+                key: LogExerciseBlock.addSetKey(exercise.id),
+                onPressed: () => setState(() => _addedRows++),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppMetrics.gapSnug),
+                ),
+                icon: const Icon(Icons.add,
+                    size: 17, color: AppPalette.textSecondary),
+                label: const Text('Add set',
+                    style: TextStyle(
+                        color: AppPalette.textSecondary, fontSize: 14)),
+              ),
+            ),
           ),
         ],
       ),
@@ -271,37 +299,54 @@ class _HeadingRow extends StatelessWidget {
   }
 }
 
-/// The user's note for this exercise. Commits on blur, not per keystroke — a
-/// write per character would be a database round trip per character.
-class _NotesField extends ConsumerStatefulWidget {
-  const _NotesField({required this.exercise});
+/// The quiet row under an exercise's title: its rest timer, and its note.
+///
+/// **Absent until asked for.** A bordered notes field and a `Rest timer: OFF`
+/// line on every exercise is two rows of furniture per block that say nothing
+/// the user did not already know. Here each is a ghost affordance that becomes
+/// content the moment it holds any.
+class _ExerciseMeta extends ConsumerStatefulWidget {
+  const _ExerciseMeta({required this.exercise});
 
   final SessionExercise exercise;
 
   @override
-  ConsumerState<_NotesField> createState() => _NotesFieldState();
+  ConsumerState<_ExerciseMeta> createState() => _ExerciseMetaState();
 }
 
-class _NotesFieldState extends ConsumerState<_NotesField> {
+class _ExerciseMetaState extends ConsumerState<_ExerciseMeta> {
   late final TextEditingController _controller =
       TextEditingController(text: widget.exercise.notes ?? '');
   final FocusNode _focus = FocusNode();
+  bool _editingNote = false;
 
   @override
   void initState() {
     super.initState();
-    _focus.addListener(() {
-      if (!_focus.hasFocus) {
-        ref.read(activeSessionProvider.notifier).setExerciseNotes(
-              sessionExerciseId: widget.exercise.id,
-              notes: _controller.text,
-            );
-      }
-    });
+    _focus.addListener(_commitOnBlur);
   }
 
+  void _commitOnBlur() {
+    if (_focus.hasFocus || !mounted) return;
+    ref.read(activeSessionProvider.notifier).setExerciseNotes(
+          sessionExerciseId: widget.exercise.id,
+          notes: _controller.text,
+        );
+    if (_controller.text.trim().isEmpty) {
+      setState(() => _editingNote = false);
+    }
+  }
+
+  /// **Removed before the node is disposed, and guarded on `mounted`.**
+  /// Disposing a `FocusNode` that currently has focus notifies its listeners,
+  /// and a listener that reaches for `ref` at that moment is reading the
+  /// element tree while it is being torn down — which throws "Looking up a
+  /// deactivated widget's ancestor is unsafe". The commit has to happen while
+  /// the widget is still alive, so it happens on blur and the teardown path is
+  /// made silent.
   @override
   void dispose() {
+    _focus.removeListener(_commitOnBlur);
     _controller.dispose();
     _focus.dispose();
     super.dispose();
@@ -309,21 +354,97 @@ class _NotesFieldState extends ConsumerState<_NotesField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      key: LogExerciseBlock.notesKey(widget.exercise.id),
-      controller: _controller,
-      focusNode: _focus,
-      maxLines: null,
-      style: const TextStyle(color: AppPalette.textSecondary, fontSize: 14),
-      decoration: const InputDecoration(
-        isDense: true,
-        border: InputBorder.none,
-        contentPadding: EdgeInsets.zero,
-        hintText: 'Add notes here…',
-        hintStyle: TextStyle(color: AppPalette.textMuted, fontSize: 14),
-      ),
+    final hasNote = (widget.exercise.notes ?? '').trim().isNotEmpty;
+    final showsField = _editingNote || hasNote;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            RestTimerChip(exercise: widget.exercise),
+            if (!showsField) ...<Widget>[
+              const SizedBox(width: AppMetrics.gapSnug),
+              _GhostChip(
+                chipKey: LogExerciseBlock.notesKey(widget.exercise.id),
+                icon: Icons.notes_outlined,
+                label: 'Note',
+                onTap: () {
+                  setState(() => _editingNote = true);
+                  WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => _focus.requestFocus(),
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+        if (showsField)
+          Padding(
+            padding: const EdgeInsets.only(top: AppMetrics.gapSnug),
+            child: TextField(
+              key: LogExerciseBlock.notesKey(widget.exercise.id),
+              controller: _controller,
+              focusNode: _focus,
+              maxLines: null,
+              style: const TextStyle(
+                  color: AppPalette.textSecondary, fontSize: 14, height: 1.4),
+              decoration: const InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                hintText: 'Note for this exercise',
+                hintStyle:
+                    TextStyle(color: AppPalette.textMuted, fontSize: 14),
+              ),
+            ),
+          ),
+      ],
     );
   }
+}
+
+/// A low-emphasis pill: an affordance that has nothing to show yet.
+class _GhostChip extends StatelessWidget {
+  const _GhostChip({
+    required this.chipKey,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final Key chipKey;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: label,
+        excludeSemantics: true,
+        child: SizedBox(
+          height: AppMetrics.touchTarget,
+          child: InkWell(
+            key: chipKey,
+            borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppMetrics.gapSnug),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Icon(icon, size: 15, color: AppPalette.textMuted),
+                  const SizedBox(width: AppMetrics.gapTight + 2),
+                  Text(label,
+                      style: const TextStyle(
+                          color: AppPalette.textMuted, fontSize: 13)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 /// Reorder, replace and remove, as Hevy's per-exercise `⋮` menu.

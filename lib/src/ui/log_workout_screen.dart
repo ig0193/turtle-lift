@@ -9,6 +9,7 @@ import '../data/exercise_index.dart';
 import '../data/load_type.dart';
 import '../data/session_store.dart';
 import '../data/set_format.dart';
+import '../theme/app_metrics.dart';
 import '../theme/app_palette.dart';
 import 'adhoc_overview_body.dart';
 import 'app_screen.dart';
@@ -17,7 +18,6 @@ import 'exercise_picker_screen.dart';
 import 'log_exercise_block.dart';
 import 'rest_timer.dart';
 import 'save_workout_screen.dart';
-import 'session_body_map.dart';
 import 'template_overview_body.dart';
 
 /// The screen a workout is run on.
@@ -79,31 +79,42 @@ class LogWorkoutBody extends ConsumerWidget {
       padding: screenScrollPadding(context),
       children: <Widget>[
         _SummaryBar(session: session),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppMetrics.gapSection),
         if (session.exercises.isEmpty)
           const _EmptyState()
         else
           for (final exercise in session.exercises)
             LogExerciseBlock(exercise: exercise, session: session),
-        FilledButton.icon(
+        // **Outlined, not filled.** A full-bleed accent slab is the loudest
+        // thing on the screen and it scrolls under a blurred tab bar, where it
+        // smears and reads as a collision. Accent stays on the border and the
+        // label, which is legible under glass and still unmistakably the
+        // primary action.
+        OutlinedButton.icon(
           key: LogWorkoutScreen.addExerciseKey,
           onPressed: () => _addExercises(context, ref, session),
-          style: FilledButton.styleFrom(
-            backgroundColor: AppPalette.accentStrong,
-            foregroundColor: AppPalette.onAccent,
-            minimumSize: const Size.fromHeight(48),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppPalette.accentLight,
+            backgroundColor: AppPalette.surface,
+            // **No accent border.** A 1.5px orange outline read *through* the
+            // blurred tab bar as it scrolled past, which looks like a
+            // collision rather than a control passing under glass. Accent
+            // stays on the label, which survives the blur legibly.
+            side: const BorderSide(color: AppPalette.border),
+            minimumSize: const Size.fromHeight(AppMetrics.controlHeight),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppMetrics.radiusControl),
+            ),
+            textStyle: const TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w600),
           ),
-          icon: const Icon(Icons.add),
+          icon: const Icon(Icons.add, size: 20),
           label: const Text('Add exercise'),
         ),
-        const SizedBox(height: 10),
-        TextButton(
-          key: LogWorkoutScreen.discardKey,
-          onPressed: () => _discard(context, ref),
-          style: TextButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-          child: const Text('Discard workout',
-              style: TextStyle(color: AppPalette.danger)),
-        ),
+        // Discard moved into the header's overflow menu. A destructive action
+        // does not belong at the foot of a scroll, one thumb-width under the
+        // control the user reaches for most.
+        const SizedBox(height: AppMetrics.gapBlock),
       ],
     );
   }
@@ -137,7 +148,8 @@ class LogWorkoutBody extends ConsumerWidget {
     }
   }
 
-  Future<void> _discard(BuildContext context, WidgetRef ref) async {
+  static Future<void> discardWorkout(
+      BuildContext context, WidgetRef ref) async {
     final confirmed = await confirmDestructive(
       context,
       title: 'Discard workout?',
@@ -178,9 +190,14 @@ class FinishAction extends ConsumerWidget {
 
 /// `Duration · Volume · Sets`, plus the front and back figures.
 ///
-/// **Set count is the headline of the three**, per `00` §3: volume cannot
-/// include bodyweight or timed work, so it is the partial figure of the row and
-/// must never out-rank the one that covers every load type.
+/// **One figure leads.** Three equal-weight stats in a row is a table, and a
+/// table makes the reader do the ranking. Duration is the one that moves and the
+/// one a user glances at mid-set, so it is the large one; volume and sets are
+/// facts to check, not to watch.
+///
+/// **Set count is still the headline of the app**, per `00` §3 — volume cannot
+/// include bodyweight or timed work. Size here ranks *glanceability*, not
+/// importance, which is why volume never gets the large treatment either.
 class _SummaryBar extends ConsumerWidget {
   const _SummaryBar({required this.session});
 
@@ -189,43 +206,124 @@ class _SummaryBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppPalette.border)),
+      margin: const EdgeInsets.only(top: AppMetrics.gapSnug),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppMetrics.gapCard, vertical: AppMetrics.gap),
+      decoration: BoxDecoration(
+        color: AppPalette.surface,
+        borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
       ),
+      // **Every region flexes.** The bar holds a hero numeral, two stats and a
+      // control on a 360pt phone; laying any of them out at intrinsic width
+      // overflows the moment a volume reaches four digits.
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
-          const Expanded(child: _DurationStat()),
+          const Flexible(flex: 4, child: _DurationStat()),
+          const SizedBox(width: AppMetrics.gap),
+          Container(width: 1, height: 34, color: AppPalette.border),
+          const SizedBox(width: AppMetrics.gap),
           Expanded(
-            child: _Stat(
-              label: 'Volume',
-              valueKey: LogWorkoutScreen.volumeKey,
-              value: '${formatWeight(volumeOf(session))} kg',
-            ),
-          ),
-          Expanded(
-            child: _Stat(
-              label: 'Sets',
-              valueKey: LogWorkoutScreen.setCountKey,
-              value: '${setCountOf(session)}',
-            ),
-          ),
-          // The two figures are the way back to the muscle overview, which
-          // Hevy has no equivalent of and which this app kept (`adr/0004`).
-          GestureDetector(
-            key: LogWorkoutScreen.bodyMapKey,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => _OverviewRoute(session: session),
-              ),
-            ),
-            child: SizedBox(
-              width: 64,
-              child: SessionBodyMap(compact: true),
+            flex: 6,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Flexible(
+                  child: _MiniStat(
+                    label: 'Volume',
+                    valueKey: LogWorkoutScreen.volumeKey,
+                    value: '${formatWeight(volumeOf(session))} kg',
+                  ),
+                ),
+                Flexible(
+                  child: _MiniStat(
+                    label: 'Sets',
+                    valueKey: LogWorkoutScreen.setCountKey,
+                    value: '${setCountOf(session)}',
+                  ),
+                ),
+                // **A count and a chevron, not two 40pt figures.** The body
+                // diagrams are 42 traced segments rendered into a 40pt box:
+                // at that size they are brown smudges that name nothing and
+                // invite no tap. The muscle overview they lead to is worth
+                // reaching; the thumbnail was not the way to say so.
+                Semantics(
+                  button: true,
+                  label: 'Muscles worked this session',
+                  excludeSemantics: true,
+                  child: SizedBox(
+                    height: AppMetrics.touchTarget,
+                    child: InkWell(
+                      key: LogWorkoutScreen.bodyMapKey,
+                      borderRadius:
+                          BorderRadius.circular(AppMetrics.radiusControl),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => _OverviewRoute(session: session),
+                        ),
+                      ),
+                      child: const Padding(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: AppMetrics.gapSnug),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(Icons.accessibility_new,
+                                size: 18, color: AppPalette.textSecondary),
+                            Icon(Icons.chevron_right,
+                                size: 16, color: AppPalette.textMuted),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A stat that is checked, not watched.
+class _MiniStat extends StatelessWidget {
+  const _MiniStat({
+    required this.label,
+    required this.value,
+    required this.valueKey,
+  });
+
+  final String label;
+  final String value;
+  final Key valueKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(label,
+            style: const TextStyle(
+                color: AppPalette.textMuted,
+                fontSize: 11,
+                letterSpacing: 0.3)),
+        const SizedBox(height: 1),
+        Text(
+          value,
+          key: valueKey,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: AppPalette.textPrimary,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -260,17 +358,44 @@ class _DurationStatState extends ConsumerState<_DurationStat> {
   Widget build(BuildContext context) {
     final session = ref.watch(activeSessionProvider);
     final elapsed = session == null ? null : elapsedOf(session, _now);
-    return GestureDetector(
-      key: LogWorkoutScreen.durationControlKey,
-      behavior: HitTestBehavior.opaque,
-      onTap: session == null ? null : _adjust,
-      child: _Stat(
-        label: 'Duration',
-        valueKey: LogWorkoutScreen.durationKey,
-        // An em dash, not `0:00`. A session logged before `adr/0004` has no
-        // start time, and a zero would claim it took no time at all.
-        value: elapsed == null ? '—' : formatDuration(elapsed.inSeconds),
-        accent: true,
+    return Semantics(
+      button: true,
+      label: 'Workout duration. Tap to adjust',
+      excludeSemantics: true,
+      child: InkWell(
+        key: LogWorkoutScreen.durationControlKey,
+        borderRadius: BorderRadius.circular(AppMetrics.radiusControl),
+        onTap: session == null ? null : _adjust,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppMetrics.gapTight),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text('Duration',
+                  style: TextStyle(
+                      color: AppPalette.textMuted,
+                      fontSize: 11,
+                      letterSpacing: 0.3)),
+              Text(
+                // An em dash, not `0:00`. A session logged before `adr/0004`
+                // has no start time, and a zero would claim it took none.
+                elapsed == null ? '—' : formatDuration(elapsed.inSeconds),
+                key: LogWorkoutScreen.durationKey,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppPalette.accentLight,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                  height: 1.1,
+                  letterSpacing: -0.5,
+                  fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -314,58 +439,26 @@ class _DurationStatState extends ConsumerState<_DurationStat> {
   }
 }
 
-class _Stat extends StatelessWidget {
-  const _Stat({
-    required this.label,
-    required this.value,
-    required this.valueKey,
-    this.accent = false,
-  });
-
-  final String label;
-  final String value;
-  final Key valueKey;
-  final bool accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(label,
-            style: const TextStyle(color: AppPalette.textMuted, fontSize: 12)),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          key: valueKey,
-          style: TextStyle(
-            color: accent ? AppPalette.accentLight : AppPalette.textPrimary,
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
     return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 48),
+      padding: EdgeInsets.only(top: 56, bottom: AppMetrics.gapSection),
       child: Column(
         children: <Widget>[
-          Text('Get started',
+          Icon(Icons.fitness_center, size: 30, color: AppPalette.textMuted),
+          SizedBox(height: AppMetrics.gapCard),
+          Text('Nothing logged yet',
               style: TextStyle(
                   color: AppPalette.textPrimary,
-                  fontSize: 18,
+                  fontSize: 17,
                   fontWeight: FontWeight.w600)),
-          SizedBox(height: 6),
-          Text('Add an exercise to start your workout',
-              style: TextStyle(color: AppPalette.textSecondary)),
+          SizedBox(height: AppMetrics.gapTight + 2),
+          Text('Add your first exercise below',
+              style:
+                  TextStyle(color: AppPalette.textSecondary, fontSize: 14)),
         ],
       ),
     );

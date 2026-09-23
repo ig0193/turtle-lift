@@ -282,12 +282,13 @@ void main() {
     }
 
     expect(
-      find.text('Discard workout'),
+      find.text('Add exercise'),
       findsOneWidget,
-      // Finish moved into the pinned header with `adr/0004`, which this host
-      // does not mount — so the foot of the body is where Discard is, alone.
-      // Ending a workout and throwing it away are no longer neighbours.
-      reason: 'the takeover ends with Discard; the landing has no such button',
+      // Both Finish and Discard live in the pinned header now — Finish as a
+      // button, Discard inside its overflow — and this host mounts no header.
+      // What the body ends with is the one control that adds to the workout.
+      reason: 'the takeover ends with Add exercise; the landing has no such '
+          'button',
     );
     expect(
       find.text('ROUTINES'),

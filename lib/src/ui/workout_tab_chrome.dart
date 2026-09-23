@@ -26,43 +26,20 @@ final workoutTabChromeProvider = Provider<L0TabChrome>((ref) {
   return const L0TabChrome(
     title: 'Workout in progress',
     titleWidget: SessionTitleField(),
-    // Finish sits in the header, as Hevy's does (`adr/0004`), and the
-    // Discard beside it stays at the foot of the body — ending a workout and
-    // throwing it away must not be neighbours.
-    actions: <Widget>[_StartAnotherButton(), _FinishButton()],
+    // **Three controls, not five.** The header carried a browse-templates
+    // glyph, Finish, the word "Profile" and an avatar, over a title that
+    // truncated at a dozen characters. Finish is the only one a user reaches
+    // for mid-workout; the rest moved into the overflow, and the profile
+    // avatar is suppressed for the duration.
+    actions: <Widget>[_FinishButton(), _WorkoutOverflow()],
+    hideProfile: true,
   );
 });
 
-/// Opens the template list so another workout can be started.
-///
-/// **A list glyph, never a plus.** It sits inches from the ad-hoc path's
-/// "+ Add exercise" and means something far more consequential: choosing a
-/// workout here saves or drops the one in progress. A plus would read as "add
-/// something to this workout", which is the opposite of what it does.
-class _StartAnotherButton extends StatelessWidget {
-  const _StartAnotherButton();
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: 'Browse templates',
-        excludeSemantics: true,
-        child: GestureDetector(
-          key: startAnotherWorkoutKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: () => pushTemplateList(context),
-          child: const SizedBox(
-            width: 48,
-            height: 48,
-            child: Icon(Icons.list_alt_outlined,
-                size: 20, color: AppPalette.textSecondary),
-          ),
-        ),
-      );
-}
-
 /// The key a test taps to reach the template list mid-workout.
-const Key startAnotherWorkoutKey = ValueKey<String>('start-another-workout');
+///
+/// It is the overflow menu now, not a header glyph of its own.
+const Key startAnotherWorkoutKey = _WorkoutOverflow.menuKey;
 
 
 /// Finishes the open workout, by way of the Save workout screen.
@@ -71,4 +48,45 @@ class _FinishButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const FinishAction();
+}
+
+/// Everything else a workout can do: browse templates, or throw it away.
+///
+/// **Discard lives here rather than at the foot of the scroll.** It sat one
+/// thumb-width under Add exercise — the control pressed most often on the
+/// screen — painted in the one colour reserved for destruction. A menu costs a
+/// tap and removes a whole class of accident.
+class _WorkoutOverflow extends ConsumerWidget {
+  const _WorkoutOverflow();
+
+  static const Key menuKey = ValueKey<String>('workout-overflow');
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<String>(
+      key: menuKey,
+      icon: const Icon(Icons.more_horiz, color: AppPalette.textSecondary),
+      color: AppPalette.surface,
+      tooltip: 'Workout options',
+      itemBuilder: (_) => <PopupMenuEntry<String>>[
+        const PopupMenuItem<String>(
+          value: 'templates',
+          child: Text('Browse templates'),
+        ),
+        const PopupMenuItem<String>(
+          value: 'discard',
+          child: Text('Discard workout',
+              style: TextStyle(color: AppPalette.danger)),
+        ),
+      ],
+      onSelected: (value) async {
+        switch (value) {
+          case 'templates':
+            await pushTemplateList(context);
+          case 'discard':
+            await LogWorkoutBody.discardWorkout(context, ref);
+        }
+      },
+    );
+  }
 }

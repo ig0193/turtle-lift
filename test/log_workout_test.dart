@@ -11,7 +11,6 @@ import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
 import 'package:turtle_lift/src/data/settings_store.dart'
     show appDatabaseProvider;
-import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/log_exercise_block.dart';
 import 'package:turtle_lift/src/ui/log_workout_screen.dart';
@@ -271,8 +270,9 @@ void main() {
         tester
             .widget<Text>(find.byKey(SetTableRow.previousKey(rows['bench']!, 1)))
             .data,
-        '-',
-        reason: 'the second set was never done before',
+        '—',
+        reason: 'the second set was never done before — an em dash, because a '
+            'hyphen in a column of numbers reads as a minus sign',
       );
     });
 
@@ -368,19 +368,14 @@ void main() {
       expect(find.text('Add exercise'), findsOneWidget);
     });
 
-    testWidgets('Discard workout is painted danger, never accent',
-        (tester) async {
+    testWidgets('Discard is not one of them', (tester) async {
       await pumpLog(tester, <String, LoadType>{'bench': LoadType.weighted});
 
-      final label = tester.widget<Text>(
-        find.descendant(
-          of: find.byKey(LogWorkoutScreen.discardKey),
-          matching: find.byType(Text),
-        ),
-      );
-      // `#D85A30` means "active / this has been worked" wherever it appears, so
-      // a discard painted in it would read as approval. See `00` §12.
-      expect(label.style?.color, AppPalette.danger);
+      // It moved into the header overflow. A destructive action one
+      // thumb-width under the most-pressed control on the screen is an
+      // accident waiting to be filed as a bug report.
+      expect(find.byKey(LogWorkoutScreen.discardKey), findsNothing);
+      expect(find.text('Discard workout'), findsNothing);
     });
   });
 }
