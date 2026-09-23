@@ -5,6 +5,7 @@ import '../data/active_session.dart';
 import '../data/exercise.dart';
 import '../data/exercise_index.dart';
 import '../data/generated/muscle_taxonomy.dart';
+import '../theme/app_metrics.dart';
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
 
@@ -67,23 +68,41 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
           ListView(
             padding: screenScrollPadding(context),
             children: <Widget>[
-              const SizedBox(height: 4),
+              const SizedBox(height: AppMetrics.gapSnug),
               TextField(
                 key: ExercisePickerScreen.searchKey,
                 controller: _search,
                 onChanged: (value) => setState(() => _query = value),
                 style: const TextStyle(color: AppPalette.textPrimary),
-                decoration: const InputDecoration(
-                  prefixIcon:
-                      Icon(Icons.search, color: AppPalette.textMuted, size: 20),
-                  hintText: 'Search exercise',
-                  hintStyle: TextStyle(color: AppPalette.textMuted),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                      vertical: AppMetrics.gap, horizontal: AppMetrics.gap),
+                  prefixIcon: const Icon(Icons.search,
+                      color: AppPalette.textMuted, size: 20),
+                  hintText: 'Search exercises',
+                  hintStyle: const TextStyle(color: AppPalette.textMuted),
                   filled: true,
                   fillColor: AppPalette.mutedSurface,
-                  border: OutlineInputBorder(borderSide: BorderSide.none),
+                  border: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppMetrics.radiusControl),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppMetrics.radiusControl),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppMetrics.radiusControl),
+                    borderSide: const BorderSide(
+                        color: AppPalette.accentStrong, width: 1.5),
+                  ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppMetrics.gap),
               Row(
                 children: <Widget>[
                   Expanded(
@@ -96,7 +115,7 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                       onTap: () => _pickEquipment(index),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppMetrics.gap),
                   Expanded(
                     child: _FilterButton(
                       buttonKey: ExercisePickerScreen.muscleFilterKey,
@@ -110,29 +129,37 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                 ],
               ),
               if (recent.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 16),
+                const SizedBox(height: AppMetrics.gapSection),
                 const _SectionLabel('RECENT'),
                 for (final exercise in recent) _row(exercise),
               ],
-              const SizedBox(height: 16),
+              const SizedBox(height: AppMetrics.gapSection),
               _SectionLabel('ALL EXERCISES (${matches.length})'),
               for (final exercise in matches) _row(exercise),
               // Room for the floating Add button not to cover the last row.
-              const SizedBox(height: 72),
+              const SizedBox(height: 88),
             ],
           ),
           if (_selected.isNotEmpty)
             Positioned(
               left: 0,
               right: 0,
-              bottom: 12,
+              bottom: AppMetrics.gap + MediaQuery.paddingOf(context).bottom,
               child: FilledButton(
                 key: ExercisePickerScreen.addKey,
                 onPressed: () => Navigator.of(context).pop(_selected),
+                // The one accent on the screen, and the only thing it is for.
                 style: FilledButton.styleFrom(
                   backgroundColor: AppPalette.accentStrong,
                   foregroundColor: AppPalette.onAccent,
-                  minimumSize: const Size.fromHeight(48),
+                  minimumSize:
+                      const Size.fromHeight(AppMetrics.controlHeight),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppMetrics.radiusControl),
+                  ),
+                  textStyle: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w700),
                 ),
                 child: Text(
                   _selected.length == 1
@@ -150,7 +177,8 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
     final selected = _selected.contains(exercise.id);
     return ListTile(
       key: ExercisePickerScreen.rowKey(exercise.id),
-      contentPadding: EdgeInsets.zero,
+      contentPadding: const EdgeInsets.symmetric(vertical: AppMetrics.gapTight),
+      minVerticalPadding: AppMetrics.gapSnug,
       onTap: () => setState(() {
         if (selected) {
           _selected.remove(exercise.id);
@@ -158,17 +186,47 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
           _selected.add(exercise.id);
         }
       }),
-      leading: Icon(
-        selected ? Icons.check_circle : Icons.circle_outlined,
-        color: selected ? AppPalette.accentStrong : AppPalette.textMuted,
+      leading: SizedBox(
+        width: 28,
+        height: AppMetrics.touchTarget,
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color:
+                  selected ? AppPalette.accentStrong : Colors.transparent,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color:
+                    selected ? AppPalette.accentStrong : AppPalette.border,
+                width: 1.5,
+              ),
+            ),
+            child: selected
+                ? const Icon(Icons.check,
+                    size: 15, color: AppPalette.onAccent)
+                : null,
+          ),
+        ),
       ),
       title: Text(exercise.name,
-          style: const TextStyle(color: AppPalette.textPrimary)),
-      subtitle: Text(
-        // Equipment, not an illustration: `00` §13 still rules out per-exercise
-        // artwork, and the equipment is what tells two variants apart anyway.
-        '${exercise.equipment} · ${_primaryLabel(exercise)}',
-        style: const TextStyle(color: AppPalette.textSecondary, fontSize: 13),
+          style: const TextStyle(
+              color: AppPalette.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w500)),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Text(
+          // Equipment, not an illustration: `00` §13 still rules out
+          // per-exercise artwork, and the equipment is what tells two variants
+          // apart anyway.
+          '${exercise.equipment} · ${_primaryLabel(exercise)}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: AppPalette.textMuted, fontSize: 13),
+        ),
       ),
     );
   }
@@ -341,19 +399,45 @@ class _FilterButton extends StatelessWidget {
   Widget build(BuildContext context) => OutlinedButton(
         key: buttonKey,
         onPressed: onTap,
+        // **A filter in use is not a primary action.** Filling it with
+        // `#D85A30` spent the colour that marks "start this workout" on a
+        // dropdown, and put two of them side by side above the list. Selected
+        // state is carried by an accent hairline and label instead.
         style: OutlinedButton.styleFrom(
           backgroundColor:
-              active ? AppPalette.accentStrong : AppPalette.mutedSurface,
-          side: const BorderSide(color: AppPalette.border),
-          minimumSize: const Size.fromHeight(44),
-        ),
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: active ? AppPalette.onAccent : AppPalette.textPrimary,
+              active ? AppPalette.surface : AppPalette.mutedSurface,
+          side: BorderSide(
+            color: active ? AppPalette.accentStrong : AppPalette.border,
+            width: active ? 1.5 : 1,
           ),
+          minimumSize: const Size.fromHeight(AppMetrics.touchTarget),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppMetrics.radiusControl),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: active
+                      ? AppPalette.accentLight
+                      : AppPalette.textSecondary,
+                  fontSize: 14,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppMetrics.gapTight),
+            Icon(Icons.expand_more,
+                size: 17,
+                color:
+                    active ? AppPalette.accentLight : AppPalette.textMuted),
+          ],
         ),
       );
 }

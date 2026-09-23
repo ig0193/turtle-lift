@@ -102,10 +102,8 @@ void main() {
       await pumpBuilder(tester);
 
       expect(find.text('Create routine'), findsOneWidget);
-      expect(
-        find.textContaining('adding an exercise to your routine'),
-        findsOneWidget,
-      );
+      expect(find.text('No exercises yet'), findsOneWidget);
+      expect(find.text('Add the lifts this routine plans'), findsOneWidget);
     });
 
     testWidgets('is not created just by opening the builder', (tester) async {

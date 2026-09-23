@@ -7,6 +7,7 @@ import '../data/load_type.dart';
 import '../data/routine_store.dart';
 import '../data/routines.dart';
 import '../data/set_format.dart';
+import '../theme/app_metrics.dart';
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
 import 'exercise_picker_screen.dart';
@@ -113,28 +114,60 @@ class _RoutineBuilderScreenState extends ConsumerState<RoutineBuilderScreen> {
       body: ListView(
         padding: screenScrollPadding(context),
         children: <Widget>[
+          const SizedBox(height: AppMetrics.gapSnug),
+          const _SectionLabel('ROUTINE NAME'),
           TextField(
             key: RoutineBuilderScreen.titleKey,
             controller: _title,
+            maxLength: 40,
             style: const TextStyle(
                 color: AppPalette.textPrimary,
-                fontSize: 22,
+                fontSize: 17,
                 fontWeight: FontWeight.w600),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              hintText: 'Routine title',
+            decoration: InputDecoration(
+              counterText: '',
+              isDense: true,
+              filled: true,
+              fillColor: AppPalette.mutedSurface,
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppMetrics.gap, vertical: AppMetrics.gap),
+              hintText: 'Push day',
               hintStyle:
-                  TextStyle(color: AppPalette.textMuted, fontSize: 22),
+                  const TextStyle(color: AppPalette.textMuted, fontSize: 17),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+                borderSide: const BorderSide(
+                    color: AppPalette.accentStrong, width: 1.5),
+              ),
             ),
           ),
-          const Divider(color: AppPalette.border),
+          const SizedBox(height: AppMetrics.gapSection),
           if (routine == null || routine.isEmpty)
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
-              child: Text(
-                'Get started by adding an exercise to your routine.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppPalette.textSecondary),
+              padding: EdgeInsets.only(top: 40, bottom: AppMetrics.gapSection),
+              child: Column(
+                children: <Widget>[
+                  Icon(Icons.list_alt_outlined,
+                      size: 28, color: AppPalette.textMuted),
+                  SizedBox(height: AppMetrics.gap),
+                  Text('No exercises yet',
+                      style: TextStyle(
+                          color: AppPalette.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600)),
+                  SizedBox(height: AppMetrics.gapTight + 2),
+                  Text('Add the lifts this routine plans',
+                      style: TextStyle(
+                          color: AppPalette.textSecondary, fontSize: 14)),
+                ],
               ),
             )
           else
@@ -148,18 +181,25 @@ class _RoutineBuilderScreenState extends ConsumerState<RoutineBuilderScreen> {
                 name: index.byId(exercise.exerciseId)?.name ??
                     exercise.exerciseId,
               ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
+          const SizedBox(height: AppMetrics.gap),
+          OutlinedButton.icon(
             key: RoutineBuilderScreen.addExerciseKey,
             onPressed: _addExercises,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppPalette.accentStrong,
-              foregroundColor: AppPalette.onAccent,
-              minimumSize: const Size.fromHeight(48),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppPalette.accentLight,
+              backgroundColor: AppPalette.surface,
+              side: const BorderSide(color: AppPalette.border),
+              minimumSize: const Size.fromHeight(AppMetrics.controlHeight),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppMetrics.radiusControl),
+              ),
+              textStyle:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add, size: 20),
             label: const Text('Add exercise'),
           ),
+          const SizedBox(height: AppMetrics.gapSection),
         ],
       ),
     );
@@ -209,22 +249,32 @@ class _BuilderExerciseBlock extends ConsumerWidget {
     };
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(bottom: AppMetrics.gapSection),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
             children: <Widget>[
               Expanded(
+                // Not accent: a name is not a state. See `00` §12.
                 child: Text(name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        color: AppPalette.accentLight,
+                        color: AppPalette.textPrimary,
                         fontSize: 16,
-                        fontWeight: FontWeight.w600)),
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.2)),
               ),
-              IconButton(
-                icon: const Icon(Icons.close, color: AppPalette.textSecondary),
-                onPressed: () => notifier.removeExercise(exercise.id),
+              SizedBox(
+                width: AppMetrics.touchTarget,
+                height: AppMetrics.touchTarget,
+                child: IconButton(
+                  tooltip: 'Remove $name',
+                  icon: const Icon(Icons.close,
+                      size: 20, color: AppPalette.textSecondary),
+                  onPressed: () => notifier.removeExercise(exercise.id),
+                ),
               ),
             ],
           ),
@@ -245,7 +295,7 @@ class _BuilderExerciseBlock extends ConsumerWidget {
                       style: const TextStyle(
                           color: AppPalette.textMuted, fontSize: 11)),
                 ),
-              const SizedBox(width: 40),
+              const SizedBox(width: AppMetrics.touchTarget),
             ],
           ),
           for (final (i, set) in exercise.sets.indexed)
@@ -255,13 +305,24 @@ class _BuilderExerciseBlock extends ConsumerWidget {
               set: set,
               loadType: loadType,
             ),
-          TextButton.icon(
-            key: RoutineBuilderScreen.addSetKey(exercise.id),
-            onPressed: () => notifier.addSet(routineExerciseId: exercise.id),
-            icon: const Icon(Icons.add,
-                size: 18, color: AppPalette.textSecondary),
-            label: const Text('Add set',
-                style: TextStyle(color: AppPalette.textSecondary)),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              height: AppMetrics.touchTarget,
+              child: TextButton.icon(
+                key: RoutineBuilderScreen.addSetKey(exercise.id),
+                onPressed: () => notifier.addSet(routineExerciseId: exercise.id),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppMetrics.gapSnug),
+                ),
+                icon: const Icon(Icons.add,
+                    size: 17, color: AppPalette.textSecondary),
+                label: const Text('Add set',
+                    style: TextStyle(
+                        color: AppPalette.textSecondary, fontSize: 14)),
+              ),
+            ),
           ),
         ],
       ),
@@ -392,7 +453,7 @@ class _TargetRowState extends ConsumerState<_TargetRow> {
   Widget build(BuildContext context) {
     final showsSecond = widget.loadType != LoadType.timed;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: AppMetrics.gapTight),
       child: Row(
         children: <Widget>[
           SizedBox(
@@ -416,8 +477,10 @@ class _TargetRowState extends ConsumerState<_TargetRow> {
               ),
             ),
           SizedBox(
-            width: 40,
+            width: AppMetrics.touchTarget,
+            height: AppMetrics.touchTarget,
             child: IconButton(
+              tooltip: 'Remove set ${widget.index + 1}',
               icon: const Icon(Icons.close,
                   size: 18, color: AppPalette.textMuted),
               onPressed: () =>
@@ -450,21 +513,41 @@ class _TargetRowState extends ConsumerState<_TargetRow> {
         decoration: InputDecoration(
           isDense: true,
           contentPadding:
-              const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              const EdgeInsets.symmetric(vertical: 11, horizontal: 4),
           filled: true,
           fillColor: AppPalette.mutedSurface,
-          hintText: '-',
+          hintText: '—',
           hintStyle: const TextStyle(color: AppPalette.textMuted),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: AppPalette.border),
+            borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+            borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: AppPalette.border),
+            borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+            borderSide: BorderSide.none,
           ),
         ),
       ),
     );
   }
+}
+
+
+/// A section label, shared by the builder's fields.
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: AppMetrics.gapLabel),
+        child: Text(text,
+            style: const TextStyle(
+              color: AppPalette.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.6,
+            )),
+      );
 }
