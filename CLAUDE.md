@@ -150,8 +150,12 @@ are marked in `docs/00` §3, §9, §13 and `docs/02`.
   inline, `SET · PREVIOUS · KG · REPS · ✓`. No push-per-exercise step.
   `SetLoggingScreen` survives **only** for editing a saved session from History, and
   both surfaces must keep rendering sets through the one shared formatter.
-- **Routine ≠ Template.** A *routine* is a user's ordered exercise list (in folders);
-  a *template* is one of the 11 shipped muscle-group starting points. See `CONTEXT.md`.
+- **Routine ≠ Template.** A *routine* is a user's ordered exercise list; a
+  *template* is one of the 11 shipped muscle-group starting points. See `CONTEXT.md`.
+- **No routine folders.** Built, then removed on request. `RoutineFolders` and
+  `Routines.folderId` are still defined but inert — dropping them needs a table
+  rebuild, which is not worth the risk for an empty table. Do not wire them back
+  up without asking.
 - **Rest timer and session duration are built** — they left the out-of-scope list. The
   rest timer is foreground-only and raises no notification, so that ban still holds.
 - **Lifted volume is back, derived on read**, in the Log Workout summary bar only —

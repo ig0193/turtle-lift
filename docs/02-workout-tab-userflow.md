@@ -2,7 +2,7 @@
 
 > **Superseded in part by `adr/0004` (Hevy parity, session 2).** The tab was
 > rebuilt around Hevy's shape: the landing lists **routines** (ordered exercise
-> lists, in folders) rather than muscle-group templates, and a live session runs
+> lists) rather than muscle-group templates, and a live session runs
 > on **one scrolling Log Workout screen** with every exercise and set inline,
 > instead of pushing into a screen per exercise. Steps 1–5 below still hold for
 > *why* each rule exists, and every rule not named in `adr/0004` still binds.

@@ -15,7 +15,6 @@ import 'package:turtle_lift/src/data/settings_store.dart'
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/log_workout_screen.dart';
 import 'package:turtle_lift/src/ui/routine_card.dart';
-import 'package:turtle_lift/src/ui/routine_folder_section.dart';
 import 'package:turtle_lift/src/ui/workout_root.dart';
 
 /// The Workout landing, rebuilt around routines (`adr/0004`).
@@ -69,11 +68,9 @@ void main() {
 
   Future<void> pumpLanding(WidgetTester tester) async {
     late List<Routine> seededRoutines;
-    late List<RoutineFolder> seededFolders;
     late WorkoutSession? open;
     await tester.runAsync(() async {
       seededRoutines = await routines.readRoutines();
-      seededFolders = await routines.readFolders();
       open = await sessions.readOpenSession();
     });
 
@@ -84,7 +81,6 @@ void main() {
           appDatabaseProvider.overrideWithValue(database),
           exerciseIndexProvider.overrideWithValue(index),
           initialRoutinesProvider.overrideWithValue(seededRoutines),
-          initialRoutineFoldersProvider.overrideWithValue(seededFolders),
           initialActiveSessionProvider.overrideWithValue(open),
           initialSavedSessionsProvider.overrideWithValue(<WorkoutSession>[]),
         ],
@@ -127,7 +123,6 @@ void main() {
       expect(find.text('ROUTINES'), findsOneWidget);
       expect(find.byKey(WorkoutLandingBody.newRoutineKey), findsOneWidget);
       expect(find.byKey(WorkoutLandingBody.templatesKey), findsOneWidget);
-      expect(find.byKey(WorkoutLandingBody.newFolderKey), findsOneWidget);
     });
 
     testWidgets('a routine card names its exercises', (tester) async {
@@ -367,49 +362,4 @@ void main() {
     });
   });
 
-  group('folders', () {
-    testWidgets('a folder lists its own routines and counts them',
-        (tester) async {
-      await tester.runAsync(() async {
-        final folder = await routines.createFolder(name: 'Abc');
-        final routine = await pushDay();
-        await routines.moveRoutineToFolder(
-            routineId: routine.id, folderId: folder.id);
-      });
-      await pumpLanding(tester);
-
-      expect(find.text('Abc (1)'), findsOneWidget);
-      expect(find.text('MY ROUTINES (0)'), findsOneWidget,
-          reason: 'a filed routine leaves the unfiled group');
-    });
-
-    testWidgets('an empty folder offers a routine rather than sitting blank',
-        (tester) async {
-      await tester.runAsync(() => routines.createFolder(name: 'Abc'));
-      await pumpLanding(tester);
-
-      expect(find.text('Abc (0)'), findsOneWidget);
-      expect(find.text('+ Add new routine'), findsOneWidget);
-    });
-
-    testWidgets('collapsing a folder hides its routines, not its heading',
-        (tester) async {
-      await tester.runAsync(() async {
-        final folder = await routines.createFolder(name: 'Abc');
-        final routine = await pushDay();
-        await routines.moveRoutineToFolder(
-            routineId: routine.id, folderId: folder.id);
-      });
-      await pumpLanding(tester);
-      expect(find.byType(RoutineCard), findsOneWidget);
-
-      final folders = await tester.runAsync(() => routines.readFolders());
-      await tester.tap(
-          find.byKey(RoutineFolderSection.headerKey(folders!.single.id)));
-      await tester.pump();
-
-      expect(find.byType(RoutineCard), findsNothing);
-      expect(find.text('Abc (1)'), findsOneWidget);
-    });
-  });
 }

@@ -117,7 +117,6 @@ class _RoutineMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final folders = ref.watch(routineFoldersProvider);
     return PopupMenuButton<String>(
       key: RoutineCard.menuKey(routine.id),
       icon: const Icon(Icons.more_horiz, color: AppPalette.textSecondary),
@@ -126,9 +125,6 @@ class _RoutineMenu extends ConsumerWidget {
         const PopupMenuItem<String>(value: 'edit', child: Text('Edit routine')),
         const PopupMenuItem<String>(
             value: 'duplicate', child: Text('Duplicate')),
-        if (folders.isNotEmpty || routine.folderId != null)
-          const PopupMenuItem<String>(
-              value: 'move', child: Text('Move to folder')),
         const PopupMenuItem<String>(
           value: 'delete',
           child: Text('Delete', style: TextStyle(color: AppPalette.danger)),
@@ -144,8 +140,6 @@ class _RoutineMenu extends ConsumerWidget {
             );
           case 'duplicate':
             await ref.read(routineListProvider.notifier).duplicate(routine);
-          case 'move':
-            if (context.mounted) await _move(context, ref, folders);
           case 'delete':
             final confirmed = await confirmDestructive(
               context,
@@ -162,43 +156,4 @@ class _RoutineMenu extends ConsumerWidget {
     );
   }
 
-  Future<void> _move(
-    BuildContext context,
-    WidgetRef ref,
-    List<RoutineFolder> folders,
-  ) async {
-    final chosen = await showModalBottomSheet<List<String?>>(
-      context: context,
-      backgroundColor: AppPalette.surface,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            ListTile(
-              title: const Text('My routines',
-                  style: TextStyle(color: AppPalette.textPrimary)),
-              trailing: routine.folderId == null
-                  ? const Icon(Icons.check, color: AppPalette.accentStrong)
-                  : null,
-              onTap: () => Navigator.of(context).pop(<String?>[null]),
-            ),
-            for (final folder in folders)
-              ListTile(
-                title: Text(folder.name,
-                    style: const TextStyle(color: AppPalette.textPrimary)),
-                trailing: routine.folderId == folder.id
-                    ? const Icon(Icons.check, color: AppPalette.accentStrong)
-                    : null,
-                onTap: () => Navigator.of(context).pop(<String?>[folder.id]),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (chosen == null) return;
-    await ref.read(routineListProvider.notifier).moveToFolder(
-          routineId: routine.id,
-          folderId: chosen.first,
-        );
-  }
 }

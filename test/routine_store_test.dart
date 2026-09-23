@@ -48,7 +48,6 @@ void main() {
 
       expect(routine.name, 'Push day');
       expect(routine.exercises, isEmpty);
-      expect(routine.folderId, isNull, reason: 'unfiled until moved');
     });
 
     test('exercises keep the order they were added in', () async {
@@ -139,47 +138,6 @@ void main() {
 
       final read = (await store.readRoutines()).single;
       expect(read.exercises.map((e) => e.exerciseId), <String>['ohp']);
-    });
-  });
-
-  group('folders', () {
-    test('a routine can be filed, and moved back out again', () async {
-      final folder = await store.createFolder(name: 'Abc');
-      final routine = await store.createRoutine(name: 'Push day');
-
-      await store.moveRoutineToFolder(
-          routineId: routine.id, folderId: folder.id);
-      expect((await store.readRoutines()).single.folderId, folder.id);
-
-      await store.moveRoutineToFolder(routineId: routine.id, folderId: null);
-      expect((await store.readRoutines()).single.folderId, isNull);
-    });
-
-    test('deleting a folder keeps its routines, unfiled', () async {
-      final folder = await store.createFolder(name: 'Abc');
-      final routine = await store.createRoutine(name: 'Push day');
-      await store.moveRoutineToFolder(
-          routineId: routine.id, folderId: folder.id);
-
-      await store.deleteFolder(folder.id);
-
-      // **The folder is the container, not the owner.** Cascading here would
-      // destroy a routine the user spent real time building, to tidy away a
-      // label they no longer wanted.
-      final read = await store.readRoutines();
-      expect(read, hasLength(1));
-      expect(read.single.folderId, isNull);
-      expect(await store.readFolders(), isEmpty);
-    });
-
-    test('folders keep the order they were made in', () async {
-      await store.createFolder(name: 'Abc');
-      await store.createFolder(name: 'Xyz');
-
-      expect(
-        (await store.readFolders()).map((f) => f.name),
-        <String>['Abc', 'Xyz'],
-      );
     });
   });
 

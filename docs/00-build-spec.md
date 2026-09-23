@@ -83,9 +83,7 @@ Average 76 words per exercise across all four. Every entry mentions breathing; 1
 
 **Template** — name, `isPredefined`, and **parent muscle group ids only**. Never store sub-groups.
 
-**Routine** — **[0004]** the user's own ordered exercise list: `name`, `folderId?`, `position`, then `RoutineExercise{exerciseId, position, notes?, restTimerSec?}` and `RoutineSet{position, targetWeightKg?, targetReps?, targetDurationSec?}`. Every target is nullable: "three sets of bench" with no weight yet is a real plan.
-
-**RoutineFolder** — **[0004]** `name`, `position`. A container, never an owner: deleting one leaves its routines unfiled rather than deleting them.
+**Routine** — **[0004]** the user's own ordered exercise list: `name`, `position`, then `RoutineExercise{exerciseId, position, notes?, restTimerSec?}` and `RoutineSet{position, targetWeightKg?, targetReps?, targetDurationSec?}`. Every target is nullable: "three sets of bench" with no weight yet is a real plan.
 
 ⚠ **A routine is not a template, and neither converts into the other.** A template names *muscle groups* and ships with the app; a routine names *exercises in an order* and belongs to the user. They are stored separately and the v4 migration does not fold one into the other — converting a template would have to invent the exercise list that is the entire difference. See `CONTEXT.md` and `adr/0004`.
 
@@ -185,7 +183,9 @@ streakAsOf(date) -> int
 
 ## 9. Workout tab
 
-**Entry:** the landing leads with **Start empty workout**, then a **Routines** section — a new-folder glyph, a **New routine** / **Templates** pair, the user's routine folders, then **My routines (n)**. A routine card carries its name, its exercise names, a **Start routine** button and a `⋮` menu (edit · duplicate · delete · move to folder). Routines reorder by long-press drag, and drag between folders. See `02` §Step 1.
+**Entry:** the landing leads with **Start empty workout**, then a **Routines** section — a **New routine** / **Templates** pair, then **My routines (n)** as a flat list. A routine card carries its name, its exercise names, a **Start routine** button and a `⋮` menu (edit · duplicate · delete). Routines reorder by long-press drag. See `02` §Step 1.
+
+**No folders.** Hevy groups routines into folders; this app does not. A deliberate divergence — see `adr/0004`.
 
 **Templates** are the 11 predefined muscle-group templates, reached from the **Templates** button. They are starting points, not routines: picking one opens an empty workout with the exercise picker pre-filtered to its muscle groups. The split filter (**1 Muscle per day** · **Multi Split** · **Push-Pull-Legs**; no unfiltered value, Multi Split on first launch, last choice remembered) applies there, and stays a view control, never a declared programme.
 

@@ -69,6 +69,20 @@ in folders. Six rules are reversed to make that coherent:
   unreachable from the main path. The user chose to keep them and decide later;
   they hang off the body figures in the summary bar.
 
+## Amended: no routine folders
+
+Folders were built, then removed at the user's request after the create-folder
+dialog crashed on device. The crash was a disposed text controller and is fixed;
+the removal is a separate, deliberate call — the landing is a flat list of
+routines under **My routines**, and Hevy's folders are a divergence this app
+accepts. Routines still reorder by long-press drag.
+
+`RoutineFolders` and `Routines.folderId` remain defined and inert. Dropping them
+means rebuilding `Routines` to shed a foreign key, and a table rebuild is the
+riskiest migration there is; running one to delete an empty table would spend
+that risk on tidiness. They go out with the next migration that has a real
+reason to rebuild the table.
+
 ## Consequences
 
 **`markedDone` outlives its UI.** The column stays on `SessionExercises` for

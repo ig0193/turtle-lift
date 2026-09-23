@@ -20,13 +20,10 @@ import 'exercise_picker_screen.dart';
 /// routine as edited rather than reverting it — which is why a *new* routine is
 /// created up front and deleted on Cancel if nothing was added to it.
 class RoutineBuilderScreen extends ConsumerStatefulWidget {
-  const RoutineBuilderScreen({this.routineId, this.folderId, super.key});
+  const RoutineBuilderScreen({this.routineId, super.key});
 
   /// Null creates a new routine; a value edits that one.
   final String? routineId;
-
-  /// The folder a newly created routine lands in. Ignored when editing.
-  final String? folderId;
 
   static const Key titleKey = ValueKey<String>('routine-title');
   static const Key saveKey = ValueKey<String>('routine-save');
@@ -79,7 +76,6 @@ class _RoutineBuilderScreenState extends ConsumerState<RoutineBuilderScreen> {
     _creating = true;
     final created = await ref.read(routineListProvider.notifier).create(
           name: _title.text.trim().isEmpty ? 'New routine' : _title.text.trim(),
-          folderId: widget.folderId,
         );
     setState(() => _routineId = created.id);
     return created.id;

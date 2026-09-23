@@ -76,26 +76,12 @@ class RoutineStore {
         Routine(
           id: row.id,
           name: row.name,
-          folderId: row.folderId,
           position: row.position,
           exercises: exercises,
         ),
       );
     }
     return result;
-  }
-
-  /// Every folder, in the order they read on the landing.
-  Future<List<RoutineFolder>> readFolders() async {
-    final rows = await (_db.select(_db.routineFolders)
-          ..orderBy(<OrderClauseGenerator<$RoutineFoldersTable>>[
-            (f) => OrderingTerm.asc(f.position),
-          ]))
-        .get();
-    return <RoutineFolder>[
-      for (final row in rows)
-        RoutineFolder(id: row.id, name: row.name, position: row.position),
-    ];
   }
 
   // ---------------------------------------------------------------- routines
@@ -107,7 +93,7 @@ class RoutineStore {
   /// than by renumbering every other row. A create is then one insert whatever
   /// the list length, and an explicit drag order (which renumbers from zero)
   /// still wins because both are read ascending.
-  Future<Routine> createRoutine({required String name, String? folderId}) async {
+  Future<Routine> createRoutine({required String name}) async {
     final id = const Uuid().v4();
     final lowest = await _db
         .customSelect('SELECT MIN(position) AS p FROM routines')
@@ -118,14 +104,12 @@ class RoutineStore {
           RoutinesCompanion.insert(
             id: id,
             name: name,
-            folderId: Value<String?>(folderId),
             position: position,
           ),
         );
     return Routine(
       id: id,
       name: name,
-      folderId: folderId,
       position: position,
       exercises: const <RoutineExercise>[],
     );
@@ -143,8 +127,8 @@ class RoutineStore {
 
   /// Writes an explicit order, renumbering from zero.
   ///
-  /// Ids not in [idsInOrder] keep their existing position, so reordering inside
-  /// one folder cannot silently reshuffle another.
+  /// Ids not in [idsInOrder] keep their existing position, so a partial list
+  /// cannot silently reshuffle the rest.
   Future<void> reorderRoutines(List<String> idsInOrder) =>
       _db.transaction(() async {
         for (var i = 0; i < idsInOrder.length; i++) {
@@ -153,46 +137,6 @@ class RoutineStore {
               .write(RoutinesCompanion(position: Value<int>(i)));
         }
       });
-
-  // ----------------------------------------------------------------- folders
-
-  Future<RoutineFolder> createFolder({required String name}) async {
-    final id = const Uuid().v4();
-    final highest = await _db
-        .customSelect('SELECT MAX(position) AS p FROM routine_folders')
-        .getSingle();
-    final position = (highest.read<int?>('p') ?? -1) + 1;
-
-    await _db.into(_db.routineFolders).insert(
-          RoutineFoldersCompanion.insert(
-            id: id,
-            name: name,
-            position: position,
-          ),
-        );
-    return RoutineFolder(id: id, name: name, position: position);
-  }
-
-  Future<void> renameFolder(String folderId, String name) async {
-    await (_db.update(_db.routineFolders)..where((f) => f.id.equals(folderId)))
-        .write(RoutineFoldersCompanion(name: Value<String>(name)));
-  }
-
-  /// Deletes a folder. **Its routines survive, unfiled** — the `setNull`
-  /// foreign key does that in the database rather than in a callback something
-  /// could later forget to call.
-  Future<void> deleteFolder(String folderId) async {
-    await (_db.delete(_db.routineFolders)..where((f) => f.id.equals(folderId)))
-        .go();
-  }
-
-  Future<void> moveRoutineToFolder({
-    required String routineId,
-    required String? folderId,
-  }) async {
-    await (_db.update(_db.routines)..where((r) => r.id.equals(routineId)))
-        .write(RoutinesCompanion(folderId: Value<String?>(folderId)));
-  }
 
   // --------------------------------------------------------------- exercises
 
@@ -357,16 +301,12 @@ class Routine {
   const Routine({
     required this.id,
     required this.name,
-    required this.folderId,
     required this.position,
     required this.exercises,
   });
 
   final String id;
   final String name;
-
-  /// Null means unfiled — the `My routines` section on the landing.
-  final String? folderId;
   final int position;
   final List<RoutineExercise> exercises;
 
@@ -416,18 +356,4 @@ class RoutineSet {
   final double? targetWeightKg;
   final int? targetReps;
   final int? targetDurationSec;
-}
-
-/// A named group of routines. A container, never an owner.
-@immutable
-class RoutineFolder {
-  const RoutineFolder({
-    required this.id,
-    required this.name,
-    required this.position,
-  });
-
-  final String id;
-  final String name;
-  final int position;
 }

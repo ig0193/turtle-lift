@@ -21,10 +21,6 @@ final initialRoutinesProvider = Provider<List<Routine>>(
   (ref) => const <Routine>[],
 );
 
-final initialRoutineFoldersProvider = Provider<List<RoutineFolder>>(
-  (ref) => const <RoutineFolder>[],
-);
-
 /// The user's routines, newest first until they drag one.
 ///
 /// **Write through, then re-read** — the same discipline as `ActiveSession`.
@@ -39,11 +35,10 @@ class RoutineList extends Notifier<List<Routine>> {
 
   Future<void> _refresh() async {
     state = await _store.readRoutines();
-    ref.read(routineFolderListProvider.notifier).refresh();
   }
 
-  Future<Routine> create({required String name, String? folderId}) async {
-    final routine = await _store.createRoutine(name: name, folderId: folderId);
+  Future<Routine> create({required String name}) async {
+    final routine = await _store.createRoutine(name: name);
     await _refresh();
     return routine;
   }
@@ -64,10 +59,7 @@ class RoutineList extends Notifier<List<Routine>> {
   /// `Push day` with no way to tell them apart is how a user edits the wrong
   /// one.
   Future<void> duplicate(Routine source) async {
-    final copy = await _store.createRoutine(
-      name: '${source.name} (copy)',
-      folderId: source.folderId,
-    );
+    final copy = await _store.createRoutine(name: '${source.name} (copy)');
     for (final exercise in source.exercises) {
       final rowId = await _store.addExercise(
         routineId: copy.id,
@@ -156,14 +148,6 @@ class RoutineList extends Notifier<List<Routine>> {
     await _refresh();
   }
 
-  Future<void> moveToFolder({
-    required String routineId,
-    required String? folderId,
-  }) async {
-    await _store.moveRoutineToFolder(routineId: routineId, folderId: folderId);
-    await _refresh();
-  }
-
   Future<String> addExercise({
     required String routineId,
     required String exerciseId,
@@ -243,39 +227,3 @@ final routineListProvider =
 /// exists beside its notifier.
 final routinesProvider =
     Provider<List<Routine>>((ref) => ref.watch(routineListProvider));
-
-class RoutineFolderList extends Notifier<List<RoutineFolder>> {
-  @override
-  List<RoutineFolder> build() => ref.watch(initialRoutineFoldersProvider);
-
-  RoutineStore get _store => ref.read(routineStoreProvider);
-
-  Future<void> refresh() async {
-    state = await _store.readFolders();
-  }
-
-  Future<RoutineFolder> create(String name) async {
-    final folder = await _store.createFolder(name: name);
-    await refresh();
-    return folder;
-  }
-
-  Future<void> rename(String folderId, String name) async {
-    await _store.renameFolder(folderId, name);
-    await refresh();
-  }
-
-  /// Deletes a folder. Its routines survive, unfiled — see [RoutineStore].
-  Future<void> delete(String folderId) async {
-    await _store.deleteFolder(folderId);
-    await refresh();
-    await ref.read(routineListProvider.notifier).refresh();
-  }
-}
-
-final routineFolderListProvider =
-    NotifierProvider<RoutineFolderList, List<RoutineFolder>>(
-        RoutineFolderList.new);
-
-final routineFoldersProvider =
-    Provider<List<RoutineFolder>>((ref) => ref.watch(routineFolderListProvider));

@@ -18,10 +18,6 @@ One of the 11 shipped sets of **parent muscle groups**, carrying no exercises. A
 starting point that pre-filters the exercise picker, not something you run.
 _Avoid_: Routine, preset, split (the *split* is the filter a template is listed under)
 
-**Folder**:
-A named group of routines on the Workout landing. Holds routines only; never
-nests.
-
 **Session**:
 One workout that happened, on one calendar date. Open (in progress) or saved;
 exactly one can be open at a time.

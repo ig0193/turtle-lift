@@ -517,11 +517,18 @@ class SetEntries extends Table {
       ];
 }
 
-/// A named group of routines on the Workout landing.
+/// **Unused. The folder feature was removed** — the landing is a flat list of
+/// routines under "My routines" (`adr/0004`).
 ///
-/// **A container, never an owner.** Deleting one must not take the routines
-/// inside it — see the `setNull` on [Routines.folderId]. Folders do not nest;
-/// one level is what the landing renders and what the user asked for.
+/// **Kept defined rather than dropped, deliberately.** Nothing reads or writes
+/// it, so it costs nothing at runtime; removing it would mean a migration that
+/// rebuilds [Routines] to shed its `folderId` foreign key, and a table rebuild
+/// is the riskiest migration there is. Running one to delete an empty table
+/// would be spending the only kind of migration that can lose a user's routines
+/// on tidiness.
+///
+/// If folders ever come back, they come back here. If they never do, this goes
+/// out with the next migration that has a real reason to rebuild the table.
 @DataClassName('RoutineFolderRow')
 class RoutineFolders extends Table {
   TextColumn get id => text()();
@@ -548,8 +555,7 @@ class Routines extends Table {
 
   TextColumn get name => text()();
 
-  /// Null means unfiled, which is where every routine starts and where it
-  /// returns when its folder is deleted.
+  /// **Unused** — see [RoutineFolders]. Always null; nothing writes it.
   TextColumn get folderId =>
       text().nullable().references(RoutineFolders, #id, onDelete: KeyAction.setNull)();
 

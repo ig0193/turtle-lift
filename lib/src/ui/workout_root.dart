@@ -8,10 +8,8 @@ import '../data/derived.dart';
 import '../data/exercise_index.dart';
 import 'app_screen.dart';
 import 'destructive_confirmation.dart';
-import 'name_prompt.dart';
 import 'routine_builder_screen.dart';
 import 'routine_card.dart';
-import 'routine_folder_section.dart';
 import 'template_list_screen.dart';
 import 'log_workout_screen.dart';
 import 'template_row.dart';
@@ -87,16 +85,13 @@ class WorkoutLandingBody extends ConsumerWidget {
   /// and then return to the root.
   final bool isPushed;
 
-  /// The keys a test reaches the landing's three routine controls by.
-  static const Key newFolderKey = ValueKey<String>('new-folder');
+  /// The keys a test reaches the landing's routine controls by.
   static const Key newRoutineKey = ValueKey<String>('new-routine');
   static const Key templatesKey = ValueKey<String>('open-templates');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final routines = ref.watch(routinesProvider);
-    final folders = ref.watch(routineFoldersProvider);
-    final unfiled = routines.where((r) => r.folderId == null).toList();
 
     return ListView(
       padding: screenScrollPadding(context),
@@ -111,13 +106,6 @@ class WorkoutLandingBody extends ConsumerWidget {
                 header: true,
                 child: const Text('ROUTINES', style: kLandingSectionLabelStyle),
               ),
-            ),
-            IconButton(
-              key: newFolderKey,
-              tooltip: 'New folder',
-              icon: const Icon(Icons.create_new_folder_outlined,
-                  size: 20, color: AppPalette.textSecondary),
-              onPressed: () => _newFolder(context, ref),
             ),
           ],
         ),
@@ -152,19 +140,13 @@ class WorkoutLandingBody extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 18),
-        for (final folder in folders)
-          RoutineFolderSection(
-            folder: folder,
-            routines: routines.where((r) => r.folderId == folder.id).toList(),
-          ),
-        if (folders.isNotEmpty) const SizedBox(height: 4),
         Semantics(
           header: true,
-          child: Text('MY ROUTINES (${unfiled.length})',
+          child: Text('MY ROUTINES (${routines.length})',
               style: kLandingSectionLabelStyle),
         ),
         const SizedBox(height: 10),
-        if (unfiled.isEmpty)
+        if (routines.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
             child: Text(
@@ -187,12 +169,12 @@ class WorkoutLandingBody extends ConsumerWidget {
             // index the row actually lands on, rather than the one it would
             // have had before the row was taken out.
             onReorderItem: (oldIndex, newIndex) {
-              final ids = unfiled.map((r) => r.id).toList();
+              final ids = routines.map((r) => r.id).toList();
               ids.insert(newIndex, ids.removeAt(oldIndex));
               ref.read(routineListProvider.notifier).reorder(ids);
             },
             children: <Widget>[
-              for (final (i, routine) in unfiled.indexed)
+              for (final (i, routine) in routines.indexed)
                 ReorderableDelayedDragStartListener(
                   key: ValueKey<String>('reorder-${routine.id}'),
                   index: i,
@@ -217,11 +199,6 @@ class WorkoutLandingBody extends ConsumerWidget {
     await ref.read(activeSessionProvider.notifier).startAdHoc();
   }
 
-  Future<void> _newFolder(BuildContext context, WidgetRef ref) async {
-    final name = await promptForName(context, title: 'New folder');
-    if (name == null || name.isEmpty) return;
-    await ref.read(routineFolderListProvider.notifier).create(name);
-  }
 
   /// Saves or drops the workout already running. Returns false when the user
   /// backed out, in which case nothing else should happen.

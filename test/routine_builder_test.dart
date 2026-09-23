@@ -54,10 +54,8 @@ void main() {
 
   Future<void> pumpBuilder(WidgetTester tester, {String? routineId}) async {
     late List<Routine> seeded;
-    late List<RoutineFolder> folders;
     await tester.runAsync(() async {
       seeded = await store.readRoutines();
-      folders = await store.readFolders();
     });
 
     await tester.pumpWidget(
@@ -67,7 +65,6 @@ void main() {
           appDatabaseProvider.overrideWithValue(database),
           exerciseIndexProvider.overrideWithValue(index),
           initialRoutinesProvider.overrideWithValue(seeded),
-          initialRoutineFoldersProvider.overrideWithValue(folders),
         ],
         child: MaterialApp(
           theme: buildAppTheme(),
