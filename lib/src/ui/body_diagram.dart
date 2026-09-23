@@ -336,11 +336,25 @@ class BodyDiagramPainter extends CustomPainter {
     required this.view,
     required this.gender,
     required this.fill,
+    this.separatorWidth = kBodySegmentSeparatorWidth,
   });
 
   final BodyView view;
   final BodyGender gender;
   final BodySegmentFill fill;
+
+  /// How thick the muscle separators are, or null for none.
+  ///
+  /// **The default is the only value any full-size diagram should pass**, and
+  /// [buildSeparatorPaint]'s header explains why it is not scaled with the
+  /// geometry: between 200pt and 600pt a fixed 2.5 keeps reading as a line.
+  ///
+  /// The template thumbnail on the Workout landing is a different regime
+  /// entirely. It draws the body about 30pt wide, where a single muscle is
+  /// roughly 4pt across and a 2.5pt line around it is not a separator but the
+  /// whole segment. It passes null: at that size the fill contrast alone
+  /// carries the shape, and the strokes only turned the body into a smudge.
+  final double? separatorWidth;
 
   /// The `kBodyAssets` key these two fields name. The join lives in
   /// `body_gender.dart`; this is the only thing that asks for it.
@@ -409,7 +423,7 @@ class BodyDiagramPainter extends CustomPainter {
   /// stays legible whether the body is drawn at 200pt or 600pt.
   Paint buildSeparatorPaint() => Paint()
     ..style = PaintingStyle.stroke
-    ..strokeWidth = kBodySegmentSeparatorWidth
+    ..strokeWidth = separatorWidth ?? kBodySegmentSeparatorWidth
     ..color = AppPalette.border
     ..isAntiAlias = true
     ..strokeJoin = StrokeJoin.round;
@@ -448,10 +462,13 @@ class BodyDiagramPainter extends CustomPainter {
       );
     }
     // Separators last, so a muscle's own fill never paints over the line that
-    // divides it from its neighbour.
-    final separator = buildSeparatorPaint();
-    for (final segment in segments) {
-      canvas.drawPath(segment.path, separator);
+    // divides it from its neighbour. Skipped entirely at thumbnail size --
+    // see [separatorWidth].
+    if (separatorWidth != null) {
+      final separator = buildSeparatorPaint();
+      for (final segment in segments) {
+        canvas.drawPath(segment.path, separator);
+      }
     }
     canvas.restore();
   }
@@ -460,7 +477,8 @@ class BodyDiagramPainter extends CustomPainter {
   bool shouldRepaint(BodyDiagramPainter oldDelegate) =>
       oldDelegate.view != view ||
       oldDelegate.gender != gender ||
-      oldDelegate.fill != fill;
+      oldDelegate.fill != fill ||
+      oldDelegate.separatorWidth != separatorWidth;
 
   /// [view] is handed over rather than left to be read back out of
   /// [assetKey]: this object already knows which side it is drawing, and

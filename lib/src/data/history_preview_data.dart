@@ -23,6 +23,7 @@ import 'exercise_index.dart';
 import 'generated/muscle_taxonomy.dart';
 import 'personal_best.dart';
 import 'session_store.dart';
+import 'set_format.dart';
 
 /// One logged workout, reduced to what a history row needs.
 ///
@@ -61,7 +62,18 @@ class HistoryExercise {
     required this.name,
     required this.primaryGroupIds,
     required this.setScores,
+    this.setLabels = const <String>[],
   });
+
+  /// Each set as the app writes it everywhere else — `60kg × 8`, `12 reps`,
+  /// `20kg assist × 8`, `0:45`.
+  ///
+  /// **Carried rather than derived here, so there is one formatter.** The score
+  /// below collapses a set to a single comparable number for the projection's
+  /// sake; rendering that number would show `60 kg` on this screen and
+  /// `60kg × 8` on the summary card for the same set, which is the drift the
+  /// shared formatter exists to prevent.
+  final List<String> setLabels;
 
   final String name;
 
@@ -138,7 +150,9 @@ Map<String, HistoryRowFigures> buildHistoryProjection(
       // you ever do something is trivially your maximum, and badging it would
       // make every beginner's first weeks a wall of trophies (`docs/01`).
       if (previous != null && best > previous) pbCount++;
-      if (previous == null || best > previous) runningBest[exercise.name] = best;
+      if (previous == null || best > previous) {
+        runningBest[exercise.name] = best;
+      }
     }
 
     figures[session.id] = HistoryRowFigures(
@@ -210,6 +224,9 @@ HistorySession historySessionFrom(WorkoutSession session, ExerciseIndex index) {
           for (final set in completed)
             metricFor(exercise.loadType, set).primary,
         ],
+        setLabels: <String>[
+          for (final set in completed) formatSet(exercise.loadType, set),
+        ],
       ),
     );
   }
@@ -225,24 +242,24 @@ HistorySession historySessionFrom(WorkoutSession session, ExerciseIndex index) {
 
 /// The projection over the saved workouts, with the personal-best count taken
 /// from the one derivation the summary card also uses.
-final historyProjectionProvider = Provider<Map<String, HistoryRowFigures>>(
-  (ref) {
-    final rows = buildHistoryProjection(ref.watch(historySessionsProvider));
-    final saved = ref.watch(savedSessionsProvider);
-    if (saved.isEmpty) return rows;
+final historyProjectionProvider = Provider<Map<String, HistoryRowFigures>>((
+  ref,
+) {
+  final rows = buildHistoryProjection(ref.watch(historySessionsProvider));
+  final saved = ref.watch(savedSessionsProvider);
+  if (saved.isEmpty) return rows;
 
-    return <String, HistoryRowFigures>{
-      for (final session in saved)
-        if (rows[session.id] case final row?)
-          session.id: HistoryRowFigures(
-            setCount: setCountOf(session),
-            exerciseCount: exerciseCountOf(session),
-            pbCount: pbCountFor(session, saved),
-            trainedGroupIds: row.trainedGroupIds,
-          ),
-    };
-  },
-);
+  return <String, HistoryRowFigures>{
+    for (final session in saved)
+      if (rows[session.id] case final row?)
+        session.id: HistoryRowFigures(
+          setCount: setCountOf(session),
+          exerciseCount: exerciseCountOf(session),
+          pbCount: pbCountFor(session, saved),
+          trainedGroupIds: row.trainedGroupIds,
+        ),
+  };
+});
 
 /// Sessions newest first, which is the order the tab lists them in.
 ///
@@ -250,8 +267,9 @@ final historyProjectionProvider = Provider<Map<String, HistoryRowFigures>>(
 /// it was typed in — so a backdated session slots into its real place rather
 /// than jumping to the top.
 final historySessionsNewestFirstProvider = Provider<List<HistorySession>>(
-  (ref) => <HistorySession>[...ref.watch(historySessionsProvider)]
-    ..sort((a, b) => b.performedOn.compareTo(a.performedOn)),
+  (ref) =>
+      <HistorySession>[...ref.watch(historySessionsProvider)]
+        ..sort((a, b) => b.performedOn.compareTo(a.performedOn)),
 );
 
 DateTime _day(int daysAgo) {
@@ -468,8 +486,7 @@ int streakAsOf(List<HistorySession> sessions, DateTime asOf) {
   final days = <DateTime>{
     for (final session in sessions)
       if (!session.performedOn.isAfter(asOf)) session.performedOn,
-  }.toList()
-    ..sort((a, b) => b.compareTo(a));
+  }.toList()..sort((a, b) => b.compareTo(a));
 
   if (days.isEmpty) return 0;
   // Decays against the reference date: a streak you have already let lapse is
