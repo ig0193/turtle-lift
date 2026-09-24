@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/active_session.dart';
 import '../data/exercise_index.dart';
 import '../data/load_type.dart';
 import '../data/routine_store.dart';
@@ -10,24 +11,35 @@ import '../data/set_format.dart';
 import '../theme/app_metrics.dart';
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
+import 'destructive_confirmation.dart';
 import 'exercise_picker_screen.dart';
 
-/// Build or edit one routine.
+/// One routine: read it, change it, start it. **One screen, not two.**
 ///
-/// **It writes as you go, and Save is only the way out.** A builder that held
-/// the whole routine in memory until Save would lose fifteen minutes of work to
-/// a phone call; every add, every target and every note goes to disk as it
-/// happens, following `RoutineStore`'s rule. Cancel therefore leaves the
-/// routine as edited rather than reverting it — which is why a *new* routine is
-/// created up front and deleted on Cancel if nothing was added to it.
-class RoutineBuilderScreen extends ConsumerStatefulWidget {
-  const RoutineBuilderScreen({this.routineId, super.key});
+/// There used to be a detail screen and a builder. The detail screen's only
+/// unique element was the Start button — everything else it showed, it showed
+/// *worse*: `1 set` where the builder shows the actual targets. A read-only
+/// view that is a poorer rendering of the editable one is a tap the user pays
+/// for nothing.
+///
+/// The app already had the precedent. `SessionSummaryScreen` is explicitly
+/// "not a read-only viewer": the screen you land on after finishing and the
+/// one you open from History are the same component. This is that rule applied
+/// to routines.
+///
+/// **It writes as you go, so there is no Save.** Every add, every target and
+/// every note reaches disk as it happens — a builder holding fifteen minutes of
+/// work in memory loses it to a phone call. Back is the only way out it needs,
+/// and the title commits when it loses focus.
+class RoutineScreen extends ConsumerStatefulWidget {
+  const RoutineScreen({this.routineId, super.key});
 
-  /// Null creates a new routine; a value edits that one.
+  /// Null creates a routine; a value opens that one.
   final String? routineId;
 
   static const Key titleKey = ValueKey<String>('routine-title');
-  static const Key saveKey = ValueKey<String>('routine-save');
+  static const Key startKey = ValueKey<String>('routine-start');
+  static const Key menuKey = ValueKey<String>('routine-screen-menu');
   static const Key addExerciseKey = ValueKey<String>('routine-add-exercise');
   static Key addSetKey(String routineExerciseId) =>
       ValueKey<String>('routine-add-set-$routineExerciseId');
@@ -38,14 +50,13 @@ class RoutineBuilderScreen extends ConsumerStatefulWidget {
       ValueKey<String>('routine-target-$setId-$column');
 
   @override
-  ConsumerState<RoutineBuilderScreen> createState() =>
-      _RoutineBuilderScreenState();
+  ConsumerState<RoutineScreen> createState() => _RoutineScreenState();
 }
 
-class _RoutineBuilderScreenState extends ConsumerState<RoutineBuilderScreen> {
+class _RoutineScreenState extends ConsumerState<RoutineScreen> {
   final TextEditingController _title = TextEditingController();
+  final FocusNode _titleFocus = FocusNode();
   String? _routineId;
-  bool _creating = false;
 
   @override
   void initState() {
@@ -58,23 +69,37 @@ class _RoutineBuilderScreenState extends ConsumerState<RoutineBuilderScreen> {
           .firstOrNull;
       _title.text = existing?.name ?? '';
     }
+    _titleFocus.addListener(_commitTitle);
+  }
+
+  /// Commits the name on blur. Removed before the node is disposed and guarded
+  /// on `mounted`: disposing a focused `FocusNode` notifies its listeners, and
+  /// a listener reaching for `ref` then is reading a tree being torn down.
+  void _commitTitle() {
+    if (_titleFocus.hasFocus || !mounted) return;
+    final id = _routineId;
+    if (id == null) return;
+    final name = _title.text.trim();
+    ref
+        .read(routineListProvider.notifier)
+        .rename(id, name.isEmpty ? 'New routine' : name);
   }
 
   @override
   void dispose() {
+    _titleFocus.removeListener(_commitTitle);
     _title.dispose();
+    _titleFocus.dispose();
     super.dispose();
   }
 
   /// Creates the routine on the first thing added to it, not on arrival.
   ///
-  /// Same rule the ad-hoc session path follows: a user who opens the builder
-  /// and backs straight out should not find an empty routine waiting for them
-  /// on the landing.
+  /// The same rule the ad-hoc session path follows: a user who opens this and
+  /// backs straight out should not find an empty routine on their landing.
   Future<String> _ensureRoutine() async {
     final existing = _routineId;
     if (existing != null) return existing;
-    _creating = true;
     final created = await ref.read(routineListProvider.notifier).create(
           name: _title.text.trim().isEmpty ? 'New routine' : _title.text.trim(),
         );
@@ -90,26 +115,12 @@ class _RoutineBuilderScreenState extends ConsumerState<RoutineBuilderScreen> {
   Widget build(BuildContext context) {
     final routine = _routine;
     final index = ref.watch(exerciseIndexProvider);
+    final isEmpty = routine == null || routine.isEmpty;
 
     return AppScreen.pushed(
-      title: widget.routineId == null ? 'Create routine' : 'Edit routine',
+      title: widget.routineId == null ? 'New routine' : 'Routine',
       actions: <Widget>[
-        TextButton(
-          key: RoutineBuilderScreen.saveKey,
-          onPressed: () async {
-            final id = _routineId;
-            final name = _title.text.trim();
-            if (id != null) {
-              await ref
-                  .read(routineListProvider.notifier)
-                  .rename(id, name.isEmpty ? 'New routine' : name);
-            }
-            if (context.mounted) Navigator.of(context).pop();
-          },
-          child: const Text('Save',
-              style: TextStyle(
-                  color: AppPalette.accentLight, fontWeight: FontWeight.w600)),
-        ),
+        if (routine != null) _RoutineScreenMenu(routine: routine),
       ],
       body: ListView(
         padding: screenScrollPadding(context),
@@ -117,9 +128,11 @@ class _RoutineBuilderScreenState extends ConsumerState<RoutineBuilderScreen> {
           const SizedBox(height: AppMetrics.gapSnug),
           const _SectionLabel('ROUTINE NAME'),
           TextField(
-            key: RoutineBuilderScreen.titleKey,
+            key: RoutineScreen.titleKey,
             controller: _title,
+            focusNode: _titleFocus,
             maxLength: 40,
+            onSubmitted: (_) => _titleFocus.unfocus(),
             style: const TextStyle(
                 color: AppPalette.textPrimary,
                 fontSize: 17,
@@ -149,10 +162,40 @@ class _RoutineBuilderScreenState extends ConsumerState<RoutineBuilderScreen> {
               ),
             ),
           ),
+          const SizedBox(height: AppMetrics.gapCard),
+          // **Start leads, even on a screen you can edit.** Running the routine
+          // is what it is for; changing it is what you do on the way past.
+          FilledButton(
+            key: RoutineScreen.startKey,
+            onPressed: isEmpty ? null : () => _start(context, routine, index),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppPalette.accentStrong,
+              foregroundColor: AppPalette.onAccent,
+              disabledBackgroundColor: AppPalette.mutedSurface,
+              disabledForegroundColor: AppPalette.textMuted,
+              minimumSize: const Size.fromHeight(AppMetrics.controlHeight),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppMetrics.radiusControl),
+              ),
+              textStyle:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            child: Text(isEmpty ? 'Add an exercise to start' : 'Start routine'),
+          ),
+          if (routine != null && !routine.isEmpty) ...<Widget>[
+            const SizedBox(height: AppMetrics.gapSnug),
+            Center(
+              child: Text(
+                _meta(routine),
+                style: const TextStyle(
+                    color: AppPalette.textMuted, fontSize: 13),
+              ),
+            ),
+          ],
           const SizedBox(height: AppMetrics.gapSection),
-          if (routine == null || routine.isEmpty)
+          if (isEmpty)
             const Padding(
-              padding: EdgeInsets.only(top: 40, bottom: AppMetrics.gapSection),
+              padding: EdgeInsets.only(top: 24, bottom: AppMetrics.gapSection),
               child: Column(
                 children: <Widget>[
                   Icon(Icons.list_alt_outlined,
@@ -183,7 +226,7 @@ class _RoutineBuilderScreenState extends ConsumerState<RoutineBuilderScreen> {
               ),
           const SizedBox(height: AppMetrics.gap),
           OutlinedButton.icon(
-            key: RoutineBuilderScreen.addExerciseKey,
+            key: RoutineScreen.addExerciseKey,
             onPressed: _addExercises,
             style: OutlinedButton.styleFrom(
               foregroundColor: AppPalette.accentLight,
@@ -205,6 +248,19 @@ class _RoutineBuilderScreenState extends ConsumerState<RoutineBuilderScreen> {
     );
   }
 
+  Future<void> _start(
+    BuildContext context,
+    Routine routine,
+    ExerciseIndex index,
+  ) async {
+    // The title may still be focused with an uncommitted rename.
+    _titleFocus.unfocus();
+    await ref
+        .read(activeSessionProvider.notifier)
+        .startFromRoutine(routine, index);
+    if (context.mounted) Navigator.of(context).pop();
+  }
+
   Future<void> _addExercises() async {
     final picked = await Navigator.of(context).push<List<String>>(
       MaterialPageRoute<List<String>>(
@@ -223,7 +279,60 @@ class _RoutineBuilderScreenState extends ConsumerState<RoutineBuilderScreen> {
           .read(routineListProvider.notifier)
           .addSet(routineExerciseId: rowId);
     }
-    if (_creating) _creating = false;
+  }
+}
+
+/// `2 exercises · 4 sets`.
+String _meta(Routine routine) {
+  final exercises = routine.exercises.length;
+  final sets =
+      routine.exercises.fold<int>(0, (total, e) => total + e.sets.length);
+  return '$exercises exercise${exercises == 1 ? '' : 's'}'
+      ' · $sets set${sets == 1 ? '' : 's'}';
+}
+
+/// Duplicate and delete. Editing is the screen itself, so it is not in here.
+class _RoutineScreenMenu extends ConsumerWidget {
+  const _RoutineScreenMenu({required this.routine});
+
+  final Routine routine;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<String>(
+      key: RoutineScreen.menuKey,
+      icon: const Icon(Icons.more_horiz, color: AppPalette.textSecondary),
+      color: AppPalette.surface,
+      tooltip: 'Routine options',
+      itemBuilder: (_) => <PopupMenuEntry<String>>[
+        const PopupMenuItem<String>(
+            value: 'duplicate', child: Text('Duplicate')),
+        const PopupMenuItem<String>(
+          value: 'delete',
+          child: Text('Delete routine',
+              style: TextStyle(color: AppPalette.danger)),
+        ),
+      ],
+      onSelected: (value) async {
+        switch (value) {
+          case 'duplicate':
+            await ref.read(routineListProvider.notifier).duplicate(routine);
+            if (context.mounted) Navigator.of(context).pop();
+          case 'delete':
+            final confirmed = await confirmDestructive(
+              context,
+              title: 'Delete ${routine.name}?',
+              message: 'The routine and its planned sets are permanently '
+                  'removed. Workouts you already logged from it are kept.',
+              confirmLabel: 'Delete',
+            );
+            if (confirmed) {
+              await ref.read(routineListProvider.notifier).delete(routine.id);
+              if (context.mounted) Navigator.of(context).pop();
+            }
+        }
+      },
+    );
   }
 }
 
@@ -310,7 +419,7 @@ class _BuilderExerciseBlock extends ConsumerWidget {
             child: SizedBox(
               height: AppMetrics.touchTarget,
               child: TextButton.icon(
-                key: RoutineBuilderScreen.addSetKey(exercise.id),
+                key: RoutineScreen.addSetKey(exercise.id),
                 onPressed: () => notifier.addSet(routineExerciseId: exercise.id),
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
@@ -465,7 +574,7 @@ class _TargetRowState extends ConsumerState<_TargetRow> {
           Expanded(
             child: _field(
               _first,
-              fieldKey: RoutineBuilderScreen.targetFieldKey(widget.set.id, 0),
+              fieldKey: RoutineScreen.targetFieldKey(widget.set.id, 0),
               allowsColon: !showsSecond,
             ),
           ),
@@ -473,7 +582,7 @@ class _TargetRowState extends ConsumerState<_TargetRow> {
             Expanded(
               child: _field(
                 _second,
-                fieldKey: RoutineBuilderScreen.targetFieldKey(widget.set.id, 1),
+                fieldKey: RoutineScreen.targetFieldKey(widget.set.id, 1),
               ),
             ),
           SizedBox(

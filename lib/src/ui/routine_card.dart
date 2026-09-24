@@ -8,8 +8,7 @@ import '../data/routines.dart';
 import '../theme/app_metrics.dart';
 import '../theme/app_palette.dart';
 import 'destructive_confirmation.dart';
-import 'routine_builder_screen.dart';
-import 'routine_detail_screen.dart';
+import 'routine_screen.dart';
 
 /// One routine on the Workout landing.
 ///
@@ -50,7 +49,7 @@ class RoutineCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => RoutineDetailScreen(routineId: routine.id),
+              builder: (_) => RoutineScreen(routineId: routine.id),
             ),
           ),
           child: Padding(
@@ -138,7 +137,6 @@ class _RoutineMenu extends ConsumerWidget {
       icon: const Icon(Icons.more_horiz, color: AppPalette.textSecondary),
       color: AppPalette.surface,
       itemBuilder: (_) => <PopupMenuEntry<String>>[
-        const PopupMenuItem<String>(value: 'edit', child: Text('Edit routine')),
         const PopupMenuItem<String>(
             value: 'duplicate', child: Text('Duplicate')),
         const PopupMenuItem<String>(
@@ -148,12 +146,6 @@ class _RoutineMenu extends ConsumerWidget {
       ],
       onSelected: (value) async {
         switch (value) {
-          case 'edit':
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => RoutineBuilderScreen(routineId: routine.id),
-              ),
-            );
           case 'duplicate':
             await ref.read(routineListProvider.notifier).duplicate(routine);
           case 'delete':

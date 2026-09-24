@@ -8,7 +8,7 @@ import '../data/derived.dart';
 import '../data/exercise_index.dart';
 import 'app_screen.dart';
 import 'destructive_confirmation.dart';
-import 'routine_builder_screen.dart';
+import 'routine_screen.dart';
 import 'routine_card.dart';
 import 'template_list_screen.dart';
 import 'log_workout_screen.dart';
@@ -119,7 +119,7 @@ class WorkoutLandingBody extends ConsumerWidget {
                 label: 'New routine',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const RoutineBuilderScreen(),
+                    builder: (_) => const RoutineScreen(),
                   ),
                 ),
               ),

@@ -12,9 +12,9 @@ import 'package:turtle_lift/src/data/settings_store.dart'
     show appDatabaseProvider;
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/exercise_picker_screen.dart';
-import 'package:turtle_lift/src/ui/routine_builder_screen.dart';
+import 'package:turtle_lift/src/ui/routine_screen.dart';
 
-/// The only place a routine is authored (`adr/0004`).
+/// The one routine screen: read it, change it, start it.
 ///
 /// **It writes as you go, and that is what these tests pin.** A builder that
 /// held the routine in memory until Save would lose fifteen minutes of work to
@@ -52,7 +52,7 @@ void main() {
     entry('plank', 'Plank', 'timed'),
   ]);
 
-  Future<void> pumpBuilder(WidgetTester tester, {String? routineId}) async {
+  Future<void> pumpRoutine(WidgetTester tester, {String? routineId}) async {
     late List<Routine> seeded;
     await tester.runAsync(() async {
       seeded = await store.readRoutines();
@@ -68,7 +68,7 @@ void main() {
         ],
         child: MaterialApp(
           theme: buildAppTheme(),
-          home: RoutineBuilderScreen(routineId: routineId),
+          home: RoutineScreen(routineId: routineId),
         ),
       ),
     );
@@ -85,7 +85,7 @@ void main() {
 
   /// Walks the picker: opens it, ticks [ids], confirms.
   Future<void> addExercises(WidgetTester tester, List<String> ids) async {
-    await tester.tap(find.byKey(RoutineBuilderScreen.addExerciseKey));
+    await tester.tap(find.byKey(RoutineScreen.addExerciseKey));
     await tester.pumpAndSettle();
     for (final id in ids) {
       await tester.tap(find.byKey(ExercisePickerScreen.rowKey(id)));
@@ -99,15 +99,15 @@ void main() {
 
   group('a new routine', () {
     testWidgets('opens empty, and says what to do', (tester) async {
-      await pumpBuilder(tester);
+      await pumpRoutine(tester);
 
-      expect(find.text('Create routine'), findsOneWidget);
+      expect(find.text('New routine'), findsOneWidget);
       expect(find.text('No exercises yet'), findsOneWidget);
       expect(find.text('Add the lifts this routine plans'), findsOneWidget);
     });
 
     testWidgets('is not created just by opening the builder', (tester) async {
-      await pumpBuilder(tester);
+      await pumpRoutine(tester);
       await tester.pump();
 
       // Same rule the ad-hoc session path follows: backing straight out must
@@ -118,7 +118,7 @@ void main() {
 
     testWidgets('is created by the first exercise added, with one planned set',
         (tester) async {
-      await pumpBuilder(tester);
+      await pumpRoutine(tester);
       await addExercises(tester, <String>['bench']);
 
       final routines = await tester.runAsync(store.readRoutines);
@@ -129,14 +129,16 @@ void main() {
       expect(routines.single.exercises.single.sets, hasLength(1));
     });
 
-    testWidgets('takes the typed title on Save', (tester) async {
-      await pumpBuilder(tester);
+    testWidgets('takes the typed title when the field loses focus',
+        (tester) async {
+      await pumpRoutine(tester);
       await addExercises(tester, <String>['bench']);
 
-      await tester.enterText(
-          find.byKey(RoutineBuilderScreen.titleKey), 'Push day');
+      await tester.enterText(find.byKey(RoutineScreen.titleKey), 'Push day');
+      // No Save button: every change reaches disk as it happens, so the only
+      // thing left to commit is the name, and blur is when it is final.
       await act(tester, () async {
-        await tester.tap(find.byKey(RoutineBuilderScreen.saveKey));
+        FocusManager.instance.primaryFocus?.unfocus();
       });
 
       final routines = await tester.runAsync(store.readRoutines);
@@ -144,21 +146,26 @@ void main() {
     });
 
     testWidgets('an untitled routine still gets a name', (tester) async {
-      await pumpBuilder(tester);
+      await pumpRoutine(tester);
       await addExercises(tester, <String>['bench']);
-
-      await act(tester, () async {
-        await tester.tap(find.byKey(RoutineBuilderScreen.saveKey));
-      });
 
       // A blank row on the landing is unusable; the fallback is a name, not an
       // empty string.
       final routines = await tester.runAsync(store.readRoutines);
       expect(routines!.single.name, 'New routine');
     });
+
+    testWidgets('it cannot be started until it holds something', (tester) async {
+      await pumpRoutine(tester);
+
+      final start =
+          tester.widget<FilledButton>(find.byKey(RoutineScreen.startKey));
+      expect(start.onPressed, isNull);
+      expect(find.text('Add an exercise to start'), findsOneWidget);
+    });
   });
 
-  group('editing an existing routine', () {
+  group('opening an existing routine', () {
     late String routineId;
 
     setUp(() async {
@@ -170,15 +177,18 @@ void main() {
     });
 
     testWidgets('opens with its title and exercises', (tester) async {
-      await pumpBuilder(tester, routineId: routineId);
+      await pumpRoutine(tester, routineId: routineId);
 
-      expect(find.text('Edit routine'), findsOneWidget);
+      // One screen, not two: the name is editable and the targets are the
+      // real ones, where the old detail screen showed "1 set".
+      expect(find.text('Routine'), findsOneWidget);
       expect(find.text('Barbell bench press'), findsOneWidget);
+      expect(find.text('Start routine'), findsOneWidget);
     });
 
     testWidgets('Add set appends a planned set straight to disk',
         (tester) async {
-      await pumpBuilder(tester, routineId: routineId);
+      await pumpRoutine(tester, routineId: routineId);
       final exerciseRowId = (await tester.runAsync(store.readRoutines))!
           .single
           .exercises
@@ -187,7 +197,7 @@ void main() {
 
       await act(tester, () async {
         await tester
-            .tap(find.byKey(RoutineBuilderScreen.addSetKey(exerciseRowId)));
+            .tap(find.byKey(RoutineScreen.addSetKey(exerciseRowId)));
       });
 
       final routines = await tester.runAsync(store.readRoutines);
@@ -196,7 +206,7 @@ void main() {
 
     testWidgets('a target with no numbers stays blank rather than zero',
         (tester) async {
-      await pumpBuilder(tester, routineId: routineId);
+      await pumpRoutine(tester, routineId: routineId);
 
       final set =
           (await tester.runAsync(store.readRoutines))!.single.exercises.single.sets.single;
@@ -208,7 +218,7 @@ void main() {
 
     testWidgets('typed targets reach the store, in the right columns',
         (tester) async {
-      await pumpBuilder(tester, routineId: routineId);
+      await pumpRoutine(tester, routineId: routineId);
       final setId = (await tester.runAsync(store.readRoutines))!
           .single
           .exercises
@@ -219,11 +229,11 @@ void main() {
 
       await act(tester, () async {
         await tester.enterText(
-            find.byKey(RoutineBuilderScreen.targetFieldKey(setId, 0)), '60');
+            find.byKey(RoutineScreen.targetFieldKey(setId, 0)), '60');
       });
       await act(tester, () async {
         await tester.enterText(
-            find.byKey(RoutineBuilderScreen.targetFieldKey(setId, 1)), '8');
+            find.byKey(RoutineScreen.targetFieldKey(setId, 1)), '8');
       });
 
       final set = (await tester.runAsync(store.readRoutines))!
@@ -241,7 +251,7 @@ void main() {
 
     testWidgets('removing the exercise empties the routine but keeps it',
         (tester) async {
-      await pumpBuilder(tester, routineId: routineId);
+      await pumpRoutine(tester, routineId: routineId);
 
       await act(tester, () async {
         await tester.tap(find.byIcon(Icons.close).first);
@@ -256,7 +266,7 @@ void main() {
   group('load types', () {
     testWidgets('a timed exercise plans a TIME column, and no reps',
         (tester) async {
-      await pumpBuilder(tester);
+      await pumpRoutine(tester);
       await addExercises(tester, <String>['plank']);
 
       expect(find.text('TIME'), findsOneWidget);
@@ -265,7 +275,7 @@ void main() {
     });
 
     testWidgets('a weighted exercise plans KG and REPS', (tester) async {
-      await pumpBuilder(tester);
+      await pumpRoutine(tester);
       await addExercises(tester, <String>['bench']);
 
       expect(find.text('KG'), findsOneWidget);
