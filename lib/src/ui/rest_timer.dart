@@ -3,11 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/active_session.dart';
-import '../data/session_store.dart';
 import '../data/set_format.dart';
 import '../theme/app_metrics.dart';
 import '../theme/app_palette.dart';
+import 'ghost_chip.dart';
 
 /// The rest timer's live state. Null means nothing is resting.
 @immutable
@@ -88,61 +87,37 @@ final restTimerProvider =
 /// the absence of a feature on every exercise of every workout — a row of
 /// furniture per block, forever, saying nothing the user did not know. Set, it
 /// becomes a real value and earns its weight.
-class RestTimerChip extends ConsumerWidget {
-  const RestTimerChip({required this.exercise, super.key});
+///
+/// **It takes a value and a callback, not a session exercise**, so the routine
+/// screen and the live workout render the same control over their own storage.
+/// Two copies of a picker is two places for the options to drift.
+class RestTimerChip extends StatelessWidget {
+  const RestTimerChip({
+    required this.seconds,
+    required this.onChanged,
+    this.chipKey,
+    super.key,
+  });
 
-  final SessionExercise exercise;
+  final int? seconds;
+  final ValueChanged<int?> onChanged;
+  final Key? chipKey;
 
-  static Key lineKey(String exerciseRowId) =>
-      ValueKey<String>('rest-timer-$exerciseRowId');
+  static Key lineKey(String rowId) => ValueKey<String>('rest-timer-$rowId');
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final seconds = exercise.restTimerSec;
+  Widget build(BuildContext context) {
     final isSet = seconds != null;
-
-    return Semantics(
-      button: true,
-      label: isSet
-          ? 'Rest timer, ${formatDuration(seconds)}'
-          : 'Set a rest timer',
-      excludeSemantics: true,
-      child: SizedBox(
-        height: AppMetrics.touchTarget,
-        child: InkWell(
-          key: lineKey(exercise.id),
-          borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
-          onTap: () => _pick(context, ref),
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppMetrics.gapSnug),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(Icons.timer_outlined,
-                    size: 15,
-                    color:
-                        isSet ? AppPalette.accentLight : AppPalette.textMuted),
-                const SizedBox(width: AppMetrics.gapTight + 2),
-                Text(
-                  isSet ? formatDuration(seconds) : 'Rest',
-                  style: TextStyle(
-                    color:
-                        isSet ? AppPalette.accentLight : AppPalette.textMuted,
-                    fontSize: 13,
-                    fontWeight: isSet ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return GhostChip(
+      chipKey: chipKey,
+      icon: Icons.timer_outlined,
+      label: isSet ? formatDuration(seconds!) : 'Rest',
+      active: isSet,
+      onTap: () => _pick(context),
     );
   }
 
-  Future<void> _pick(BuildContext context, WidgetRef ref) async {
-    const options = <int?>[null, 30, 45, 60, 90, 120, 180];
+  Future<void> _pick(BuildContext context) async {
     final chosen = await showModalBottomSheet<Object?>(
       context: context,
       backgroundColor: AppPalette.surface,
@@ -151,8 +126,8 @@ class RestTimerChip extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('Rest timer',
+              padding: EdgeInsets.all(AppMetrics.gapCard),
+              child: Text('Rest between sets',
                   style: TextStyle(
                       color: AppPalette.textPrimary,
                       fontSize: 16,
@@ -166,13 +141,14 @@ class RestTimerChip extends ConsumerWidget {
               child: ListView(
                 shrinkWrap: true,
                 children: <Widget>[
-                  for (final option in options)
+                  for (final option in kRestTimerOptions)
                     ListTile(
                       title: Text(
                         option == null ? 'Off' : formatDuration(option),
-                        style: const TextStyle(color: AppPalette.textPrimary),
+                        style:
+                            const TextStyle(color: AppPalette.textPrimary),
                       ),
-                      trailing: option == exercise.restTimerSec
+                      trailing: option == seconds
                           ? const Icon(Icons.check,
                               color: AppPalette.accentStrong)
                           : null,
@@ -186,10 +162,7 @@ class RestTimerChip extends ConsumerWidget {
       ),
     );
     if (chosen is! List<Object?>) return;
-    await ref.read(activeSessionProvider.notifier).setExerciseRestTimer(
-          sessionExerciseId: exercise.id,
-          seconds: chosen.first as int?,
-        );
+    onChanged(chosen.first as int?);
   }
 }
 

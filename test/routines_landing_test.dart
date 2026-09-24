@@ -7,6 +7,7 @@ import 'package:turtle_lift/src/data/active_session.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/exercise.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
+import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/routine_store.dart';
 import 'package:turtle_lift/src/data/routines.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
@@ -69,9 +70,12 @@ void main() {
   Future<void> pumpLanding(WidgetTester tester) async {
     late List<Routine> seededRoutines;
     late WorkoutSession? open;
+    late List<WorkoutSession> saved;
     await tester.runAsync(() async {
       seededRoutines = await routines.readRoutines();
       open = await sessions.readOpenSession();
+      // Real history, because the card's recency line is derived from it.
+      saved = await sessions.readSavedSessions();
     });
 
     await tester.pumpWidget(
@@ -82,7 +86,7 @@ void main() {
           exerciseIndexProvider.overrideWithValue(index),
           initialRoutinesProvider.overrideWithValue(seededRoutines),
           initialActiveSessionProvider.overrideWithValue(open),
-          initialSavedSessionsProvider.overrideWithValue(<WorkoutSession>[]),
+          initialSavedSessionsProvider.overrideWithValue(saved),
         ],
         child: MaterialApp(
           theme: buildAppTheme(),
@@ -125,17 +129,46 @@ void main() {
       expect(find.byKey(WorkoutLandingBody.templatesKey), findsOneWidget);
     });
 
-    testWidgets('a routine card names its exercises', (tester) async {
+    testWidgets('a routine card sizes it and says when it was last done',
+        (tester) async {
       await tester.runAsync(pushDay);
       await pumpLanding(tester);
 
       expect(find.text('Push day'), findsOneWidget);
-      expect(
-        find.text('2 exercises · 2 sets · Barbell bench press, Overhead press'),
-        findsOneWidget,
-        reason: 'the count is what a user scanning six routines wants; the '
-            'names are the reminder of which one this is',
-      );
+      // The exercise names came out: listed after the counts they truncated two
+      // words in, which is noise with an ellipsis rather than recall. The
+      // routine's own name identifies it; the counts say how big it is and the
+      // recency says when — which is what someone scanning six of them wants.
+      expect(find.text('2 exercises · 2 sets'), findsOneWidget);
+      expect(find.text('Never done'), findsOneWidget);
+    });
+
+    testWidgets('a routine that has been run says how long ago, never "due"',
+        (tester) async {
+      await tester.runAsync(() async {
+        final routine = await pushDay();
+        final session = await sessions.createSession(routineId: routine.id);
+        final rowId = await sessions.addExercise(
+          sessionId: session.id,
+          exerciseId: 'bench',
+          loadType: LoadType.weighted,
+        );
+        await sessions.writeSet(
+          sessionExerciseId: rowId,
+          position: 0,
+          completed: true,
+          weightKg: 60,
+          reps: 8,
+        );
+        await sessions.saveOpenSession();
+      });
+      await pumpLanding(tester);
+
+      expect(find.text('Last done today'), findsOneWidget);
+      // `docs/02`: recall, never recommendation. The moment this says "due"
+      // the app has become the suggestion engine it refuses to be.
+      expect(find.textContaining('due'), findsNothing);
+      expect(find.textContaining('time for'), findsNothing);
     });
 
     testWidgets('an empty routine cannot be started', (tester) async {

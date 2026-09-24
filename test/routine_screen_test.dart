@@ -101,7 +101,8 @@ void main() {
     testWidgets('opens empty, and says what to do', (tester) async {
       await pumpRoutine(tester);
 
-      expect(find.text('New routine'), findsOneWidget);
+      expect(find.text('Name this routine'), findsOneWidget,
+          reason: 'the name lives in the header and asks for itself');
       expect(find.text('No exercises yet'), findsOneWidget);
       expect(find.text('Add the lifts this routine plans'), findsOneWidget);
     });
@@ -181,7 +182,12 @@ void main() {
 
       // One screen, not two: the name is editable and the targets are the
       // real ones, where the old detail screen showed "1 set".
-      expect(find.text('Routine'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byKey(RoutineScreen.titleKey))
+            .controller!
+            .text,
+        'Push day',
+      );
       expect(find.text('Barbell bench press'), findsOneWidget);
       expect(find.text('Start routine'), findsOneWidget);
     });
@@ -253,8 +259,19 @@ void main() {
         (tester) async {
       await pumpRoutine(tester, routineId: routineId);
 
+      final exerciseRowId = (await tester.runAsync(store.readRoutines))!
+          .single
+          .exercises
+          .single
+          .id;
+      // Removal moved into the exercise's own menu: a bare ✕ beside the title
+      // sat next to the ✕ that deletes a single set, one destructive glyph
+      // above another.
+      await tester
+          .tap(find.byKey(RoutineScreen.exerciseMenuKey(exerciseRowId)));
+      await tester.pumpAndSettle();
       await act(tester, () async {
-        await tester.tap(find.byIcon(Icons.close).first);
+        await tester.tap(find.text('Remove exercise'));
       });
 
       final routines = await tester.runAsync(store.readRoutines);
@@ -264,22 +281,26 @@ void main() {
   });
 
   group('load types', () {
-    testWidgets('a timed exercise plans a TIME column, and no reps',
+    testWidgets('a timed exercise asks for a time, and no reps',
         (tester) async {
       await pumpRoutine(tester);
       await addExercises(tester, <String>['plank']);
 
-      expect(find.text('TIME'), findsOneWidget);
-      expect(find.text('REPS'), findsNothing);
-      expect(find.text('KG'), findsNothing);
+      // **The cells name their own units now**, so there is no column header
+      // repeated under every exercise — which is what made an eight-exercise
+      // routine unreadable.
+      expect(find.text('time'), findsOneWidget);
+      expect(find.text('reps'), findsNothing);
+      expect(find.text('×'), findsNothing);
     });
 
-    testWidgets('a weighted exercise plans KG and REPS', (tester) async {
+    testWidgets('a weighted exercise asks for kg and reps', (tester) async {
       await pumpRoutine(tester);
       await addExercises(tester, <String>['bench']);
 
-      expect(find.text('KG'), findsOneWidget);
-      expect(find.text('REPS'), findsOneWidget);
+      expect(find.text('kg'), findsOneWidget);
+      expect(find.text('reps'), findsOneWidget);
+      expect(find.text('×'), findsOneWidget);
     });
   });
 }

@@ -13,6 +13,7 @@ import '../theme/app_palette.dart';
 import 'destructive_confirmation.dart';
 import 'exercise_detail_screen.dart';
 import 'exercise_picker_screen.dart';
+import 'ghost_chip.dart';
 import 'rest_timer.dart';
 import 'set_table_row.dart';
 
@@ -362,10 +363,18 @@ class _ExerciseMetaState extends ConsumerState<_ExerciseMeta> {
       children: <Widget>[
         Row(
           children: <Widget>[
-            RestTimerChip(exercise: widget.exercise),
+            RestTimerChip(
+              chipKey: RestTimerChip.lineKey(widget.exercise.id),
+              seconds: widget.exercise.restTimerSec,
+              onChanged: (seconds) =>
+                  ref.read(activeSessionProvider.notifier).setExerciseRestTimer(
+                        sessionExerciseId: widget.exercise.id,
+                        seconds: seconds,
+                      ),
+            ),
             if (!showsField) ...<Widget>[
               const SizedBox(width: AppMetrics.gapSnug),
-              _GhostChip(
+              GhostChip(
                 chipKey: LogExerciseBlock.notesKey(widget.exercise.id),
                 icon: Icons.notes_outlined,
                 label: 'Note',
@@ -402,49 +411,6 @@ class _ExerciseMetaState extends ConsumerState<_ExerciseMeta> {
       ],
     );
   }
-}
-
-/// A low-emphasis pill: an affordance that has nothing to show yet.
-class _GhostChip extends StatelessWidget {
-  const _GhostChip({
-    required this.chipKey,
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final Key chipKey;
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: label,
-        excludeSemantics: true,
-        child: SizedBox(
-          height: AppMetrics.touchTarget,
-          child: InkWell(
-            key: chipKey,
-            borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppMetrics.gapSnug),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Icon(icon, size: 15, color: AppPalette.textMuted),
-                  const SizedBox(width: AppMetrics.gapTight + 2),
-                  Text(label,
-                      style: const TextStyle(
-                          color: AppPalette.textMuted, fontSize: 13)),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
 }
 
 /// Reorder, replace and remove, as Hevy's per-exercise `⋮` menu.

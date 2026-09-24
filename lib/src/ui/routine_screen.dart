@@ -13,24 +13,26 @@ import '../theme/app_palette.dart';
 import 'app_screen.dart';
 import 'destructive_confirmation.dart';
 import 'exercise_picker_screen.dart';
+import 'ghost_chip.dart';
+import 'rest_timer.dart';
 
 /// One routine: read it, change it, start it. **One screen, not two.**
 ///
 /// There used to be a detail screen and a builder. The detail screen's only
 /// unique element was the Start button — everything else it showed, it showed
-/// *worse*: `1 set` where the builder shows the actual targets. A read-only
-/// view that is a poorer rendering of the editable one is a tap the user pays
-/// for nothing.
-///
-/// The app already had the precedent. `SessionSummaryScreen` is explicitly
-/// "not a read-only viewer": the screen you land on after finishing and the
-/// one you open from History are the same component. This is that rule applied
-/// to routines.
+/// *worse*: `1 set` where the builder showed the actual targets. The app
+/// already had the rule written down: `SessionSummaryScreen` is explicitly
+/// "not a read-only viewer".
 ///
 /// **It writes as you go, so there is no Save.** Every add, every target and
-/// every note reaches disk as it happens — a builder holding fifteen minutes of
-/// work in memory loses it to a phone call. Back is the only way out it needs,
-/// and the title commits when it loses focus.
+/// every note reaches disk as it happens. The name lives in the header, where
+/// the live workout's title lives, and commits when it loses focus.
+///
+/// **The chrome had to come down before this screen could hold a real
+/// routine.** At eight exercises it rendered five rows of furniture each — a
+/// name, a bordered notes field, a `SET · KG · REPS` header, one empty row and
+/// an Add set — for one row of data. The headings are gone (each cell says its
+/// own unit), notes and rest are ghost chips, and what is left is the plan.
 class RoutineScreen extends ConsumerStatefulWidget {
   const RoutineScreen({this.routineId, super.key});
 
@@ -43,9 +45,11 @@ class RoutineScreen extends ConsumerStatefulWidget {
   static const Key addExerciseKey = ValueKey<String>('routine-add-exercise');
   static Key addSetKey(String routineExerciseId) =>
       ValueKey<String>('routine-add-set-$routineExerciseId');
+  static Key exerciseMenuKey(String routineExerciseId) =>
+      ValueKey<String>('routine-exercise-menu-$routineExerciseId');
 
   /// A planned set's input. [column] is 0 for the first field (weight, assist
-  /// or time) and 1 for reps — the same order the headings read in.
+  /// or time) and 1 for reps — the same order the cells read in.
   static Key targetFieldKey(String setId, int column) =>
       ValueKey<String>('routine-target-$setId-$column');
 
@@ -93,10 +97,8 @@ class _RoutineScreenState extends ConsumerState<RoutineScreen> {
     super.dispose();
   }
 
-  /// Creates the routine on the first thing added to it, not on arrival.
-  ///
-  /// The same rule the ad-hoc session path follows: a user who opens this and
-  /// backs straight out should not find an empty routine on their landing.
+  /// Creates the routine on the first thing added to it, not on arrival — the
+  /// same rule the ad-hoc session path follows.
   Future<String> _ensureRoutine() async {
     final existing = _routineId;
     if (existing != null) return existing;
@@ -118,7 +120,11 @@ class _RoutineScreenState extends ConsumerState<RoutineScreen> {
     final isEmpty = routine == null || routine.isEmpty;
 
     return AppScreen.pushed(
-      title: widget.routineId == null ? 'New routine' : 'Routine',
+      title: routine?.name ?? 'New routine',
+      // **The name lives in the header**, where the live workout's title lives.
+      // As a labelled field in the body it was a whole block of screen for one
+      // word, and the header said "Routine" — a heading with nothing to say.
+      titleWidget: _NameField(controller: _title, focusNode: _titleFocus),
       actions: <Widget>[
         if (routine != null) _RoutineScreenMenu(routine: routine),
       ],
@@ -126,45 +132,6 @@ class _RoutineScreenState extends ConsumerState<RoutineScreen> {
         padding: screenScrollPadding(context),
         children: <Widget>[
           const SizedBox(height: AppMetrics.gapSnug),
-          const _SectionLabel('ROUTINE NAME'),
-          TextField(
-            key: RoutineScreen.titleKey,
-            controller: _title,
-            focusNode: _titleFocus,
-            maxLength: 40,
-            onSubmitted: (_) => _titleFocus.unfocus(),
-            style: const TextStyle(
-                color: AppPalette.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w600),
-            decoration: InputDecoration(
-              counterText: '',
-              isDense: true,
-              filled: true,
-              fillColor: AppPalette.mutedSurface,
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppMetrics.gap, vertical: AppMetrics.gap),
-              hintText: 'Push day',
-              hintStyle:
-                  const TextStyle(color: AppPalette.textMuted, fontSize: 17),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppMetrics.radiusField),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppMetrics.radiusField),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppMetrics.radiusField),
-                borderSide: const BorderSide(
-                    color: AppPalette.accentStrong, width: 1.5),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppMetrics.gapCard),
-          // **Start leads, even on a screen you can edit.** Running the routine
-          // is what it is for; changing it is what you do on the way past.
           FilledButton(
             key: RoutineScreen.startKey,
             onPressed: isEmpty ? null : () => _start(context, routine, index),
@@ -182,48 +149,56 @@ class _RoutineScreenState extends ConsumerState<RoutineScreen> {
             ),
             child: Text(isEmpty ? 'Add an exercise to start' : 'Start routine'),
           ),
-          if (routine != null && !routine.isEmpty) ...<Widget>[
-            const SizedBox(height: AppMetrics.gapSnug),
-            Center(
-              child: Text(
-                _meta(routine),
-                style: const TextStyle(
-                    color: AppPalette.textMuted, fontSize: 13),
-              ),
-            ),
-          ],
           const SizedBox(height: AppMetrics.gapSection),
           if (isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 24, bottom: AppMetrics.gapSection),
-              child: Column(
-                children: <Widget>[
-                  Icon(Icons.list_alt_outlined,
-                      size: 28, color: AppPalette.textMuted),
-                  SizedBox(height: AppMetrics.gap),
-                  Text('No exercises yet',
-                      style: TextStyle(
-                          color: AppPalette.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600)),
-                  SizedBox(height: AppMetrics.gapTight + 2),
-                  Text('Add the lifts this routine plans',
-                      style: TextStyle(
-                          color: AppPalette.textSecondary, fontSize: 14)),
-                ],
-              ),
-            )
-          else
-            for (final exercise in routine.exercises)
-              _BuilderExerciseBlock(
-                exercise: exercise,
-                loadType: LoadType.fromName(
-                      index.byId(exercise.exerciseId)?.loadType ?? '',
-                    ) ??
-                    LoadType.weighted,
-                name: index.byId(exercise.exerciseId)?.name ??
-                    exercise.exerciseId,
-              ),
+            const _EmptyRoutine()
+          else ...<Widget>[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                const Text('EXERCISES',
+                    style: TextStyle(
+                      color: AppPalette.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.6,
+                    )),
+                Text(_meta(routine),
+                    style: const TextStyle(
+                        color: AppPalette.textMuted, fontSize: 12)),
+              ],
+            ),
+            const SizedBox(height: AppMetrics.gapLabel),
+            // Long-press an exercise to move it. A plan's order is the order
+            // you do it in, so it has to be changeable without deleting.
+            ReorderableListView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              buildDefaultDragHandles: false,
+              onReorderItem: (oldIndex, newIndex) {
+                final ids =
+                    routine.exercises.map((e) => e.id).toList(growable: true);
+                ids.insert(newIndex, ids.removeAt(oldIndex));
+                ref.read(routineListProvider.notifier).reorderExercises(ids);
+              },
+              children: <Widget>[
+                for (final (i, exercise) in routine.exercises.indexed)
+                  ReorderableDelayedDragStartListener(
+                    key: ValueKey<String>('routine-exercise-${exercise.id}'),
+                    index: i,
+                    child: _RoutineExerciseBlock(
+                      exercise: exercise,
+                      loadType: LoadType.fromName(
+                            index.byId(exercise.exerciseId)?.loadType ?? '',
+                          ) ??
+                          LoadType.weighted,
+                      name: index.byId(exercise.exerciseId)?.name ??
+                          exercise.exerciseId,
+                    ),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: AppMetrics.gap),
           OutlinedButton.icon(
             key: RoutineScreen.addExerciseKey,
@@ -273,8 +248,8 @@ class _RoutineScreenState extends ConsumerState<RoutineScreen> {
       final rowId = await ref
           .read(routineListProvider.notifier)
           .addExercise(routineId: routineId, exerciseId: exerciseId);
-      // A new exercise opens with one planned set, as Hevy's does — an
-      // exercise with no sets is a plan that says nothing.
+      // A new exercise opens with one planned set: an exercise with no sets is
+      // a plan that says nothing.
       await ref
           .read(routineListProvider.notifier)
           .addSet(routineExerciseId: rowId);
@@ -289,6 +264,61 @@ String _meta(Routine routine) {
       routine.exercises.fold<int>(0, (total, e) => total + e.sets.length);
   return '$exercises exercise${exercises == 1 ? '' : 's'}'
       ' · $sets set${sets == 1 ? '' : 's'}';
+}
+
+/// The routine's name, in the header.
+class _NameField extends StatelessWidget {
+  const _NameField({required this.controller, required this.focusNode});
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+
+  @override
+  Widget build(BuildContext context) => TextField(
+        key: RoutineScreen.titleKey,
+        controller: controller,
+        focusNode: focusNode,
+        maxLength: 40,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => focusNode.unfocus(),
+        style: const TextStyle(
+            color: AppPalette.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w600),
+        decoration: const InputDecoration(
+          counterText: '',
+          isDense: true,
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
+          hintText: 'Name this routine',
+          hintStyle: TextStyle(color: AppPalette.textMuted, fontSize: 18),
+        ),
+      );
+}
+
+class _EmptyRoutine extends StatelessWidget {
+  const _EmptyRoutine();
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+        padding: EdgeInsets.only(top: 24, bottom: AppMetrics.gapSection),
+        child: Column(
+          children: <Widget>[
+            Icon(Icons.list_alt_outlined,
+                size: 28, color: AppPalette.textMuted),
+            SizedBox(height: AppMetrics.gap),
+            Text('No exercises yet',
+                style: TextStyle(
+                    color: AppPalette.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
+            SizedBox(height: AppMetrics.gapTight + 2),
+            Text('Add the lifts this routine plans',
+                style:
+                    TextStyle(color: AppPalette.textSecondary, fontSize: 14)),
+          ],
+        ),
+      );
 }
 
 /// Duplicate and delete. Editing is the screen itself, so it is not in here.
@@ -336,8 +366,9 @@ class _RoutineScreenMenu extends ConsumerWidget {
   }
 }
 
-class _BuilderExerciseBlock extends ConsumerWidget {
-  const _BuilderExerciseBlock({
+/// One exercise in the plan.
+class _RoutineExerciseBlock extends ConsumerWidget {
+  const _RoutineExerciseBlock({
     required this.exercise,
     required this.loadType,
     required this.name,
@@ -350,12 +381,7 @@ class _BuilderExerciseBlock extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(routineListProvider.notifier);
-    final headings = switch (loadType) {
-      LoadType.weighted => const <String>['KG', 'REPS'],
-      LoadType.bodyweight => const <String>['+KG', 'REPS'],
-      LoadType.assisted => const <String>['ASSIST', 'REPS'],
-      LoadType.timed => const <String>['TIME'],
-    };
+    final hasNote = (exercise.notes ?? '').trim().isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppMetrics.gapSection),
@@ -375,38 +401,24 @@ class _BuilderExerciseBlock extends ConsumerWidget {
                         fontWeight: FontWeight.w600,
                         letterSpacing: -0.2)),
               ),
-              SizedBox(
-                width: AppMetrics.touchTarget,
-                height: AppMetrics.touchTarget,
-                child: IconButton(
-                  tooltip: 'Remove $name',
-                  icon: const Icon(Icons.close,
-                      size: 20, color: AppPalette.textSecondary),
-                  onPressed: () => notifier.removeExercise(exercise.id),
-                ),
-              ),
+              _ExerciseMenu(exercise: exercise, name: name),
             ],
           ),
-          _RoutineNotesField(exercise: exercise),
-          const SizedBox(height: 8),
           Row(
             children: <Widget>[
-              const SizedBox(
-                width: 34,
-                child: Text('SET',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: AppPalette.textMuted, fontSize: 11)),
-              ),
-              for (final heading in headings)
-                Expanded(
-                  child: Text(heading,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: AppPalette.textMuted, fontSize: 11)),
+              RestTimerChip(
+                chipKey: RestTimerChip.lineKey(exercise.id),
+                seconds: exercise.restTimerSec,
+                onChanged: (seconds) => notifier.setExerciseRestTimer(
+                  routineExerciseId: exercise.id,
+                  seconds: seconds,
                 ),
-              const SizedBox(width: AppMetrics.touchTarget),
+              ),
+              const SizedBox(width: AppMetrics.gapSnug),
+              _NoteChip(exercise: exercise, hasNote: hasNote),
             ],
           ),
+          const SizedBox(height: AppMetrics.gapTight),
           for (final (i, set) in exercise.sets.indexed)
             _TargetRow(
               key: ValueKey<String>('target-${set.id}'),
@@ -439,67 +451,128 @@ class _BuilderExerciseBlock extends ConsumerWidget {
   }
 }
 
-class _RoutineNotesField extends ConsumerStatefulWidget {
-  const _RoutineNotesField({required this.exercise});
+class _ExerciseMenu extends ConsumerWidget {
+  const _ExerciseMenu({required this.exercise, required this.name});
 
   final RoutineExercise exercise;
+  final String name;
 
   @override
-  ConsumerState<_RoutineNotesField> createState() => _RoutineNotesFieldState();
-}
-
-class _RoutineNotesFieldState extends ConsumerState<_RoutineNotesField> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.exercise.notes ?? '');
-  final FocusNode _focus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(_commitOnBlur);
-  }
-
-  void _commitOnBlur() {
-    if (_focus.hasFocus || !mounted) return;
-    ref.read(routineListProvider.notifier).setExerciseNotes(
-          routineExerciseId: widget.exercise.id,
-          notes: _controller.text,
-        );
-  }
-
-  /// **Removed before the node is disposed, and guarded on `mounted`.**
-  /// Disposing a `FocusNode` that currently has focus notifies its listeners,
-  /// and a listener that reaches for `ref` at that moment is reading the
-  /// element tree while it is being torn down — which throws "Looking up a
-  /// deactivated widget's ancestor is unsafe". The commit has to happen while
-  /// the widget is still alive, so it happens on blur and the teardown path is
-  /// made silent.
-  @override
-  void dispose() {
-    _focus.removeListener(_commitOnBlur);
-    _controller.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => TextField(
-        controller: _controller,
-        focusNode: _focus,
-        maxLines: null,
-        style:
-            const TextStyle(color: AppPalette.textSecondary, fontSize: 14),
-        decoration: const InputDecoration(
-          isDense: true,
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-          hintText: 'Add routine notes here',
-          hintStyle: TextStyle(color: AppPalette.textMuted, fontSize: 14),
-        ),
+  Widget build(BuildContext context, WidgetRef ref) => PopupMenuButton<String>(
+        key: RoutineScreen.exerciseMenuKey(exercise.id),
+        icon: const Icon(Icons.more_vert, color: AppPalette.textSecondary),
+        color: AppPalette.surface,
+        tooltip: 'Options for $name',
+        itemBuilder: (_) => <PopupMenuEntry<String>>[
+          const PopupMenuItem<String>(
+            value: 'remove',
+            child: Text('Remove exercise',
+                style: TextStyle(color: AppPalette.danger)),
+          ),
+        ],
+        onSelected: (value) {
+          if (value == 'remove') {
+            ref.read(routineListProvider.notifier).removeExercise(exercise.id);
+          }
+        },
       );
 }
 
-/// One planned set. Blank is a legitimate value — see [RoutineSets].
+/// The note, as a chip that becomes a field.
+class _NoteChip extends ConsumerStatefulWidget {
+  const _NoteChip({required this.exercise, required this.hasNote});
+
+  final RoutineExercise exercise;
+  final bool hasNote;
+
+  @override
+  ConsumerState<_NoteChip> createState() => _NoteChipState();
+}
+
+class _NoteChipState extends ConsumerState<_NoteChip> {
+  @override
+  Widget build(BuildContext context) => GhostChip(
+        icon: Icons.notes_outlined,
+        label: widget.hasNote ? 'Note' : 'Note',
+        active: widget.hasNote,
+        onTap: () => _edit(context),
+      );
+
+  Future<void> _edit(BuildContext context) async {
+    final controller =
+        TextEditingController(text: widget.exercise.notes ?? '');
+    final saved = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppPalette.surface,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          left: AppMetrics.gapCard,
+          right: AppMetrics.gapCard,
+          top: AppMetrics.gapCard,
+          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom +
+              AppMetrics.gapCard,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const Text('Note',
+                style: TextStyle(
+                    color: AppPalette.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(height: AppMetrics.gap),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              maxLines: 4,
+              minLines: 2,
+              style: const TextStyle(
+                  color: AppPalette.textSecondary, fontSize: 15),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppPalette.mutedSurface,
+                hintText: 'Cues, tempo, a link to a form video',
+                hintStyle:
+                    const TextStyle(color: AppPalette.textMuted, fontSize: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppMetrics.gapCard),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(sheetContext).pop(<String>[controller.text]),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppPalette.accentStrong,
+                foregroundColor: AppPalette.onAccent,
+                minimumSize:
+                    const Size.fromHeight(AppMetrics.controlHeight),
+                shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(AppMetrics.radiusControl),
+                ),
+              ),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+    if (saved == null) return;
+    await ref.read(routineListProvider.notifier).setExerciseNotes(
+          routineExerciseId: widget.exercise.id,
+          notes: saved.first,
+        );
+  }
+}
+
+/// One planned set. **No column headings above it** — each cell names its own
+/// unit, so the table does not need a header repeated under every exercise.
 class _TargetRow extends ConsumerStatefulWidget {
   const _TargetRow({
     required this.index,
@@ -558,40 +631,60 @@ class _TargetRowState extends ConsumerState<_TargetRow> {
     return (m == null || s == null) ? null : m * 60 + s;
   }
 
+  /// What the first cell holds, in the unit the load type measures.
+  String get _firstUnit => switch (widget.loadType) {
+        LoadType.weighted => 'kg',
+        LoadType.bodyweight => '+kg',
+        LoadType.assisted => 'assist',
+        LoadType.timed => 'time',
+      };
+
   @override
   Widget build(BuildContext context) {
-    final showsSecond = widget.loadType != LoadType.timed;
+    final showsReps = widget.loadType != LoadType.timed;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppMetrics.gapTight),
       child: Row(
         children: <Widget>[
           SizedBox(
-            width: 34,
+            width: 26,
             child: Text('${widget.index + 1}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppPalette.textPrimary)),
+                style: const TextStyle(
+                  color: AppPalette.textMuted,
+                  fontSize: 13,
+                  fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                )),
           ),
           Expanded(
-            child: _field(
+            child: _cell(
               _first,
               fieldKey: RoutineScreen.targetFieldKey(widget.set.id, 0),
-              allowsColon: !showsSecond,
+              unit: _firstUnit,
+              allowsColon: !showsReps,
             ),
           ),
-          if (showsSecond)
+          if (showsReps) ...<Widget>[
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppMetrics.gapSnug),
+              child: Text('×',
+                  style:
+                      TextStyle(color: AppPalette.textMuted, fontSize: 14)),
+            ),
             Expanded(
-              child: _field(
+              child: _cell(
                 _second,
                 fieldKey: RoutineScreen.targetFieldKey(widget.set.id, 1),
+                unit: 'reps',
               ),
             ),
+          ],
           SizedBox(
             width: AppMetrics.touchTarget,
             height: AppMetrics.touchTarget,
             child: IconButton(
               tooltip: 'Remove set ${widget.index + 1}',
               icon: const Icon(Icons.close,
-                  size: 18, color: AppPalette.textMuted),
+                  size: 17, color: AppPalette.textMuted),
               onPressed: () =>
                   ref.read(routineListProvider.notifier).deleteSet(widget.set.id),
             ),
@@ -601,62 +694,55 @@ class _TargetRowState extends ConsumerState<_TargetRow> {
     );
   }
 
-  Widget _field(
+  Widget _cell(
     TextEditingController controller, {
     required Key fieldKey,
+    required String unit,
     bool allowsColon = false,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: TextField(
-        key: fieldKey,
-        controller: controller,
-        onChanged: (_) => _commit(),
-        textAlign: TextAlign.center,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: <TextInputFormatter>[
-          FilteringTextInputFormatter.allow(
-              RegExp(allowsColon ? r'[0-9:]' : r'[0-9.]')),
-        ],
-        style: const TextStyle(color: AppPalette.textPrimary),
-        decoration: InputDecoration(
-          isDense: true,
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 11, horizontal: 4),
-          filled: true,
-          fillColor: AppPalette.mutedSurface,
-          hintText: '—',
-          hintStyle: const TextStyle(color: AppPalette.textMuted),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppMetrics.radiusField),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppMetrics.radiusField),
-            borderSide: BorderSide.none,
-          ),
+    return TextField(
+      key: fieldKey,
+      controller: controller,
+      onChanged: (_) => _commit(),
+      textAlign: TextAlign.center,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: <TextInputFormatter>[
+        FilteringTextInputFormatter.allow(
+            RegExp(allowsColon ? r'[0-9:]' : r'[0-9.]')),
+      ],
+      style: const TextStyle(
+        color: AppPalette.textPrimary,
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 11, horizontal: AppMetrics.gapSnug),
+        filled: true,
+        fillColor: AppPalette.mutedSurface,
+        // The unit is the hint, so an empty cell says what it wants rather
+        // than showing a dash and making the user guess.
+        hintText: unit,
+        hintStyle: const TextStyle(color: AppPalette.textMuted, fontSize: 13),
+        suffixText: controller.text.isEmpty ? null : unit,
+        suffixStyle:
+            const TextStyle(color: AppPalette.textMuted, fontSize: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+          borderSide:
+              const BorderSide(color: AppPalette.accentStrong, width: 1.5),
         ),
       ),
     );
   }
-}
-
-
-/// A section label, shared by the builder's fields.
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: AppMetrics.gapLabel),
-        child: Text(text,
-            style: const TextStyle(
-              color: AppPalette.textMuted,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.6,
-            )),
-      );
 }

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/active_session.dart';
+import '../data/derived.dart';
 import '../data/exercise_index.dart';
+import '../data/local_date.dart';
 import '../data/routine_store.dart';
 import '../data/routines.dart';
 import '../theme/app_metrics.dart';
@@ -31,13 +33,12 @@ class RoutineCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final index = ref.watch(exerciseIndexProvider);
-    final names = routine.exercises
-        .map((e) => index.byId(e.exerciseId)?.name)
-        .whereType<String>()
-        .toList(growable: false);
     final setCount = routine.exercises
         .fold<int>(0, (total, e) => total + e.sets.length);
+    final lastDone = lastPerformedRoutine(
+      routine.id,
+      ref.watch(savedSessionsProvider),
+    );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppMetrics.gap),
@@ -78,8 +79,12 @@ class RoutineCard extends ConsumerWidget {
                       // are the reminder of which one this is. Names alone,
                       // wrapped to two lines, made every card the same height
                       // and none of them scannable.
+                      // **Two lines, not one.** Everything on one line lost
+                      // its tail to an ellipsis beside the Start pill — and
+                      // the tail is the recency, which is the half a user
+                      // scanning six routines actually reads.
                       Text(
-                        _summary(names, setCount),
+                        _size(routine, setCount),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -88,6 +93,17 @@ class RoutineCard extends ConsumerWidget {
                           height: 1.3,
                         ),
                       ),
+                      if (!routine.isEmpty)
+                        Text(
+                          _recency(lastDone),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppPalette.textMuted,
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -105,15 +121,32 @@ class RoutineCard extends ConsumerWidget {
     );
   }
 
-  /// `4 exercises · 12 sets` over `Arnold press, Back extension, …`.
+  /// `4 exercises · 12 sets` — how big the routine is.
   ///
-  /// An empty routine says so instead of rendering a blank line the user
-  /// cannot interpret.
-  static String _summary(List<String> names, int setCount) {
-    if (names.isEmpty) return 'No exercises yet';
-    final exercises = '${names.length} exercise${names.length == 1 ? '' : 's'}';
-    final sets = setCount == 0 ? '' : ' · $setCount set${setCount == 1 ? '' : 's'}';
-    return '$exercises$sets · ${names.join(', ')}';
+  /// **The exercise names came out.** Listed after the counts they truncated
+  /// two words in — `21s bar…` — which is not recall, it is noise with an
+  /// ellipsis. The routine's own name is what identifies it.
+  static String _size(Routine routine, int setCount) {
+    if (routine.isEmpty) return 'No exercises yet';
+    final exercises =
+        '${routine.exercises.length} exercise${routine.exercises.length == 1 ? '' : 's'}';
+    final sets =
+        setCount == 0 ? '' : ' · $setCount set${setCount == 1 ? '' : 's'}';
+    return '$exercises$sets';
+  }
+
+  /// When it was last done. **Recall, never recommendation**: when, never
+  /// "due", never "time for".
+  static String _recency(LocalDate? date) {
+    if (date == null) return 'Never done';
+    final days = LocalDate.today().daysAfter(date);
+    if (days <= 0) return 'Last done today';
+    if (days == 1) return 'Last done yesterday';
+    if (days < 7) return 'Last done $days days ago';
+    if (days < 14) return 'Last done 1 week ago';
+    if (days < 31) return 'Last done ${days ~/ 7} weeks ago';
+    if (days < 62) return 'Last done 1 month ago';
+    return 'Last done ${days ~/ 30} months ago';
   }
 
   Future<void> _start(BuildContext context, WidgetRef ref) async {

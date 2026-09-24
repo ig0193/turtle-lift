@@ -289,6 +289,31 @@ int timesPerformed(String exerciseId, List<WorkoutSession> savedSessions) =>
 /// **Compared on [WorkoutSession.performedOn], never on `loggedAt`.** A
 /// backdated session is a workout done on the day the user says it was, so a
 /// Monday session entered on Wednesday reads "Monday" here too.
+/// The last day a workout was run from [routineId], or null for never.
+///
+/// **Recall, never recommendation.** It says when, and stops. The moment this
+/// grows a "due", an "overdue" or a "time for", the app has become the
+/// suggestion engine `docs/02` refuses to be — the rule
+/// `test/template_row_test.dart` already fails on for templates.
+///
+/// Sessions with no completed set are excluded: an abandoned workout is not a
+/// time you did the routine. Compared on `performedOn`, so a backdated session
+/// counts on the day it happened.
+LocalDate? lastPerformedRoutine(
+  String routineId,
+  List<WorkoutSession> savedSessions,
+) {
+  LocalDate? latest;
+  for (final session in savedSessions) {
+    if (session.routineId != routineId) continue;
+    if (setCountOf(session) == 0) continue;
+    if (latest == null || session.performedOn > latest) {
+      latest = session.performedOn;
+    }
+  }
+  return latest;
+}
+
 LocalDate? lastPerformed(String templateId, List<WorkoutSession> savedSessions) {
   LocalDate? latest;
   for (final session in savedSessions) {

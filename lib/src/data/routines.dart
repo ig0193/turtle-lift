@@ -158,6 +158,13 @@ class RoutineList extends Notifier<List<Routine>> {
     return id;
   }
 
+  /// Writes an explicit exercise order for a routine. A plan's order is the
+  /// order you do it in, so it has to be changeable without deleting.
+  Future<void> reorderExercises(List<String> idsInOrder) async {
+    await _store.reorderExercises(idsInOrder);
+    await _refresh();
+  }
+
   Future<void> removeExercise(String routineExerciseId) async {
     await _store.deleteExercise(routineExerciseId);
     await _refresh();
