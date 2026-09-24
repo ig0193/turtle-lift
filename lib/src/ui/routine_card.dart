@@ -10,7 +10,9 @@ import '../data/routines.dart';
 import '../theme/app_metrics.dart';
 import '../theme/app_palette.dart';
 import 'destructive_confirmation.dart';
+import '../theme/app_typography.dart';
 import 'routine_screen.dart';
+import 'workout_root.dart';
 
 /// One routine on the Workout landing.
 ///
@@ -249,4 +251,216 @@ class _StartButton extends StatelessWidget {
       ),
     );
   }
+}
+
+
+/// The landing's hero: the routine you last trained.
+///
+/// **One big thing, then quiet ones.** Three equal cards make the reader do the
+/// ranking; a screen with a lead and a list has already done it. What earns the
+/// lead here is history, not a recommendation — see
+/// `WorkoutLandingBody._mostRecentlyTrained`.
+class RoutineHeroCard extends ConsumerWidget {
+  const RoutineHeroCard({required this.routine, required this.lastDone, super.key});
+
+  final Routine routine;
+  final LocalDate? lastDone;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final setCount =
+        routine.exercises.fold<int>(0, (total, e) => total + e.sets.length);
+
+    return Material(
+      color: AppPalette.surface,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        key: WorkoutLandingBody.heroKey,
+        borderRadius: BorderRadius.circular(24),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => RoutineScreen(routineId: routine.id),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text('LAST TRAINED',
+                        style: kLandingSectionLabelStyle),
+                  ),
+                  _RoutineMenu(routine: routine),
+                ],
+              ),
+              const SizedBox(height: AppMetrics.gapSnug),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  // The one display numeral on the screen. Opal's move: a
+                  // single figure leads, and everything else is checked.
+                  Text(
+                    '${routine.exercises.length}',
+                    style: const TextStyle(
+                      color: AppPalette.textPrimary,
+                      fontSize: 52,
+                      fontWeight: FontWeight.w700,
+                      height: 0.9,
+                      letterSpacing: -2.4,
+                      fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const SizedBox(width: AppMetrics.gap),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            routine.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppPalette.textPrimary,
+                              fontSize: 19,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.4,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            // The numeral beside this is the exercise count,
+                            // so the word after it has to agree with it.
+                            '${routine.exercises.length == 1 ? 'exercise' : 'exercises'}'
+                            ' · $setCount ${setCount == 1 ? 'set' : 'sets'}'
+                            ' · ${recencyLabel(lastDone)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: AppPalette.textSecondary, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              FilledButton(
+                key: RoutineCard.startKey(routine.id),
+                onPressed: routine.isEmpty
+                    ? null
+                    : () => ref
+                        .read(activeSessionProvider.notifier)
+                        .startFromRoutine(
+                            routine, ref.read(exerciseIndexProvider)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppPalette.accentStrong,
+                  foregroundColor: AppPalette.onAccent,
+                  disabledBackgroundColor: AppPalette.mutedSurface,
+                  disabledForegroundColor: AppPalette.textMuted,
+                  minimumSize: const Size.fromHeight(AppMetrics.controlHeight),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppMetrics.radiusControl),
+                  ),
+                  textStyle: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                child: const Text('Start routine'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A routine below the hero: one line, no accent.
+///
+/// **The list carries no colour at all.** Six rows each with their own accent
+/// pill is six primary actions, which is none. Starting one of these is two
+/// taps — open, then Start — and that is the correct cost for a routine you did
+/// not last train.
+class RoutineListRow extends ConsumerWidget {
+  const RoutineListRow({required this.routine, required this.lastDone, super.key});
+
+  final Routine routine;
+  final LocalDate? lastDone;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return InkWell(
+      key: RoutineCard.cardKey(routine.id),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => RoutineScreen(routineId: routine.id),
+        ),
+      ),
+      child: Container(
+        constraints:
+            const BoxConstraints(minHeight: AppMetrics.touchTarget + 8),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppPalette.border)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: AppMetrics.gap),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    routine.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppPalette.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    routine.isEmpty
+                        ? 'No exercises yet'
+                        : '${routine.exercises.length}'
+                            ' ${routine.exercises.length == 1 ? 'exercise' : 'exercises'}'
+                            ' · ${recencyLabel(lastDone)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: AppPalette.textSecondary, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right,
+                size: 20, color: AppPalette.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// When a routine was last run. **Recall, never recommendation**: when, never
+/// "due", never "time for".
+String recencyLabel(LocalDate? date) {
+  if (date == null) return 'Never done';
+  final days = LocalDate.today().daysAfter(date);
+  if (days <= 0) return 'Last done today';
+  if (days == 1) return 'Last done yesterday';
+  if (days < 7) return 'Last done $days days ago';
+  if (days < 14) return 'Last done 1 week ago';
+  if (days < 31) return 'Last done ${days ~/ 7} weeks ago';
+  if (days < 62) return 'Last done 1 month ago';
+  return 'Last done ${days ~/ 30} months ago';
 }

@@ -231,9 +231,9 @@ void main() {
     await tester.pumpWidget(hostTall(const WorkoutRoot()));
 
     expect(
-      find.text('ROUTINES'),
+      find.text('New routine'),
       findsOneWidget,
-      reason: 'the group label the New routine / Templates pair sits under',
+      reason: 'the way to build one, always present',
     );
     expect(
       find.text('Start empty workout'),

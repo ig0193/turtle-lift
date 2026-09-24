@@ -47,6 +47,8 @@ class RoutineScreen extends ConsumerStatefulWidget {
       ValueKey<String>('routine-add-set-$routineExerciseId');
   static Key exerciseMenuKey(String routineExerciseId) =>
       ValueKey<String>('routine-exercise-menu-$routineExerciseId');
+  static Key exerciseRowKey(String routineExerciseId) =>
+      ValueKey<String>('routine-exercise-row-$routineExerciseId');
 
   /// A planned set's input. [column] is 0 for the first field (weight, assist
   /// or time) and 1 for reps — the same order the cells read in.
@@ -366,8 +368,18 @@ class _RoutineScreenMenu extends ConsumerWidget {
   }
 }
 
-/// One exercise in the plan.
-class _RoutineExerciseBlock extends ConsumerWidget {
+/// One exercise in the plan: **a single row until you open it.**
+///
+/// **Eight exercises had to fit on one screen.** Expanded, each block cost a
+/// name, two chips, a set row and an Add set — five rows of furniture for one
+/// row of data, eight times over, on a screen whose whole job is to be read at
+/// a glance before a session. Collapsed it is one line that already answers the
+/// question people open this screen for: *what am I doing, and how much.*
+///
+/// Expansion is per-widget and not stored. It is a glance-level preference that
+/// costs one tap to redo, and `app_database.dart` keeps only what cannot be
+/// derived or cheaply retaken.
+class _RoutineExerciseBlock extends ConsumerStatefulWidget {
   const _RoutineExerciseBlock({
     required this.exercise,
     required this.loadType,
@@ -379,76 +391,158 @@ class _RoutineExerciseBlock extends ConsumerWidget {
   final String name;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_RoutineExerciseBlock> createState() =>
+      _RoutineExerciseBlockState();
+}
+
+class _RoutineExerciseBlockState
+    extends ConsumerState<_RoutineExerciseBlock> {
+  bool _open = false;
+
+  RoutineExercise get exercise => widget.exercise;
+
+  @override
+  Widget build(BuildContext context) {
     final notifier = ref.read(routineListProvider.notifier);
     final hasNote = (exercise.notes ?? '').trim().isNotEmpty;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppMetrics.gapSection),
+    return Container(
+      decoration: BoxDecoration(
+        color: _open ? AppPalette.mutedSurface : null,
+        borderRadius: BorderRadius.circular(AppMetrics.radiusField),
+        border: const Border(
+          bottom: BorderSide(color: AppPalette.border),
+        ),
+      ),
+      padding: EdgeInsets.symmetric(
+          horizontal: _open ? AppMetrics.gap : 0,
+          vertical: _open ? AppMetrics.gapSnug : 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                // Not accent: a name is not a state. See `00` §12.
-                child: Text(name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: AppPalette.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.2)),
-              ),
-              _ExerciseMenu(exercise: exercise, name: name),
-            ],
-          ),
-          Row(
-            children: <Widget>[
-              RestTimerChip(
-                chipKey: RestTimerChip.lineKey(exercise.id),
-                seconds: exercise.restTimerSec,
-                onChanged: (seconds) => notifier.setExerciseRestTimer(
-                  routineExerciseId: exercise.id,
-                  seconds: seconds,
-                ),
-              ),
-              const SizedBox(width: AppMetrics.gapSnug),
-              _NoteChip(exercise: exercise, hasNote: hasNote),
-            ],
-          ),
-          const SizedBox(height: AppMetrics.gapTight),
-          for (final (i, set) in exercise.sets.indexed)
-            _TargetRow(
-              key: ValueKey<String>('target-${set.id}'),
-              index: i,
-              set: set,
-              loadType: loadType,
-            ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: SizedBox(
-              height: AppMetrics.touchTarget,
-              child: TextButton.icon(
-                key: RoutineScreen.addSetKey(exercise.id),
-                onPressed: () => notifier.addSet(routineExerciseId: exercise.id),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppMetrics.gapSnug),
-                ),
-                icon: const Icon(Icons.add,
-                    size: 17, color: AppPalette.textSecondary),
-                label: const Text('Add set',
-                    style: TextStyle(
-                        color: AppPalette.textSecondary, fontSize: 14)),
+          InkWell(
+            key: RoutineScreen.exerciseRowKey(exercise.id),
+            onTap: () => setState(() => _open = !_open),
+            child: Container(
+              constraints: const BoxConstraints(
+                  minHeight: AppMetrics.touchTarget + 8),
+              padding:
+                  const EdgeInsets.symmetric(vertical: AppMetrics.gapSnug),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(widget.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: AppPalette.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: -0.2)),
+                        const SizedBox(height: 3),
+                        Text(
+                          summariseSets(widget.loadType, exercise.sets),
+                          style: const TextStyle(
+                              color: AppPalette.textSecondary, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (hasNote && !_open)
+                    const Padding(
+                      padding: EdgeInsets.only(right: AppMetrics.gapSnug),
+                      child: Icon(Icons.notes_outlined,
+                          size: 15, color: AppPalette.textSecondary),
+                    ),
+                  Icon(_open ? Icons.expand_less : Icons.expand_more,
+                      size: 20, color: AppPalette.textSecondary),
+                ],
               ),
             ),
           ),
+          if (_open) ...<Widget>[
+            Row(
+              children: <Widget>[
+                RestTimerChip(
+                  chipKey: RestTimerChip.lineKey(exercise.id),
+                  seconds: exercise.restTimerSec,
+                  onChanged: (seconds) => notifier.setExerciseRestTimer(
+                    routineExerciseId: exercise.id,
+                    seconds: seconds,
+                  ),
+                ),
+                const SizedBox(width: AppMetrics.gapSnug),
+                _NoteChip(exercise: exercise, hasNote: hasNote),
+                const Spacer(),
+                _ExerciseMenu(exercise: exercise, name: widget.name),
+              ],
+            ),
+            const SizedBox(height: AppMetrics.gapTight),
+            for (final (i, set) in exercise.sets.indexed)
+              _TargetRow(
+                key: ValueKey<String>('target-${set.id}'),
+                index: i,
+                set: set,
+                loadType: widget.loadType,
+              ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SizedBox(
+                height: AppMetrics.touchTarget,
+                child: TextButton.icon(
+                  key: RoutineScreen.addSetKey(exercise.id),
+                  onPressed: () =>
+                      notifier.addSet(routineExerciseId: exercise.id),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppMetrics.gapSnug),
+                  ),
+                  icon: const Icon(Icons.add,
+                      size: 17, color: AppPalette.textSecondary),
+                  label: const Text('Add set',
+                      style: TextStyle(
+                          color: AppPalette.textSecondary, fontSize: 14)),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+/// What a collapsed exercise says about its sets.
+///
+/// **`3 × 60kg` when the plan is uniform, `3 sets` when it names no numbers.**
+/// A routine that plans three identical sets is the common case and deserves
+/// the short form; one with varied targets says how many sets and leaves the
+/// detail to the expansion, because a collapsed row that lists every set is not
+/// collapsed.
+String summariseSets(LoadType type, List<RoutineSet> sets) {
+  if (sets.isEmpty) return 'No sets';
+  final count = '${sets.length} set${sets.length == 1 ? '' : 's'}';
+
+  String? shape(RoutineSet s) => switch (type) {
+        LoadType.timed =>
+          s.targetDurationSec == null ? null : formatDuration(s.targetDurationSec!),
+        LoadType.bodyweight =>
+          s.targetReps == null ? null : '${s.targetReps}',
+        LoadType.weighted || LoadType.assisted => s.targetWeightKg == null
+            ? (s.targetReps == null ? null : '${s.targetReps}')
+            : '${formatWeight(s.targetWeightKg)}kg'
+                '${s.targetReps == null ? '' : ' × ${s.targetReps}'}',
+      };
+
+  final shapes = sets.map(shape).toList();
+  if (shapes.any((v) => v == null)) return count;
+  final first = shapes.first;
+  if (shapes.every((v) => v == first)) return '${sets.length} × $first';
+  return count;
 }
 
 class _ExerciseMenu extends ConsumerWidget {

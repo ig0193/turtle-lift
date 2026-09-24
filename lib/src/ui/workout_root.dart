@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/derived.dart';
+import '../data/local_date.dart';
+import '../data/routine_store.dart';
 import '../data/routines.dart';
+import '../data/session_store.dart';
 import '../theme/app_palette.dart';
 import '../data/active_session.dart';
-import '../data/derived.dart';
 import '../data/exercise_index.dart';
 import 'app_screen.dart';
 import 'destructive_confirmation.dart';
 import 'routine_screen.dart';
 import 'routine_card.dart';
+import '../theme/app_metrics.dart';
 import 'template_list_screen.dart';
 import 'log_workout_screen.dart';
 import 'template_row.dart';
@@ -89,27 +93,84 @@ class WorkoutLandingBody extends ConsumerWidget {
   static const Key newRoutineKey = ValueKey<String>('new-routine');
   static const Key templatesKey = ValueKey<String>('open-templates');
 
+  /// The card at the top of the landing, when there is one.
+  static const Key heroKey = ValueKey<String>('routine-hero');
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final routines = ref.watch(routinesProvider);
+    final saved = ref.watch(savedSessionsProvider);
+    final hero = _mostRecentlyTrained(routines, saved);
+    final rest = routines.where((r) => r.id != hero?.id).toList();
 
     return ListView(
       padding: screenScrollPadding(context),
       children: <Widget>[
-        const SizedBox(height: 2),
-        _StartEmptyWorkout(onTap: () => _startEmpty(context, ref)),
-        const SizedBox(height: 22),
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Semantics(
-                header: true,
-                child: const Text('ROUTINES', style: kLandingSectionLabelStyle),
-              ),
+        const SizedBox(height: AppMetrics.gapSnug),
+        if (hero != null) ...<Widget>[
+          RoutineHeroCard(routine: hero, lastDone: lastPerformedRoutine(hero.id, saved)),
+          const SizedBox(height: AppMetrics.gapSection),
+        ],
+        if (rest.isNotEmpty) ...<Widget>[
+          Semantics(
+            header: true,
+            child: Text(
+              hero == null
+                  ? 'MY ROUTINES (${rest.length})'
+                  : 'OTHER ROUTINES',
+              style: kLandingSectionLabelStyle,
             ),
-          ],
-        ),
-        const SizedBox(height: 6),
+          ),
+          const SizedBox(height: AppMetrics.gapTight),
+          // Long-press to drag. The list is quiet now, but the order is still
+          // the user's, and a routine they never train would otherwise sink
+          // below one they do with no way back up.
+          ReorderableListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            onReorderItem: (oldIndex, newIndex) {
+              final ids = rest.map((r) => r.id).toList();
+              ids.insert(newIndex, ids.removeAt(oldIndex));
+              // The hero keeps its own place: it is chosen by history, not by
+              // position, so it is not part of what the drag reorders.
+              ref.read(routineListProvider.notifier).reorder(ids);
+            },
+            children: <Widget>[
+              for (final (i, routine) in rest.indexed)
+                ReorderableDelayedDragStartListener(
+                  key: ValueKey<String>('reorder-${routine.id}'),
+                  index: i,
+                  child: RoutineListRow(
+                    routine: routine,
+                    lastDone: lastPerformedRoutine(routine.id, saved),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppMetrics.gapSection),
+        ],
+        if (routines.isEmpty) ...<Widget>[
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppMetrics.gapSection),
+            child: Column(
+              children: <Widget>[
+                Icon(Icons.assignment_outlined,
+                    size: 28, color: AppPalette.textSecondary),
+                SizedBox(height: AppMetrics.gap),
+                Text('No routines yet',
+                    style: TextStyle(
+                        color: AppPalette.textPrimary,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600)),
+                SizedBox(height: AppMetrics.gapTight + 2),
+                Text('Build one, or just start and add as you go',
+                    style: TextStyle(
+                        color: AppPalette.textSecondary, fontSize: 14)),
+              ],
+            ),
+          ),
+        ],
         Row(
           children: <Widget>[
             Expanded(
@@ -124,7 +185,7 @@ class WorkoutLandingBody extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppMetrics.gap),
             Expanded(
               child: _SecondaryAction(
                 // **Where Hevy puts "Explore Routines".** That one reaches a
@@ -139,51 +200,39 @@ class WorkoutLandingBody extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 18),
-        Semantics(
-          header: true,
-          child: Text('MY ROUTINES (${routines.length})',
-              style: kLandingSectionLabelStyle),
-        ),
-        const SizedBox(height: 10),
-        if (routines.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Text(
-              'Routines you build appear here. Start an empty workout any '
-              'time without one.',
-              style: TextStyle(color: AppPalette.textSecondary),
-            ),
-          )
-        else
-          // **Long-press to drag, inside the landing's own scrollable.**
-          // `shrinkWrap` with no physics of its own, so this list measures its
-          // children and hands scrolling back to the page — two competing
-          // scrollables on one screen is how a drag near the edge starts
-          // fighting the finger.
-          ReorderableListView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            buildDefaultDragHandles: false,
-            // `onReorderItem`, not the deprecated `onReorder`: it reports the
-            // index the row actually lands on, rather than the one it would
-            // have had before the row was taken out.
-            onReorderItem: (oldIndex, newIndex) {
-              final ids = routines.map((r) => r.id).toList();
-              ids.insert(newIndex, ids.removeAt(oldIndex));
-              ref.read(routineListProvider.notifier).reorder(ids);
-            },
-            children: <Widget>[
-              for (final (i, routine) in routines.indexed)
-                ReorderableDelayedDragStartListener(
-                  key: ValueKey<String>('reorder-${routine.id}'),
-                  index: i,
-                  child: RoutineCard(routine: routine),
-                ),
-            ],
-          ),
+        const SizedBox(height: AppMetrics.gap),
+        _StartEmptyWorkout(onTap: () => _startEmpty(context, ref)),
+        const SizedBox(height: AppMetrics.gapSection),
       ],
     );
+  }
+
+  /// The routine whose last completed workout is the most recent.
+  ///
+  /// **A fact about the past, never a pick for the future.** `docs/02` forbids
+  /// this tab from suggesting, rotating or surfacing a "today's workout", and a
+  /// card at the top of a screen is the loudest kind of surfacing there is — so
+  /// what earns the position is the one thing the app can say without an
+  /// opinion: *this is the one you last trained*. A routine never run is never
+  /// the hero, and nothing here ranks, scores or rotates.
+  ///
+  /// Null when nothing has been run yet, and then the landing is a plain list
+  /// rather than promoting an arbitrary routine to a place it has not earned.
+  static Routine? _mostRecentlyTrained(
+    List<Routine> routines,
+    List<WorkoutSession> saved,
+  ) {
+    Routine? best;
+    LocalDate? bestDate;
+    for (final routine in routines) {
+      final date = lastPerformedRoutine(routine.id, saved);
+      if (date == null) continue;
+      if (bestDate == null || date > bestDate) {
+        best = routine;
+        bestDate = date;
+      }
+    }
+    return best;
   }
 
   /// Starts a workout with nothing in it.

@@ -61,7 +61,7 @@ void main() {
     // exercises the real TurtleLiftApp path -- the shell's own tests host
     // L0Shell directly and would not notice main.dart handing it a different
     // starting index.
-    expect(find.text('ROUTINES').hitTestable(), findsOneWidget,
+    expect(find.text('New routine').hitTestable(), findsOneWidget,
         reason: 'the app opens on the Workout tab, which lists the templates');
 
     final context = tester.element(find.byType(L0Shell));

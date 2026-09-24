@@ -83,6 +83,17 @@ void main() {
     await tester.pump();
   }
 
+  /// Opens the one exercise on screen, so its set cells are reachable.
+  ///
+  /// Exercises collapse to a single row now — eight of them had to fit on one
+  /// screen — so editing anything is behind one tap.
+  Future<void> expandFirst(WidgetTester tester) async {
+    final rowId =
+        (await tester.runAsync(store.readRoutines))!.single.exercises.single.id;
+    await tester.tap(find.byKey(RoutineScreen.exerciseRowKey(rowId)));
+    await tester.pumpAndSettle();
+  }
+
   /// Walks the picker: opens it, ticks [ids], confirms.
   Future<void> addExercises(WidgetTester tester, List<String> ids) async {
     await tester.tap(find.byKey(RoutineScreen.addExerciseKey));
@@ -195,6 +206,7 @@ void main() {
     testWidgets('Add set appends a planned set straight to disk',
         (tester) async {
       await pumpRoutine(tester, routineId: routineId);
+      await expandFirst(tester);
       final exerciseRowId = (await tester.runAsync(store.readRoutines))!
           .single
           .exercises
@@ -225,6 +237,7 @@ void main() {
     testWidgets('typed targets reach the store, in the right columns',
         (tester) async {
       await pumpRoutine(tester, routineId: routineId);
+      await expandFirst(tester);
       final setId = (await tester.runAsync(store.readRoutines))!
           .single
           .exercises
@@ -267,6 +280,7 @@ void main() {
       // Removal moved into the exercise's own menu: a bare ✕ beside the title
       // sat next to the ✕ that deletes a single set, one destructive glyph
       // above another.
+      await expandFirst(tester);
       await tester
           .tap(find.byKey(RoutineScreen.exerciseMenuKey(exerciseRowId)));
       await tester.pumpAndSettle();
@@ -285,6 +299,7 @@ void main() {
         (tester) async {
       await pumpRoutine(tester);
       await addExercises(tester, <String>['plank']);
+      await expandFirst(tester);
 
       // **The cells name their own units now**, so there is no column header
       // repeated under every exercise — which is what made an eight-exercise
@@ -297,6 +312,7 @@ void main() {
     testWidgets('a weighted exercise asks for kg and reps', (tester) async {
       await pumpRoutine(tester);
       await addExercises(tester, <String>['bench']);
+      await expandFirst(tester);
 
       expect(find.text('kg'), findsOneWidget);
       expect(find.text('reps'), findsOneWidget);

@@ -15,7 +15,7 @@ import 'package:turtle_lift/src/data/settings_store.dart'
     show appDatabaseProvider;
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/log_workout_screen.dart';
-import 'package:turtle_lift/src/ui/routine_card.dart';
+import 'package:turtle_lift/src/ui/routine_card.dart' show RoutineListRow, RoutineCard;
 import 'package:turtle_lift/src/ui/workout_root.dart';
 
 /// The Workout landing, rebuilt around routines (`adr/0004`).
@@ -105,6 +105,22 @@ void main() {
     await tester.pump();
   }
 
+  /// Opens the first routine and starts it.
+  ///
+  /// **Only the hero starts from the landing**, and the hero is whichever
+  /// routine was last trained — so a routine never run is started from its own
+  /// screen, which is the two-tap cost the quiet list is meant to have.
+  Future<void> startFirstRoutine(WidgetTester tester) async {
+    if (find.text('Start routine').evaluate().isEmpty) {
+      await tester.tap(find.byType(RoutineListRow).first);
+      await tester.pumpAndSettle();
+    }
+    await act(tester, () async {
+      await tester.tap(find.text('Start routine'));
+    });
+    await tester.pumpAndSettle();
+  }
+
   /// A routine of two lifts, two planned sets on the first.
   Future<Routine> pushDay() async {
     final routine = await routines.createRoutine(name: 'Push day');
@@ -124,23 +140,35 @@ void main() {
       await pumpLanding(tester);
 
       expect(find.text('Start empty workout'), findsOneWidget);
-      expect(find.text('ROUTINES'), findsOneWidget);
       expect(find.byKey(WorkoutLandingBody.newRoutineKey), findsOneWidget);
       expect(find.byKey(WorkoutLandingBody.templatesKey), findsOneWidget);
     });
 
-    testWidgets('a routine card sizes it and says when it was last done',
+    testWidgets('a routine never run is a quiet row, not the hero',
         (tester) async {
       await tester.runAsync(pushDay);
       await pumpLanding(tester);
 
+      // **The hero is whichever routine was last trained.** Nothing has been,
+      // so there is no hero — promoting an arbitrary routine to the top of the
+      // screen would be the suggestion `docs/02` refuses to make.
+      expect(find.byKey(WorkoutLandingBody.heroKey), findsNothing);
+      expect(find.byType(RoutineListRow), findsOneWidget);
       expect(find.text('Push day'), findsOneWidget);
-      // The exercise names came out: listed after the counts they truncated two
-      // words in, which is noise with an ellipsis rather than recall. The
-      // routine's own name identifies it; the counts say how big it is and the
-      // recency says when — which is what someone scanning six of them wants.
-      expect(find.text('2 exercises · 2 sets'), findsOneWidget);
-      expect(find.text('Never done'), findsOneWidget);
+      expect(find.text('2 exercises · Never done'), findsOneWidget);
+    });
+
+    testWidgets('a routine of one says "1 exercise", not "1 exercises"',
+        (tester) async {
+      await tester.runAsync(() async {
+        final routine = await routines.createRoutine(name: 'Solo');
+        final rowId = await routines.addExercise(
+            routineId: routine.id, exerciseId: 'bench');
+        await routines.addSet(routineExerciseId: rowId);
+      });
+      await pumpLanding(tester);
+
+      expect(find.text('1 exercise · Never done'), findsOneWidget);
     });
 
     testWidgets('a routine that has been run says how long ago, never "due"',
@@ -164,11 +192,16 @@ void main() {
       });
       await pumpLanding(tester);
 
-      expect(find.text('Last done today'), findsOneWidget);
+      // Having been trained, it becomes the hero — and the label says why it
+      // is up there: history, not a pick.
+      expect(find.byKey(WorkoutLandingBody.heroKey), findsOneWidget);
+      expect(find.text('LAST TRAINED'), findsOneWidget);
+      expect(find.textContaining('Last done today'), findsOneWidget);
       // `docs/02`: recall, never recommendation. The moment this says "due"
       // the app has become the suggestion engine it refuses to be.
       expect(find.textContaining('due'), findsNothing);
       expect(find.textContaining('time for'), findsNothing);
+      expect(find.textContaining('Up next'), findsNothing);
     });
 
     testWidgets('an empty routine cannot be started', (tester) async {
@@ -176,13 +209,9 @@ void main() {
           () => routines.createRoutine(name: 'Nothing in here'));
       await pumpLanding(tester);
 
-      final routineId = (await tester.runAsync(routines.readRoutines))!.single.id;
-      final start = tester.widget<InkWell>(
-        find.byKey(RoutineCard.startKey(routineId)),
-      );
-      // Starting it would open a workout with nothing in it, which is what
+      // A routine with nothing in it offers no way to start: that is what
       // Start empty workout is already for.
-      expect(start.onTap, isNull);
+      expect(find.text('Start routine'), findsNothing);
       expect(find.text('No exercises yet'), findsOneWidget);
     });
 
@@ -190,8 +219,10 @@ void main() {
         (tester) async {
       await pumpLanding(tester);
 
-      expect(find.byType(RoutineCard), findsNothing);
-      expect(find.textContaining('Routines you build appear here'),
+      expect(find.byType(RoutineListRow), findsNothing);
+      expect(find.byKey(WorkoutLandingBody.heroKey), findsNothing);
+      expect(find.text('No routines yet'), findsOneWidget);
+      expect(find.textContaining('just start and add as you go'),
           findsOneWidget);
     });
   });
@@ -202,9 +233,7 @@ void main() {
       await tester.runAsync(pushDay);
       await pumpLanding(tester);
 
-      await act(tester, () async {
-        await tester.tap(find.text('Start'));
-      });
+      await startFirstRoutine(tester);
 
       final open = await tester.runAsync(() => sessions.readOpenSession());
       expect(open, isNotNull);
@@ -227,9 +256,7 @@ void main() {
       await tester.runAsync(pushDay);
       await pumpLanding(tester);
 
-      await act(tester, () async {
-        await tester.tap(find.text('Start'));
-      });
+      await startFirstRoutine(tester);
 
       expect(find.byType(LogWorkoutBody), findsOneWidget);
       expect(find.byType(RoutineCard), findsNothing,
@@ -240,9 +267,7 @@ void main() {
       await tester.runAsync(pushDay);
       await pumpLanding(tester);
 
-      await act(tester, () async {
-        await tester.tap(find.text('Start'));
-      });
+      await startFirstRoutine(tester);
 
       final open = await tester.runAsync(() => sessions.readOpenSession());
       expect(open!.title, 'Push day');
@@ -261,12 +286,12 @@ void main() {
       // Newest first until the user drags one.
       expect(
         tester
-            .widgetList<RoutineCard>(find.byType(RoutineCard))
+            .widgetList<RoutineListRow>(find.byType(RoutineListRow))
             .map((c) => c.routine.name),
         <String>['Second', 'First'],
       );
 
-      final cards = find.byType(RoutineCard);
+      final cards = find.byType(RoutineListRow);
       final cardHeight = tester.getSize(cards.first).height;
       final gesture = await tester.startGesture(tester.getCenter(cards.first));
       // The delayed listener wants a real long press before it will drag.
@@ -311,9 +336,7 @@ void main() {
     Future<void> runAndFinish(WidgetTester tester, {required bool diverge}) async {
       await tester.runAsync(benchOnly);
       await pumpLanding(tester);
-      await act(tester, () async {
-        await tester.tap(find.text('Start'));
-      });
+      await startFirstRoutine(tester);
 
       final open = (await tester.runAsync(() => sessions.readOpenSession()))!;
       final bench = open.exercises.first;
@@ -345,9 +368,7 @@ void main() {
         (tester) async {
       await tester.runAsync(benchOnly);
       await pumpLanding(tester);
-      await act(tester, () async {
-        await tester.tap(find.text('Start'));
-      });
+      await startFirstRoutine(tester);
 
       final open = await tester.runAsync(() => sessions.readOpenSession());
       final stored = await tester.runAsync(routines.readRoutines);
