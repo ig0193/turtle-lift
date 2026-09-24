@@ -11,6 +11,12 @@ doesn't cover something. **If `00` disagrees with `01`–`04`, `01`–`04` win**
 `00` is a digest, not the source of truth. Report any conflict you find rather
 than picking one.
 
+`docs/06-opal-design-reference.md` — the Opal app, written down as a checkable
+reference, because "make it like Opal" kept being reconstructed from scratch.
+Read its **What does not transfer** section before borrowing anything: the
+achievement loop that carries half of Opal's design is explicitly out of scope
+here.
+
 `prototypes/screens.html` — 22 screens, open it in a browser. It is the visual
 reference and is **ahead of the docs on layout**. Where they differ on how a
 screen looks, follow the prototype. Where they differ on a rule, follow the docs.
