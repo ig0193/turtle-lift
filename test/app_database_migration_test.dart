@@ -68,6 +68,59 @@ void main() {
     await legacy.close();
   }
 
+  /// Writes the version-3 schema exactly as it shipped, with a logged workout
+  /// already in it. Transcribed for the same reason as [createVersion1Database]:
+  /// a helper built from today's tables would gain the version-4 columns and
+  /// quietly stop being the old shape this is supposed to reproduce.
+  Future<void> createVersion3Database() async {
+    final legacy = NativeDatabase(dbFile);
+    await legacy.ensureOpen(_NoopUser());
+    for (final statement in <String>[
+      'CREATE TABLE settings (id INTEGER NOT NULL, '
+          'workout_template_filter TEXT NULL, body_gender TEXT NULL, '
+          'PRIMARY KEY (id))',
+      'CREATE TABLE bodyweight_entries (date TEXT NOT NULL, '
+          'weight_kg REAL NOT NULL, PRIMARY KEY (date))',
+      'CREATE TABLE custom_templates (id TEXT NOT NULL, name TEXT NOT NULL, '
+          'group_ids TEXT NOT NULL, source_template_id TEXT NULL, '
+          'PRIMARY KEY (id))',
+      'CREATE TABLE sessions (id TEXT NOT NULL, title TEXT NULL, '
+          'performed_on TEXT NOT NULL, logged_at INTEGER NOT NULL, '
+          'template_id TEXT NULL, template_name TEXT NULL, '
+          'group_ids TEXT NULL, open_marker INTEGER NULL, PRIMARY KEY (id), '
+          'UNIQUE (open_marker), '
+          'CHECK (open_marker IS NULL OR open_marker = $kOpenSessionMarker))',
+      'CREATE TABLE session_exercises (id TEXT NOT NULL, '
+          'session_id TEXT NOT NULL REFERENCES sessions (id) ON DELETE CASCADE, '
+          'exercise_id TEXT NOT NULL, position INTEGER NOT NULL, '
+          'load_type TEXT NOT NULL, '
+          'marked_done INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (id), '
+          'UNIQUE (session_id, exercise_id))',
+      'CREATE TABLE set_entries (id TEXT NOT NULL, '
+          'session_exercise_id TEXT NOT NULL REFERENCES session_exercises (id) '
+          'ON DELETE CASCADE, position INTEGER NOT NULL, '
+          'completed INTEGER NOT NULL DEFAULT 0, weight_kg REAL NULL, '
+          'reps INTEGER NULL, added_kg REAL NULL, assist_kg REAL NULL, '
+          'duration_sec INTEGER NULL, PRIMARY KEY (id))',
+      "INSERT INTO settings (id, workout_template_filter, body_gender) "
+          "VALUES ($kSettingsRowId, 'ppl', 'female')",
+      "INSERT INTO custom_templates (id, name, group_ids) "
+          "VALUES ('ct-1', 'My push day', 'chest,shoulders,triceps')",
+      "INSERT INTO sessions (id, title, performed_on, logged_at, open_marker) "
+          "VALUES ('s-1', 'Leg day', '2026-09-20', 1758387600, NULL)",
+      "INSERT INTO session_exercises "
+          "(id, session_id, exercise_id, position, load_type, marked_done) "
+          "VALUES ('se-1', 's-1', 'barbell-squat', 0, 'weighted', 1)",
+      "INSERT INTO set_entries "
+          "(id, session_exercise_id, position, completed, weight_kg, reps) "
+          "VALUES ('set-1', 'se-1', 0, 1, 100.0, 5)",
+      'PRAGMA user_version = 3',
+    ]) {
+      await legacy.runCustom(statement, const <Object?>[]);
+    }
+    await legacy.close();
+  }
+
   AppDatabase openUpgraded() {
     final database = AppDatabase.forTesting(NativeDatabase(dbFile));
     addTearDown(database.close);
@@ -103,12 +156,12 @@ void main() {
       );
     });
 
-    test('reaches schema version 3', () async {
+    test('reaches the current schema version', () async {
       await createVersion1Database();
       final database = openUpgraded();
       await database.select(database.settings).get();
 
-      expect(database.schemaVersion, 3);
+      expect(database.schemaVersion, 6);
     });
 
     test('adds a usable bodyweight table', () async {
@@ -465,6 +518,66 @@ void main() {
     });
   });
 
+  group('the Hevy-parity step (adr/0004)', () {
+    test('a logged workout survives the upgrade intact', () async {
+      await createVersion3Database();
+      final database = openUpgraded();
+
+      final session = await database.select(database.sessions).getSingle();
+      expect(session.title, 'Leg day');
+      expect(session.performedOn, LocalDate(2026, 9, 20));
+      final sets = await database.select(database.setEntries).get();
+      expect(sets.single.weightKg, 100.0);
+      expect(sets.single.reps, 5);
+    });
+
+    test('the new columns arrive unset rather than guessed', () async {
+      await createVersion3Database();
+      final database = openUpgraded();
+
+      final session = await database.select(database.sessions).getSingle();
+      // A workout logged before the rebuild has no timings, and inventing them
+      // would put a fabricated duration on a real session.
+      expect(session.startedAt, isNull);
+      expect(session.endedAt, isNull);
+
+      final exercise =
+          await database.select(database.sessionExercises).getSingle();
+      expect(exercise.notes, isNull);
+      expect(exercise.restTimerSec, isNull);
+      expect(exercise.markedDone, isTrue, reason: 'old rows keep what they had');
+      // A workout logged before routines existed came from no routine, and
+      // there is nothing to infer from its template.
+      expect(session.routineId, isNull);
+    });
+
+    test('settings and the user own templates are untouched', () async {
+      await createVersion3Database();
+      final database = openUpgraded();
+
+      final settings = await database.select(database.settings).getSingle();
+      expect(settings.workoutTemplateFilter, 'ppl');
+      expect(settings.bodyGender, 'female');
+
+      // Custom templates are deliberately NOT converted into routines: a
+      // template names muscle groups and a routine names exercises, so the
+      // conversion would have to invent the exercise list that is the whole
+      // difference between them.
+      final templates = await database.select(database.customTemplates).get();
+      expect(templates.single.name, 'My push day');
+      expect(templates.single.groupIds, 'chest,shoulders,triceps');
+    });
+
+    test('the upgrade is idempotent across a reopen', () async {
+      await createVersion3Database();
+      await openUpgraded().close();
+
+      final reopened = openUpgraded();
+      expect(reopened.schemaVersion, 6);
+      expect((await reopened.select(reopened.sessions).get()), hasLength(1));
+    });
+  });
+
   group('a database already at the current version', () {
     /// Builds a database stamped at version 3 with the personal-details tables
     /// but no session tables, which is the shape a development install from
@@ -499,7 +612,7 @@ void main() {
       await legacy.close();
     }
 
-    test('runs no upgrade branch, so it has no session tables', () async {
+    test('gains the session tables it never got, keeping its data', () async {
       await createVersion3WithoutSessions();
       final database = openUpgraded();
 
@@ -508,14 +621,28 @@ void main() {
         hasLength(1),
         reason: 'its existing rows are untouched',
       );
-      await expectLater(
-        database.select(database.sessions).get(),
-        throwsA(isA<Exception>()),
-        reason: 'the reserved version-2 slot is below the stored version, so '
-            'the session step never runs here. No shipped build is in this '
-            'state, but a development install from before the session step is, '
-            'and its app data has to be cleared once. This is that limit '
-            'pinned as a test rather than discovered on a device.',
+      // **This used to be the one state the app could not recover from.** The
+      // reserved version-2 slot sits below the stored version, so the session
+      // step never runs on this database and it had no session tables at all —
+      // a development install in this state had to have its app data cleared by
+      // hand. Step 4 now creates them if they are missing (`adr/0004`), so the
+      // repair happens on the next launch instead.
+      expect(
+        await database.select(database.sessions).get(),
+        isEmpty,
+        reason: 'the table exists now, and starts empty',
+      );
+      await database.into(database.sessions).insert(
+            SessionsCompanion.insert(
+              id: 's-repaired',
+              performedOn: LocalDate(2026, 9, 23),
+              loggedAt: DateTime(2026, 9, 23, 19),
+            ),
+          );
+      expect(
+        (await database.select(database.sessions).getSingle()).startedAt,
+        isNull,
+        reason: 'created straight at version 4, new columns and all',
       );
     });
   });

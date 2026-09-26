@@ -1,6 +1,7 @@
 import 'bodyweight_resolution.dart';
 import 'exercise_index.dart';
 import 'generated/muscle_taxonomy.dart';
+import 'load_type.dart';
 import 'local_date.dart';
 import 'personal_details_store.dart' show BodyweightEntry;
 import 'session_store.dart';
@@ -31,6 +32,71 @@ int setCountOf(WorkoutSession session) => session.exercises
 int exerciseCountOf(WorkoutSession session) => session.exercises
     .where((e) => e.sets.any((s) => isSetComplete(e.loadType, s)))
     .length;
+
+/// How long a session took, or null while it is still running.
+///
+/// Derived from the two stored timestamps rather than stored itself, so
+/// correcting either end corrects this with no second place to update. A
+/// session logged before `adr/0004` has neither timestamp and returns null —
+/// the UI shows nothing rather than a zero that would read as "took no time".
+///
+/// **For a running session, use [elapsedOf] instead.** This one deliberately
+/// returns null until Finish, so a length that is still growing can never be
+/// mistaken for a final one.
+Duration? durationOf(WorkoutSession session) {
+  final start = session.startedAt;
+  final end = session.endedAt;
+  if (start == null || end == null) return null;
+  final length = end.difference(start);
+  return length.isNegative ? Duration.zero : length;
+}
+
+/// How long a running session has been going, measured against [now].
+///
+/// [now] is a parameter rather than a call to `DateTime.now()` inside, because
+/// a function that reads the clock cannot be tested and a ticking widget needs
+/// to pass the same instant it is painting.
+Duration? elapsedOf(WorkoutSession session, DateTime now) {
+  final start = session.startedAt;
+  if (start == null) return null;
+  if (session.endedAt != null) return durationOf(session);
+  final length = now.difference(start);
+  return length.isNegative ? Duration.zero : length;
+}
+
+/// Total external weight moved in a session, in kg — Σ (weight × reps) over
+/// completed sets.
+///
+/// **A partial figure by construction, and it must stay one.** Only two of the
+/// four load types move a weight this can count: `weighted` by its own weight,
+/// and `bodyweight` by whatever was *added* on top. Assisted work has weight
+/// *removed* — counting it, in either direction, would be arithmetic about a
+/// number that means the opposite of load. Timed work has no reps to multiply.
+/// So a session of dips, planks and assisted pull-ups is honestly 0 kg here.
+///
+/// That partiality is the whole reason `00` §3 banned this figure in the first
+/// place. It came back for the Log Workout summary bar (`adr/0004`) on one
+/// condition: it is never the headline stat, and it never appears on the
+/// summary card. Set count remains the volume proxy that covers every load
+/// type. If you ever find yourself inventing a weight for a bodyweight rep to
+/// make this number look complete, that is this rule catching you.
+double volumeOf(WorkoutSession session) {
+  var total = 0.0;
+  for (final exercise in session.exercises) {
+    for (final set in exercise.sets) {
+      if (!isSetComplete(exercise.loadType, set)) continue;
+      final reps = set.reps;
+      if (reps == null) continue;
+      final load = switch (exercise.loadType) {
+        LoadType.weighted => set.weightKg,
+        LoadType.bodyweight => set.addedKg,
+        LoadType.assisted || LoadType.timed || null => null,
+      };
+      if (load != null) total += load * reps;
+    }
+  }
+  return total;
+}
 
 /// What a session exercise looks like to the ad-hoc list.
 enum ExerciseProgress {
@@ -203,6 +269,62 @@ int timesPerformed(String exerciseId, List<WorkoutSession> savedSessions) =>
             e.exerciseId == exerciseId &&
             e.sets.any((s) => isSetComplete(e.loadType, s))))
         .length;
+
+/// The day [templateId] was last performed, or null when it never has been.
+///
+/// **Recall, not recommendation.** This says what the user did; it never says
+/// what to do next. `docs/02` is emphatic that nothing on the Workout tab may
+/// state or imply a schedule, and this figure is deliberately incapable of it:
+/// it is per-template, it does not rank, it does not reorder the list, and
+/// nothing reads it to decide what to show. It is the same kind of value as
+/// [timesPerformed] — a fact about history, attached to the thing it is a fact
+/// about, so the user recognises a template instead of recalling it.
+///
+/// **Sessions with no completed set do not count**, matching [timesPerformed]
+/// and the streak: an opened-and-abandoned template was not performed. That
+/// can only happen to a session saved by the auto-save rule before the
+/// zero-set guard, or to one whose sets were later edited away, but the row
+/// must not claim a workout the rest of the app does not count.
+///
+/// **Compared on [WorkoutSession.performedOn], never on `loggedAt`.** A
+/// backdated session is a workout done on the day the user says it was, so a
+/// Monday session entered on Wednesday reads "Monday" here too.
+/// The last day a workout was run from [routineId], or null for never.
+///
+/// **Recall, never recommendation.** It says when, and stops. The moment this
+/// grows a "due", an "overdue" or a "time for", the app has become the
+/// suggestion engine `docs/02` refuses to be — the rule
+/// `test/template_row_test.dart` already fails on for templates.
+///
+/// Sessions with no completed set are excluded: an abandoned workout is not a
+/// time you did the routine. Compared on `performedOn`, so a backdated session
+/// counts on the day it happened.
+LocalDate? lastPerformedRoutine(
+  String routineId,
+  List<WorkoutSession> savedSessions,
+) {
+  LocalDate? latest;
+  for (final session in savedSessions) {
+    if (session.routineId != routineId) continue;
+    if (setCountOf(session) == 0) continue;
+    if (latest == null || session.performedOn > latest) {
+      latest = session.performedOn;
+    }
+  }
+  return latest;
+}
+
+LocalDate? lastPerformed(String templateId, List<WorkoutSession> savedSessions) {
+  LocalDate? latest;
+  for (final session in savedSessions) {
+    if (session.templateId != templateId) continue;
+    if (session.completedSets.isEmpty) continue;
+    if (latest == null || session.performedOn.isAfter(latest)) {
+      latest = session.performedOn;
+    }
+  }
+  return latest;
+}
 
 /// The most recent saved session that logged [exerciseId], or null.
 ///

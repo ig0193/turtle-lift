@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'exercise_index.dart';
 import 'load_type.dart';
 import 'local_date.dart';
+import 'routine_store.dart';
 import 'session_store.dart';
 
 /// The session the app was launched with, resolved **before the first frame**.
@@ -97,6 +99,53 @@ class ActiveSession extends Notifier<WorkoutSession?> {
       templateName: templateName,
       groupIds: groupIds,
     );
+    await _refresh();
+  }
+
+  /// Starts a workout from one of the user's routines (`adr/0004`).
+  ///
+  /// **The routine is copied in, not referenced.** Every exercise, note, rest
+  /// timer and planned set is written onto the session as its own rows, so
+  /// editing the routine tomorrow cannot rewrite what was logged today — the
+  /// same reason `loadType` is snapshotted rather than looked up.
+  ///
+  /// Planned sets arrive as **uncompleted rows carrying their targets**, which
+  /// is what makes a routine worth starting: the numbers are already there and
+  /// the user ticks them off or corrects them. `saveOpenSession` drops every
+  /// row still uncompleted at Finish, so a plan the user did not get to leaves
+  /// no trace in history.
+  Future<void> startFromRoutine(Routine routine, ExerciseIndex index) async {
+    final session = await _store.createSession(
+      templateName: routine.name,
+      routineId: routine.id,
+    );
+    for (final exercise in routine.exercises) {
+      final library = index.byId(exercise.exerciseId);
+      if (library == null) continue;
+      final rowId = await _store.addExercise(
+        sessionId: session.id,
+        exerciseId: exercise.exerciseId,
+        loadType: LoadType.fromName(library.loadType) ?? LoadType.weighted,
+      );
+      if (exercise.notes != null) {
+        await _store.setExerciseNotes(
+            sessionExerciseId: rowId, notes: exercise.notes);
+      }
+      if (exercise.restTimerSec != null) {
+        await _store.setExerciseRestTimer(
+            sessionExerciseId: rowId, seconds: exercise.restTimerSec);
+      }
+      for (final (position, planned) in exercise.sets.indexed) {
+        await _store.writeSet(
+          sessionExerciseId: rowId,
+          position: position,
+          completed: false,
+          weightKg: planned.targetWeightKg,
+          reps: planned.targetReps,
+          durationSec: planned.targetDurationSec,
+        );
+      }
+    }
     await _refresh();
   }
 
@@ -205,6 +254,79 @@ class ActiveSession extends Notifier<WorkoutSession?> {
 
   Future<void> removeExercise(String sessionExerciseId) async {
     await _store.removeExercise(sessionExerciseId);
+    await _refresh();
+  }
+
+  /// Moves one exercise up or down the session's list by [delta] places.
+  ///
+  /// A menu item rather than a drag handle: the list is a column of text fields
+  /// and a drag on it is already the gesture that scrolls or edits a set.
+  Future<void> moveExercise(String sessionExerciseId, int delta) async {
+    final session = state;
+    if (session == null) return;
+    final ids = session.exercises.map((e) => e.id).toList();
+    final from = ids.indexOf(sessionExerciseId);
+    final to = from + delta;
+    if (from < 0 || to < 0 || to >= ids.length) return;
+    ids.insert(to, ids.removeAt(from));
+    await _store.reorderExercises(sessionId: session.id, idsInOrder: ids);
+    await _refresh();
+  }
+
+  /// Swaps one exercise for another, keeping the row and its sets.
+  Future<void> replaceExercise({
+    required String sessionExerciseId,
+    required String exerciseId,
+    required LoadType loadType,
+  }) async {
+    await _store.replaceExercise(
+      sessionExerciseId: sessionExerciseId,
+      exerciseId: exerciseId,
+      loadType: loadType,
+    );
+    await _refresh();
+  }
+
+  /// Writes the user's note for one exercise (`adr/0004`).
+  Future<void> setExerciseNotes({
+    required String sessionExerciseId,
+    required String? notes,
+  }) async {
+    await _store.setExerciseNotes(
+      sessionExerciseId: sessionExerciseId,
+      notes: notes,
+    );
+    await _refresh();
+  }
+
+  /// Sets or clears one exercise's rest timer. Null is OFF.
+  Future<void> setExerciseRestTimer({
+    required String sessionExerciseId,
+    required int? seconds,
+  }) async {
+    await _store.setExerciseRestTimer(
+      sessionExerciseId: sessionExerciseId,
+      seconds: seconds,
+    );
+    await _refresh();
+  }
+
+  /// Writes the user's note about the whole session.
+  Future<void> setSessionNotes(String? notes) async {
+    final session = state;
+    if (session == null) return;
+    await _store.setSessionNotes(session.id, notes);
+    await _refresh();
+  }
+
+  /// Corrects how long the open session has been running.
+  Future<void> setDuration(Duration duration) async {
+    final session = state;
+    if (session == null) return;
+    await _store.setSessionDuration(
+      sessionId: session.id,
+      duration: duration,
+    );
     await _refresh();
   }
 

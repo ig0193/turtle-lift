@@ -57,13 +57,15 @@ void main() {
     List<SessionExercise> exercises, {
     String? title,
     String? templateName,
+    String? templateId,
+    DateTime? loggedAt,
   }) =>
       WorkoutSession(
         id: 'session-${nextId++}',
         title: title,
         performedOn: date,
-        loggedAt: date.toDateTime(),
-        templateId: templateName == null ? null : 'tpl',
+        loggedAt: loggedAt ?? date.toDateTime(),
+        templateId: templateId ?? (templateName == null ? null : 'tpl'),
         templateName: templateName,
         groupIds: const <String>[],
         isOpen: false,
@@ -523,6 +525,144 @@ void main() {
       expect(streakAsOf(today, <WorkoutSession>[s]), 0);
       expect(resolvedTitle(s, index), isNotEmpty);
       expect(trainedSubGroups(s, index), isEmpty);
+    });
+  });
+
+  group('lastPerformed', () {
+    final today = LocalDate.today();
+    final bench = libraryExercise('bench', name: 'Bench', primary: ['chest/mid']);
+    final index = ExerciseIndex(<Exercise>[bench]);
+
+    WorkoutSession ran(String templateId, LocalDate on, {bool completed = true}) =>
+        session(
+          on,
+          <SessionExercise>[
+            exercise('bench', LoadType.weighted, <SetEntry>[
+              set(weightKg: 60, reps: 8, completed: completed),
+            ]),
+          ],
+          templateId: templateId,
+        );
+
+    test('is null for a template that has never been run', () {
+      expect(lastPerformed('push', <WorkoutSession>[]), isNull);
+      expect(
+        lastPerformed('push', <WorkoutSession>[ran('pull', today)]),
+        isNull,
+        reason: 'another template being run is not this one being run',
+      );
+    });
+
+    test('is the most recent day, whatever order history arrives in', () {
+      final sessions = <WorkoutSession>[
+        ran('push', today.addDays(-9)),
+        ran('push', today.addDays(-2)),
+        ran('push', today.addDays(-30)),
+      ];
+      expect(lastPerformed('push', sessions), today.addDays(-2));
+    });
+
+    test('ignores sessions with no completed set', () {
+      // The same bar the streak and timesPerformed use: an opened and
+      // abandoned template was not performed.
+      final sessions = <WorkoutSession>[
+        ran('push', today.addDays(-6)),
+        ran('push', today, completed: false),
+      ];
+      expect(
+        lastPerformed('push', sessions),
+        today.addDays(-6),
+        reason: 'today\'s session ticked nothing, so it is not a performance',
+      );
+    });
+
+    test('reads performedOn, not loggedAt', () {
+      // A Monday workout entered on Wednesday was done on Monday, and the row
+      // has to say so -- the rule `performedOn` exists for.
+      final monday = today.addDays(-2);
+      final sessions = <WorkoutSession>[
+        ran('push', today.addDays(-1)),
+        session(
+          monday,
+          <SessionExercise>[
+            exercise('bench', LoadType.weighted, <SetEntry>[
+              set(weightKg: 60, reps: 8),
+            ]),
+          ],
+          templateId: 'push',
+          loggedAt: today.toDateTime(),
+        ),
+      ];
+      expect(
+        lastPerformed('push', sessions),
+        today.addDays(-1),
+        reason: 'the backdated session is older than yesterday\'s, however '
+            'recently it was typed in',
+      );
+    });
+
+    test('is unaffected by an ad-hoc session, which names no template', () {
+      final adHoc = session(today, <SessionExercise>[
+        exercise('bench', LoadType.weighted, <SetEntry>[
+          set(weightKg: 60, reps: 8),
+        ]),
+      ]);
+      expect(lastPerformed('push', <WorkoutSession>[adHoc]), isNull);
+      expect(index.byId('bench'), isNotNull);
+    });
+  });
+
+  group('lifted volume', () {
+    // Volume returned in `adr/0004` for Hevy's summary bar, after being banned
+    // outright by `00` §3. It is a *partial* figure on purpose: two of the four
+    // load types move no external weight at all, so the number can only ever
+    // describe part of a session. These tests pin that partiality, because the
+    // tempting "fix" is to invent a weight for bodyweight work, and that would
+    // quietly make the figure a lie.
+    final today = LocalDate(2026, 9, 23);
+
+    test('sums weight by reps over completed weighted sets', () {
+      final s = session(today, <SessionExercise>[
+        exercise('bench', LoadType.weighted, <SetEntry>[
+          set(weightKg: 60, reps: 10), // 600
+          set(weightKg: 62.5, reps: 8), // 500
+        ]),
+      ]);
+      expect(volumeOf(s), 1100);
+    });
+
+    test('an incomplete set contributes nothing', () {
+      final s = session(today, <SessionExercise>[
+        exercise('bench', LoadType.weighted, <SetEntry>[
+          set(weightKg: 60, reps: 10),
+          set(weightKg: 60, reps: 10, completed: false),
+        ]),
+      ]);
+      expect(volumeOf(s), 600);
+    });
+
+    test('bodyweight counts only the weight actually added', () {
+      final s = session(today, <SessionExercise>[
+        exercise('pullup', LoadType.bodyweight, <SetEntry>[
+          set(reps: 12), // no external load — contributes nothing
+          set(reps: 8, addedKg: 10), // 80
+        ]),
+      ]);
+      expect(volumeOf(s), 80);
+    });
+
+    test('assisted and timed work contribute nothing', () {
+      final s = session(today, <SessionExercise>[
+        exercise('assisted-pullup', LoadType.assisted, <SetEntry>[
+          set(reps: 10, assistKg: 20),
+        ]),
+        exercise('plank', LoadType.timed, <SetEntry>[
+          set(durationSec: 60),
+        ]),
+      ]);
+      // Not zero because they are unimportant — zero because neither moves a
+      // weight this figure could honestly count. Assist is weight *removed*.
+      expect(volumeOf(s), 0);
     });
   });
 }

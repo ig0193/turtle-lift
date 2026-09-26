@@ -51,8 +51,12 @@ Male and female assets have different coordinate spaces — never assume a value
 | `performedOn` | **local calendar date** | No time, no timezone. Defaults today. Editable. Clamped ≤ today. Drives streak, history order, date labels. |
 | `loggedAt` | timestamp | Internal only. Tiebreaker when two sessions share `performedOn`. Never shown. |
 | `templateId` | id? | `null` = ad-hoc session. |
+| `startedAt` | timestamp? | **[0004]** Internal. When the workout began; the live duration ticks from it. |
+| `endedAt` | timestamp? | **[0004]** Internal. Stamped once by Finish, never re-stamped by an edit. Duration is `endedAt − startedAt`, derived — see §3. |
+| `notes` | string? | **[0004]** The user's note about the session, from the Save workout screen. |
+| `routineId` | id? | **[0004]** The routine this workout was started from. **Not** `templateId` — that column branches the template path. No foreign key and no cascade: deleting a routine must not delete the workouts done from it. |
 
-**SessionExercise** — `exerciseId`, `order`, `loadType` (snapshotted at add time), and a stored `markedDone` flag.
+**SessionExercise** — `exerciseId`, `order`, `loadType` (snapshotted at add time), a stored `markedDone` flag, and **[0004]** `notes` (the user's note for this lift) and `restTimerSec` (null = OFF).
 
 ⚠ **Conflict, resolved.** This line used to give `SessionExercise` a stored `state ∈ not_started | in_progress | done`, which contradicts §3 and `01` §Derived values: delete every set from an `in_progress` exercise and the stored state is simply wrong. Only the user's Mark-exercise-done tap is stored; the tri-state the list renders is derived from that flag and the sets. `loadType` *is* stored, and is the one exception worth stating — it lives in regenerated content, so a set row whose meaning is resolved at read time would be reinterpreted by a later build, and an assisted record read as a maximum is silently backwards.
 **SetEntry** — `completed`, plus fields determined by the exercise's `loadType`:
@@ -79,15 +83,25 @@ Average 76 words per exercise across all four. Every entry mentions breathing; 1
 
 **Template** — name, `isPredefined`, and **parent muscle group ids only**. Never store sub-groups.
 
+**Routine** — **[0004]** the user's own ordered exercise list: `name`, `position`, then `RoutineExercise{exerciseId, position, notes?, restTimerSec?}` and `RoutineSet{position, targetWeightKg?, targetReps?, targetDurationSec?}`. Every target is nullable: "three sets of bench" with no weight yet is a real plan.
+
+⚠ **A routine is not a template, and neither converts into the other.** A template names *muscle groups* and ships with the app; a routine names *exercises in an order* and belongs to the user. They are stored separately and the v4 migration does not fold one into the other — converting a template would have to invent the exercise list that is the entire difference. See `CONTEXT.md` and `adr/0004`.
+
+**No snapshotted `loadType` on a RoutineExercise**, unlike a SessionExercise. A session records what happened, so reinterpreting it against changed content ships a record backwards; a routine is a *plan*, and should follow the library if an exercise is reclassified.
+
 **No muscle-level state exists in the model.** → `01` §Muscle training state.
 
 ---
 
 ## 3. Derived values — compute on read, never store
 
-`streak` · exercise count · set count · personal bests · **per-session PB count** · calorie estimate · `trained` ticks · resolved title.
+`streak` · exercise count · set count · personal bests · **per-session PB count** · calorie estimate · `trained` ticks · resolved title · **session duration** · **lifted volume**.
 
-**No lifted-volume (kg) metric anywhere in V1** — it cannot include bodyweight or timed exercises. Set count is the headline **volume proxy** in its place. → `01` §Derived values. (It stands in for the banned kg figure; it is not an instruction about which stat renders largest.)
+**Lifted volume (kg) is derived, never stored** — Σ (weight × reps) over completed sets, shown in the Log Workout summary bar beside Duration and Sets. It cannot include bodyweight or timed exercises, so it is a partial figure by construction and is **never the headline stat**: set count remains the headline **volume proxy**. → `01` §Derived values.
+
+**Session duration is derived too** — `endedAt − startedAt`, both stored on the session as internal timestamps alongside `loggedAt`. While a session is open it ticks live from `startedAt`. `performedOn` stays a local calendar date and is unaffected. → `adr/0004`.
+
+> Reversed in session 2 for Hevy parity (`adr/0004`). Until then this section read *"No lifted-volume (kg) metric anywhere in V1"*, and §13 banned workout duration outright.
 
 Deleting or editing a session must change all of the above automatically, including the inline "Last time: 22kg × 10" hint. Do not introduce a stored counter. → `01` §Derived values.
 
@@ -169,9 +183,17 @@ streakAsOf(date) -> int
 
 ## 9. Workout tab
 
-**Entry:** the landing lists the predefined templates filtered by split (**1 Muscle per day** · **Multi Split** · **Push-Pull-Legs**; no unfiltered value, Multi Split on first launch, last choice remembered), then the user's own templates unfiltered, then **Ad-hoc workout** (exercise search). No separate picker screen. The filter is a view control, never a declared programme — see `02` §Step 1.
+**Entry:** the landing leads with **Start empty workout**, then a **Routines** section — a **New routine** / **Templates** pair, then **My routines (n)** as a flat list. A routine card carries its name, its exercise names, a **Start routine** button and a `⋮` menu (edit · duplicate · delete). Routines reorder by long-press drag. See `02` §Step 1.
 
-**Overview screen**
+**No folders.** Hevy groups routines into folders; this app does not. A deliberate divergence — see `adr/0004`.
+
+**Templates** are the 11 predefined muscle-group templates, reached from the **Templates** button. They are starting points, not routines: picking one opens an empty workout with the exercise picker pre-filtered to its muscle groups. The split filter (**1 Muscle per day** · **Multi Split** · **Push-Pull-Legs**; no unfiltered value, Multi Split on first launch, last choice remembered) applies there, and stays a view control, never a declared programme.
+
+**Template card** — thumbnail (front + back, the template's muscles in `#A89C8E`, **never accent**) · name · muscle chips (as many as fit, then `+N`) · recency line (`Last done 3 days ago` / `Not done yet`, derived from `sessions.templateId`, completed sets only, compared on `performedOn`). Recall, never recommendation: nothing ranks, reorders or marks anything due. See `02` §A template card.
+
+**Log Workout screen** — the tab's main surface while a session is open. One scrolling screen, every exercise and every set inline; there is no push-per-exercise step. Header: collapse chevron · `Log Workout` · duration control · **Finish**. Summary bar: **Duration · Volume · Sets** plus the front/back body figures. Then one block per exercise (equipment glyph · name · `⋮` reorder/replace/remove · notes · rest timer · the `SET · PREVIOUS · KG · REPS · ✓` table · **+ Add set**), then **+ Add exercise** (the one accent fill), then Settings and **Discard workout** (`#C4553A`). The chevron collapses the screen to the mini workout bar above the tab bar. → `02` §Step 4, `adr/0004`.
+
+**Overview screens** — secondary since `adr/0004`; reached by tapping the body figures in the summary bar.
 - Editable title; **no caption line**.
 - Editable session date; show prominently when ≠ today.
 - Muscle map heats live per completed exercise.
@@ -185,15 +207,19 @@ streakAsOf(date) -> int
 - Ticked rows stay tappable; open the exercise list with logged exercises pinned to top.
 - **Map and list intentionally disagree** (map = primary + secondary; list = primary only). Do not "fix".
 
-**Template lock** — exercises outside the template's muscle groups cannot be added to a template session. Swapping within a sub-group is unrestricted.
+**No template lock.** `+ Add exercise` is unrestricted everywhere. A routine is an ordered exercise list, not a claim over a set of muscle groups, so there is nothing for a lock to enforce. (Reversed in `adr/0004`; it previously read *"exercises outside the template's muscle groups cannot be added to a template session"*.)
 
-**Finish** — available any time. **A session with 0 completed sets must not save.**
+**Finish** — available any time. **A session with 0 completed sets must not save**, enforced in `SessionStore.saveOpenSession` rather than on a button, because the button has moved twice.
+
+**[0004] Update routine?** — after finishing a workout started from a routine, offer to rewrite that routine to what was actually done. Asked **only when the shape diverged** — different exercises, a different order, or a different number of completed sets — never when only the weights differed, which is the routine working rather than a routine needing a rewrite. Keep is the quiet default.
 
 **Session persistence** — an active session persists indefinitely; never auto-discarded. Returning to the Workout tab shows the session in place of the landing; no Resume card. Starting a new workout auto-saves the open one (>=1 completed set, keeping its **original `performedOn`**, with a toast) or discards it silently (0 sets). One active session at a time.
 
 **Exercise tap → set logging directly.** Info button in the logging header reaches Exercise Detail. Exception: `timesPerformed == 0` → land on Exercise Detail first.
 
-**Set-logging screen order:** sets → Add set → Mark exercise done → Recent (last 2, all sets shown per session) → See all N sessions.
+**Set-logging screen order:** sets → Add set → Recent (last 2, all sets shown per session) → See all N sessions. This screen now serves **editing a saved session from History only**; live logging happens inline on Log Workout, whose exercise block carries no Recent section.
+
+**No Mark exercise done.** The control is gone (`adr/0004`) — Log Workout has no equivalent. `markedDone` survives on the row for schema stability, so `countsAsTrained` reduces in practice to *has a completed set*.
 
 → `02`.
 
@@ -273,7 +299,11 @@ History is a tab; Profile is reached from the header avatar (`docs/adr/0003-l0-n
 
 ## 13. Out of scope for V1
 
-No zone-lit human mascot (dead — see `mascot-brief.md`) · no per-exercise illustrations or silhouettes (V2; equipment glyphs instead) · no login · no cloud sync · no soft delete · no rest timer · no workout duration · no notifications · no wearables · no AI · no premium · no ads · no multi-day splits or weekly rotation · no "today's workout" suggestion · no exercise videos · no social features.
+No zone-lit human mascot (dead — see `mascot-brief.md`) · no per-exercise illustrations or silhouettes (V2; equipment glyphs instead) · no login · no cloud sync · no soft delete · no notifications · no wearables · no AI · no premium · no ads · no multi-day splits or weekly rotation · no "today's workout" suggestion · no exercise videos · no social features.
+
+Also out, and new with `adr/0004`: no set types (warm-up / drop / to-failure) · no supersets · no RPE · no plate calculator · no custom exercises (`exercises.json` is generated content).
+
+**Rest timer and workout duration left this list in session 2** — both are built, per `adr/0004`. The rest timer is foreground-only and fires no notification, which is why the notification ban above still stands.
 
 Local storage only. Works fully offline. No onboarding wizard.
 

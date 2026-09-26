@@ -12,9 +12,8 @@ import 'package:turtle_lift/src/data/settings_store.dart';
 import 'package:turtle_lift/src/data/template_filter.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
 import 'package:turtle_lift/src/ui/app_screen.dart';
-import 'package:turtle_lift/src/ui/exercise_search_screen.dart';
 import 'package:turtle_lift/src/ui/template_filter_control.dart';
-import 'package:turtle_lift/src/ui/template_overview_body.dart';
+import 'package:turtle_lift/src/ui/template_list_screen.dart';
 import 'package:turtle_lift/src/ui/template_row.dart';
 import 'package:turtle_lift/src/ui/workout_root.dart';
 
@@ -26,6 +25,21 @@ import 'package:turtle_lift/src/ui/workout_root.dart';
 /// file owns its behaviour.
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+  /// Gives the test a phone-tall viewport instead of the 800x600 default.
+  ///
+  /// **Because the landing's rows are cards now, and a `ListView` only builds
+  /// what fits.** At the old row height the whole list happened to fall inside
+  /// 600pt, so every "is it listed" assertion was also, silently, a "does it
+  /// fit on one screen" assertion. It is not one on a real device either --
+  /// `flutter run` shows five template cards plus the call to action without
+  /// scrolling -- so the tests that ask what the screen lists are given room
+  /// to list it, and the ones that genuinely care about geometry say so.
+  void useTallViewport(WidgetTester tester) {
+    tester.view.physicalSize = const Size(1200, 4200);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+  }
 
   /// Hosts the landing as the shell does, with the filter seeded the way
   /// `main()` seeds it.
@@ -50,9 +64,11 @@ void main() {
         exerciseIndexProvider.overrideWithValue(ExerciseIndex(const <Exercise>[])),
         if (database != null) appDatabaseProvider.overrideWithValue(database),
       ],
-      child: const MaterialApp(
-        home: Scaffold(body: WorkoutRoot()),
-      ),
+      // **The template list left the landing with `adr/0004`.** The landing
+      // lists routines now; these tests follow the templates to the screen
+      // behind the `Templates` button, which is where the split filter, the
+      // custom group and the manage link went with them.
+      child: const MaterialApp(home: TemplateListScreen()),
     );
   }
 
@@ -63,6 +79,7 @@ void main() {
   group('what it lists', () {
     testWidgets('shows exactly the selected filter\'s templates',
         (tester) async {
+      useTallViewport(tester);
       await tester.pumpWidget(host());
 
       expect(
@@ -72,17 +89,31 @@ void main() {
           'Full body day',
           'Chest and triceps day',
           'Back and biceps day',
-          // The route to template authoring. It sits outside the custom-group
-          // conditional on purpose, so it is here even with no custom
-          // templates -- see WorkoutRoot.manageTemplatesKey.
-          'Manage templates',
-          'Ad-hoc workout',
         ],
+        reason: 'only templates are cards now -- the ad-hoc entry is the '
+            'primary action above the list and Manage templates is a link '
+            'below it, and neither is a template',
       );
       expect(
         find.text('Push day'),
         findsNothing,
         reason: 'Push day belongs to Push-Pull-Legs only',
+      );
+    });
+
+    testWidgets('carries the ad-hoc action and the manage link either side of '
+        'the list', (tester) async {
+      useTallViewport(tester);
+      await tester.pumpWidget(host());
+
+      // The route to template authoring sits outside the custom-group
+      // conditional on purpose, so it is here even with no custom templates --
+      // see TemplateListScreen.manageTemplatesKey.
+      expect(find.byKey(TemplateListScreen.manageTemplatesKey), findsOneWidget);
+      expect(
+        find.byType(TemplateRow),
+        findsNWidgets(4),
+        reason: 'the manage link is not a template card',
       );
     });
 
@@ -97,6 +128,7 @@ void main() {
 
     testWidgets('lists leg day under both of the filters it belongs to',
         (tester) async {
+      useTallViewport(tester);
       await tester.pumpWidget(host(initial: TemplateFilter.singleMuscle));
       expect(find.text('Leg day'), findsOneWidget);
 
@@ -115,22 +147,6 @@ void main() {
           findsWidgets,
           reason: '${filter.label} must never render an empty list -- there is '
               'no unfiltered value to escape to',
-        );
-      }
-    });
-
-    testWidgets('puts the ad-hoc entry below the templates, under every filter',
-        (tester) async {
-      for (final filter in TemplateFilter.values) {
-        await tester.pumpWidget(host(initial: filter));
-        await tester.pump();
-
-        final adHoc = find.text('Ad-hoc workout');
-        expect(adHoc, findsOneWidget, reason: filter.label);
-        expect(
-          tester.getRect(adHoc).top,
-          greaterThan(tester.getRect(find.byType(TemplateRow).first).bottom),
-          reason: '${filter.label}: the ad-hoc entry sits below the list',
         );
       }
     });
@@ -163,16 +179,17 @@ void main() {
       await tester.pumpWidget(host());
 
       expect(
-        find.text(WorkoutRoot.customGroupLabel),
+        find.text(TemplateListScreen.customGroupLabel),
         findsNothing,
         reason: 'a heading standing over nothing reads as broken',
       );
     });
 
     testWidgets('renders when the user has one', (tester) async {
+      useTallViewport(tester);
       await tester.pumpWidget(host(custom: custom));
 
-      expect(find.text(WorkoutRoot.customGroupLabel), findsOneWidget);
+      expect(find.text(TemplateListScreen.customGroupLabel), findsOneWidget);
       expect(find.text('My arm blaster'), findsOneWidget);
     });
 
@@ -181,6 +198,7 @@ void main() {
       // no unfiltered value, a classified custom template would be reachable
       // from exactly one split and invisible from the other two.
       for (final filter in TemplateFilter.values) {
+        useTallViewport(tester);
         await tester.pumpWidget(host(initial: filter, custom: custom));
         await tester.pump();
 
@@ -192,8 +210,9 @@ void main() {
       }
     });
 
-    testWidgets('sits between the templates and the ad-hoc entry',
+    testWidgets('sits between the predefined templates and the manage link',
         (tester) async {
+      useTallViewport(tester);
       await tester.pumpWidget(host(custom: custom));
 
       final customRow = tester.getRect(find.text('My arm blaster'));
@@ -203,7 +222,11 @@ void main() {
       );
       expect(
         customRow.bottom,
-        lessThan(tester.getRect(find.text('Ad-hoc workout')).top),
+        lessThan(
+          tester.getRect(find.byKey(TemplateListScreen.manageTemplatesKey)).top,
+        ),
+        reason: 'the ad-hoc action leads the screen now, so the group the '
+            'custom templates close is the one the manage link follows',
       );
     });
   });
@@ -263,10 +286,9 @@ void main() {
       });
       await tester.pumpAndSettle();
 
-      expect(find.byType(TemplateOverviewBody), findsOneWidget);
-      expect(find.byType(TemplateRow), findsNothing,
-          reason: 'the landing is replaced, not covered');
-
+      // `adr/0004`: a template no longer *is* a session shape — it starts an
+      // empty workout narrowed to its muscles and gets out of the way. The
+      // proof is the open session, not what replaced this screen.
       final open = await tester.runAsync(
         () => SessionStore(database).readOpenSession(),
       );
@@ -274,14 +296,6 @@ void main() {
       expect(open.title, 'Chest and triceps day');
     });
 
-    testWidgets('the ad-hoc entry opens exercise search', (tester) async {
-      await tester.pumpWidget(host());
-
-      await tester.tap(find.text('Ad-hoc workout'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(ExerciseSearchScreen), findsOneWidget);
-    });
   });
 
   testWidgets('the pinned header does not move when the landing scrolls',

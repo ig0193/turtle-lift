@@ -6,6 +6,7 @@ import '../data/bodyweight_resolution.dart';
 import '../data/generated/muscle_taxonomy.dart';
 import '../data/history_preview_data.dart';
 import '../data/personal_details_store.dart';
+import '../data/set_format.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'app_screen.dart';
@@ -13,16 +14,13 @@ import 'body_diagram.dart';
 
 /// One logged session, opened from a History row.
 ///
-/// **This is the read half only.** `docs/04` specifies session detail as the
-/// *same component as the live workout card* — editable title, editable
-/// `performedOn`, editable sets, add and remove, and delete. All of that
-/// belongs to the session-flow work
-/// (`docs/plans/2026-09-14-2351-feat-workout-session-flow-plan.md`), which owns
-/// the session tables and every `session_*.dart` file. Building an editor here
-/// would collide with it and would be editing a fixture besides.
-///
-/// So this screen shows what a session *was*, from the same preview data the
-/// History tab lists, and says nothing it cannot back up.
+/// **This is the read half only, and it reads real sessions.** Editing a saved
+/// session — title, `performedOn`, sets, add, remove, delete — lives on
+/// `SessionSummaryScreen`, which the session flow owns. `docs/01` warns against
+/// a second read-only viewer drifting from the live one, so everything numeric
+/// here goes through the shared derivations and the shared [formatSet]: the
+/// counts, the calorie estimate, the personal-best trophies and the set pills
+/// are the same functions the summary card calls, not a parallel copy.
 ///
 /// **The card is the shareable part; the log is the reason to scroll past it.**
 /// `docs/04` draws that line explicitly: the card is a summary someone would
@@ -104,7 +102,7 @@ class HistorySessionDetailScreen extends ConsumerWidget {
             child: Text(
               figures.pbCount > 0
                   ? 'LOGGED · ${figures.pbCount} PERSONAL BEST'
-                      '${figures.pbCount == 1 ? '' : 'S'}'
+                        '${figures.pbCount == 1 ? '' : 'S'}'
                   : 'LOGGED',
               style: kLandingSectionLabelStyle,
             ),
@@ -118,8 +116,6 @@ class HistorySessionDetailScreen extends ConsumerWidget {
               // than just saying the session had one.
               recordScore: _recordScoreFor(sessions, session, exercise),
             ),
-          const SizedBox(height: 22),
-          const _ReadOnlyNote(),
         ],
       ),
     );
@@ -168,10 +164,10 @@ double? _recordScoreFor(
 ///
 /// Done here once so no caller has to remember it.
 Set<String> subMuscleGroupIdsFor(Iterable<String> groupIds) => <String>{
-      for (final groupId in groupIds)
-        for (final subName in kMuscleTaxonomy[groupId] ?? const <String>[])
-          '$groupId/$subName',
-    };
+  for (final groupId in groupIds)
+    for (final subName in kMuscleTaxonomy[groupId] ?? const <String>[])
+      '$groupId/$subName',
+};
 
 /// The screenshot-friendly summary: what was trained, and four figures.
 class _HeroCard extends ConsumerWidget {
@@ -218,8 +214,10 @@ class _HeroCard extends ConsumerWidget {
               ),
               if (figures.pbCount > 0)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppPalette.accentStrong.withValues(alpha: 0.17),
                     borderRadius: BorderRadius.circular(999),
@@ -314,8 +312,9 @@ List<BodyView> _viewsFor(List<String> trainedGroupIds) {
   var back = false;
   for (final subId in subMuscleGroupIdsFor(trainedGroupIds)) {
     {
-      for (final segment in kSubMuscleGroups[subId]?.segments ??
-          const <({String view, String segment})>[]) {
+      for (final segment
+          in kSubMuscleGroups[subId]?.segments ??
+              const <({String view, String segment})>[]) {
         if (segment.view == BodyView.front.taxonomyView) front = true;
         if (segment.view == BodyView.back.taxonomyView) back = true;
       }
@@ -334,8 +333,9 @@ List<BodyView> _viewsFor(List<String> trainedGroupIds) {
 @immutable
 class _SessionMuscleFill {
   _SessionMuscleFill(Set<String> trainedGroupIds)
-      : trainedSubGroups =
-            Set<String>.unmodifiable(subMuscleGroupIdsFor(trainedGroupIds));
+    : trainedSubGroups = Set<String>.unmodifiable(
+        subMuscleGroupIdsFor(trainedGroupIds),
+      );
 
   final Set<String> trainedSubGroups;
 
@@ -431,8 +431,13 @@ class _ExerciseBlock extends StatelessWidget {
             spacing: 5,
             runSpacing: 5,
             children: <Widget>[
-              for (final score in exercise.setScores)
-                _SetPill(score: score, isRecord: score == recordScore),
+              for (final (index, score) in exercise.setScores.indexed)
+                _SetPill(
+                  label: index < exercise.setLabels.length
+                      ? exercise.setLabels[index]
+                      : formatWeight(score),
+                  isRecord: score == recordScore,
+                ),
             ],
           ),
         ],
@@ -443,9 +448,11 @@ class _ExerciseBlock extends StatelessWidget {
 
 /// One set. The record-setting one is the only thing in the log painted accent.
 class _SetPill extends StatelessWidget {
-  const _SetPill({required this.score, required this.isRecord});
+  const _SetPill({required this.label, required this.isRecord});
 
-  final double score;
+  /// Already formatted by [formatSet] upstream, so a set reads the same here as
+  /// it does on the summary card that follows the workout.
+  final String label;
   final bool isRecord;
 
   @override
@@ -464,9 +471,7 @@ class _SetPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        score == score.roundToDouble()
-            ? '${score.toStringAsFixed(0)} kg'
-            : '$score kg',
+        label,
         style: TextStyle(
           fontSize: 10.5,
           fontWeight: isRecord ? FontWeight.w600 : FontWeight.w400,
@@ -477,37 +482,20 @@ class _SetPill extends StatelessWidget {
   }
 }
 
-/// Says plainly what this screen cannot do, rather than leaving a user hunting
-/// for an edit control that is not there yet.
-class _ReadOnlyNote extends StatelessWidget {
-  const _ReadOnlyNote();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: AppPalette.mutedSurface,
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: const Text(
-        'Editing and deleting a past workout arrive with the session tables. '
-        'This history is sample data, so the figures above are real '
-        'derivations over it rather than stored numbers.',
-        style: TextStyle(
-          fontSize: 11.5,
-          height: 1.5,
-          color: AppPalette.textMuted,
-        ),
-      ),
-    );
-  }
-}
-
 String _longDate(DateTime date) {
   const months = <String>[
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
   return '${date.day} ${months[date.month - 1]} ${date.year}';
 }
