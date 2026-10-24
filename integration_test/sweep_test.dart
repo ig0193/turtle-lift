@@ -6,10 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:turtle_lift/main.dart' as app;
 import 'package:turtle_lift/src/ui/destructive_confirmation.dart';
+import 'package:turtle_lift/src/ui/exercise_picker_sheet.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
+import 'package:turtle_lift/src/ui/l0_shell.dart';
 import 'package:turtle_lift/src/ui/session_actions.dart';
+import 'package:turtle_lift/src/ui/session_overview_body.dart';
 import 'package:turtle_lift/src/ui/set_logging_screen.dart';
 import 'package:turtle_lift/src/ui/set_row.dart';
+import 'package:turtle_lift/src/ui/template_preview_sheet.dart';
+import 'package:turtle_lift/src/ui/workout_root.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +35,37 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Starts the app and waits for its first screen.
+  ///
+  /// `app.main()` is async — it opens the database, seeds sample data in a debug
+  /// build and reads the exercise library before `runApp` — and `pumpAndSettle`
+  /// returns the moment no frame is scheduled, which is *before* any of that has
+  /// finished. So this waits, in real time, for the shell to exist.
+  Future<void> bootApp(WidgetTester tester) async {
+    app.main();
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+      if (find.byType(L0Shell).evaluate().isNotEmpty) break;
+    }
+    await settle(tester);
+  }
+
+  /// Scrolls the landing until [id]'s tile is clear of the pinned Start bar and
+  /// the tab bar, then taps it. Tiles lower in the grid start off screen or
+  /// behind the bars, where a tap lands on the wrong thing.
+  Future<void> tapTemplate(WidgetTester tester, String id) async {
+    final tile = find.byKey(WorkoutLandingBody.templateKey(id));
+    await tester.scrollUntilVisible(
+      tile,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -220));
+    await settle(tester);
+    await tester.tap(tile);
+    await settle(tester);
+  }
+
   Future<void> tapText(WidgetTester tester, String text) async {
     final finder = find.text(text);
     if (finder.evaluate().isEmpty) return;
@@ -39,18 +75,28 @@ void main() {
 
   testWidgets('every screen renders without a framework error',
       (tester) async {
-    app.main();
-    await settle(tester);
+    await bootApp(tester);
 
-    // Clear anything a previous run left open.
-    if (find.byKey(SessionActions.finishKey).evaluate().isNotEmpty) {
-      await tester.tap(find.byKey(SessionActions.finishKey));
+    // Clear anything a previous run left open, by Discard: it is on the ready
+    // view and the list alike, below the whole list, so it is scrolled to.
+    if (find.byType(SessionOverviewBody).evaluate().isNotEmpty) {
+      await tester.scrollUntilVisible(
+        find.byKey(SessionActions.discardKey),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.byKey(SessionActions.discardKey));
       await settle(tester);
       if (find.byKey(confirmDestructiveKey).evaluate().isNotEmpty) {
         await tester.tap(find.byKey(confirmDestructiveKey));
         await settle(tester);
       }
     }
+
+    Finder pickerField() => find.descendant(
+          of: find.byType(ExercisePickerSheet),
+          matching: find.byType(TextField),
+        );
 
     // --- The other two tabs. Tapped by the bar's own key: the header renders
     // the same words, so finding them by text hits the title instead.
@@ -59,13 +105,18 @@ void main() {
       await settle(tester);
     }
 
-    // --- The widest template: every parent group, every accordion.
-    await tapText(tester, 'Full body day');
-    expect(find.text('Upper chest'), findsOneWidget,
-        reason: 'the widest template — every parent group, every accordion');
+    // --- The longest template: its preview, the ready view, the picker over
+    // the map, and then the list itself.
+    await tapTemplate(tester, 'upper-body');
+    await tester.tap(find.byKey(TemplatePreviewSheet.startKey));
+    await settle(tester);
+    expect(find.byKey(SessionOverviewBody.startLoggingKey), findsOneWidget);
+    await tester.tap(find.byKey(SessionOverviewBody.startLoggingKey));
+    await settle(tester);
+    await tester.tapAt(const Offset(10, 10));
+    await settle(tester);
 
-    // The whole muscle list, which is the longest in the app. Finish sits past
-    // twelve parent groups, so it is only built once scrolled to.
+    // Finish sits below the whole list, so it is only built once scrolled to.
     await tester.scrollUntilVisible(
       find.byKey(SessionActions.finishKey),
       400,
@@ -81,11 +132,15 @@ void main() {
     await tester.tap(find.byKey(confirmDestructiveKey));
     await settle(tester);
 
-    // --- Ad-hoc: search, the detour, logging, the summary, history.
-    await tapText(tester, 'Ad-hoc workout');
-    await tester.enterText(find.byType(TextField).first, 'plank');
+    // --- Empty start: the picker, the detour, logging, the summary, history.
+    await tester.tap(find.byKey(WorkoutLandingBody.startWorkoutKey));
     await settle(tester);
-    await tapText(tester, 'Plank');
+    await tester.tap(find.byKey(SessionOverviewBody.startLoggingKey));
+    await settle(tester);
+    await tester.enterText(pickerField(), 'plank');
+    await settle(tester);
+    await tester.tap(find.byKey(ExercisePickerSheet.rowKey('plank')));
+    await settle(tester);
     await tapText(tester, 'Start logging');
 
     if (find.byType(SetLoggingScreen).evaluate().isNotEmpty) {
@@ -102,10 +157,15 @@ void main() {
     }
 
     // Add an assisted lift too, so the inverted record and its banner render.
-    await tapText(tester, '+ Add exercise');
-    await tester.enterText(find.byType(TextField).first, 'assisted');
+    await tester.tap(find.byKey(SessionOverviewBody.addExerciseKey));
     await settle(tester);
-    await tapText(tester, 'Assisted pull-up machine');
+    await tester.enterText(pickerField(), 'assisted');
+    await settle(tester);
+    await tester.tap(find.descendant(
+      of: find.byType(ExercisePickerSheet),
+      matching: find.text('Assisted pull-up machine'),
+    ));
+    await settle(tester);
     await tapText(tester, 'Start logging');
     if (find.byType(SetLoggingScreen).evaluate().isNotEmpty) {
       await tester.enterText(find.byType(TextField).first, '25');
