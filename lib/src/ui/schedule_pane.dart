@@ -90,11 +90,12 @@ const List<String> _dayLong = <String>[
 /// it has a session. After the week is over it reads as a plain count.
 String weekCaption(WeekSummary week) {
   final extra = week.extra == 0 ? '' : ' · +${week.extra} extra';
+  final days = week.planned == 1 ? 'day' : 'days';
   if (week.hit == week.planned) {
-    return 'All ${week.planned} plan days done$extra';
+    return 'All ${week.planned} plan $days done$extra';
   }
   final left = week.remaining;
-  if (left.isEmpty) return '${week.hit} of ${week.planned} plan days$extra';
+  if (left.isEmpty) return '${week.hit} of ${week.planned} plan $days$extra';
   return '${left.length} more to go — next is ${_dayLong[left.first.weekday]}'
       '$extra';
 }
@@ -272,7 +273,8 @@ class _WeekHero extends StatelessWidget {
     final caption = weekCaption(week);
     return Semantics(
       container: true,
-      label: 'This week: ${week.hit} of ${week.planned} plan days. $caption',
+      label: 'This week: ${week.hit} of ${week.planned} plan '
+          '${week.planned == 1 ? 'day' : 'days'}. $caption',
       excludeSemantics: true,
       child: _Card(
         key: SchedulePane.heroKey,

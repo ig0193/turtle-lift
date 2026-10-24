@@ -120,6 +120,15 @@ void main() {
     test('every plan day done says so, and extra sessions are counted', () {
       final w = week(today: 25, sessions: <int>[19, 21, 23, 24]);
       expect(weekCaption(w), 'All 3 plan days done · +1 extra');
+      expect(
+        weekCaption(week(
+          today: 19,
+          sessions: <int>[19],
+          entries: <TrainingPlanEntry>[plan(1, const <int>{0})],
+        )),
+        'All 1 plan day done',
+        reason: 'singular, not "1 plan days"',
+      );
     });
 
     test('a session on a rest day is extra, not a hit', () {
@@ -233,10 +242,18 @@ void main() {
     setUp(() => database = AppDatabase.forTesting(NativeDatabase.memory()));
     tearDown(() => database.close());
 
+    Future<void> seed(String date, int mask) =>
+        database.into(database.trainingPlanEntries).insert(
+              TrainingPlanEntriesCompanion.insert(
+                effectiveFrom: date,
+                weekdayMask: mask,
+              ),
+            );
+
     test('reads entries back oldest first as domain entries', () async {
       final store = TrainingPlanStore(database);
-      await store.appendEntry('2026-10-20', 0x0A);
-      await store.appendEntry('2026-10-01', 0x15);
+      await seed('2026-10-20', 0x0A);
+      await seed('2026-10-01', 0x15);
 
       expect(await readStoredTrainingPlan(store), <TrainingPlanEntry>[
         plan(1, monWedFri),
@@ -244,17 +261,22 @@ void main() {
       ]);
     });
 
-    test('saving twice on one day replaces that day', () async {
+    test('saving replaces this week onwards and never reaches earlier weeks',
+        () async {
       final store = TrainingPlanStore(database);
-      await store.appendEntry('2026-10-20', 0x15);
-      await store.appendEntry('2026-10-20', 0x01);
+      await seed('2026-10-01', 0x15); // an earlier week's plan
+      await seed('2026-10-21', 0x0A); // a stray mid-week entry
+      await store.replaceFromWeek('2026-10-19', 0x01);
 
       final rows = await store.readEntries();
-      expect(rows, hasLength(1));
-      expect(rows.single.weekdayMask, 0x01);
+      expect(rows.map((r) => r.effectiveFrom), <String>[
+        '2026-10-01',
+        '2026-10-19',
+      ], reason: 'earlier weeks are untouched; this week is replaced whole');
+      expect(rows.last.weekdayMask, 0x01);
     });
 
-    test('the notifier stamps today, persists, and replaces a same-day save',
+    test('the notifier stamps this Monday, persists, and replaces a re-save',
         () async {
       final c = ProviderContainer(overrides: [
         appDatabaseProvider.overrideWithValue(database),
@@ -265,21 +287,61 @@ void main() {
       await log.save(monWedFri);
       await log.save(const <int>{1});
 
-      final today = LocalDate.today();
+      final monday = startOfWeek(LocalDate.today());
       expect(c.read(trainingPlanLogProvider), <TrainingPlanEntry>[
-        TrainingPlanEntry(effectiveFrom: today, weekdays: const <int>{1}),
+        TrainingPlanEntry(effectiveFrom: monday, weekdays: const <int>{1}),
       ]);
       final stored = await readStoredTrainingPlan(TrainingPlanStore(database));
       expect(stored, c.read(trainingPlanLogProvider));
     });
 
-    test('there is no way to edit or delete a past plan', () {
-      // Enforced by absence, like the bodyweight series: a method here would
-      // let a past week be re-read against a plan it was never lived under.
+    test('the only delete is bounded to the current week onwards', () {
+      // A past week must never be re-read against a plan it was not lived
+      // under. There is no update, and the one delete carries a lower bound.
       final source = File('lib/src/data/training_plan.dart').readAsStringSync();
-      expect(source, isNot(contains('_db.delete(')));
+      expect('_db.delete('.allMatches(source), hasLength(1));
+      expect(source, contains('isBiggerOrEqualValue(weekStart)'));
       expect(source, isNot(contains('_db.update(')));
-      expect(source, isNot(contains('.replace(')));
+    });
+
+    test('a plan saved mid-week counts the days earlier in that week',
+        () async {
+      final c = ProviderContainer(overrides: [
+        appDatabaseProvider.overrideWithValue(database),
+        planTodayProvider.overrideWithValue(oct(24)), // a Saturday
+        historySessionsProvider.overrideWithValue(const <HistorySession>[]),
+      ]);
+      addTearDown(c.dispose);
+
+      await c
+          .read(trainingPlanLogProvider.notifier)
+          .save(const <int>{0, 1, 2, 4, 5});
+
+      final summary = c.read(thisWeekSummaryProvider)!;
+      expect(summary.planned, 5,
+          reason: 'Monday to Saturday all belong to this week, so five picked '
+              'days read as five, not as the one that is left today');
+    });
+
+    test('re-saving never changes last week', () async {
+      await seed('2026-10-01', 0x15);
+      final c = ProviderContainer(overrides: [
+        appDatabaseProvider.overrideWithValue(database),
+        planTodayProvider.overrideWithValue(oct(24)),
+        initialTrainingPlanProvider.overrideWithValue(<TrainingPlanEntry>[
+          plan(1, monWedFri),
+        ]),
+        historySessionsProvider.overrideWithValue(const <HistorySession>[]),
+      ]);
+      addTearDown(c.dispose);
+
+      await c.read(trainingPlanLogProvider.notifier).save(const <int>{1, 3});
+
+      expect(c.read(lastWeekSummaryProvider)!.days.map((d) => d.weekday),
+          <int>[0, 2, 4],
+          reason: 'last week keeps the plan it was lived under');
+      expect(c.read(thisWeekSummaryProvider)!.days.map((d) => d.weekday),
+          <int>[1, 3]);
     });
   });
 }

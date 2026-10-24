@@ -62,7 +62,7 @@ Top to bottom: **week summary** (this week as a compact hero — count, a dot pe
 - No plan chosen → the summary becomes one line prompting for days. Never "0 of 0".
 - Copy states counts, never verdicts: "2 of 3 this week · 1 more to go — next is Friday"; after the week, "2 of 3 plan days". No "missed".
 - "N more to go" appears only while plan days remain; today counts as remaining until it has a session.
-- The plan is a dated, immutable series; past weeks resolve against the plan in force then. Hit/not-hit is derived on read, never stored.
+- The plan is a dated series. A saved plan takes effect from the Monday of the current week and replaces anything saved this week; past weeks are immutable and resolve against the plan in force then. Hit/not-hit is derived on read, never stored.
 - Turning **Remind me** on shows an explain-first sheet, then the system permission. Denied: days and summary still work. Notifications are built after this screen; until then the Remind me row is **visible but inert** — the switch and explain-first sheet work, but nothing is scheduled and no system permission is requested. Week starts Monday.
 
 ### Personal details (bodyweight + gender)

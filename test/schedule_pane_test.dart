@@ -167,7 +167,7 @@ void main() {
       final stored = await readStoredTrainingPlan(TrainingPlanStore(database));
       expect(stored, <TrainingPlanEntry>[
         TrainingPlanEntry(
-          effectiveFrom: LocalDate(2026, 10, 21),
+          effectiveFrom: LocalDate(2026, 10, 19),
           weekdays: const <int>{4},
         ),
       ]);

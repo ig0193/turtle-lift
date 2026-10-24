@@ -189,16 +189,27 @@ class TrainingPlanStore {
         .get();
   }
 
-  /// Saves [mask] as the plan from [effectiveFrom] (`YYYY-MM-DD`).
+  /// Saves [mask] as the plan from [weekStart] (`YYYY-MM-DD`, a Monday).
   ///
-  /// An upsert on the date: saving twice on one day replaces that day.
-  Future<void> appendEntry(String effectiveFrom, int mask) async {
-    await _db.into(_db.trainingPlanEntries).insertOnConflictUpdate(
-          TrainingPlanEntriesCompanion.insert(
-            effectiveFrom: effectiveFrom,
-            weekdayMask: mask,
-          ),
-        );
+  /// **Replaces everything saved from [weekStart] onwards, in one transaction.**
+  /// That is the only delete in this file and it can only ever reach the
+  /// current week: [TrainingPlanLog.save] passes this week's Monday, so any
+  /// entry before it -- every week the user has already seen summarised -- is
+  /// untouched. Replacing rather than appending is what lets the user fix a
+  /// plan twice in one week without a stale mid-week entry overriding the new
+  /// one for the days after it.
+  Future<void> replaceFromWeek(String weekStart, int mask) {
+    return _db.transaction(() async {
+      await (_db.delete(_db.trainingPlanEntries)
+            ..where((e) => e.effectiveFrom.isBiggerOrEqualValue(weekStart)))
+          .go();
+      await _db.into(_db.trainingPlanEntries).insert(
+            TrainingPlanEntriesCompanion.insert(
+              effectiveFrom: weekStart,
+              weekdayMask: mask,
+            ),
+          );
+    });
   }
 }
 
@@ -237,20 +248,25 @@ class TrainingPlanLog extends Notifier<List<TrainingPlanEntry>> {
   @override
   List<TrainingPlanEntry> build() => ref.read(initialTrainingPlanProvider);
 
-  /// Saves [weekdays] as the plan from today onwards.
+  /// Saves [weekdays] as the plan from the **start of the current week**.
+  ///
+  /// **Not from today.** A plan that began on the day it was saved would make
+  /// a user who picks five days on a Saturday see "1 of 1", because Monday to
+  /// Friday predate it. The current week is the one the user is looking at and
+  /// has not been reviewed yet; every earlier week keeps the plan it was lived
+  /// under, because [TrainingPlanStore.replaceFromWeek] cannot reach before
+  /// this Monday.
   Future<void> save(Set<int> weekdays) async {
     // The same clock the summaries read, so a saved plan and the week it
     // applies to can never disagree about what day it is.
-    final today = ref.read(planTodayProvider);
-    final entry = TrainingPlanEntry(effectiveFrom: today, weekdays: weekdays);
+    final weekStart = startOfWeek(ref.read(planTodayProvider));
+    final entry = TrainingPlanEntry(effectiveFrom: weekStart, weekdays: weekdays);
     await ref
         .read(trainingPlanStoreProvider)
-        .appendEntry(today.encode(), entry.mask);
+        .replaceFromWeek(weekStart.encode(), entry.mask);
 
-    // Today is by construction the latest date, so drop any entry already on
-    // today and append, keeping the oldest-first order.
     state = <TrainingPlanEntry>[
-      ...state.where((e) => e.effectiveFrom != today),
+      ...state.where((e) => e.effectiveFrom < weekStart),
       entry,
     ];
   }

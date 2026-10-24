@@ -25,8 +25,11 @@ asked what they plan to do that day, and the app never suggests a workout. This
 is a schedule of days, not a split, so the no-split rule holds.
 
 **2. The plan is a dated series, not one value.** A plan entry is the set of
-weekdays plus the date it takes effect. Entries are immutable; a change is a new
-entry that applies from the day it is saved. This is the shape bodyweight
+weekdays plus the date it takes effect. A saved plan takes effect from the
+**Monday of the current week**, not from the day it is saved: otherwise a user
+who picks five days on a Saturday sees "1 of 1", because Monday to Friday
+predate the plan. Saving replaces whatever was saved this week; every earlier
+week is immutable and keeps the plan it was lived under. This is the shape bodyweight
 already uses, for the same reason: one stored pattern, re-read against old
 weeks, would turn every past hit into a miss the moment the user changed a day.
 Hit / not-hit is **derived on read** — a plan day with a session whose
