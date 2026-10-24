@@ -5,8 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
 
-/// Proves the app's first persistence slice round-trips, and that the provider
-/// seam a widget test needs actually works.
+/// Proves the provider seam a widget test needs actually works.
+///
+/// The split filter this file used to round-trip is gone with the exercise-first
+/// Workout tab (`docs/adr/0006-workout-tab-is-exercise-first.md`); its column is
+/// left in the table, unread.
 ///
 /// Everything here runs against an in-memory database. The real constructor
 /// opens a file through `path_provider`, which has no platform channel under
@@ -29,36 +32,8 @@ void main() {
   tearDown(() => database.close());
 
   group('the settings row', () {
-    test('a fresh database has no stored filter', () async {
-      expect(await store.readWorkoutTemplateFilter(), isNull);
-    });
-
     test('a fresh database has no settings row at all', () async {
       expect(await store.rowCount(), 0);
-    });
-
-    test('a written key reads back unchanged', () async {
-      await store.writeWorkoutTemplateFilter('ppl');
-      expect(await store.readWorkoutTemplateFilter(), 'ppl');
-    });
-
-    test('writing twice leaves exactly one row', () async {
-      await store.writeWorkoutTemplateFilter('multi');
-      await store.writeWorkoutTemplateFilter('ppl');
-
-      expect(await store.rowCount(), 1);
-      expect(
-        await store.readWorkoutTemplateFilter(),
-        'ppl',
-        reason: 'the second write updates the row rather than adding one',
-      );
-    });
-
-    test('an unrecognised key is stored and returned verbatim', () async {
-      // The store deals in opaque strings on purpose -- deciding what a key
-      // means belongs to the filter provider, which owns the vocabulary.
-      await store.writeWorkoutTemplateFilter('nonsense');
-      expect(await store.readWorkoutTemplateFilter(), 'nonsense');
     });
   });
 
@@ -75,9 +50,8 @@ void main() {
       addTearDown(container.dispose);
 
       final seamStore = container.read(settingsStoreProvider);
-      await seamStore.writeWorkoutTemplateFilter('single');
 
-      expect(await seamStore.readWorkoutTemplateFilter(), 'single');
+      expect(await seamStore.rowCount(), 0);
     });
 
     test('the override really replaces the default database', () async {

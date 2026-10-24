@@ -1,100 +1,46 @@
-/// The shipped workout templates, and the split filter the Workout landing
-/// groups them by.
+/// The shipped workout templates.
 ///
 /// **Hand-authored, not generated.** `CLAUDE.md`'s generated-data table covers
 /// the body diagrams, the muscle taxonomy and the exercise library — templates
 /// are not in it, there is no generator for them, and `tool/sync_generated.sh`
 /// would not guard them. So this file is edited directly, and
-/// `test/workout_templates_test.dart` is what stops it drifting from the set
-/// `docs/01-app-idea.md` describes.
+/// `test/workout_templates_test.dart` is what stops it drifting from the
+/// exercise library it points into.
+///
+/// **A template is a list of exercises** (`docs/adr/0006-workout-tab-is-exercise-first.md`).
+/// Starting one copies that list into the session; nothing a session does writes
+/// back here.
 library;
 
+import 'exercise_index.dart';
 import 'generated/muscle_taxonomy.dart';
 
-/// How the Workout landing groups the predefined templates.
+/// One workout template: an ordered shortlist of exercises to start a session
+/// with.
 ///
-/// **A filter over single-day templates, not a training programme.** The app
-/// has no multi-day split system, no rotation and no "today's workout"
-/// (`docs/01-app-idea.md`), and this enum must not become the seed of one: it
-/// says which templates are *shown*, never which one to do. Nothing stores
-/// "the user's split", nothing advances it, and nothing here knows what day it
-/// is.
+/// **Exercise ids only.** Names, equipment and muscles are read from the
+/// exercise library at render time, so a correction to the library reaches every
+/// template with no migration. The muscle line a row shows is derived by
+/// [templateSubtitle], never stored.
 ///
-/// **There is no unfiltered value.** Every arrival lands in a named split, so
-/// each of the three must always have at least one template behind it — the
-/// membership test in `test/workout_templates_test.dart` is what keeps that
-/// true, because an empty filter is a dead end with no "All" to escape to.
-enum TemplateFilter {
-  /// One muscle group per session. Arms day counts as one: that is the user's
-  /// reading, not the taxonomy's, and it is why this is not called
-  /// "single parent group".
-  singleMuscle('single', '1 Muscle per day'),
-
-  /// Two or more groups in a session, including the whole-body days.
-  multiSplit('multi', 'Multi Split'),
-
-  /// The push / pull / legs trio.
-  pushPullLegs('ppl', 'Push-Pull-Legs');
-
-  const TemplateFilter(this.key, this.label);
-
-  /// What gets persisted. **Never store [label]** — it is display copy, and a
-  /// wording change would strand every value already written to disk.
-  final String key;
-
-  /// What the filter control shows.
-  final String label;
-
-  /// The filter for a stored [key], or null when the key is absent or is one
-  /// this build does not recognise.
-  ///
-  /// Returning null rather than throwing is deliberate: an unreadable stored
-  /// value is a user who downgraded or hand-edited the database, and the right
-  /// answer is the ordinary default, not a crash on the app's first screen.
-  static TemplateFilter? fromKey(String? key) {
-    if (key == null) return null;
-    for (final filter in values) {
-      if (filter.key == key) return filter;
-    }
-    return null;
-  }
-}
-
-/// One workout template: a curated shortlist of muscle groups to browse within.
-///
-/// **A template stores parent muscle groups only** (`docs/00-build-spec.md`
-/// §2). Sub-groups are derived from [kMuscleTaxonomy] at render time, so a
-/// sub-group added to the taxonomy later is picked up by every existing
-/// template with no migration.
-///
-/// **It is a menu, not a checklist.** Nothing in a template is ever "finished"
-/// and no group carries a completion state, which is why a seven-group day is
-/// unremarkable rather than daunting.
+/// **A starting point, not a contract.** The list can be added to, reordered and
+/// shortened once the session is running; the template itself is untouched.
 class WorkoutTemplate {
   const WorkoutTemplate({
     required this.id,
     required this.name,
-    required this.groupIds,
-    required this.filters,
+    required this.exerciseIds,
     this.isPredefined = true,
     this.subtitleOverride,
   });
 
-  /// Stable across renames of [name]; this is what a session will reference.
+  /// Stable across renames of [name]; this is what a session references.
   final String id;
 
   final String name;
 
-  /// Parent muscle group ids, in taxonomy order. Never sub-group ids.
-  final List<String> groupIds;
-
-  /// Which filters show this template.
-  ///
-  /// **A set, not a single value.** Leg day genuinely belongs to both
-  /// [TemplateFilter.singleMuscle] and [TemplateFilter.pushPullLegs], so the
-  /// eleven templates carry twelve memberships between them. A single field
-  /// here would force a duplicate row or an arbitrary choice.
-  final Set<TemplateFilter> filters;
+  /// Library exercise ids, in the order the session lists them.
+  final List<String> exerciseIds;
 
   /// False only for templates the user authored. Predefined ones are immutable
   /// — a user duplicates one to get an editable copy (`docs/00-build-spec.md`
@@ -103,17 +49,42 @@ class WorkoutTemplate {
 
   /// Replaces the derived subtitle for the one template the join does not suit.
   ///
-  /// Full body day spans all twelve groups, so joining its labels would render
-  /// a line roughly four times longer than any other row on the screen.
-  /// `prototypes/workout-l0-filtered-templates.html` already made that call,
-  /// and the prototype governs this screen's layout.
+  /// Full body day spans a dozen muscle groups, so joining their labels would
+  /// render a line roughly four times longer than any other row on the screen.
   final String? subtitleOverride;
+}
 
-  /// The second line of the template's row.
-  ///
-  /// Derived on read rather than stored, like every other display value in the
-  /// app — the labels live in generated data that this file must not copy.
-  String get subtitle => subtitleOverride ?? muscleGroupSummary(groupIds);
+/// The parent muscle groups [template]'s exercises train directly, in taxonomy
+/// order.
+///
+/// **Primary muscles only**, matching what the rest of the app means by "trained
+/// directly". An exercise id the library no longer has contributes nothing
+/// rather than failing the screen.
+List<String> templateGroupIds(WorkoutTemplate template, ExerciseIndex index) {
+  final wanted = <String>{};
+  for (final id in template.exerciseIds) {
+    final exercise = index.byId(id);
+    if (exercise == null) continue;
+    for (final subGroupId in exercise.primary) {
+      final parent = kSubMuscleGroups[subGroupId]?.group;
+      if (parent != null) wanted.add(parent);
+    }
+  }
+  return <String>[
+    for (final id in kMuscleTaxonomy.keys)
+      if (wanted.contains(id)) id,
+  ];
+}
+
+/// The second line of a template's row: the muscles its exercises train.
+///
+/// Derived on read, like every other display value in the app — the labels live
+/// in generated data that this file must not copy. An empty template has no
+/// muscles to name, so it says what it is instead of rendering a blank line.
+String templateSubtitle(WorkoutTemplate template, ExerciseIndex index) {
+  if (template.subtitleOverride != null) return template.subtitleOverride!;
+  final summary = muscleGroupSummary(templateGroupIds(template, index));
+  return summary.isEmpty ? 'No exercises yet' : summary;
 }
 
 /// Parent group ids rendered as one line: the first label as the taxonomy
@@ -121,7 +92,7 @@ class WorkoutTemplate {
 ///
 /// Sentence case rather than a raw join, because every value in
 /// [kMuscleGroupLabels] is capitalised and "Chest, Triceps" reads as two
-/// proper nouns. The prototype's rows are sentence-cased for the same reason.
+/// proper nouns.
 ///
 /// Ordering comes from [kMuscleTaxonomy], not from the order the ids were
 /// handed over, so two templates naming the same groups always render the same
@@ -140,108 +111,148 @@ String muscleGroupSummary(List<String> groupIds) {
   ].join(', ');
 }
 
-/// The templates [filter] shows, in the order they are authored below.
-List<WorkoutTemplate> templatesFor(TemplateFilter filter) => <WorkoutTemplate>[
-      for (final template in kPredefinedTemplates)
-        if (template.filters.contains(filter)) template,
-    ];
-
 /// The eleven templates that ship with the app.
 ///
-/// Nine come from `docs/01-app-idea.md`; Chest day and Back day were added so
-/// [TemplateFilter.singleMuscle] covers the two big pushing and pulling groups
-/// rather than jumping from shoulders to arms.
+/// **The order here is the order the landing renders them in**: the three
+/// push/pull/legs days, then the single-focus days, then the combined ones.
+/// Each list leads with its heaviest compound lift and is a shortlist of what
+/// people commonly do on that day, not a prescription.
 ///
-/// **The order here is the order every filter renders in.** It is arranged so
-/// that filtering this one list yields each filter's curated sequence — the
-/// single-muscle days first, then the trio, then the multi-group days — rather
-/// than needing a per-filter ordering.
+/// A row's muscle line is derived from these lists, so choosing an exercise that
+/// trains a neighbouring group as a *primary* (face pull, hammer curl) changes
+/// what the template says it covers. `test/workout_templates_test.dart` pins
+/// each template's derived line so that cannot happen by accident.
 const List<WorkoutTemplate> kPredefinedTemplates = <WorkoutTemplate>[
-  WorkoutTemplate(
-    id: 'chest',
-    name: 'Chest day',
-    groupIds: <String>['chest'],
-    filters: <TemplateFilter>{TemplateFilter.singleMuscle},
-  ),
-  WorkoutTemplate(
-    id: 'back',
-    name: 'Back day',
-    groupIds: <String>['back'],
-    filters: <TemplateFilter>{TemplateFilter.singleMuscle},
-  ),
-  WorkoutTemplate(
-    id: 'shoulders',
-    name: 'Shoulders day',
-    groupIds: <String>['shoulders'],
-    filters: <TemplateFilter>{TemplateFilter.singleMuscle},
-  ),
-  WorkoutTemplate(
-    id: 'arms',
-    name: 'Arms day',
-    // "Arms" is not a parent group. The taxonomy splits it, and a template
-    // stores what the taxonomy has.
-    groupIds: <String>['biceps', 'triceps'],
-    filters: <TemplateFilter>{TemplateFilter.singleMuscle},
-  ),
   WorkoutTemplate(
     id: 'push',
     name: 'Push day',
-    groupIds: <String>['chest', 'shoulders', 'triceps'],
-    filters: <TemplateFilter>{TemplateFilter.pushPullLegs},
+    exerciseIds: <String>[
+      'barbell-bench-press',
+      'incline-dumbbell-press',
+      'barbell-overhead-press',
+      'dumbbell-lateral-raise',
+      'cable-rope-pushdown',
+      'overhead-cable-triceps-extension',
+    ],
   ),
   WorkoutTemplate(
     id: 'pull',
     name: 'Pull day',
-    groupIds: <String>['back', 'biceps'],
-    filters: <TemplateFilter>{TemplateFilter.pushPullLegs},
+    exerciseIds: <String>[
+      'lat-pulldown',
+      'barbell-bent-over-row',
+      'seated-cable-row',
+      'single-arm-dumbbell-row',
+      'barbell-curl',
+      'incline-dumbbell-curl',
+    ],
   ),
   WorkoutTemplate(
     id: 'leg',
     name: 'Leg day',
-    groupIds: <String>['quads', 'hamstrings', 'glutes', 'calves'],
-    // The one template in two filters: it is both the legs of push/pull/legs
-    // and a single-focus day in its own right.
-    filters: <TemplateFilter>{
-      TemplateFilter.singleMuscle,
-      TemplateFilter.pushPullLegs,
-    },
-  ),
-  WorkoutTemplate(
-    id: 'upper-body',
-    name: 'Upper body day',
-    groupIds: <String>['chest', 'back', 'shoulders', 'biceps', 'triceps'],
-    filters: <TemplateFilter>{TemplateFilter.multiSplit},
-  ),
-  WorkoutTemplate(
-    id: 'full-body',
-    name: 'Full body day',
-    groupIds: <String>[
-      'chest',
-      'back',
-      'shoulders',
-      'biceps',
-      'triceps',
-      'forearms',
-      'abs',
-      'obliques',
-      'quads',
-      'hamstrings',
-      'glutes',
-      'calves',
+    exerciseIds: <String>[
+      'barbell-back-squat',
+      'barbell-romanian-deadlift',
+      'leg-press',
+      'seated-leg-curl',
+      'walking-lunge',
+      'standing-calf-raise-machine',
     ],
-    filters: <TemplateFilter>{TemplateFilter.multiSplit},
-    subtitleOverride: 'A mix across all major groups',
+  ),
+  WorkoutTemplate(
+    id: 'chest',
+    name: 'Chest day',
+    exerciseIds: <String>[
+      'barbell-bench-press',
+      'incline-dumbbell-press',
+      'chest-dip',
+      'pec-deck-machine',
+      'low-to-high-cable-crossover',
+    ],
+  ),
+  WorkoutTemplate(
+    id: 'back',
+    name: 'Back day',
+    exerciseIds: <String>[
+      'pull-up',
+      'barbell-bent-over-row',
+      'lat-pulldown',
+      'seated-cable-row',
+      'single-arm-dumbbell-row',
+    ],
+  ),
+  WorkoutTemplate(
+    id: 'shoulders',
+    name: 'Shoulders day',
+    exerciseIds: <String>[
+      'barbell-overhead-press',
+      'arnold-press',
+      'dumbbell-lateral-raise',
+      'cable-lateral-raise',
+      'reverse-pec-deck',
+    ],
+  ),
+  WorkoutTemplate(
+    id: 'arms',
+    name: 'Arms day',
+    exerciseIds: <String>[
+      'barbell-curl',
+      'close-grip-bench-press',
+      'incline-dumbbell-curl',
+      'cable-rope-pushdown',
+      'preacher-curl',
+      'overhead-cable-triceps-extension',
+    ],
   ),
   WorkoutTemplate(
     id: 'chest-triceps',
     name: 'Chest and triceps day',
-    groupIds: <String>['chest', 'triceps'],
-    filters: <TemplateFilter>{TemplateFilter.multiSplit},
+    exerciseIds: <String>[
+      'barbell-bench-press',
+      'incline-dumbbell-press',
+      'chest-dip',
+      'pec-deck-machine',
+      'cable-rope-pushdown',
+      'ez-bar-skull-crusher',
+    ],
   ),
   WorkoutTemplate(
     id: 'back-biceps',
     name: 'Back and biceps day',
-    groupIds: <String>['back', 'biceps'],
-    filters: <TemplateFilter>{TemplateFilter.multiSplit},
+    exerciseIds: <String>[
+      'pull-up',
+      'barbell-bent-over-row',
+      'lat-pulldown',
+      'seated-cable-row',
+      'barbell-curl',
+      'incline-dumbbell-curl',
+    ],
+  ),
+  WorkoutTemplate(
+    id: 'upper-body',
+    name: 'Upper body day',
+    exerciseIds: <String>[
+      'barbell-bench-press',
+      'barbell-bent-over-row',
+      'barbell-overhead-press',
+      'lat-pulldown',
+      'dumbbell-lateral-raise',
+      'barbell-curl',
+      'cable-rope-pushdown',
+    ],
+  ),
+  WorkoutTemplate(
+    id: 'full-body',
+    name: 'Full body day',
+    exerciseIds: <String>[
+      'barbell-back-squat',
+      'barbell-bench-press',
+      'barbell-bent-over-row',
+      'barbell-overhead-press',
+      'barbell-romanian-deadlift',
+      'standing-calf-raise-machine',
+      'plank',
+    ],
+    subtitleOverride: 'A mix across all major groups',
   ),
 ];

@@ -1,137 +1,127 @@
 # Workout tab — user flow
 
-**Purpose:** start and run a workout session — either by choosing a saved single-day workout template, or by building a one-off ad-hoc session via exercise search.
+**Purpose:** start and run a workout session — either by choosing a saved single-day workout template, or by starting empty and adding exercises as you go.
 
 **Entry point:** Home → Workout tab.
 
 **Important:** the app does not suggest or auto-select a workout. There is no "today's workout," no rotation logic, no AI, and no multi-day split system — every workout template is a single, self-contained day (e.g. "Push day" on its own, not day 1 of a weekly plan). The user always makes an active choice.
 
+**The model (`docs/adr/0006-workout-tab-is-exercise-first.md`):** a session is a list of exercises. A template is a pre-filled list; an ad-hoc session is an empty one. Muscles *describe* the list (the live body map) and never *navigate* it — the Muscles tab is where you discover which exercise trains what. Visual references: `prototypes/workout-tab-options.html` (landing, session, logging) and `prototypes/workout-start-moment.html` (the start moment, variant P2). Where they differ on layout, the prototypes win; where they differ on a rule, this document wins.
+
 ---
 
 ## Step 1 — The Workout landing
 
-**The landing *is* the template list.** There is no intermediate picker screen and no pair of entry buttons: the templates are on screen the moment the tab opens. Two things follow, and both are the reason for the shape. Day one shows real content rather than an empty state, because eleven templates ship with the app. And starting a saved workout is one tap rather than three.
+**The landing is where a workout starts, with content on day one.** Eleven templates ship, so there is no empty state and no zero-data condition to design for.
 
 ### Anatomy, top to bottom
 
 | Row | What it is |
 |---|---|
 | Pinned header | `Workout`. Outside the scroll body — it never moves. |
-| `TEMPLATES` | A quiet small-caps group label, with the split filter control on its right. |
-| Count line | `4 templates` — how many the current split yields. |
-| Template rows | The predefined templates for the selected split, in a curated order. |
-| `YOUR TEMPLATES` | The user's own templates, in their own group. **Absent entirely when they have none** — not a heading over nothing. |
-| `Ad-hoc workout` | A single entry below every group, on the muted surface so it reads as a different kind of thing rather than one more template. |
+| Search field | Filters by name, across **templates and exercises**. See below. |
+| `MY TEMPLATES` | The user's own templates, as a horizontal rail of tiles. **Absent entirely when they have none** — not a heading over nothing. |
+| `READY-MADE` | The eleven predefined templates, as a two-column grid of tiles, in a fixed order. |
+| `Manage templates` | A quiet row below the grid: the visible route to the template library on the Profile tab. Navigation, not authoring. |
+| **Start workout** bar | **Pinned above the tab bar**, not scrolled with the list: `Start workout` over `Add exercises as you go`. |
 | Floating tab bar | Over the content, as on every L0 root. |
 
-The body is the scrollable and carries the gutter plus the tab bar's inset itself; the header is the `Scaffold.appBar` and sits outside it.
+The body is the scrollable and carries the gutter plus the tab bar's inset **and the pinned bar's height** itself; the header is the `Scaffold.appBar` and sits outside it.
 
-### The split filter
+### There is no split filter
 
-A control beside the group label filters the predefined templates to one of three splits: **1 Muscle per day**, **Multi Split**, or **Push-Pull-Legs**.
+The three-way split control (1 Muscle per day / Multi Split / Push-Pull-Legs) is gone. Its job was to keep a long list manageable, but eleven templates fit in about a screen and a half, the labels meant nothing to a new user, and with no unfiltered value the list on screen was always a subset. One flat list in a fixed order is simpler and hides nothing. **Nothing stores a "split"**, and a template belongs to no category.
 
-- **There is no unfiltered value.** Every arrival lands in a named split, so each of the three must always have at least one template behind it — an empty split would be a dead end with no "All" to escape to.
-- **First launch shows Multi Split**; after that the screen opens on whichever split the user last chose. That choice is read *before the first frame*, so the list never renders one split and swaps to another.
-- **It is a view filter, not a declared programme.** This is the same line the note at the top of this document draws. It changes which templates are listed and nothing else: it never advances, never rotates, never suggests, and does not know what day it is.
-- **A template may belong to more than one split.** Leg day is both the legs of push/pull/legs and a single-focus day, so the eleven templates carry twelve memberships between them.
-- **Membership lives in one place** — with the template data in `lib/src/data/workout_templates.dart`. It is deliberately not copied into these docs, because two copies drift.
+### A template tile
 
-The control shows a filter glyph, the current split's name, and a caret. **The name is not decoration:** with no unfiltered value the list on screen is always a subset, so a control that showed only an icon would leave a user seeing three rows concluding the app ships three templates.
+Each tile is the template's **name**, the **muscles its exercises train** (derived from those exercises' primary muscles, in taxonomy order, sentence case: `Chest, shoulders, triceps`), and **how many exercises** it has. **Full body day** is the one exception to the derived line — it spans a dozen groups — and carries `A mix across all major groups`. A template with no exercises says `No exercises yet`.
 
-Tapping it opens a **dropdown anchored under the control**, right edges aligned — the menu belongs to the chip that opened it. Three options, the current one marked. It is painted from the app's own surfaces rather than taking Material's popup defaults, which would bring an elevation and surface tint used nowhere else here. The accepted trade is reach: a dropdown lands at the top of the screen, which is the harder half to touch one-handed, and the control's 48pt target is what keeps that round trip manageable.
+Tapping a tile opens a **preview sheet**: the name, the muscle line, the numbered exercise list with equipment, `Start workout` and `Cancel`. Starting a template is therefore **two taps**, and the sheet is the one look at what is about to be committed to. Nothing is created until `Start workout`.
 
-### A template row
+### Search
 
-Each row is the template's **name** over its **parent muscle groups**, with a chevron, and is tappable across a comfortable target — this screen is used standing, often one-handed, between sets.
+One field, **by name**, over templates and exercises:
 
-The muscle line is derived from the taxonomy at render time, never stored: the labels are joined in taxonomy order, in sentence case (`Chest, shoulders, triceps`). **Full body day is the one exception** — it spans all twelve parent groups, so the literal join would run about four times longer than any other row, and it carries the bespoke line `A mix across all major groups` instead.
+- With the field empty, the rail and the grid show.
+- Typing shows `TEMPLATES` (matching names, your own included) then `EXERCISES · TAP TO START LOGGING`. **Tapping an exercise starts an ad-hoc workout with that exercise** and goes straight to its logging screen (or its page first, if the user has never done it — Step 3).
+- Nothing matching shows `Nothing matches that name.`
 
-Tapping a row opens the workout overview for that template. It does **not** create a session yet; see Step 2.
+### Start workout
 
-### Ad-hoc workout
-
-Search for exercises directly and add them to a session. No template or muscle-group structure required — for a user who already knows exactly what they want to do (e.g. following a YouTube trainer's routine), or who wants a one-off session without saving a reusable template.
-
-- Adding an exercise via search just places it in the session's exercise list with a "not started" state — it does not require logging immediately.
-- Logging is a separate action, reached by tapping into any exercise in the list.
-- This means both usage patterns are supported naturally with no extra UI: a user can search → tap an exercise → land straight on the log screen for it (log-as-you-go), or search and add several exercises first, then tap into each one at their own pace (plan-ahead). There's no forced order — it's the same list and the same tap-to-log interaction either way.
+Starts an **empty** workout, in place, on the ready view (Step 2). It creates the session immediately: the ready view carries a `Discard workout` action, so a user who changes their mind is never stranded in an empty session.
 
 ### Custom templates
 
-Custom templates sit **outside** the filter and are shown whichever split is selected. With no unfiltered value to fall back on, filing them under one split would make a user's own template invisible from the other two — and a classifier would put a single-muscle custom template under Multi Split while the predefined equivalent sat under 1 Muscle per day, which reads as a bug.
-
-Creating and editing them happens **on the Profile tab**, never here; this screen only selects an already-saved template to run. Until that authoring flow exists, the group is always absent.
+Created by **Save as template** on a finished workout's summary (Step 6). **Renaming, duplicating and deleting happen on the Profile tab**, never here. A custom template is the same kind of thing as a predefined one, so its tile is identical: only the `MY TEMPLATES` label sets it apart.
 
 ### What this screen deliberately does not have
 
-- **No empty state.** Eleven templates ship, so there is no zero-data condition for it to be in. An empty state here would be the bug.
-- **No Resume card, and no in-progress session UI.** An active session replaces this tab root entirely — see Step 2b.
-- **No streak, no last-session recall, no body diagram, no muscle-coverage chips.** Each was considered and cut; the screen's job is to be left quickly.
+- **No empty state.**
+- **No Resume card, and no in-progress session UI.** An open session replaces this tab root entirely — see Step 2c.
+- **No streak, no last-session recall, no body diagram, no muscle-coverage chips.**
 - **No suggestion of any kind.** Nothing here states or implies a schedule, a rotation, or a recommended workout.
 
-Both paths — a template and ad-hoc — converge into the same underlying session-running experience from Step 2 onward, just with different starting inputs.
+---
 
-## Step 2 — Workout overview
+## Step 2 — Starting: the ready view
 
-- **Session date control.** The overview header shows the date this session will be saved under, defaulting to **today**. Tapping it opens a date picker so the user can log a workout they did earlier in the week. This exists because the app explicitly supports retrospective logging (see the note on why duration isn't tracked in `01-app-idea.md`) — without an editable date, a Monday session logged on Tuesday would be filed on the wrong day and would break the user's streak with no way to fix it.
-  - Defaults to today; the vast majority of sessions never touch this control.
-  - **Clamped to today or earlier** — future dates are not selectable.
-  - Applies to both paths, and to single-exercise quick logs.
-  - Stored as `performedOn`, a local calendar date — see the session data model in `01-app-idea.md`.
-  - When the date is anything other than today, show it prominently (e.g. the header reads "Mon 28 Jul" rather than a subtle chip) so the user can't backdate by accident and not notice.
+**Starting a workout must feel like starting one**, not like one list being replaced by another. So Start (from the bar, or `Start workout` in a template's preview) opens the session on a **ready view**, and the list appears only once the user taps **Start logging**:
 
-- **Session title.** The overview header shows an editable session title. There is **no caption line** under the header — the title is the only text identifying the session, so nothing else needs to stay in sync with it.
-  - **Template path:** prefilled with the template name (e.g. "Push day"). Without this the header would be blank and the user would lose any indication of which template they're running.
-  - **Ad-hoc path:** starts **empty**. The user is never blocked on naming anything; they can leave it empty for the whole session and name it at the end, or never.
-  - The title is also inline-editable on the summary card after finishing — see Step 6. A blank title is always resolved for display via the fallback chain in `01-app-idea.md`; it is never shown blank in history or on a share card.
-  - Cap at **40 characters** — it is the hero text on a ~300px-wide share card.
+- The pulsing "Workout in progress" strip is **not** shown yet: the workout is being set up.
+- The **body map at its largest**. A template shows the muscles its exercises train as **outlines** (see the map, Step 2a).
+- One line — `N exercises planned` for a template, `Nothing logged yet` for an empty start.
+- One primary button: **Start logging**.
+- `Discard workout` (no `Finish` — there is nothing to finish yet).
 
-- Both paths show a **muscle map that starts uncolored and heats up live as exercises are logged during the session** — a running visual record of what's actually been worked, not a static preview.
-  - **Every time an exercise is marked complete, the muscles that exercise trains fill in on the map**: primary muscles at accent-strong (`#D85A30`), secondary muscles at accent-light (`#F0997B`). See the muscle map live fill animation below.
-  - Resolve which diagram region to fill via the `segments` list in `muscle_taxonomy.dart` — not by string-matching the sub-muscle group id against the SVG. Most sub-groups map 1:1, several fill segments in both views, and side delt fills the front shoulder segment. All three cases are handled by the same lookup.
-  - **Template path:** the template's sub-muscle groups appear as faint outlines from the start, so the user sees at a glance what today covers. Each outlined region heats up once an exercise training it has actually been logged, not just planned.
-  - **Ad-hoc workout:** no outlines exist upfront, since there's no predefined plan. The map starts fully neutral and only gains colour as exercises are logged.
+**Start logging** opens the **exercise picker** (Step 3) as a tall sheet over the map. The map stays visible behind it, so choosing an exercise reads as something done *in* the workout. Dismissing the sheet leaves the user on the **list**, not back on a button they have already pressed.
 
-- Alongside the map, both paths show a list. **The two paths show different lists — this is intentional, not an inconsistency:**
+**What "started logging" is.** It is true once the user taps Start logging or opens any exercise, and it is also true whenever anything has been written to the session — so a restart mid-workout lands on the list, and a restart with nothing written lands back on the ready view. **It is held in memory only; nothing is stored for it.**
 
-  - **Template path — a nested muscle list.** Parent muscle groups from the template, each expanding to its sub-muscle groups (accordion). Rows are derived from `muscle_taxonomy.dart`, never stored on the template. A sub-muscle group row shows a **tick** when it has been trained this session, and shows nothing otherwise.
-    - **Parents with only one sub-muscle group render as a single flat row with no accordion** — biceps, triceps, forearms, obliques, quads, hamstrings, glutes, calves. Only chest, back, shoulders and abs expand. So an Arms day is two flat rows, not two accordions each hiding one identical child.
-    - **Side delt gets its own row like any other sub-muscle group**, even though it shares the front-delt diagram segment. See the side-delt mapping exception in `01-app-idea.md`; the list is driven by the taxonomy, the map by the segment mapping, and only the latter has the exception.
-  - **Ad-hoc path — a flat exercise list.** The exercises the user has added, each with a per-exercise state: not started / in progress / done. There is no muscle list on this path, because there is no template to derive one from.
+## Step 2a — The session screen
 
-- **The `trained` state — precise definition.** This is the single most misread part of this screen, so it is spelled out exhaustively:
-  - A sub-muscle group is `trained` when **at least one exercise whose PRIMARY muscles include it has a completed set in this session, or has been marked done.**
-  - **A completed set is enough; Mark exercise done is not required.** A user who logs three sets and walks to the next machine has trained that muscle, and making the tick wait for a button they never tapped would leave the summary disagreeing with the work they just did. Mark exercise done remains the "I am finished here" signal.
-  - **Primary only. Secondary muscles never set the tick.** Incline dumbbell press is primary upper chest, secondary front delt and triceps. On a Push day it ticks upper chest and nothing else — the triceps row stays unticked, because the user has not done a triceps movement.
-  - `trained` is **derived on read, never stored.** There is no muscle-level completion record in the data model. The tick is computed from the session's completed exercises and the exercise library's primary-muscle mapping, exactly like the muscle map fill and the streak. Nothing to write, nothing to reset, nothing that can drift.
-  - It is **binary and read-only.** There is no "not started" state to store or render, no "in progress", and no way for the user to tick or untick a muscle directly.
-  - **It gates nothing.** Finish workout is available at any point, with any number of muscles unticked. Muscle groups are a menu of options, not a checklist to complete.
-  - Name the field `trained` in the model, **not `done`** — "done" implies a target the app's philosophy explicitly does not set.
+Once logging has started, the screen is, top to bottom:
 
-- **Map and list deliberately disagree, and this must not be "fixed".** After an incline press on a Push day, triceps fills lightly on the map but its list row stays unticked. The map answers *"what got worked"* (primary and secondary). The list answers *"what have I trained directly"* (primary only). Both are correct; they answer different questions.
+1. **The live strip** — a pulsing accent dot (one pulse as it appears, not a loop), `WORKOUT IN PROGRESS`, and the **clock** on the right. See below.
+2. **The date control and progress** — the session date on the left, `N of M done` on the right.
+3. **The body map** — front and back, the hero of the screen. It **shrinks in steps as the list grows** (3 or fewer exercises 176pt, 4–5 152pt, 6–7 128pt, 8 or more 108pt) so the next exercise stays on screen.
+4. **`KEEP LOGGING`** — the exercise list, in the order it was built, with the **first exercise that is not done tagged `UP NEXT` and outlined in the accent**.
+5. `+ Add exercise`, then **Finish workout** and **Discard workout**.
 
-- **Templates are locked to their own muscle groups.** On the template path the user **cannot add an exercise outside the template's muscle groups.** A template is a fixed, coherent set of muscles the user chose to train, and keeping it sane is the point of choosing one. If the plan isn't decided, that's what the ad-hoc path is for.
-  - Consequence, accepted deliberately: someone on Push day who wants to finish with barbell curls must finish that session and start an ad-hoc one, producing two history entries for one gym visit. Both count, both share the same `performedOn`, and the streak is unaffected.
-  - This does **not** restrict swapping exercises — Step 3 already offers every equivalent exercise within a sub-muscle group, which covers the occupied-machine case.
-  - The "Add to current workout" action in the Muscle Groups tab therefore appears **only during ad-hoc sessions**. See `03-muscle-groups-tab-userflow.md`.
+- **Session date control.** The header shows the date this session will be saved under, defaulting to **today**. Tapping it opens a date picker so the user can log a workout they did earlier in the week — retrospective logging is first-class (see `01-app-idea.md`). **Clamped to today or earlier.** Applies to both paths. Stored as `performedOn`, a local calendar date. When it is anything other than today it is shown prominently (`Mon 28 Jul`) so the user can't backdate by accident and not notice.
+- **Session title.** The pinned header shows an editable session title, **capped at 40 characters** — it is the hero text on a share card. **Template path:** prefilled with the template name. **Ad-hoc path:** starts **empty**; the user is never blocked on naming anything. A blank title is always resolved for display via the fallback chain in `01-app-idea.md`.
+- **The list rows.** Each row is the exercise name, its logged sets (`60x10 · 60x8`), and a progress tag: `To do` / `In progress` / `Done`, **derived** from the sets and the one stored `markedDone` flag. Tapping a row opens that exercise (Step 3). Swipe or long-press removes it (asking first if it has completed sets).
+- **The map.** It starts uncoloured and heats up live: **every time an exercise gets a completed set or is marked done, the muscles it trains fill in** — primary at accent-strong (`#D85A30`), secondary at accent-light (`#F0997B`). A muscle the workout *plans* to train but has not worked is **outlined** in the accent (primary muscles of every exercise on the list); an outline never sits on a filled muscle. Resolve diagram regions via the `segments` list in `muscle_taxonomy.dart`, not by string-matching.
+- **There is no muscle list and no `trained` tick.** The map is the one place muscles appear on this screen.
 
-## Step 2b — Session persistence and resume
+### The clock
+
+A live elapsed clock beside the "Workout in progress" strip, and under the exercise name on the logging screen.
+
+- **Display-only.** It is never stored and is shown **nowhere else** — not in History, not on the summary card, not on the share card. That keeps the reason `01-app-idea.md` gives for "no workout duration" intact: retrospective logging makes a stored duration meaningless.
+- It counts from when the workout started (`loggedAt`), which is within seconds of the Start logging tap, and shows `m:ss`, or `h:mm:ss` from the first hour.
+- **It shows only for a workout that is happening now:** one dated the day it was started, and under **six hours** old. A backdated session never shows a clock, and one left open for days never shows a meaningless one. (Compared against the day the workout *started*, not today, so a session that crosses midnight keeps its clock.)
+
+## Step 2c — Session persistence and resume
 
 - **An active session persists indefinitely.** It is never auto-discarded on app close, on a date change, or after any timeout.
-- Returning to the Workout tab with a session still open shows **the session itself** — it replaces the landing, so the template list and the ad-hoc entry are not on screen. There is no Resume card. **Note:** this removes the trigger for the auto-save rule below, which fires when a new workout is started while one is open. The rule stands; the entry point that fires it has to be restored when this screen is built. See `docs/adr/0003-l0-navigation-variant-a.md`.
+- Returning to the Workout tab with a session still open shows **the session itself** — it replaces the landing, so the template list and the ad-hoc entry are not on screen. There is no Resume card. The entry point for the auto-save rule below is the **list glyph in the open workout's header**, which pushes the same landing the Workout tab shows when nothing is open (search, tiles, Start workout). See `docs/adr/0003-l0-navigation-variant-a.md`.
 - **Starting a new workout while one is still open auto-saves the old one** rather than discarding it or blocking the user:
   - If the abandoned session has **at least one completed set**, it is saved to history exactly as if Finish had been tapped. Show a brief toast ("Chest and triceps day saved") — work must not vanish silently into history.
   - If it has **zero completed sets**, discard it silently. Saving it would create an empty session that counts toward the streak, contradicting the rule in `01-app-idea.md`.
   - **The auto-saved session keeps its original `performedOn`**, not today's date. A Monday session abandoned and auto-saved on Wednesday must still file as Monday, or the streak is wrong.
 - Only one session can be active at a time.
 
-## Step 3 — Selecting what to log next
+## Step 3 — Choosing what to log
 
-- **Template path:** user expands a parent muscle group, taps a sub-muscle group (e.g. "upper chest"), and is shown equivalent exercise options that train it (e.g. incline barbell press, incline dumbbell press, incline machine press). This lets the user switch exercises on the fly if a machine is occupied.
-  - **Tapping an exercise goes straight to the set-logging screen — not to exercise detail first.** The app's promise is speed; routing every logging action through a reference screen taxes the majority who already know the lift. Exercise detail is one tap away via an **info button in the logging screen header**.
-    - **One exception: if the user has never logged this exercise (`timesPerformed == 0`), land on exercise detail first.** They cannot know a lift they have never done, and this targets exactly that case using data already available. From there a primary action starts logging.
-  - **A ticked sub-muscle group remains tappable**, and opens the same exercise list with any exercise already logged this session pinned to the top, showing its logged sets. This is the only route back in to add a fourth set or correct a mistyped weight, so it must not be disabled once the tick appears.
-- **Ad-hoc path:** user taps an already-added exercise in the list to log it, or searches to add another exercise to the list at any point — before or after logging others. Adding and logging are independent actions using the same list.
+There is one way to choose an exercise from a list, and every list ends there (`openExerciseForLogging`).
+
+- **The exercise picker** is a tall modal sheet: a title (`What are you starting with?` the first time, `Add an exercise` after), a search field, a row of **muscle filter chips** (`All`, then the twelve parent groups), and the exercises. **The workout's own exercises come first under `IN THIS WORKOUT`**, then `ADD ANOTHER` (or `EXERCISES` when the workout is empty). Each row shows the equipment and, when the user has done it before, the last set (`Last 30kg × 10`). **Muscles are a filter, never a level to navigate down.**
+- **Tapping an exercise goes straight to the set-logging screen — not to exercise detail first.** The app's promise is speed; routing every logging action through a reference screen taxes the majority who already know the lift. Exercise detail is one tap away via an **info button in the logging screen header**.
+  - **One exception: if the user has never logged this exercise (`timesPerformed == 0`), land on exercise detail first**, whether it is on the list already or is being added. They cannot know a lift they have never done. A primary action there starts logging. On a fresh install every exercise in a template is new, so the first session takes this extra tap per exercise: the rule working as designed. **An exercise that already has sets written never goes back through it.**
+- An exercise already in the workout **opens rather than being added twice**, which would split its sets across two prefill chains.
+- **Adding is never restricted by muscle.** A template is a starting list, not a contract: the user can add any exercise to a template session, which removes the old "finish Push day with curls" workaround of two history entries for one gym visit.
+- **Swap and reorder** (replace an exercise with one that trains the same muscle when a machine is taken; drag to reorder) are not built yet. The exercise's page already offers substitutes.
+- **Add to current workout** on an exercise's page (reached from the Muscles tab) works in **any** open session.
 
 ## Step 4 — Log sets
 
@@ -151,14 +141,15 @@ Both paths — a template and ad-hoc — converge into the same underlying sessi
 
 ## Step 5 — Repeat
 
-- Repeat Steps 3–4 for any sub-muscle group (template path) or added exercise (ad-hoc path), in any order, as many or as few as the user wants. Nothing needs to be exhausted before finishing.
-- For the ad-hoc path, the user can keep adding new exercises mid-session via search at any point. On the template path, exercises outside the template's muscle groups cannot be added — see Step 2.
+- Repeat Steps 3–4 for any exercise on the list, in any order, as many or as few as the user wants. Nothing needs to be exhausted before finishing.
+- The user can add exercises at any point, from any muscle.
 
 ## Step 6 — Finish workout
 
 - Available at any time — not gated behind completing everything, and not gated behind every muscle group being ticked.
 - **Discard workout** sits alongside Finish as a **secondary** button (neutral surface, not accent), so ending a session and throwing it away are visually distinct actions. Discarding requires a confirmation dialog and permanently drops the session and all its sets.
 - **A session with zero completed sets must not be saved.** If the user taps Finish having logged nothing, discard silently rather than creating an empty session — an empty session would otherwise count toward the streak, contradicting the "at least one completed set" rule in `01-app-idea.md`.
+- **Save as template.** Below the card — outside the part built to be screenshotted, like Delete — the summary offers **Save as template**. It asks for a name (prefilled with the workout's title) and makes a template of **the exercises that have completed sets, in the order they were done**. This is how a user's own templates are made: the workout they just did is the routine they want to repeat.
 - No additional input required. Set count, exercise count, streak and calories are derived from what was already logged. There is no volume figure.
 - **Personal best pill.** When the session set one or more personal bests, a pill renders directly above the stat grid: a trophy icon plus `2 personal bests` (or `1 personal best`). **It is omitted entirely when the count is zero** — never render "0 personal bests" on a card designed to be screenshotted. Definition, the first-occurrence exclusion, and the strictly-greater rule are in `01-app-idea.md` §Progress tracking.
   - It is a pill, not a fifth stat tile, precisely because most sessions won't have one and a 4-tile grid shouldn't collapse to 3 and back.
@@ -171,178 +162,35 @@ Both paths — a template and ad-hoc — converge into the same underlying sessi
 
 ## Screen list
 
-1. Workout tab landing (the split-filtered template list, the user's own templates, and an ad-hoc entry)
-2. Exercise search + add (for Ad-hoc workout)
-3. Workout overview (muscle map + nested muscle list on the template path, or flat exercise list on the ad-hoc path; editable title; editable session date; Finish and Discard)
-4. Sub-muscle group → exercise options (template path; reachable whether or not the sub-muscle group is already ticked)
-5. Exercise logging screen (sets, reps, weight)
-6. Workout summary (inline-editable title; same composition reused for Session Detail in Profile)
+1. Workout tab landing (search, `MY TEMPLATES` rail, `READY-MADE` grid, pinned Start workout bar) and the template preview sheet
+2. The session screen: ready view, then the live view (map, list, live strip, clock)
+3. Exercise picker (sheet)
+4. Exercise logging screen (sets, reps, weight)
+5. Workout summary (inline-editable title; Save as template; same composition reused for Session Detail in Profile)
 
-A separate template-picker screen is **not** in this list any more. Whether one comes back as a "see all templates" destination — showing every template regardless of split — is open; the landing works either way.
-
-Note: creating/editing a custom workout template is a separate flow that lives on the Profile tab — see that document.
+Note: duplicating, renaming and deleting a custom template is a separate flow that lives on the Profile tab — see that document.
 
 ## Animations specific to this tab
 
-- **Muscle map live fill** — the workout overview's muscle map starts uncolored (or, for the template path, shows faint target outlines) and animates a color fill-in each time an exercise is logged, region by region, over the course of the session — not a one-time animation on screen load. Primary muscle = strongest fill color, secondary = lighter fill, not-yet-logged = neutral/outline. This makes the map function as a live progress record of the session, reusable as-is between the template and ad-hoc paths.
-- **Parent muscle group expand/collapse** — the body appears and the chevron rotates; the reveal itself is instant. `lib/src/ui/disclosure_row.dart` states as a convention that no cross-fade or size animation exists anywhere in `lib/`, and every disclosure in the app behaves alike. Accordions start **expanded**, because the tick only renders inside the body and this screen is read at a glance between sets. Template path only; the ad-hoc path has a flat exercise list with nothing to expand. Parents with a single sub-muscle group have no accordion and no animation — they are a plain tappable row.
-- **Progress indicator** — when an exercise is marked complete, the tick on each of its **primary** sub-muscle groups animates in (scale/fade). Secondary muscles never tick. On the ad-hoc path the same animation applies to the exercise row's own done state.
+- **Muscle map live fill** — starts uncoloured (outlined for a plan) and animates a colour fill-in each time an exercise is logged, region by region, over the course of the session — not a one-time animation on screen load. Primary muscle = strongest fill colour, secondary = lighter fill.
+- **The live strip's dot** — one pulse as it appears. **Not a loop**: a repeating animation never lets the frame scheduler settle, and a dot pulsing for the whole workout is chrome the user stops seeing within a minute.
 - **Set logging confirmation** — brief, fast confirmation animation when a set is logged (not a full-screen celebration).
-- **Auto-advance** — after marking an exercise complete, smoothly transition back to workout overview, ideally highlighting or scrolling to the next incomplete item.
-- **Workout saved celebration** — on finishing a workout, a brief celebratory moment plays before or as the summary screen loads: a checkmark pops in with a quick radiating burst (under ~1 second), followed by the summary stats (sets, exercises, streak) counting up. Small and fast, closer to Strava's activity-saved moment than a full celebration screen — reinforces "you showed up" without slowing down the flow or feeling like a game.
+- **Auto-advance** — after marking an exercise complete, return to the session screen, where the next exercise is already tagged `UP NEXT`.
+- **Workout saved celebration** — on finishing a workout, a brief celebratory moment plays before or as the summary screen loads: a checkmark pops in with a quick radiating burst (under ~1 second), followed by the summary stats (sets, exercises, streak) counting up. Small and fast — reinforces "you showed up" without slowing the flow or feeling like a game.
 - **Screen transitions** — standard platform push/pop transitions; nothing that slows down the core loop.
 
 ## Explicitly out of scope for V1
 
-- No rest timer, so no rest timer countdown/ring animation.
+- **No rest timer**, so no rest-timer countdown or ring.
+- **No stored workout duration.** The live clock above is display-only.
 - Keep the workout-saved celebration small and brief — no confetti, badges, sound effects, or full-screen takeovers.
+- **Not built yet:** reorder and swap on a session row; an "Add weight" chip for bodyweight and timed exercises; quick-fill duration chips.
 
 ---
 
 ## Sample screens (Coral theme)
 
-Reference HTML/CSS mockups for this tab's key screens, using the Coral palette defined in `01-app-idea.md`. These are visual/layout references for Claude Code to translate into Flutter, not production code.
-
-### Workout tab landing
-
-Shows the Push-Pull-Legs split selected. The tab bar is Workout / Muscles / History / Profile (`docs/adr/0004-profile-returns-as-a-tab.md`).
-
-```html
-<div style="background:#17140F; border-radius:16px; max-width:340px; overflow:hidden; font-family:system-ui;">
-<div style="display:flex; align-items:center; justify-content:space-between; padding:1rem 1.125rem 0.75rem;">
-<h1 style="margin:0; color:#F5EFE8; font-size:24px; font-weight:600; letter-spacing:-0.5px;">Workout</h1>
-<div style="width:32px; height:32px; border-radius:50%; background:#211D18; border:1px solid #332C22; display:flex; align-items:center; justify-content:center;"><i class="ti ti-user" style="font-size:17px; color:#A89C8E;"></i></div>
-</div>
-<div style="padding:0 1.125rem 1rem;">
-<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
-<span style="font-size:10.5px; font-weight:700; letter-spacing:1.1px; color:#6B6156;">TEMPLATES</span>
-<span style="display:inline-flex; align-items:center; gap:7px; background:#211D18; border:1px solid #332C22; border-radius:999px; padding:8px 10px 8px 11px;">
-<i class="ti ti-filter" style="font-size:16px; color:#A89C8E;"></i>
-<span style="font-size:12.5px; font-weight:600; color:#F5EFE8;">Push-Pull-Legs</span>
-<i class="ti ti-chevron-down" style="font-size:14px; color:#6B6156;"></i>
-</span>
-</div>
-<p style="margin:0 0 12px; font-size:11.5px; color:#6B6156;">3 templates</p>
-
-<div style="background:#211D18; border:1px solid #332C22; border-radius:13px; padding:13px 15px; margin-bottom:9px; display:flex; align-items:center;">
-<div style="flex:1;"><p style="margin:0; font-size:15px; font-weight:600; color:#F5EFE8;">Push day</p><p style="margin:3px 0 0; font-size:11.5px; color:#6B6156;">Chest, shoulders, triceps</p></div>
-<i class="ti ti-chevron-right" style="font-size:20px; color:#6B6156;"></i>
-</div>
-<div style="background:#211D18; border:1px solid #332C22; border-radius:13px; padding:13px 15px; margin-bottom:9px; display:flex; align-items:center;">
-<div style="flex:1;"><p style="margin:0; font-size:15px; font-weight:600; color:#F5EFE8;">Pull day</p><p style="margin:3px 0 0; font-size:11.5px; color:#6B6156;">Back, biceps</p></div>
-<i class="ti ti-chevron-right" style="font-size:20px; color:#6B6156;"></i>
-</div>
-<div style="background:#211D18; border:1px solid #332C22; border-radius:13px; padding:13px 15px; margin-bottom:16px; display:flex; align-items:center;">
-<div style="flex:1;"><p style="margin:0; font-size:15px; font-weight:600; color:#F5EFE8;">Leg day</p><p style="margin:3px 0 0; font-size:11.5px; color:#6B6156;">Quads, hamstrings, glutes, calves</p></div>
-<i class="ti ti-chevron-right" style="font-size:20px; color:#6B6156;"></i>
-</div>
-
-<div style="background:#241F19; border:1px solid #332C22; border-radius:13px; padding:13px 15px; display:flex; align-items:center;">
-<div style="flex:1;"><p style="margin:0; font-size:15px; font-weight:600; color:#F5EFE8;">Ad-hoc workout</p><p style="margin:3px 0 0; font-size:11.5px; color:#6B6156;">Search and add as you go</p></div>
-<i class="ti ti-chevron-right" style="font-size:20px; color:#6B6156;"></i>
-</div>
-</div>
-
-<div style="display:flex; gap:6px; margin:1.5rem 1.125rem 1.125rem; padding:7px; background:#211D18; border:1px solid #332C22; border-radius:999px;">
-<div style="flex:1; text-align:center; padding:7px 0; border-radius:999px; background:#241F19; color:#D85A30;"><i class="ti ti-barbell" style="font-size:18px;"></i><p style="font-size:11px; margin:1px 0 0;">Workout</p></div>
-<div style="flex:1; text-align:center; padding:7px 0; color:#6B6156;"><i class="ti ti-stretching" style="font-size:18px;"></i><p style="font-size:11px; margin:1px 0 0;">Muscles</p></div>
-<div style="flex:1; text-align:center; padding:7px 0; color:#6B6156;"><i class="ti ti-clock" style="font-size:18px;"></i><p style="font-size:11px; margin:1px 0 0;">History</p></div>
-</div>
-</div>
-```
-
-### Workout overview (live muscle map + progress list)
-
-```html
-<div style="background:#17140F; border-radius:16px; padding:0; max-width:340px; overflow:hidden;">
-<div style="padding:1.25rem 1.25rem 0.5rem;">
-<div style="display:flex; align-items:center; gap:8px; margin-bottom:0.75rem;">
-<i class="ti ti-arrow-left" style="font-size:18px; color:#A89C8E;"></i>
-<h2 style="margin:0; color:#F5EFE8;">Chest and triceps day</h2>
-<i class="ti ti-pencil" style="font-size:14px; color:#6B6156;"></i>
-</div>
-<button style="display:flex; align-items:center; gap:6px; background:#211D18; border:0.5px solid #332C22; border-radius:8px; padding:6px 10px; color:#A89C8E; font-size:12px; margin-bottom:0.5rem;">
-<i class="ti ti-calendar" style="font-size:14px;"></i>Today<i class="ti ti-chevron-down" style="font-size:12px; color:#6B6156;"></i>
-</button>
-<div style="display:flex; justify-content:center; margin:0.5rem 0 1rem;">
-<svg viewBox="0 0 200 260" width="140" height="182">
-<circle cx="100" cy="22" r="14" fill="#3a2f26"/>
-<ellipse cx="70" cy="52" rx="14" ry="9" fill="#D85A30"/>
-<ellipse cx="130" cy="52" rx="14" ry="9" fill="#D85A30"/>
-<rect x="80" y="46" width="40" height="28" rx="7" fill="#D85A30"/>
-<rect x="48" y="60" width="13" height="42" rx="6" fill="none" stroke="#3d332a" stroke-width="2"/>
-<rect x="139" y="60" width="13" height="42" rx="6" fill="none" stroke="#3d332a" stroke-width="2"/>
-<rect x="50" y="64" width="5" height="34" rx="2.5" fill="#F0997B"/>
-<rect x="145" y="64" width="5" height="34" rx="2.5" fill="#F0997B"/>
-<rect x="82" y="78" width="36" height="38" rx="6" fill="#241f19"/>
-<rect x="78" y="118" width="18" height="66" rx="8" fill="#241f19"/>
-<rect x="104" y="118" width="18" height="66" rx="8" fill="#241f19"/>
-</svg>
-</div>
-<div style="border-top:0.5px solid #332C22; margin-top:0.5rem;">
-<div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 0; border-bottom:0.5px solid #332C22;">
-<span style="font-size:14px; color:#F5EFE8;">Upper chest</span>
-<i class="ti ti-check" style="font-size:18px; color:#D85A30;"></i>
-</div>
-<div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 0; border-bottom:0.5px solid #332C22;">
-<span style="font-size:14px; color:#F5EFE8;">Mid chest</span>
-<i class="ti ti-check" style="font-size:18px; color:#D85A30;"></i>
-</div>
-<div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 0; border-bottom:0.5px solid #332C22;">
-<span style="font-size:14px; color:#F5EFE8;">Lower chest</span>
-<i class="ti ti-chevron-right" style="font-size:16px; color:#6B6156;"></i>
-</div>
-<div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 0;">
-<span style="font-size:14px; color:#F5EFE8;">Triceps</span>
-<i class="ti ti-chevron-right" style="font-size:16px; color:#6B6156;"></i>
-</div>
-</div>
-<button style="width:100%; margin:1rem 0 8px; background:#D85A30; color:#1B0C05; border:none; padding:10px; border-radius:8px; font-size:14px; font-weight:500;">Finish workout</button>
-<button style="width:100%; margin-bottom:0.5rem; background:#211D18; border:0.5px solid #332C22; color:#A89C8E; padding:10px; border-radius:8px; font-size:14px;">Discard workout</button>
-</div>
-</div>
-```
-
-Notes on this mockup:
-- **The template shown is "Chest and triceps day", not "Push day".** Push day is chest + shoulders + triceps, which expands to seven sub-muscle group rows, not four. Chest and triceps day is also a predefined template, and four rows is correct for it.
-- **There is no caption line** — the editable title is the only identifying text on this screen.
-- **Ticks mark trained sub-muscle groups; untrained rows show a chevron, not a "Not started" label.** There is no stored not-started state.
-- The muscle map here is a static snapshot for reference — in the real app it starts unfilled/outlined and heats each region in live as the corresponding exercise is logged (see the muscle map live fill animation below). It is also simplified to one shape per major muscle group for this mockup; the real diagram needs a distinct segment per sub-muscle group — see "Body diagram requirement" in `01-app-idea.md`.
-- The parent-group accordion is collapsed out of this mockup for brevity; in the real screen "Chest" expands to its three bands.
-
-### Exercise logging screen
-
-```html
-<div style="background:#17140F; border-radius:16px; padding:0; max-width:340px; overflow:hidden;">
-<div style="padding:1.25rem 1.25rem 0.5rem;">
-<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-<i class="ti ti-arrow-left" style="font-size:18px; color:#A89C8E;"></i>
-<h2 style="margin:0; color:#F5EFE8;">Incline dumbbell press</h2>
-</div>
-<p style="font-size:12px; color:#A89C8E; margin:0 0 1rem;">Last time: 22kg &times; 10, 22kg &times; 9, 20kg &times; 10</p>
-<div style="border-top:0.5px solid #332C22;">
-<div style="display:grid; grid-template-columns:1fr 2fr 2fr 1fr; gap:8px; padding:0.5rem 0; font-size:11px; color:#6B6156;">
-<span>Set</span><span>Weight</span><span>Reps</span><span></span>
-</div>
-<div style="display:grid; grid-template-columns:1fr 2fr 2fr 1fr; gap:8px; align-items:center; padding:0.5rem 0; border-top:0.5px solid #332C22;">
-<span style="font-size:14px; color:#F5EFE8;">1</span>
-<input type="text" value="22 kg" style="width:100%; background:#211D18; border:0.5px solid #332C22; color:#F5EFE8; border-radius:6px; padding:6px;" />
-<input type="text" value="10" style="width:100%; background:#211D18; border:0.5px solid #332C22; color:#F5EFE8; border-radius:6px; padding:6px;" />
-<i class="ti ti-check" style="font-size:18px; color:#D85A30; justify-self:center;"></i>
-</div>
-<div style="display:grid; grid-template-columns:1fr 2fr 2fr 1fr; gap:8px; align-items:center; padding:0.5rem 0; border-top:0.5px solid #332C22;">
-<span style="font-size:14px; color:#F5EFE8;">2</span>
-<input type="text" value="22 kg" style="width:100%; background:#211D18; border:0.5px solid #332C22; color:#F5EFE8; border-radius:6px; padding:6px;" />
-<input type="text" value="9" style="width:100%; background:#211D18; border:0.5px solid #332C22; color:#F5EFE8; border-radius:6px; padding:6px;" />
-<i class="ti ti-check" style="font-size:18px; color:#D85A30; justify-self:center;"></i>
-</div>
-</div>
-<button style="width:100%; margin-top:0.75rem; background:#211D18; border:0.5px solid #332C22; color:#F5EFE8; border-radius:8px; padding:8px; display:flex; align-items:center; justify-content:center; gap:6px;">
-<i class="ti ti-plus" style="font-size:16px;"></i>Add set</button>
-<button style="width:100%; margin-top:1.25rem; background:#D85A30; color:#1B0C05; border:none; border-radius:8px; padding:10px; font-size:14px; font-weight:500;">Mark exercise complete</button>
-</div>
-</div>
-```
+The landing, overview and logging mockups that used to sit here described the muscle-first design and are gone. **The references are `prototypes/workout-tab-options.html` and `prototypes/workout-start-moment.html`.** The two mockups below — the saved celebration and the shareable summary — are unchanged.
 
 ### Workout-saved celebration
 

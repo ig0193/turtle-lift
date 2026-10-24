@@ -95,12 +95,12 @@ Not built. Full record for a single exercise, reached from exercise detail and f
 
 - The user can freely visit the Muscle Groups tab while a workout session is active — for example, to check an alternative exercise's form cues or muscles worked before deciding what to do next. This doesn't disrupt or pause the active session.
 
-**"Add to current workout" is built.** The exercise detail screen now decides what it offers from how it was reached: browsing this tab with no workout open it offers nothing, browsing during an **ad-hoc** workout it offers Add to current workout, reached as the first-time gate inside the workout flow it offers Start logging, and opened from the logging screen's info button it offers neither. The rules below are what it does. **The Best / Last / Times tiles and the history block remain deferred.**
+**"Add to current workout" is built.** The exercise detail screen now decides what it offers from how it was reached: browsing this tab with no workout open it offers nothing, browsing during **any** workout it offers Add to current workout, reached as the first-time gate inside the workout flow it offers Start logging, and opened from the logging screen's info button it offers neither. The rules below are what it does. **The Best / Last / Times tiles and the history block remain deferred.**
 
-- **When an AD-HOC session is active**, the exercise detail screen shows one additional contextual action: **Add to current workout** — this adds the exercise to the active session's exercise list as not-started, the same as if it had been found via search from inside the Workout tab. It does not log sets from here; the user logs it back in the active workout flow, consistent with logging always happening in one place.
-- **When a TEMPLATE-based session is active, this action does not appear.** Template sessions are locked to their own muscle groups — an exercise outside the template cannot be added to it. See "Templates are locked to their own muscle groups" in `02-workout-tab-userflow.md` for the rationale. During a template session this tab stays pure reference, exactly as it is with no session active.
+- **When any session is active**, the exercise detail screen shows one additional contextual action: **Add to current workout** — this adds the exercise to the active session's exercise list as not-started, the same as if it had been found via search from inside the Workout tab. It does not log sets from here; the user logs it back in the active workout flow, consistent with logging always happening in one place.
+- **A template session takes it too.** A template is a starting list, not a muscle lock (`docs/adr/0006-workout-tab-is-exercise-first.md`), so finishing Push day with curls from here is ordinary.
 - When no session is active, the exercise detail screen shows no action beyond the reference content — there's nothing to add it to yet.
-- **Summary of when the button renders:** ad-hoc session active → yes. Template session active → no. No session → no.
+- **Summary of when the button renders:** any session active → yes. No session → no.
 
 ---
 
@@ -129,9 +129,9 @@ Four screens ship:
 ## Animations specific to this tab
 
 - **Muscle map highlight** — one reusable full-body component used on every screen. Interactive on the landing, read-only on exercise detail. No cropped or zoomed variant exists.
-- **No accordion in this tab.** The 4-expand / 8-flat rule is a **Workout tab** rule — it governs the template path's nested muscle list (`02-workout-tab-userflow.md`, `00` §4). The screens that used it here were deleted. Exercise detail's four content fields are disclosure rows, not that accordion: each opens independently, and Common mistakes starts open.
+- **No accordion in this tab.** There is no accordion anywhere in the app: the Workout tab's nested muscle list, the only place it was used, was removed with `docs/adr/0006`, and the screens that used it here were deleted earlier. Exercise detail's four content fields are disclosure rows, not that accordion: each opens independently, and Common mistakes starts open.
 - **Search-to-result transition** — fast, minimal-motion transition from typing a query to landing on exercise detail, since speed is the main value of search over browsing.
-- **Add-to-workout confirmation — deferred**, with the action it confirms. When an ad-hoc session is active and the user taps "Add to current workout," a brief, lightweight confirmation (e.g. a small toast or button state change) confirms the exercise was added to the session — not a full logging interaction, since no sets are entered here.
+- **Add-to-workout confirmation — deferred**, with the action it confirms. When a session is active and the user taps "Add to current workout," a brief, lightweight confirmation (e.g. a small toast or button state change) confirms the exercise was added to the session — not a full logging interaction, since no sets are entered here.
 
 ## Explicitly out of scope for V1
 
@@ -249,4 +249,4 @@ The mockup also predates the shipped screen below the diagrams: the Best/Last/Ti
 </div>
 ```
 
-Note: the "Add to current workout" button is deferred and renders nowhere today. When it lands it renders **only when an ad-hoc session is active**. During a template-based session, or with no session at all, the screen shows no button — pure reference, which is what every case is today.
+Note: the "Add to current workout" button is deferred and renders nowhere today. It renders **whenever a session is active**, template or ad-hoc. With no session the screen shows no button — pure reference.

@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/custom_templates.dart';
+import 'package:turtle_lift/src/data/exercise_index.dart';
+import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
 import 'package:turtle_lift/src/theme/app_palette.dart';
@@ -19,8 +21,21 @@ import 'package:turtle_lift/src/ui/template_library_screen.dart';
 /// fixture override would pass while nothing reached the table.
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+  // `exerciseLibraryProvider` reaches `rootBundle`, which needs the binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
 
   late AppDatabase database;
+  late ExerciseIndex index;
+
+  // Each row's muscle line is derived from its exercises, so the screen needs
+  // the library the app seeds at boot.
+  setUpAll(() async {
+    final boot = ProviderContainer();
+    addTearDown(boot.dispose);
+    index = ExerciseIndex.fromJson(
+      await boot.read(exerciseLibraryProvider.future),
+    );
+  });
 
   setUp(() => database = AppDatabase.forTesting(NativeDatabase.memory()));
   tearDown(() => database.close());
@@ -43,7 +58,10 @@ void main() {
 
   Widget host() => ProviderScope(
         key: UniqueKey(),
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          exerciseIndexProvider.overrideWithValue(index),
+        ],
         child: MaterialApp(
           theme: buildAppTheme(),
           home: const TemplateLibraryScreen(),
@@ -164,7 +182,7 @@ void main() {
       final source =
           kPredefinedTemplates.firstWhere((t) => t.id == 'leg');
 
-      expect(copy.groupIds, source.groupIds);
+      expect(copy.exerciseIds, source.exerciseIds);
       expect(copy.isPredefined, isFalse);
     });
 
@@ -304,7 +322,7 @@ void main() {
 
       expect(after.name, 'Heavy push');
       expect(after.id, before.id, reason: 'the id is stable across renames');
-      expect(after.groupIds, before.groupIds);
+      expect(after.exerciseIds, before.exerciseIds);
     });
 
     testWidgets('an emptied name is refused rather than saved', (tester) async {

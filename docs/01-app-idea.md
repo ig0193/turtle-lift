@@ -79,12 +79,11 @@ Note: the app doesn't suggest or auto-select a workout for the user (no "today's
   - Back day
 - Each predefined template has a short explanation of what it means.
 - **Predefined templates cannot be edited directly** — they stay as a reliable, unmodified reference. A user can duplicate one into an editable custom copy instead.
-- **A template stores parent muscle groups only** (e.g. `['chest','shoulders','triceps']`). Sub-muscle groups are **derived from the muscle taxonomy at render time**, never copied into the template. Picking "chest" in the template editor therefore surfaces upper, mid and lower chest automatically; the user does not select bands individually.
-  - Benefit of deriving rather than storing: if a sub-muscle group is ever added to the taxonomy (e.g. a real side-delt segment), every existing template picks it up with no data migration.
-  - **A template is a curated shortlist to browse within, not a plan to complete.** Nothing in a template is ever "finished", and no muscle group has a completion state. This is why a seven-row Push day is unremarkable — seven options in a menu, not seven unchecked boxes.
-  - **Templates are locked to their own muscle groups during a session.** An exercise outside the template's muscle groups cannot be added to a template-based session. Keeping the template coherent is the reason for choosing one; users who don't have a fixed plan should use the ad-hoc path instead. Full rationale and the accepted friction are documented in `02-workout-tab-userflow.md`.
-- User can create a fully custom template from scratch by picking muscle groups à la carte, give it a name, and save it for reuse. Template creation and management lives on the Profile tab; the Workout tab is just for starting a session from an already-saved template.
-- User can build a one-off ad-hoc workout by searching and adding exercises directly, without any template or muscle-group structure. This is not saved as a reusable template — it's a single session.
+- **A template stores an ordered list of exercise ids** (`docs/adr/0006-workout-tab-is-exercise-first.md`). The muscles a template trains are **derived at render time** from those exercises' primary muscles and the taxonomy, never stored. (An earlier model stored parent muscle groups and had the user browse down to an exercise; that was replaced because it cost about three taps per exercise, every session.)
+  - The eleven predefined templates ship with curated lists of popular lifts, leading with the heaviest compound.
+  - **A template is a starting list, not a plan to complete or a contract.** Starting one **copies** its exercises into the session; the session's list is then its own — exercises can be added from any muscle (there is no template lock), and nothing a session does writes back to the template.
+- **A user makes their own template from a finished workout** ("Save as template" on its summary): the exercises that have completed sets, in order. Renaming, duplicating and deleting live on the Profile tab; the Workout tab is just for starting a session.
+- User can start an **empty** workout and add exercises as they go. This is not saved as a reusable template unless the user chooses to after finishing — it's a single session.
 
 ### Exercise library
 Each exercise entry contains:
@@ -99,12 +98,9 @@ Each exercise entry contains:
 ### Muscle training state
 
 - **No muscle group, at any level, has a completion state in the data model.** Only exercises are marked complete. A sub-muscle group being shown as trained is a *visualisation* of the exercises the user completed, not a stored fact about the muscle.
-- **`trained` is derived**: a sub-muscle group is `trained` in a session when at least one completed exercise in that session lists it among its **primary** muscles. Secondary muscles never contribute.
+- **`trained` is derived**: a sub-muscle group is `trained` in a session when at least one completed exercise in that session lists it among its **primary** muscles. Secondary muscles never contribute. It still feeds the resolved-title chain and the History figures; **no screen renders it as a tick any more** (the nested muscle list was removed with `docs/adr/0006`).
 - The field is named **`trained`, not `done`** — "done" implies a target the app deliberately does not set.
-- The same derivation drives two different surfaces, which deliberately disagree:
-  - **Muscle map fill** uses primary *and* secondary muscles (strong accent and light accent respectively) — it answers *"what got worked"*.
-  - **The sub-muscle group tick** in the workout overview list uses **primary only** — it answers *"what have I trained directly"*.
-  - This divergence is intentional. Without it, a chest press would tick the triceps row on a Push day and lead the user to believe triceps was handled when they had not done a single triceps movement.
+- **The live muscle map** is the one place muscles appear on the workout screen: primary and secondary muscles fill in the strong and light accent once an exercise has a completed set or is marked done, and the primary muscles of every exercise on the list that has not been worked yet are **outlined** (a plan, never a record).
 
 ### Muscle group hierarchy
 - Muscle groups are broken into sub-muscle groups wherever applicable (e.g. Chest → Upper / Mid / Lower). This hierarchy underlies both the Workout flow and the Muscle Groups tab.
@@ -360,7 +356,7 @@ The app remembers everything on the user's behalf, so it must also let them corr
 - No login or signup.
 - No cloud backup.
 - No rest timer (parked for a later version).
-- No workout duration tracking. Since some users log live during a workout and others log retrospectively (catching up later, or logging from memory), any duration the app calculated could be meaningless or actively misleading — especially since it would show up on the shareable summary card. Exercise count is used instead of duration wherever a stat is needed, since it's accurate regardless of when logging happened.
+- No **stored** workout duration. Since some users log live during a workout and others log retrospectively (catching up later, or logging from memory), any duration the app saved could be meaningless or actively misleading — especially since it would show up on the shareable summary card. Exercise count is used instead of duration wherever a stat is needed, since it's accurate regardless of when logging happened. **One narrow exception (`docs/adr/0006`): a display-only live clock** on the workout in progress, derived from when it started, never stored and shown nowhere else — not in History, not on the summary or share card — and shown only for a workout that is happening now (dated the day it started, under six hours old).
 - No notifications, except the opt-in, fixed-schedule reminders in `docs/adr/0005-schedule-and-opt-in-notifications.md`, built after the Schedule screen. Never behaviour-triggered.
 - No wearable integration.
 - No AI.

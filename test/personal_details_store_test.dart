@@ -187,28 +187,6 @@ void main() {
       expect(await SettingsStore(database).rowCount(), 1);
       expect(await store.readBodyGender(), 'female');
     });
-
-    test('gender and the split filter share a row without clobbering it',
-        () async {
-      // Both writes upsert the one settings row. An UpdateCompanion carries
-      // only the columns it was given, which is the whole reason this passes;
-      // build either write as a read-modify-write of the full row and whichever
-      // ran second silently resets the other.
-      final settings = SettingsStore(database);
-
-      await settings.writeWorkoutTemplateFilter('ppl');
-      await store.writeBodyGender('female');
-
-      expect(await settings.readWorkoutTemplateFilter(), 'ppl',
-          reason: 'storing a gender must not reset the split filter');
-      expect(await store.readBodyGender(), 'female');
-
-      await settings.writeWorkoutTemplateFilter('single');
-
-      expect(await store.readBodyGender(), 'female',
-          reason: 'storing a filter must not reset the gender');
-      expect(await settings.rowCount(), 1);
-    });
   });
 
   group('resolving the stored gender', () {

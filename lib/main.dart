@@ -11,8 +11,7 @@ import 'src/data/exercise_library.dart';
 import 'src/data/personal_details_store.dart';
 import 'src/data/sample_history_seed.dart';
 import 'src/data/session_store.dart';
-import 'src/data/settings_store.dart';
-import 'src/data/template_filter.dart';
+import 'src/data/settings_store.dart' show appDatabaseProvider;
 import 'src/data/training_plan.dart';
 import 'src/theme/app_theme.dart';
 import 'src/ui/l0_shell.dart';
@@ -21,12 +20,12 @@ import 'src/ui/session_summary_screen.dart' show kAppDisplayName;
 /// Boots the app with its stored preferences already resolved.
 ///
 /// **The await before `runApp` is deliberate, and it is what makes the Workout
-/// landing honest.** The split filter is a one-row read; resolving it here
-/// means the first frame the user sees is already the filter they chose last
-/// time. Moving that read inside a provider would be the more familiar shape
-/// and would cost a visible swap on every cold start — Multi Split's rows
-/// rendering and then being replaced — plus a loading state on the app's most
-/// opened screen. See `initialTemplateFilterProvider`.
+/// tab honest.** The open session and the user's own templates are small reads;
+/// resolving them here means the first frame the user sees is already the right
+/// one — the session they were in, not a landing that is replaced by it a frame
+/// later. Moving those reads inside providers would be the more familiar shape
+/// and would cost a visible swap on every cold start, plus a loading state on
+/// the app's most opened screen. See `initialActiveSessionProvider`.
 ///
 /// The database is constructed here rather than left to
 /// `appDatabaseProvider`'s own creator so that one instance serves both the
@@ -77,7 +76,6 @@ Future<void> main() async {
   final boot = ProviderContainer();
   final personalDetails = PersonalDetailsStore(database);
   final (
-    initialFilter,
     exercises,
     initialGender,
     initialBodyweight,
@@ -86,7 +84,6 @@ Future<void> main() async {
     initialSavedSessions,
     initialTrainingPlan,
   ) = await (
-    readStoredTemplateFilter(SettingsStore(database)),
     boot.read(exerciseLibraryProvider.future),
     readStoredBodyGender(personalDetails),
     readStoredBodyweightLog(personalDetails),
@@ -101,7 +98,6 @@ Future<void> main() async {
     ProviderScope(
       overrides: [
         appDatabaseProvider.overrideWithValue(database),
-        initialTemplateFilterProvider.overrideWithValue(initialFilter),
         initialBodyGenderProvider.overrideWithValue(initialGender),
         initialBodyweightLogProvider.overrideWithValue(initialBodyweight),
         initialTrainingPlanProvider.overrideWithValue(initialTrainingPlan),

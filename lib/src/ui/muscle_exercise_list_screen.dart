@@ -2,19 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/exercise.dart';
-import '../data/active_session.dart';
-import '../data/derived.dart';
 import '../data/exercise_index.dart';
-import '../data/load_type.dart';
-import '../data/session_store.dart';
-import '../data/set_format.dart';
 import '../data/generated/muscle_taxonomy.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'app_screen.dart';
 import 'divider_row.dart';
 import 'exercise_detail_screen.dart';
-import 'set_logging_screen.dart';
 import 'sub_group_row.dart';
 
 /// Everything that trains one sub-muscle group directly.
@@ -38,28 +32,15 @@ import 'sub_group_row.dart';
 /// is the name and the equipment, which is what a reader standing at a rack has
 /// to choose between.
 ///
-/// **Opened from inside a workout, it is also the swap screen**
-/// ([inSession]). Then, and only then, the exercises already logged this
-/// session sort to the top carrying their sets, and a tap goes to logging
-/// rather than to the reference page. This is the only route back in to add a
-/// fourth set or fix a mistyped weight, so it works whether or not the muscle
-/// is already ticked.
+/// **It is a reference page in every context.** It used to double as the swap
+/// screen inside a workout; the exercise-first Workout tab
+/// (`docs/adr/0006-workout-tab-is-exercise-first.md`) lists a session's
+/// exercises directly, so a tap here always opens the exercise's page.
 class MuscleExerciseListScreen extends ConsumerWidget {
-  const MuscleExerciseListScreen({
-    required this.subGroupId,
-    this.inSession = false,
-    super.key,
-  });
+  const MuscleExerciseListScreen({required this.subGroupId, super.key});
 
   /// A `group/sub` id from `muscle_taxonomy.dart`.
   final String subGroupId;
-
-  /// Whether this was opened from a workout in progress.
-  ///
-  /// **Opt-in, and off by default, because the row and the scaffold below are
-  /// also what the equipment list renders.** Left on by default the equipment
-  /// list would quietly gain session behaviour that nothing covers.
-  final bool inSession;
 
   /// The header over the rows. Counted from the list it sits above rather than
   /// typed, for the reason `MusclesRoot.listLabel` gives.
@@ -81,87 +62,12 @@ class MuscleExerciseListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final exercises = ref.watch(exerciseIndexProvider).withPrimary(subGroupId);
-    if (!inSession) {
-      return exerciseListScreen(
-        context,
-        title: titleFor(subGroupId),
-        exercises: exercises,
-      );
-    }
-
-    final session = ref.watch(activeSessionProvider);
-    final saved = ref.watch(savedSessionsProvider);
     return exerciseListScreen(
       context,
       title: titleFor(subGroupId),
-      exercises: _loggedFirst(exercises, session),
-      subtitleFor: (exercise) => _loggedLine(exercise, session),
-      onTapExercise: (exercise) =>
-          openExerciseForLogging(context, ref, exercise, saved),
+      exercises: exercises,
     );
   }
-
-  /// Exercises already logged this session, then the rest in their usual order.
-  ///
-  /// Pinning them is what makes this screen reachable as the way back in: the
-  /// user is looking for the lift they just did, not choosing a new one.
-  List<Exercise> _loggedFirst(
-    List<Exercise> exercises,
-    WorkoutSession? session,
-  ) {
-    if (session == null) return exercises;
-    final logged = <Exercise>[];
-    final rest = <Exercise>[];
-    for (final exercise in exercises) {
-      final inSession = session.exercises
-          .any((e) => e.exerciseId == exercise.id && e.sets.isNotEmpty);
-      (inSession ? logged : rest).add(exercise);
-    }
-    return <Exercise>[...logged, ...rest];
-  }
-
-  /// What this session has already logged for [exercise], or null.
-  String? _loggedLine(Exercise exercise, WorkoutSession? session) {
-    if (session == null) return null;
-    final logged = session.exercises
-        .where((e) => e.exerciseId == exercise.id)
-        .firstOrNull;
-    if (logged == null) return null;
-    final line = formatSetList(logged);
-    return line.isEmpty ? 'no sets yet' : line;
-  }
-}
-
-/// Opens [exercise] for logging, adding it to the workout if it is not already
-/// in one, and detouring through its page the first time it is ever done.
-Future<void> openExerciseForLogging(
-  BuildContext context,
-  WidgetRef ref,
-  Exercise exercise,
-  List<WorkoutSession> saved,
-) async {
-  final loadType = LoadType.fromName(exercise.loadType);
-  if (loadType == null) return;
-
-  final session = ref.read(activeSessionProvider);
-  final alreadyHere =
-      session?.exercises.any((e) => e.exerciseId == exercise.id) ?? false;
-
-  if (timesPerformed(exercise.id, saved) == 0 && !alreadyHere) {
-    await pushExerciseDetail(context, exercise,
-        entry: ExerciseDetailEntry.workoutStart);
-    return;
-  }
-
-  final rowId = await ref
-      .read(activeSessionProvider.notifier)
-      .addExercise(exerciseId: exercise.id, loadType: loadType);
-  if (rowId == null || !context.mounted) return;
-  await Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => SetLoggingScreen(sessionExerciseId: rowId),
-    ),
-  );
 }
 
 /// The screen both exercise lists are: a header counting the rows, and the
@@ -177,11 +83,6 @@ Widget exerciseListScreen(
   BuildContext context, {
   required String title,
   required List<Exercise> exercises,
-  /// An extra line under a row, used by the swap screen to show what this
-  /// session already logged. Null for every row on the browsing lists.
-  String? Function(Exercise)? subtitleFor,
-  /// Where a row goes. The exercise's page unless a caller says otherwise.
-  void Function(Exercise)? onTapExercise,
 }) =>
     AppScreen.pushed(
       title: title,
@@ -206,12 +107,7 @@ Widget exerciseListScreen(
               // and a screen that quietly drops half of it teaches the reader
               // that the chip means something different there.
               equipment: exercise.equipment,
-              subtitle: subtitleFor?.call(exercise),
-              // The exercise's page, unless this is the swap screen inside a
-              // workout — there the row logs rather than explains.
-              onTap: () => onTapExercise == null
-                  ? pushExerciseDetail(context, exercise)
-                  : onTapExercise(exercise),
+              onTap: () => pushExerciseDetail(context, exercise),
             ),
         ],
       ),
@@ -227,17 +123,10 @@ Widget exerciseListScreen(
 /// **Opaque, like every push in this app (KTD9).** It is the only kind of route
 /// that covers the floating tab bar; a sheet or a transparent route leaves
 /// "Workout" painted over the exercises and one stray tap away.
-Future<void> pushMuscleExerciseList(
-  BuildContext context,
-  String subGroupId, {
-  bool inSession = false,
-}) =>
+Future<void> pushMuscleExerciseList(BuildContext context, String subGroupId) =>
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => MuscleExerciseListScreen(
-          subGroupId: subGroupId,
-          inSession: inSession,
-        ),
+        builder: (_) => MuscleExerciseListScreen(subGroupId: subGroupId),
       ),
     );
 

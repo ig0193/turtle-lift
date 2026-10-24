@@ -518,6 +518,125 @@ void main() {
     });
   });
 
+  group('the planned outline', () {
+    /// How many of the painted paints are the planned-muscle outline.
+    int outlines(Iterable<Paint> paints) => paints
+        .where((p) =>
+            p.style == PaintingStyle.stroke &&
+            p.strokeWidth == kBodyPlannedOutlineWidth)
+        .length;
+
+    test('is drawn once for each segment of a planned muscle', () {
+      const painter = BodyDiagramPainter(
+        view: BodyView.front,
+        gender: BodyGender.male,
+        fill: mutedBodyFill,
+        planned: <String>{'chest/mid'},
+      );
+      final canvas = _RecordingCanvas();
+
+      painter.paint(canvas, box);
+
+      final expected = painter
+          .segmentPathsFor(box)
+          .where((s) => s.subMuscleGroupIds.contains('chest/mid'))
+          .length;
+      expect(expected, greaterThan(0), reason: 'the fixture has to hit something');
+      expect(outlines(canvas.paints), expected);
+    });
+
+    test('is drawn in the accent, so it reads as a plan next to a fill', () {
+      const painter = BodyDiagramPainter(
+        view: BodyView.front,
+        gender: BodyGender.male,
+        fill: mutedBodyFill,
+        planned: <String>{'chest/mid'},
+      );
+      final paint = painter.buildPlannedPaint();
+
+      expect(paint.style, PaintingStyle.stroke);
+      expect(paint.strokeWidth, greaterThan(kBodySegmentSeparatorWidth),
+          reason: 'thicker than the separator it is drawn over');
+      expect(paint.color.toARGB32() & 0x00FFFFFF,
+          AppPalette.accentStrong.toARGB32() & 0x00FFFFFF);
+    });
+
+    test('is not drawn for a muscle that is not planned', () {
+      const painter = BodyDiagramPainter(
+        view: BodyView.front,
+        gender: BodyGender.male,
+        fill: mutedBodyFill,
+        planned: <String>{'chest/mid'},
+      );
+      final canvas = _RecordingCanvas();
+
+      painter.paint(canvas, box);
+
+      final total = painter.segmentPathsFor(box).length;
+      expect(outlines(canvas.paints), lessThan(total),
+          reason: 'only the planned muscle is outlined, not the whole body');
+    });
+
+    test('is absent by default, so no other screen changes', () {
+      const painter = BodyDiagramPainter(
+        view: BodyView.front,
+        gender: BodyGender.male,
+        fill: mutedBodyFill,
+      );
+      final canvas = _RecordingCanvas();
+
+      painter.paint(canvas, box);
+
+      expect(outlines(canvas.paints), 0);
+    });
+
+    test('a segment shared by two muscles is outlined if either is planned',
+        () {
+      const painter = BodyDiagramPainter(
+        view: BodyView.front,
+        gender: BodyGender.male,
+        fill: mutedBodyFill,
+        planned: <String>{'shoulders/side-delt'},
+      );
+      final canvas = _RecordingCanvas();
+
+      painter.paint(canvas, box);
+
+      expect(outlines(canvas.paints), 1,
+          reason: 'side delt has no artwork of its own; it shares the front '
+              'delt segment');
+    });
+
+    test('repaints when the planned muscles change, and only then', () {
+      const base = BodyDiagramPainter(
+        view: BodyView.front,
+        gender: BodyGender.male,
+        fill: mutedBodyFill,
+        planned: <String>{'chest/mid'},
+      );
+
+      expect(
+        base.shouldRepaint(const BodyDiagramPainter(
+          view: BodyView.front,
+          gender: BodyGender.male,
+          fill: mutedBodyFill,
+          planned: <String>{'chest/upper'},
+        )),
+        isTrue,
+      );
+      expect(
+        base.shouldRepaint(const BodyDiagramPainter(
+          view: BodyView.front,
+          gender: BodyGender.male,
+          fill: mutedBodyFill,
+          planned: <String>{'chest/mid'},
+        )),
+        isFalse,
+        reason: 'an equal set is the same picture, so no repaint of 42 polygons',
+      );
+    });
+  });
+
   group('the scaled-path cache', () {
     test('the scaled paths are built once per asset and scale', () {
       const painter = BodyDiagramPainter(

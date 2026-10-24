@@ -5,8 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/custom_templates.dart';
+import 'package:turtle_lift/src/data/exercise_index.dart';
+import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
-import 'package:turtle_lift/src/data/template_filter.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
 import 'package:turtle_lift/src/ui/workout_root.dart';
 
@@ -27,6 +28,9 @@ import 'package:turtle_lift/src/ui/workout_root.dart';
 /// file through `path_provider`, which has no platform channel under
 /// `flutter test`.
 void main() {
+  // `exerciseLibraryProvider` reaches `rootBundle`, which needs the binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   // Several tests below open their own in-memory database in one isolate,
   // which drift flags on debug builds as a possible mistake. Here it is the
   // point: each test gets a clean database.
@@ -34,6 +38,15 @@ void main() {
 
   late AppDatabase database;
   late CustomTemplateStore store;
+  late ExerciseIndex index;
+
+  setUpAll(() async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    index = ExerciseIndex.fromJson(
+      await container.read(exerciseLibraryProvider.future),
+    );
+  });
 
   setUp(() {
     database = AppDatabase.forTesting(NativeDatabase.memory());
@@ -66,7 +79,7 @@ void main() {
       await store.insertCustomTemplate(
         id: 'tpl-1',
         name: 'My arm blaster',
-        groupIds: 'biceps,triceps',
+        exerciseIds: 'barbell-curl,cable-rope-pushdown',
         sourceTemplateId: 'arms',
       );
 
@@ -74,7 +87,7 @@ void main() {
       expect(rows, hasLength(1));
       expect(rows.single.id, 'tpl-1');
       expect(rows.single.name, 'My arm blaster');
-      expect(rows.single.groupIds, 'biceps,triceps');
+      expect(rows.single.exerciseIds, 'barbell-curl,cable-rope-pushdown');
       expect(rows.single.sourceTemplateId, 'arms');
     });
 
@@ -82,7 +95,7 @@ void main() {
       await store.insertCustomTemplate(
         id: 'tpl-1',
         name: 'Mine',
-        groupIds: 'chest',
+        exerciseIds: 'barbell-bench-press',
       );
 
       expect(
@@ -93,12 +106,12 @@ void main() {
       );
     });
 
-    test('renaming a template leaves its groups and its source alone',
+    test('renaming a template leaves its exercises and its source alone',
         () async {
       await store.insertCustomTemplate(
         id: 'tpl-1',
         name: 'Push day copy',
-        groupIds: 'chest,shoulders,triceps',
+        exerciseIds: 'barbell-bench-press,barbell-overhead-press',
         sourceTemplateId: 'push',
       );
 
@@ -107,8 +120,8 @@ void main() {
       final row = (await store.readCustomTemplates()).single;
       expect(row.name, 'Heavy push');
       expect(
-        row.groupIds,
-        'chest,shoulders,triceps',
+        row.exerciseIds,
+        'barbell-bench-press,barbell-overhead-press',
         reason: 'a partial companion write must not blank the columns it was '
             'not given -- a full read-modify-write would be the bug here',
       );
@@ -116,7 +129,7 @@ void main() {
     });
 
     test('renaming an id that is not there writes nothing', () async {
-      await store.insertCustomTemplate(id: 'tpl-1', name: 'Mine', groupIds: '');
+      await store.insertCustomTemplate(id: 'tpl-1', name: 'Mine', exerciseIds: '');
 
       await store.renameCustomTemplate('tpl-missing', 'Ghost');
 
@@ -129,8 +142,8 @@ void main() {
     });
 
     test('deleting removes one row and leaves the others', () async {
-      await store.insertCustomTemplate(id: 'a', name: 'A', groupIds: 'chest');
-      await store.insertCustomTemplate(id: 'b', name: 'B', groupIds: 'back');
+      await store.insertCustomTemplate(id: 'a', name: 'A', exerciseIds: 'plank');
+      await store.insertCustomTemplate(id: 'b', name: 'B', exerciseIds: 'pull-up');
 
       await store.deleteCustomTemplate('a');
 
@@ -138,9 +151,9 @@ void main() {
     });
 
     test('rows come back in name order whatever order they went in', () async {
-      await store.insertCustomTemplate(id: 'c', name: 'Zebra', groupIds: 'abs');
-      await store.insertCustomTemplate(id: 'a', name: 'Alpha', groupIds: 'abs');
-      await store.insertCustomTemplate(id: 'b', name: 'Middle', groupIds: 'abs');
+      await store.insertCustomTemplate(id: 'c', name: 'Zebra', exerciseIds: 'plank');
+      await store.insertCustomTemplate(id: 'a', name: 'Alpha', exerciseIds: 'plank');
+      await store.insertCustomTemplate(id: 'b', name: 'Middle', exerciseIds: 'plank');
 
       expect(
         (await store.readCustomTemplates()).map((r) => r.name).toList(),
@@ -151,41 +164,36 @@ void main() {
     });
   });
 
-  group('encoding the groups', () {
-    test('a group list round-trips', () {
-      expect(decodeGroupIds(encodeGroupIds(<String>['chest', 'triceps'])),
-          <String>['chest', 'triceps']);
-    });
-
-    test('groups are stored in taxonomy order, not the order handed over', () {
+  group('encoding the exercises', () {
+    test('an exercise list round-trips, in order', () {
       expect(
-        encodeGroupIds(<String>['triceps', 'chest']),
-        'chest,triceps',
-        reason: 'two templates naming the same groups must render the same '
-            'subtitle, and the subtitle is derived from this order',
+        decodeExerciseIds(encodeExerciseIds(<String>['pull-up', 'plank'])),
+        <String>['pull-up', 'plank'],
       );
     });
 
-    test('a repeated group is stored once', () {
-      expect(encodeGroupIds(<String>['chest', 'chest']), 'chest');
-    });
-
-    test('an id the taxonomy does not know is dropped', () {
+    test('order is kept, because it is the order the session lists them in', () {
       expect(
-        encodeGroupIds(<String>['chest', 'not-a-muscle']),
-        'chest',
-        reason: 'taxonomy order is undefined for an id the taxonomy has never '
-            'heard of, and a template cannot render a group that does not exist',
+        encodeExerciseIds(<String>['plank', 'pull-up']),
+        'plank,pull-up',
+        reason: 'unlike a set of muscle groups there is no canonical order',
       );
     });
 
-    test('an empty group list decodes to an empty list, not to one blank id',
-        () {
+    test('a blank id is dropped', () {
       expect(
-        decodeGroupIds(''),
+        encodeExerciseIds(<String>['pull-up', '', 'plank']),
+        'pull-up,plank',
+        reason: 'a phantom id would become a session row that names nothing',
+      );
+    });
+
+    test('an empty list decodes to an empty list, not to one blank id', () {
+      expect(
+        decodeExerciseIds(''),
         isEmpty,
-        reason: "''.split(',') yields [''], which would put a phantom group "
-            'on every group-less template',
+        reason: "''.split(',') yields [''], which would put a phantom exercise "
+            'on every empty template',
       );
     });
   });
@@ -195,7 +203,10 @@ void main() {
       final first = await boot();
       final saved = await first
           .read(customTemplateListProvider.notifier)
-          .add(name: 'My arm blaster', groupIds: <String>['biceps', 'triceps']);
+          .add(
+            name: 'My arm blaster',
+            exerciseIds: <String>['barbell-curl', 'cable-rope-pushdown'],
+          );
       first.dispose();
 
       final second = await boot();
@@ -204,39 +215,38 @@ void main() {
       expect(templates, hasLength(1));
       expect(templates.single.id, saved.id);
       expect(templates.single.name, 'My arm blaster');
-      expect(templates.single.groupIds, <String>['biceps', 'triceps']);
+      expect(
+        templates.single.exerciseIds,
+        <String>['barbell-curl', 'cable-rope-pushdown'],
+      );
     });
 
-    test('a restored template is not predefined and carries no filter',
-        () async {
+    test('a restored template is not predefined', () async {
       final first = await boot();
       await first
           .read(customTemplateListProvider.notifier)
-          .add(name: 'Mine', groupIds: <String>['chest']);
+          .add(name: 'Mine', exerciseIds: <String>['barbell-bench-press']);
       first.dispose();
 
       final restored = (await boot()).read(customTemplatesProvider).single;
 
       expect(restored.isPredefined, isFalse);
-      expect(
-        restored.filters,
-        isEmpty,
-        reason: 'custom templates sit outside the split filter entirely -- '
-            'with no unfiltered value, classifying one would make it reachable '
-            'from exactly one split',
-      );
     });
 
-    test('a restored template derives its subtitle from its groups', () async {
+    test('a restored template derives its subtitle from its exercises',
+        () async {
       final first = await boot();
       await first.read(customTemplateListProvider.notifier).add(
             name: 'Mine',
-            groupIds: <String>['triceps', 'chest'],
+            exerciseIds: <String>['cable-rope-pushdown', 'barbell-bench-press'],
           );
       first.dispose();
 
       expect(
-        (await boot()).read(customTemplatesProvider).single.subtitle,
+        templateSubtitle(
+          (await boot()).read(customTemplatesProvider).single,
+          index,
+        ),
         'Chest, triceps',
         reason: 'the subtitle is derived on read like every other display '
             'value, so nothing about it is stored',
@@ -255,7 +265,7 @@ void main() {
 
       await container
           .read(customTemplateListProvider.notifier)
-          .add(name: 'Mine', groupIds: <String>['chest']);
+          .add(name: 'Mine', exerciseIds: <String>['barbell-bench-press']);
 
       expect(
         container.read(customTemplatesProvider).map((t) => t.name),
@@ -265,12 +275,12 @@ void main() {
       );
     });
 
-    test('renaming changes the name and preserves the groups', () async {
+    test('renaming changes the name and preserves the exercises', () async {
       final container = await boot();
       final notifier = container.read(customTemplateListProvider.notifier);
       final saved = await notifier.add(
         name: 'Push day copy',
-        groupIds: <String>['chest', 'shoulders', 'triceps'],
+        exerciseIds: <String>['barbell-bench-press', 'barbell-overhead-press'],
       );
 
       await notifier.rename(saved.id, 'Heavy push');
@@ -278,14 +288,17 @@ void main() {
       final renamed = container.read(customTemplatesProvider).single;
       expect(renamed.id, saved.id, reason: 'the id is stable across a rename');
       expect(renamed.name, 'Heavy push');
-      expect(renamed.groupIds, <String>['chest', 'shoulders', 'triceps']);
+      expect(
+        renamed.exerciseIds,
+        <String>['barbell-bench-press', 'barbell-overhead-press'],
+      );
     });
 
     test('a rename survives the restart it is meant to', () async {
       final first = await boot();
       final notifier = first.read(customTemplateListProvider.notifier);
       final saved =
-          await notifier.add(name: 'Mine', groupIds: <String>['chest']);
+          await notifier.add(name: 'Mine', exerciseIds: <String>['barbell-bench-press']);
       await notifier.rename(saved.id, 'Renamed');
       first.dispose();
 
@@ -298,8 +311,8 @@ void main() {
       final container = await boot();
       final notifier = container.read(customTemplateListProvider.notifier);
       final doomed =
-          await notifier.add(name: 'Alpha', groupIds: <String>['chest']);
-      await notifier.add(name: 'Beta', groupIds: <String>['back']);
+          await notifier.add(name: 'Alpha', exerciseIds: <String>['barbell-bench-press']);
+      await notifier.add(name: 'Beta', exerciseIds: <String>['pull-up']);
 
       await notifier.delete(doomed.id);
 
@@ -313,8 +326,8 @@ void main() {
       final first = await boot();
       final notifier = first.read(customTemplateListProvider.notifier);
       final doomed =
-          await notifier.add(name: 'Alpha', groupIds: <String>['chest']);
-      await notifier.add(name: 'Beta', groupIds: <String>['back']);
+          await notifier.add(name: 'Alpha', exerciseIds: <String>['barbell-bench-press']);
+      await notifier.add(name: 'Beta', exerciseIds: <String>['pull-up']);
       await notifier.delete(doomed.id);
       first.dispose();
 
@@ -327,7 +340,7 @@ void main() {
     test('deleting an id that is not there changes nothing', () async {
       final container = await boot();
       final notifier = container.read(customTemplateListProvider.notifier);
-      await notifier.add(name: 'Mine', groupIds: <String>['chest']);
+      await notifier.add(name: 'Mine', exerciseIds: <String>['barbell-bench-press']);
 
       await notifier.delete('never-existed');
 
@@ -338,8 +351,8 @@ void main() {
         () async {
       final container = await boot();
       final notifier = container.read(customTemplateListProvider.notifier);
-      await notifier.add(name: 'Zebra', groupIds: <String>['abs']);
-      await notifier.add(name: 'Alpha', groupIds: <String>['abs']);
+      await notifier.add(name: 'Zebra', exerciseIds: <String>['plank']);
+      await notifier.add(name: 'Alpha', exerciseIds: <String>['plank']);
 
       expect(
         container.read(customTemplatesProvider).map((t) => t.name),
@@ -353,8 +366,8 @@ void main() {
       final container = await boot();
       final notifier = container.read(customTemplateListProvider.notifier);
 
-      final first = await notifier.add(name: 'A', groupIds: <String>['chest']);
-      final second = await notifier.add(name: 'B', groupIds: <String>['chest']);
+      final first = await notifier.add(name: 'A', exerciseIds: <String>['barbell-bench-press']);
+      final second = await notifier.add(name: 'B', exerciseIds: <String>['barbell-bench-press']);
 
       expect(first.id, isNot(second.id));
       expect(container.read(customTemplatesProvider), hasLength(2));
@@ -367,8 +380,7 @@ void main() {
       return ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(database),
-          initialTemplateFilterProvider
-              .overrideWithValue(TemplateFilter.multiSplit),
+          exerciseIndexProvider.overrideWithValue(index),
         ],
         child: const MaterialApp(home: Scaffold(body: WorkoutRoot())),
       );
@@ -379,7 +391,7 @@ void main() {
       await tester.pumpWidget(host());
 
       expect(
-        find.text(WorkoutRoot.customGroupLabel),
+        find.text(WorkoutLandingBody.customGroupLabel),
         findsNothing,
         reason: 'a heading standing over nothing reads as broken',
       );
@@ -392,17 +404,18 @@ void main() {
       final container = ProviderScope.containerOf(
         tester.element(find.byType(WorkoutRoot)),
       );
-      await container
-          .read(customTemplateListProvider.notifier)
-          .add(name: 'My arm blaster', groupIds: <String>['biceps']);
+      await container.read(customTemplateListProvider.notifier).add(
+            name: 'My arm blaster',
+            exerciseIds: <String>['barbell-curl'],
+          );
       await tester.pump();
 
-      expect(find.text(WorkoutRoot.customGroupLabel), findsOneWidget);
+      expect(find.text(WorkoutLandingBody.customGroupLabel), findsOneWidget);
       expect(find.text('My arm blaster'), findsOneWidget);
       expect(
         find.text('Biceps'),
         findsOneWidget,
-        reason: 'the row renders the derived subtitle, not a stored one',
+        reason: 'the tile renders the derived subtitle, not a stored one',
       );
     });
 
@@ -411,7 +424,7 @@ void main() {
       await store.insertCustomTemplate(
         id: 'tpl-1',
         name: 'My arm blaster',
-        groupIds: 'biceps',
+        exerciseIds: 'barbell-curl',
       );
 
       // One pump, no settle: this is the frame `main()`'s pre-frame read
@@ -421,6 +434,7 @@ void main() {
         ProviderScope(
           overrides: [
             appDatabaseProvider.overrideWithValue(database),
+            exerciseIndexProvider.overrideWithValue(index),
             initialCustomTemplatesProvider
                 .overrideWithValue(await readStoredCustomTemplates(store)),
           ],

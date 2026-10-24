@@ -65,7 +65,6 @@ void main() {
         loggedAt: date.toDateTime(),
         templateId: templateName == null ? null : 'tpl',
         templateName: templateName,
-        groupIds: const <String>[],
         isOpen: false,
         exercises: exercises,
       );
@@ -224,6 +223,58 @@ void main() {
       ]);
 
       expect(trainedSubGroups(s, index), isEmpty);
+    });
+  });
+
+  group('the planned muscles', () {
+    final today = LocalDate.today();
+
+    test('are the primary muscles of every exercise on the list', () {
+      final s = session(today, <SessionExercise>[
+        exercise('incline-press', LoadType.weighted, <SetEntry>[]),
+        exercise('squat', LoadType.weighted, <SetEntry>[]),
+      ]);
+
+      expect(
+        plannedSubGroups(s, index),
+        <String>{'chest/upper', 'quads/quads'},
+        reason: 'planning needs no sets: a template shows its whole plan from '
+            'the first frame',
+      );
+    });
+
+    test('never include a secondary muscle', () {
+      final s = session(today, <SessionExercise>[
+        exercise('incline-press', LoadType.weighted, <SetEntry>[]),
+      ]);
+
+      expect(plannedSubGroups(s, index).contains('triceps/triceps'), isFalse,
+          reason: 'a by-product is not what the workout is for');
+    });
+
+    test('count an exercise whether or not it has been worked', () {
+      final s = session(today, <SessionExercise>[
+        exercise('incline-press', LoadType.weighted,
+            <SetEntry>[set(weightKg: 24, reps: 10)]),
+        exercise('pushdown', LoadType.weighted, <SetEntry>[]),
+      ]);
+
+      expect(plannedSubGroups(s, index),
+          <String>{'chest/upper', 'triceps/triceps'});
+    });
+
+    test('skip an exercise the library no longer has', () {
+      final s = session(today, <SessionExercise>[
+        exercise('retired', LoadType.weighted, <SetEntry>[]),
+        exercise('squat', LoadType.weighted, <SetEntry>[]),
+      ]);
+
+      expect(plannedSubGroups(s, index), <String>{'quads/quads'});
+    });
+
+    test('are empty for an empty workout', () {
+      expect(plannedSubGroups(session(today, const <SessionExercise>[]), index),
+          isEmpty);
     });
   });
 

@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,41 +9,17 @@ import 'app_database.dart';
 /// value they need; they do not learn drift's query API, and swapping the
 /// storage underneath them stays a change to this file.
 ///
-/// **It deals in opaque strings.** Recognising a stored key — and deciding what
-/// an unrecognised one means — belongs to the filter provider, which owns the
-/// key vocabulary. Teaching this class that vocabulary too would put the same
-/// list in two files, which is the drift the stable-key rule exists to stop.
+/// **It no longer stores the split filter.** That went with the exercise-first
+/// Workout tab (`docs/adr/0006-workout-tab-is-exercise-first.md`). Its
+/// `workout_template_filter` column is left in the table, unread: SQLite cannot
+/// drop a column without rebuilding a table that holds a user's data.
 class SettingsStore {
   const SettingsStore(this._db);
 
   final AppDatabase _db;
 
-  /// The stored split-filter key, or null when the user has never chosen one.
-  ///
-  /// Null is a real answer, not an error: it is how first launch is told apart
-  /// from a returning user.
-  Future<String?> readWorkoutTemplateFilter() async {
-    final row = await (_db.select(_db.settings)
-          ..where((s) => s.id.equals(kSettingsRowId)))
-        .getSingleOrNull();
-    return row?.workoutTemplateFilter;
-  }
-
-  /// Stores [key] as the split filter to show on next launch.
-  ///
-  /// Upserts against the fixed row id, so repeated writes update the one row
-  /// rather than accumulating rows.
-  Future<void> writeWorkoutTemplateFilter(String key) async {
-    await _db.into(_db.settings).insertOnConflictUpdate(
-          SettingsCompanion.insert(
-            id: const Value<int>(kSettingsRowId),
-            workoutTemplateFilter: Value<String>(key),
-          ),
-        );
-  }
-
   /// How many settings rows exist. Only a test should care — it is the guard
-  /// that the upsert above really is an upsert.
+  /// that the one settings row really is one row.
   @visibleForTesting
   Future<int> rowCount() async => (await _db.select(_db.settings).get()).length;
 }

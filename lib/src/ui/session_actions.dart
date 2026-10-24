@@ -18,7 +18,16 @@ import 'destructive_confirmation.dart';
 /// that typed work survives, and throwing it away unannounced would spend that
 /// guarantee on nothing.
 class SessionActions extends ConsumerWidget {
-  const SessionActions({required this.onFinished, super.key});
+  const SessionActions({
+    required this.onFinished,
+    this.showFinish = true,
+    super.key,
+  });
+
+  /// Whether Finish is offered. False on the ready view: a workout that has not
+  /// started logging has nothing to finish, and the only way out of it is to
+  /// discard it.
+  final bool showFinish;
 
   /// Called once the workout has been saved, so the screen can show its
   /// summary. Not called when nothing was saved.
@@ -38,12 +47,14 @@ class SessionActions extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        FilledButton(
-          key: finishKey,
-          onPressed: () => _finish(context, ref),
-          child: const Text('Finish workout'),
-        ),
-        const SizedBox(height: 8),
+        if (showFinish) ...<Widget>[
+          FilledButton(
+            key: finishKey,
+            onPressed: () => _finish(context, ref),
+            child: const Text('Finish workout'),
+          ),
+          const SizedBox(height: 8),
+        ],
         Semantics(
           button: true,
           label: 'Discard workout',

@@ -123,7 +123,6 @@ class SessionStore {
       loggedAt: row.loggedAt,
       templateId: row.templateId,
       templateName: row.templateName,
-      groupIds: decodeGroupIds(row.groupIds),
       isOpen: row.openMarker != null,
       exercises: exercises,
     );
@@ -137,10 +136,17 @@ class SessionStore {
   /// start a workout again. Auto-save uses this same path: the old session is
   /// saved first, and if that has not happened the marker is released here
   /// rather than blocking the user.
+  ///
+  /// **[exercises] are inserted in the same transaction as the session**, so a
+  /// template run is never observable half-built — a session row with some of
+  /// its exercises would show the user a shorter list than the template and
+  /// nothing would say why. Duplicates collapse to the first: one exercise is
+  /// one row, as [addExercise] enforces for the interactive path.
   Future<WorkoutSession> createSession({
     String? templateId,
     String? templateName,
-    List<String> groupIds = const <String>[],
+    List<({String exerciseId, LoadType loadType})> exercises =
+        const <({String exerciseId, LoadType loadType})>[],
     LocalDate? performedOn,
   }) =>
       _serialized(() async {
@@ -161,12 +167,22 @@ class SessionStore {
                   loggedAt: DateTime.now(),
                   templateId: Value<String?>(templateId),
                   templateName: Value<String?>(templateName),
-                  groupIds: Value<String?>(
-                    groupIds.isEmpty ? null : encodeGroupIds(groupIds),
-                  ),
                   openMarker: const Value<int?>(kOpenSessionMarker),
                 ),
               );
+          final seen = <String>{};
+          for (final exercise in exercises) {
+            if (!seen.add(exercise.exerciseId)) continue;
+            await _db.into(_db.sessionExercises).insert(
+                  SessionExercisesCompanion.insert(
+                    id: const Uuid().v4(),
+                    sessionId: id,
+                    exerciseId: exercise.exerciseId,
+                    position: seen.length - 1,
+                    loadType: exercise.loadType.name,
+                  ),
+                );
+          }
         });
         return (await readOpenSession())!;
       });
@@ -339,15 +355,6 @@ class SessionStore {
       (await _db.select(_db.sessions).get()).length;
 }
 
-/// Parent muscle group ids, comma-joined. Mirrors the custom-template encoding.
-String encodeGroupIds(List<String> ids) => ids.join(',');
-
-/// The ids a stored [encodeGroupIds] string names.
-List<String> decodeGroupIds(String? stored) {
-  if (stored == null || stored.isEmpty) return const <String>[];
-  return stored.split(',');
-}
-
 /// One logged set.
 @immutable
 class SetEntry {
@@ -414,7 +421,6 @@ class WorkoutSession {
     required this.loggedAt,
     required this.templateId,
     required this.templateName,
-    required this.groupIds,
     required this.isOpen,
     required this.exercises,
   });
@@ -435,10 +441,6 @@ class WorkoutSession {
   /// The template's name as it was when the session started, so a deleted
   /// custom template still resolves this session's title.
   final String? templateName;
-
-  /// The parent groups this session may train, snapshotted at creation.
-  /// **Read only while the session is open.**
-  final List<String> groupIds;
 
   final bool isOpen;
   final List<SessionExercise> exercises;

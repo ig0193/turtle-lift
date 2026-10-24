@@ -77,7 +77,7 @@ All inputs are unsigned positive numbers; the sign is carried by the type. `assi
 
 Average 76 words per exercise across all four. Every entry mentions breathing; 198 of 260 include a specific number. **No `alternatives` field** — the sub-muscle-group exercise list serves that purpose. Source: `exercises/exercises.json`, 260 entries, validated by `validate_exercise_library.py`.
 
-**Template** — name, `isPredefined`, and **parent muscle group ids only**. Never store sub-groups.
+**Template** — name, `isPredefined`, and an **ordered list of exercise ids** (`docs/adr/0006-workout-tab-is-exercise-first.md`). Never store muscles: the muscle line on a row is derived from the exercises' primary muscles. Starting one **copies** the list into the session; nothing a session does writes back.
 
 **No muscle-level state exists in the model.** → `01` §Muscle training state.
 
@@ -85,7 +85,7 @@ Average 76 words per exercise across all four. Every entry mentions breathing; 1
 
 ## 3. Derived values — compute on read, never store
 
-`streak` · exercise count · set count · personal bests · **per-session PB count** · calorie estimate · `trained` ticks · resolved title.
+`streak` · exercise count · set count · personal bests · **per-session PB count** · calorie estimate · resolved title · a template row's muscle line.
 
 **No lifted-volume (kg) metric anywhere in V1** — it cannot include bodyweight or timed exercises. Set count is the headline **volume proxy** in its place. → `01` §Derived values. (It stands in for the banned kg figure; it is not an instruction about which stat renders largest.)
 
@@ -97,12 +97,12 @@ Deleting or editing a session must change all of the above automatically, includ
 
 Load from `muscle_taxonomy.dart`. **12 parents, 19 sub-groups, 1 mapping exception, 0 orphan segments.**
 
-- Template rows are derived from the taxonomy at render time.
+- A template row's muscle line is derived from its exercises and the taxonomy at render time.
 - Resolve diagram regions via the `segments` list, not by string-matching ids.
 - `back/upper`, `forearms/forearms`, `calves/calves` each fill segments in **both** views. Normal.
 - **`shoulders/side-delt` → `shoulders/front-delt`, FRONT VIEW ONLY.** The only exception. Never map it to `rear-delt`.
 - Traps is `back/upper`, not `shoulders/*`, on both views.
-- Accordion only for **chest, back, shoulders, abs**. The other 8 parents have one sub-group → render one flat row, no accordion. **This is a Workout-tab rule** — it governs the template path's nested muscle list (§9). The Muscles tab accordions nothing; the screens that used it there were deleted (§10).
+- **No accordion anywhere.** The Workout tab's nested muscle list (the only accordion, for chest, back, shoulders and abs) was removed with `docs/adr/0006`; the Muscles tab never had one (§10).
 
 → `01` §Muscle group hierarchy.
 
@@ -169,29 +169,27 @@ streakAsOf(date) -> int
 
 ## 9. Workout tab
 
-**Entry:** the landing lists the predefined templates filtered by split (**1 Muscle per day** · **Multi Split** · **Push-Pull-Legs**; no unfiltered value, Multi Split on first launch, last choice remembered), then the user's own templates unfiltered, then **Ad-hoc workout** (exercise search). No separate picker screen. The filter is a view control, never a declared programme — see `02` §Step 1.
+**Model:** a session is a list of exercises; a template is a pre-filled list; ad-hoc is an empty one. Muscles describe the list (the live map) and never navigate it. → `docs/adr/0006-workout-tab-is-exercise-first.md`.
 
-**Overview screen**
-- Editable title; **no caption line**.
-- Editable session date; show prominently when ≠ today.
-- Muscle map heats live per completed exercise.
-- Template path → nested muscle list. Ad-hoc path → flat exercise list with `not_started / in_progress / done`.
-- Finish (primary) + Discard (secondary, confirm dialog).
+**Landing** — a search field (by name, over templates and exercises), **My templates** (a rail; absent when none), **Ready-made** (the eleven predefined, a two-column grid, fixed order), `Manage templates`, and a **pinned Start workout bar** above the tab bar. **No split filter**, nothing stores a split. A template tile shows its name, a derived muscle line and its exercise count; tapping it opens a **preview sheet** (the exercises, `Start workout`, `Cancel`) — two taps to start. A search result for an exercise starts an ad-hoc workout with it.
 
-**`trained` tick**
-- Sub-group is `trained` when ≥1 completed exercise lists it as a **primary** muscle.
-- Secondary muscles never tick.
-- Derived, binary, read-only, gates nothing. Field name `trained`, not `done`.
-- Ticked rows stay tappable; open the exercise list with logged exercises pinned to top.
-- **Map and list intentionally disagree** (map = primary + secondary; list = primary only). Do not "fix".
+**Start** — opens the session on a **ready view**: map at full size, `N exercises planned` / `Nothing logged yet`, one **Start logging** button, Discard (no Finish). Start logging opens the **exercise picker** (tall sheet: search, muscle chips as a filter, `IN THIS WORKOUT` first). "Started logging" is in-memory only, and is also true once anything is written.
 
-**Template lock** — exercises outside the template's muscle groups cannot be added to a template session. Swapping within a sub-group is unrestricted.
+**Session screen** (after Start logging)
+- Pulsing `WORKOUT IN PROGRESS` strip (one pulse, no loop) with the **clock**; editable title (no caption line); editable date, prominent when ≠ today; `N of M done`.
+- **Body map is the hero** and shrinks in steps as the list grows. It fills live: primary `#D85A30`, secondary `#F0997B`; muscles the list plans to train and has not worked are **outlined**.
+- `KEEP LOGGING`: one flat exercise list for both paths, tri-state `To do / In progress / Done` (derived), the first not-done row tagged `UP NEXT`. `+ Add exercise`. Finish (primary) + Discard (secondary, confirm dialog).
+- **No muscle list, no `trained` tick, no template lock.** Any exercise can be added to any session.
+
+**Clock** — display-only elapsed time. **Never stored**; shown nowhere but the live screen (not History, not the summary or share card). Counts from `loggedAt`; shows only when `performedOn` is the day the session started and it is under six hours old.
+
+**Save as template** — on the finished workout's summary: names it, keeps the exercises that have completed sets, in order. The only way a user's own templates are made; rename / duplicate / delete stay on Profile.
 
 **Finish** — available any time. **A session with 0 completed sets must not save.**
 
 **Session persistence** — an active session persists indefinitely; never auto-discarded. Returning to the Workout tab shows the session in place of the landing; no Resume card. Starting a new workout auto-saves the open one (>=1 completed set, keeping its **original `performedOn`**, with a toast) or discards it silently (0 sets). One active session at a time.
 
-**Exercise tap → set logging directly.** Info button in the logging header reaches Exercise Detail. Exception: `timesPerformed == 0` → land on Exercise Detail first.
+**Exercise tap → set logging directly.** Info button in the logging header reaches Exercise Detail. Exception: `timesPerformed == 0` and no sets written yet → land on Exercise Detail first (applies to a row already on the list as well as to one being added).
 
 **Set-logging screen order:** sets → Add set → Mark exercise done → Recent (last 2, all sets shown per session) → See all N sessions.
 
@@ -219,7 +217,7 @@ streakAsOf(date) -> int
 - **The four content fields are collapsible rows: Common mistakes first and expanded, then Setup, Posture, Execution, collapsed.** Rendered verbatim — reviewed copy, never rewritten, summarised, truncated or reflowed.
 - **Substitutes rail** — exercises sharing **any** of this one's primary sub-groups, different equipment first, capped at 8. Titled after the muscle only when there is exactly one primary; neutral otherwise.
 - **No history block of any kind** — no Best/Last/Times tiles, no recent log, no PB badge, no `assisted` banner, and **no "You haven't logged this yet" line**. Deferred, all of it.
-- **No "Add to current workout".** Deferred with the session it would add to.
+- **"Add to current workout" appears whenever a workout is open** (any session — there is no template lock). With none open it is absent.
 
 **Deferred screen:** Exercise history. Unreachable until sessions exist.
 
@@ -273,7 +271,7 @@ History and Profile are both tabs (`docs/adr/0003-l0-navigation-variant-a.md`, a
 
 ## 13. Out of scope for V1
 
-No zone-lit human mascot (dead — see `mascot-brief.md`) · no per-exercise illustrations or silhouettes (V2; equipment glyphs instead) · no login · no cloud sync · no soft delete · no rest timer · no workout duration · no notifications except the opt-in, fixed-schedule reminders in ADR 0005 (built after the Schedule screen) · no wearables · no AI · no premium · no ads · no multi-day splits or weekly rotation · no "today's workout" suggestion · no exercise videos · no social features.
+No zone-lit human mascot (dead — see `mascot-brief.md`) · no per-exercise illustrations or silhouettes (V2; equipment glyphs instead) · no login · no cloud sync · no soft delete · no rest timer · no stored workout duration (the live clock is display-only, §9) · no notifications except the opt-in, fixed-schedule reminders in ADR 0005 (built after the Schedule screen) · no wearables · no AI · no premium · no ads · no multi-day splits or weekly rotation · no "today's workout" suggestion · no exercise videos · no social features.
 
 Local storage only. Works fully offline. No onboarding wizard.
 

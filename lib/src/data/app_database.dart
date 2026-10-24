@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 import 'local_date.dart';
+import 'workout_templates.dart' show kPredefinedTemplates;
 
 part 'app_database.g.dart';
 
@@ -15,8 +16,10 @@ part 'app_database.g.dart';
 /// units, sex and bodyweight). If you find yourself adding a column that could
 /// be recomputed from session rows, that is the rule catching you.
 ///
-/// Schema version 4 (step 4 is the training-day plan), and the app's **first** migration — so the shape here is
-/// the one every later migration will be copied from.
+/// Schema version 5 (step 5 gives a custom template its exercise list, see
+/// `docs/adr/0006-workout-tab-is-exercise-first.md`; step 4 is the training-day
+/// plan), and the app's **first** migration — so the shape here is the one every
+/// later migration will be copied from.
 ///
 /// **Version 2 is the session tables and it has now landed.** Step 2 creates
 /// `Sessions`, `SessionExercises` and `SetEntries`; step 3 is the bodyweight
@@ -60,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   /// **The first migration in the app's history.** There was no
   /// [MigrationStrategy] before this one, so the shape here is the precedent:
@@ -114,6 +117,29 @@ class AppDatabase extends _$AppDatabase {
             // The Schedule's dated training-day plan. Pure table creation, so
             // the one-transaction, idempotent rule above holds.
             await m.createTable(trainingPlanEntries);
+          }
+          if (from >= 3 && from < 5) {
+            // A template is now a list of exercises, not of muscle groups.
+            //
+            // **Only for an install that already has the table.** A user
+            // upgrading from before 3 has just had `custom_templates` created
+            // by the step above, from today's definition, which carries this
+            // column already — adding it again is a "duplicate column" error,
+            // and one that only shows up for people who skipped releases.
+            await m.addColumn(customTemplates, customTemplates.exerciseIds);
+            // The only custom templates that can exist are duplicates of a
+            // predefined one, so each takes that template's exercise list.
+            // **Guarded on `exercise_ids = ''`, so a retry after a kill
+            // mid-upgrade rewrites nothing it already wrote.** A row with no
+            // known source stays empty, which the landing renders as a template
+            // with no exercises rather than hiding the user's own row.
+            for (final template in kPredefinedTemplates) {
+              await customStatement(
+                "UPDATE custom_templates SET exercise_ids = ? "
+                "WHERE source_template_id = ? AND exercise_ids = ''",
+                <Object>[template.exerciseIds.join(','), template.id],
+              );
+            }
           }
         },
       );
@@ -243,13 +269,24 @@ class CustomTemplates extends Table {
 
   TextColumn get name => text()();
 
-  /// Parent muscle group ids, comma-joined in taxonomy order.
+  /// **Legacy: no longer written or read.** Templates were a list of parent
+  /// muscle group ids before `docs/adr/0006-workout-tab-is-exercise-first.md`.
+  /// The column stays because SQLite cannot drop a `NOT NULL` column without
+  /// rebuilding the table, and a rebuild is a worse trade than one empty string
+  /// per row. New rows write `''`.
+  TextColumn get groupIds => text().withDefault(const Constant(''))();
+
+  /// Library exercise ids, comma-joined in session order.
   ///
   /// **A joined string rather than a child table**, because the app never
-  /// queries templates *by* group: it loads the whole template and renders it.
-  /// A second table would buy a join for a list that is read whole and is at
-  /// most twelve short ids long.
-  TextColumn get groupIds => text()();
+  /// queries templates *by* exercise: it loads the whole template and renders
+  /// it. A second table would buy a join for a list that is read whole and is a
+  /// dozen short ids long at most. Exercise ids are lower-case words and hyphens,
+  /// so the separator cannot collide with one.
+  ///
+  /// **Order is the point**, unlike the group ids this replaces: it is the order
+  /// the session lists the exercises in.
+  TextColumn get exerciseIds => text().withDefault(const Constant(''))();
 
   /// The predefined template this was duplicated from, so the row can say
   /// "Duplicated from Push day" without guessing. Null once that template no
@@ -297,13 +334,11 @@ class Sessions extends Table {
   /// count would — it records what was true when the session began.
   TextColumn get templateName => text().nullable()();
 
-  /// The parent muscle group ids this session is allowed to train, comma-joined
-  /// in taxonomy order, or null for an ad-hoc session.
-  ///
-  /// Snapshotted for the same reason as [templateName]: the template lock has
-  /// to keep working for an open session whose template has been deleted.
-  /// **Read only while the session is open** — a saved session's muscles come
-  /// from its sets, or it gains a second source of truth for what it trained.
+  /// **Legacy: no longer written or read.** It snapshotted the muscle groups a
+  /// template session was locked to, and the lock is gone
+  /// (`docs/adr/0006-workout-tab-is-exercise-first.md`). The column stays for the
+  /// reason `CustomTemplates.groupIds` does: dropping it means rebuilding a table
+  /// that carries the open-session unique index.
   TextColumn get groupIds => text().nullable()();
 
   /// Set on the one open session, null on every saved one.

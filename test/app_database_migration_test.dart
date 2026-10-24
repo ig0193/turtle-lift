@@ -11,6 +11,8 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
+import 'package:turtle_lift/src/data/workout_templates.dart'
+    show kPredefinedTemplates;
 
 /// Proves the app's **first** schema migration, against the shape it will
 /// actually meet on a user's phone.
@@ -103,12 +105,12 @@ void main() {
       );
     });
 
-    test('reaches schema version 4', () async {
+    test('reaches schema version 5', () async {
       await createVersion1Database();
       final database = openUpgraded();
       await database.select(database.settings).get();
 
-      expect(database.schemaVersion, 4);
+      expect(database.schemaVersion, 5);
     });
 
     test('adds a usable bodyweight table', () async {
@@ -166,14 +168,14 @@ void main() {
             CustomTemplatesCompanion.insert(
               id: 'push-mine',
               name: 'Push day (mine)',
-              groupIds: 'chest,shoulders,triceps',
+              exerciseIds: const Value<String>('barbell-bench-press,plank'),
               sourceTemplateId: const Value<String?>('push'),
             ),
           );
 
       final rows = await database.select(database.customTemplates).get();
       expect(rows.single.name, 'Push day (mine)');
-      expect(rows.single.groupIds, 'chest,shoulders,triceps');
+      expect(rows.single.exerciseIds, 'barbell-bench-press,plank');
       expect(rows.single.sourceTemplateId, 'push');
     });
   });
@@ -233,6 +235,127 @@ void main() {
     });
   });
 
+  group('the exercise-list step (4 → 5)', () {
+    /// A version-4 database as it shipped: a custom template that still stores
+    /// muscle groups, and no `exercise_ids` column.
+    Future<void> createVersion4Database(
+      List<({String id, String name, String groups, String? source})> rows,
+    ) async {
+      final legacy = NativeDatabase(dbFile);
+      await legacy.ensureOpen(_NoopUser());
+      await legacy.runCustom(
+        'CREATE TABLE custom_templates ('
+        'id TEXT NOT NULL, '
+        'name TEXT NOT NULL, '
+        'group_ids TEXT NOT NULL, '
+        'source_template_id TEXT NULL, '
+        'PRIMARY KEY (id))',
+        const <Object?>[],
+      );
+      for (final row in rows) {
+        await legacy.runCustom(
+          'INSERT INTO custom_templates (id, name, group_ids, source_template_id) '
+          'VALUES (?, ?, ?, ?)',
+          <Object?>[row.id, row.name, row.groups, row.source],
+        );
+      }
+      await legacy.runCustom('PRAGMA user_version = 4', const <Object?>[]);
+      await legacy.close();
+    }
+
+    test('a duplicate of a predefined template takes its exercise list',
+        () async {
+      await createVersion4Database(
+        <({String id, String name, String groups, String? source})>[
+          (
+            id: 'a',
+            name: 'Push day (mine)',
+            groups: 'chest,shoulders,triceps',
+            source: 'push',
+          ),
+          (id: 'b', name: 'Leg day (mine)', groups: 'quads', source: 'leg'),
+        ],
+      );
+      final database = openUpgraded();
+
+      final rows = {
+        for (final r in await database.select(database.customTemplates).get())
+          r.id: r,
+      };
+
+      expect(
+        rows['a']!.exerciseIds.split(','),
+        kPredefinedTemplates.firstWhere((t) => t.id == 'push').exerciseIds,
+      );
+      expect(
+        rows['b']!.exerciseIds.split(','),
+        kPredefinedTemplates.firstWhere((t) => t.id == 'leg').exerciseIds,
+      );
+      expect(rows['a']!.name, 'Push day (mine)',
+          reason: 'the rest of the row is untouched');
+      expect(rows['a']!.sourceTemplateId, 'push');
+    });
+
+    test('a row with no known source survives, empty', () async {
+      await createVersion4Database(
+        <({String id, String name, String groups, String? source})>[
+          (id: 'a', name: 'Mine', groups: 'chest', source: null),
+          (
+            id: 'b',
+            name: 'From a retired one',
+            groups: 'chest',
+            source: 'retired',
+          ),
+        ],
+      );
+      final database = openUpgraded();
+
+      final rows = await database.select(database.customTemplates).get();
+
+      expect(rows, hasLength(2),
+          reason: "the user's own row is never dropped by the upgrade");
+      expect(rows.every((r) => r.exerciseIds == ''), isTrue);
+    });
+
+    test('the legacy group column is left alone', () async {
+      await createVersion4Database(
+        <({String id, String name, String groups, String? source})>[
+          (
+            id: 'a',
+            name: 'Mine',
+            groups: 'chest,triceps',
+            source: 'chest-triceps',
+          ),
+        ],
+      );
+      final database = openUpgraded();
+
+      expect(
+        (await database.select(database.customTemplates).get()).single.groupIds,
+        'chest,triceps',
+      );
+    });
+
+    test('an upgrade from 1 does not add the column twice', () async {
+      // The version-3 step creates the table from today's definition, which
+      // already has the column. A step that added it again would throw here,
+      // and only for users who had skipped several releases.
+      await createVersion1Database();
+      final database = openUpgraded();
+
+      await database.into(database.customTemplates).insert(
+            CustomTemplatesCompanion.insert(id: 'x', name: 'X'),
+          );
+
+      expect(
+        (await database.select(database.customTemplates).get())
+            .single
+            .exerciseIds,
+        '',
+      );
+    });
+  });
+
   group('a fresh install', () {
     test('creates every table without running the upgrade path', () async {
       final database = openUpgraded();
@@ -244,7 +367,7 @@ void main() {
             CustomTemplatesCompanion.insert(
               id: 'x',
               name: 'X',
-              groupIds: 'chest',
+              exerciseIds: const Value<String>('plank'),
             ),
           );
 

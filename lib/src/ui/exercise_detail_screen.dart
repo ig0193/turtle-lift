@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/body_gender.dart';
 import '../data/exercise.dart';
 import '../data/active_session.dart';
+import '../data/session_progress.dart';
 import '../data/exercise_index.dart';
 import '../data/load_type.dart';
 import '../data/session_store.dart';
@@ -147,12 +148,11 @@ class ExerciseDetailScreen extends ConsumerWidget {
         ];
 
       case ExerciseDetailEntry.reference:
-        // Offered only during an ad-hoc session: a template session is locked
-        // to its own muscle groups, and with no session there is nothing to add
-        // to. `docs/03` fixes all three cases.
-        if (session == null || session.isTemplateSession) {
-          return const <Widget>[];
-        }
+        // Offered whenever a workout is open, and only then: with none there is
+        // nothing to add to. A template session no longer locks the workout to
+        // its muscles, so it takes an addition like any other
+        // (`docs/adr/0006-workout-tab-is-exercise-first.md`).
+        if (session == null) return const <Widget>[];
         return <Widget>[
           const SizedBox(height: 16),
           _DetailAction(
@@ -203,6 +203,11 @@ Future<void> startLoggingFromDetail(
         exerciseId: exercise.id,
         loadType: loadType,
       );
+  final session = ref.read(activeSessionProvider);
+  if (session != null) {
+    // Reaching the logging screen is what starts logging, whichever way in.
+    ref.read(loggingStartedProvider.notifier).start(session.id);
+  }
   if (rowId == null || !context.mounted) return;
   await Navigator.of(context).pushReplacement(
     MaterialPageRoute<void>(

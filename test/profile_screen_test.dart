@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/custom_templates.dart';
+import 'package:turtle_lift/src/data/exercise.dart';
+import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
 import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
@@ -26,8 +28,7 @@ void main() {
   WorkoutTemplate customTemplate(String id) => WorkoutTemplate(
         id: id,
         name: 'My $id',
-        groupIds: const <String>['biceps'],
-        filters: const <TemplateFilter>{},
+        exerciseIds: const <String>['barbell-curl'],
         isPredefined: false,
       );
 
@@ -59,6 +60,9 @@ void main() {
       observers: observer == null ? null : <ProviderObserver>[observer],
       overrides: [
         customTemplatesProvider.overrideWithValue(custom),
+        // The real template library derives each row's muscle line from the
+        // exercise library; an empty one is enough for "a screen opens".
+        exerciseIndexProvider.overrideWithValue(ExerciseIndex(const <Exercise>[])),
         if (templatesDestination != null)
           profileTemplatesDestinationProvider
               .overrideWithValue(templatesDestination),

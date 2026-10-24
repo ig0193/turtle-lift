@@ -794,7 +794,20 @@ class $CustomTemplatesTable extends CustomTemplates
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _exerciseIdsMeta = const VerificationMeta(
+    'exerciseIds',
+  );
+  @override
+  late final GeneratedColumn<String> exerciseIds = GeneratedColumn<String>(
+    'exercise_ids',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _sourceTemplateIdMeta = const VerificationMeta(
     'sourceTemplateId',
@@ -808,7 +821,13 @@ class $CustomTemplatesTable extends CustomTemplates
     requiredDuringInsert: false,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, groupIds, sourceTemplateId];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    groupIds,
+    exerciseIds,
+    sourceTemplateId,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -839,8 +858,15 @@ class $CustomTemplatesTable extends CustomTemplates
         _groupIdsMeta,
         groupIds.isAcceptableOrUnknown(data['group_ids']!, _groupIdsMeta),
       );
-    } else if (isInserting) {
-      context.missing(_groupIdsMeta);
+    }
+    if (data.containsKey('exercise_ids')) {
+      context.handle(
+        _exerciseIdsMeta,
+        exerciseIds.isAcceptableOrUnknown(
+          data['exercise_ids']!,
+          _exerciseIdsMeta,
+        ),
+      );
     }
     if (data.containsKey('source_template_id')) {
       context.handle(
@@ -872,6 +898,10 @@ class $CustomTemplatesTable extends CustomTemplates
         DriftSqlType.string,
         data['${effectivePrefix}group_ids'],
       )!,
+      exerciseIds: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}exercise_ids'],
+      )!,
       sourceTemplateId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}source_template_id'],
@@ -892,13 +922,24 @@ class CustomTemplateRow extends DataClass
   final String id;
   final String name;
 
-  /// Parent muscle group ids, comma-joined in taxonomy order.
+  /// **Legacy: no longer written or read.** Templates were a list of parent
+  /// muscle group ids before `docs/adr/0006-workout-tab-is-exercise-first.md`.
+  /// The column stays because SQLite cannot drop a `NOT NULL` column without
+  /// rebuilding the table, and a rebuild is a worse trade than one empty string
+  /// per row. New rows write `''`.
+  final String groupIds;
+
+  /// Library exercise ids, comma-joined in session order.
   ///
   /// **A joined string rather than a child table**, because the app never
-  /// queries templates *by* group: it loads the whole template and renders it.
-  /// A second table would buy a join for a list that is read whole and is at
-  /// most twelve short ids long.
-  final String groupIds;
+  /// queries templates *by* exercise: it loads the whole template and renders
+  /// it. A second table would buy a join for a list that is read whole and is a
+  /// dozen short ids long at most. Exercise ids are lower-case words and hyphens,
+  /// so the separator cannot collide with one.
+  ///
+  /// **Order is the point**, unlike the group ids this replaces: it is the order
+  /// the session lists the exercises in.
+  final String exerciseIds;
 
   /// The predefined template this was duplicated from, so the row can say
   /// "Duplicated from Push day" without guessing. Null once that template no
@@ -908,6 +949,7 @@ class CustomTemplateRow extends DataClass
     required this.id,
     required this.name,
     required this.groupIds,
+    required this.exerciseIds,
     this.sourceTemplateId,
   });
   @override
@@ -916,6 +958,7 @@ class CustomTemplateRow extends DataClass
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     map['group_ids'] = Variable<String>(groupIds);
+    map['exercise_ids'] = Variable<String>(exerciseIds);
     if (!nullToAbsent || sourceTemplateId != null) {
       map['source_template_id'] = Variable<String>(sourceTemplateId);
     }
@@ -927,6 +970,7 @@ class CustomTemplateRow extends DataClass
       id: Value(id),
       name: Value(name),
       groupIds: Value(groupIds),
+      exerciseIds: Value(exerciseIds),
       sourceTemplateId: sourceTemplateId == null && nullToAbsent
           ? const Value.absent()
           : Value(sourceTemplateId),
@@ -942,6 +986,7 @@ class CustomTemplateRow extends DataClass
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       groupIds: serializer.fromJson<String>(json['groupIds']),
+      exerciseIds: serializer.fromJson<String>(json['exerciseIds']),
       sourceTemplateId: serializer.fromJson<String?>(json['sourceTemplateId']),
     );
   }
@@ -952,6 +997,7 @@ class CustomTemplateRow extends DataClass
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'groupIds': serializer.toJson<String>(groupIds),
+      'exerciseIds': serializer.toJson<String>(exerciseIds),
       'sourceTemplateId': serializer.toJson<String?>(sourceTemplateId),
     };
   }
@@ -960,11 +1006,13 @@ class CustomTemplateRow extends DataClass
     String? id,
     String? name,
     String? groupIds,
+    String? exerciseIds,
     Value<String?> sourceTemplateId = const Value.absent(),
   }) => CustomTemplateRow(
     id: id ?? this.id,
     name: name ?? this.name,
     groupIds: groupIds ?? this.groupIds,
+    exerciseIds: exerciseIds ?? this.exerciseIds,
     sourceTemplateId: sourceTemplateId.present
         ? sourceTemplateId.value
         : this.sourceTemplateId,
@@ -974,6 +1022,9 @@ class CustomTemplateRow extends DataClass
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       groupIds: data.groupIds.present ? data.groupIds.value : this.groupIds,
+      exerciseIds: data.exerciseIds.present
+          ? data.exerciseIds.value
+          : this.exerciseIds,
       sourceTemplateId: data.sourceTemplateId.present
           ? data.sourceTemplateId.value
           : this.sourceTemplateId,
@@ -986,13 +1037,15 @@ class CustomTemplateRow extends DataClass
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('groupIds: $groupIds, ')
+          ..write('exerciseIds: $exerciseIds, ')
           ..write('sourceTemplateId: $sourceTemplateId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, groupIds, sourceTemplateId);
+  int get hashCode =>
+      Object.hash(id, name, groupIds, exerciseIds, sourceTemplateId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1000,6 +1053,7 @@ class CustomTemplateRow extends DataClass
           other.id == this.id &&
           other.name == this.name &&
           other.groupIds == this.groupIds &&
+          other.exerciseIds == this.exerciseIds &&
           other.sourceTemplateId == this.sourceTemplateId);
 }
 
@@ -1007,28 +1061,31 @@ class CustomTemplatesCompanion extends UpdateCompanion<CustomTemplateRow> {
   final Value<String> id;
   final Value<String> name;
   final Value<String> groupIds;
+  final Value<String> exerciseIds;
   final Value<String?> sourceTemplateId;
   final Value<int> rowid;
   const CustomTemplatesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.groupIds = const Value.absent(),
+    this.exerciseIds = const Value.absent(),
     this.sourceTemplateId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CustomTemplatesCompanion.insert({
     required String id,
     required String name,
-    required String groupIds,
+    this.groupIds = const Value.absent(),
+    this.exerciseIds = const Value.absent(),
     this.sourceTemplateId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       name = Value(name),
-       groupIds = Value(groupIds);
+       name = Value(name);
   static Insertable<CustomTemplateRow> custom({
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? groupIds,
+    Expression<String>? exerciseIds,
     Expression<String>? sourceTemplateId,
     Expression<int>? rowid,
   }) {
@@ -1036,6 +1093,7 @@ class CustomTemplatesCompanion extends UpdateCompanion<CustomTemplateRow> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (groupIds != null) 'group_ids': groupIds,
+      if (exerciseIds != null) 'exercise_ids': exerciseIds,
       if (sourceTemplateId != null) 'source_template_id': sourceTemplateId,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1045,6 +1103,7 @@ class CustomTemplatesCompanion extends UpdateCompanion<CustomTemplateRow> {
     Value<String>? id,
     Value<String>? name,
     Value<String>? groupIds,
+    Value<String>? exerciseIds,
     Value<String?>? sourceTemplateId,
     Value<int>? rowid,
   }) {
@@ -1052,6 +1111,7 @@ class CustomTemplatesCompanion extends UpdateCompanion<CustomTemplateRow> {
       id: id ?? this.id,
       name: name ?? this.name,
       groupIds: groupIds ?? this.groupIds,
+      exerciseIds: exerciseIds ?? this.exerciseIds,
       sourceTemplateId: sourceTemplateId ?? this.sourceTemplateId,
       rowid: rowid ?? this.rowid,
     );
@@ -1069,6 +1129,9 @@ class CustomTemplatesCompanion extends UpdateCompanion<CustomTemplateRow> {
     if (groupIds.present) {
       map['group_ids'] = Variable<String>(groupIds.value);
     }
+    if (exerciseIds.present) {
+      map['exercise_ids'] = Variable<String>(exerciseIds.value);
+    }
     if (sourceTemplateId.present) {
       map['source_template_id'] = Variable<String>(sourceTemplateId.value);
     }
@@ -1084,6 +1147,7 @@ class CustomTemplatesCompanion extends UpdateCompanion<CustomTemplateRow> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('groupIds: $groupIds, ')
+          ..write('exerciseIds: $exerciseIds, ')
           ..write('sourceTemplateId: $sourceTemplateId, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1331,13 +1395,11 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
   /// count would — it records what was true when the session began.
   final String? templateName;
 
-  /// The parent muscle group ids this session is allowed to train, comma-joined
-  /// in taxonomy order, or null for an ad-hoc session.
-  ///
-  /// Snapshotted for the same reason as [templateName]: the template lock has
-  /// to keep working for an open session whose template has been deleted.
-  /// **Read only while the session is open** — a saved session's muscles come
-  /// from its sets, or it gains a second source of truth for what it trained.
+  /// **Legacy: no longer written or read.** It snapshotted the muscle groups a
+  /// template session was locked to, and the lock is gone
+  /// (`docs/adr/0006-workout-tab-is-exercise-first.md`). The column stays for the
+  /// reason `CustomTemplates.groupIds` does: dropping it means rebuilding a table
+  /// that carries the open-session unique index.
   final String? groupIds;
 
   /// Set on the one open session, null on every saved one.
@@ -3230,7 +3292,8 @@ typedef $$CustomTemplatesTableCreateCompanionBuilder =
     CustomTemplatesCompanion Function({
       required String id,
       required String name,
-      required String groupIds,
+      Value<String> groupIds,
+      Value<String> exerciseIds,
       Value<String?> sourceTemplateId,
       Value<int> rowid,
     });
@@ -3239,6 +3302,7 @@ typedef $$CustomTemplatesTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String> groupIds,
+      Value<String> exerciseIds,
       Value<String?> sourceTemplateId,
       Value<int> rowid,
     });
@@ -3264,6 +3328,11 @@ class $$CustomTemplatesTableFilterComposer
 
   ColumnFilters<String> get groupIds => $composableBuilder(
     column: $table.groupIds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get exerciseIds => $composableBuilder(
+    column: $table.exerciseIds,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3297,6 +3366,11 @@ class $$CustomTemplatesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get exerciseIds => $composableBuilder(
+    column: $table.exerciseIds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get sourceTemplateId => $composableBuilder(
     column: $table.sourceTemplateId,
     builder: (column) => ColumnOrderings(column),
@@ -3320,6 +3394,11 @@ class $$CustomTemplatesTableAnnotationComposer
 
   GeneratedColumn<String> get groupIds =>
       $composableBuilder(column: $table.groupIds, builder: (column) => column);
+
+  GeneratedColumn<String> get exerciseIds => $composableBuilder(
+    column: $table.exerciseIds,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get sourceTemplateId => $composableBuilder(
     column: $table.sourceTemplateId,
@@ -3367,12 +3446,14 @@ class $$CustomTemplatesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> groupIds = const Value.absent(),
+                Value<String> exerciseIds = const Value.absent(),
                 Value<String?> sourceTemplateId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CustomTemplatesCompanion(
                 id: id,
                 name: name,
                 groupIds: groupIds,
+                exerciseIds: exerciseIds,
                 sourceTemplateId: sourceTemplateId,
                 rowid: rowid,
               ),
@@ -3380,13 +3461,15 @@ class $$CustomTemplatesTableTableManager
               ({
                 required String id,
                 required String name,
-                required String groupIds,
+                Value<String> groupIds = const Value.absent(),
+                Value<String> exerciseIds = const Value.absent(),
                 Value<String?> sourceTemplateId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CustomTemplatesCompanion.insert(
                 id: id,
                 name: name,
                 groupIds: groupIds,
+                exerciseIds: exerciseIds,
                 sourceTemplateId: sourceTemplateId,
                 rowid: rowid,
               ),

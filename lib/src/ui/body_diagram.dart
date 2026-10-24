@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -104,12 +105,19 @@ class BodyDiagram extends ConsumerStatefulWidget {
   const BodyDiagram({
     required this.view,
     required this.fill,
+    this.planned = const <String>{},
     this.onSegmentTap,
     super.key,
   });
 
   final BodyView view;
   final BodySegmentFill fill;
+
+  /// Sub-muscle groups to **outline** rather than fill: what a workout intends
+  /// to train and has not yet. A segment is outlined when any group it stands
+  /// for is in this set, and the caller is expected to have already removed
+  /// whatever it has filled, so an outline never sits on a coloured muscle.
+  final Set<String> planned;
 
   /// Null makes the diagram read-only — the exercise page's use (R16).
   final BodySegmentTapped? onSegmentTap;
@@ -165,6 +173,7 @@ class _BodyDiagramState extends ConsumerState<BodyDiagram> {
     final painter = BodyDiagramPainter(
       view: widget.view,
       gender: ref.watch(bodyGenderProvider),
+      planned: widget.planned,
       // The muscle under the finger is painted over whatever the caller asked
       // for: the light accent while held, the full accent once chosen. Both are
       // owned by the touch and gone when it ends, so neither ever claims
@@ -331,16 +340,24 @@ Size bodyDiagramSize(BoxConstraints constraints, Size viewBox) {
 /// How thick the line between two muscles is, in logical pixels.
 const double kBodySegmentSeparatorWidth = 2.5;
 
+/// How thick the outline on a planned muscle is, in logical pixels. Thicker than
+/// the separator it is drawn over, so it reads as an outline and not as a seam.
+const double kBodyPlannedOutlineWidth = 3.5;
+
 class BodyDiagramPainter extends CustomPainter {
   const BodyDiagramPainter({
     required this.view,
     required this.gender,
     required this.fill,
+    this.planned = const <String>{},
   });
 
   final BodyView view;
   final BodyGender gender;
   final BodySegmentFill fill;
+
+  /// See [BodyDiagram.planned].
+  final Set<String> planned;
 
   /// The `kBodyAssets` key these two fields name. The join lives in
   /// `body_gender.dart`; this is the only thing that asks for it.
@@ -414,6 +431,20 @@ class BodyDiagramPainter extends CustomPainter {
     ..isAntiAlias = true
     ..strokeJoin = StrokeJoin.round;
 
+  /// The line that marks a muscle a workout plans to train.
+  ///
+  /// **Drawn over the separator, in the accent, and thicker.** A planned muscle
+  /// has no fill to say so — the fill is the record of what has been *worked*,
+  /// and planning must not look like having done it. The accent at partial
+  /// opacity reads as "this is coming" next to the full-strength fill that means
+  /// "this is done", without introducing a colour outside the palette.
+  Paint buildPlannedPaint() => Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = kBodyPlannedOutlineWidth
+    ..color = AppPalette.accentStrong.withValues(alpha: 0.75)
+    ..isAntiAlias = true
+    ..strokeJoin = StrokeJoin.round;
+
   /// The segment containing [position] — in the widget's local coordinates —
   /// or null if the point is outside every one of them.
   ///
@@ -453,6 +484,14 @@ class BodyDiagramPainter extends CustomPainter {
     for (final segment in segments) {
       canvas.drawPath(segment.path, separator);
     }
+    if (planned.isNotEmpty) {
+      final outline = buildPlannedPaint();
+      for (final segment in segments) {
+        if (segment.subMuscleGroupIds.any(planned.contains)) {
+          canvas.drawPath(segment.path, outline);
+        }
+      }
+    }
     canvas.restore();
   }
 
@@ -460,7 +499,8 @@ class BodyDiagramPainter extends CustomPainter {
   bool shouldRepaint(BodyDiagramPainter oldDelegate) =>
       oldDelegate.view != view ||
       oldDelegate.gender != gender ||
-      oldDelegate.fill != fill;
+      oldDelegate.fill != fill ||
+      !setEquals(oldDelegate.planned, planned);
 
   /// [view] is handed over rather than left to be read back out of
   /// [assetKey]: this object already knows which side it is drawing, and

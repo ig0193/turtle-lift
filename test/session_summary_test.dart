@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/active_session.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
+import 'package:turtle_lift/src/data/custom_templates.dart';
 import 'package:turtle_lift/src/data/exercise.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/load_type.dart';
@@ -259,6 +260,149 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('standard exercise-science averages'),
           findsOneWidget);
+    });
+  });
+
+  group('saving as a template', () {
+    /// Saves a workout of [ids], each with one completed set, in that order.
+    Future<String> saveMany(WidgetTester tester, List<String> ids,
+        {String? title}) async {
+      late String id;
+      await tester.runAsync(() async {
+        final session = await store.createSession(templateName: title);
+        id = session.id;
+        for (final exerciseId in ids) {
+          final row = await store.addExercise(
+            sessionId: id,
+            exerciseId: exerciseId,
+            loadType: LoadType.weighted,
+          );
+          await store.writeSet(
+            sessionExerciseId: row,
+            position: 0,
+            weightKg: 50,
+            reps: 8,
+            completed: true,
+          );
+        }
+        await store.saveOpenSession();
+      });
+      return id;
+    }
+
+    ProviderContainer containerOf(WidgetTester tester) =>
+        ProviderScope.containerOf(tester.element(find.byType(SessionSummaryScreen)));
+
+    testWidgets('the action sits below the card, above Delete', (tester) async {
+      final id = await saveMany(tester, <String>['bench']);
+      await pump(tester, id);
+
+      final save = tester.getTopLeft(find.byKey(SessionSummaryScreen.saveAsTemplateKey));
+      final delete = tester.getTopLeft(find.byKey(SessionSummaryScreen.deleteKey));
+      expect(save.dy, lessThan(delete.dy));
+      expect(find.text('Save as template'), findsOneWidget);
+    });
+
+    testWidgets('asks for a name, prefilled with the workout title',
+        (tester) async {
+      final id = await saveMany(tester, <String>['bench'], title: 'Heavy push');
+      await pump(tester, id);
+
+      await tester.ensureVisible(find.byKey(SessionSummaryScreen.saveAsTemplateKey));
+      await tester.tap(find.byKey(SessionSummaryScreen.saveAsTemplateKey));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Save as template'), findsWidgets);
+      expect(find.descendant(of: find.byType(Dialog), matching: find.widgetWithText(TextField, 'Heavy push')), findsOneWidget);
+    });
+
+    testWidgets('saves the exercises that were done, in order', (tester) async {
+      final id = await saveMany(tester, <String>['row', 'bench']);
+      await pump(tester, id);
+
+      await tester.ensureVisible(find.byKey(SessionSummaryScreen.saveAsTemplateKey));
+      await tester.tap(find.byKey(SessionSummaryScreen.saveAsTemplateKey));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.descendant(of: find.byType(Dialog), matching: find.byType(TextField)), 'My pull then push');
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Save'));
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+      });
+      await tester.pumpAndSettle();
+
+      final templates = containerOf(tester).read(customTemplatesProvider);
+      expect(templates, hasLength(1));
+      expect(templates.single.name, 'My pull then push');
+      expect(templates.single.exerciseIds, <String>['row', 'bench'],
+          reason: 'the order they were done in is the order they will be listed');
+      expect(templates.single.isPredefined, isFalse);
+      expect(find.text('My pull then push saved to My templates'),
+          findsOneWidget);
+    });
+
+    testWidgets('leaves out an exercise that was added and never touched',
+        (tester) async {
+      late String id;
+      await tester.runAsync(() async {
+        final session = await store.createSession();
+        id = session.id;
+        final done = await store.addExercise(
+            sessionId: id, exerciseId: 'bench', loadType: LoadType.weighted);
+        await store.writeSet(
+            sessionExerciseId: done,
+            position: 0,
+            weightKg: 50,
+            reps: 8,
+            completed: true);
+        // Kept in the workout, but with no completed set.
+        await store.addExercise(
+            sessionId: id, exerciseId: 'row', loadType: LoadType.weighted);
+        await store.saveOpenSession();
+      });
+      await pump(tester, id);
+
+      await tester.ensureVisible(find.byKey(SessionSummaryScreen.saveAsTemplateKey));
+      await tester.tap(find.byKey(SessionSummaryScreen.saveAsTemplateKey));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.descendant(of: find.byType(Dialog), matching: find.byType(TextField)), 'Just bench');
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Save'));
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+      });
+      await tester.pumpAndSettle();
+
+      expect(
+        containerOf(tester).read(customTemplatesProvider).single.exerciseIds,
+        <String>['bench'],
+      );
+    });
+
+    testWidgets('backing out of the name prompt saves nothing', (tester) async {
+      final id = await saveMany(tester, <String>['bench']);
+      await pump(tester, id);
+
+      await tester.ensureVisible(find.byKey(SessionSummaryScreen.saveAsTemplateKey));
+      await tester.tap(find.byKey(SessionSummaryScreen.saveAsTemplateKey));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(5, 5)); // the scrim
+      await tester.pumpAndSettle();
+
+      expect(containerOf(tester).read(customTemplatesProvider), isEmpty);
+    });
+
+    testWidgets('an emptied name is refused rather than saved', (tester) async {
+      final id = await saveMany(tester, <String>['bench']);
+      await pump(tester, id);
+
+      await tester.ensureVisible(find.byKey(SessionSummaryScreen.saveAsTemplateKey));
+      await tester.tap(find.byKey(SessionSummaryScreen.saveAsTemplateKey));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.descendant(of: find.byType(Dialog), matching: find.byType(TextField)), '   ');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(containerOf(tester).read(customTemplatesProvider), isEmpty,
+          reason: 'a blank row would be unidentifiable on the landing');
     });
   });
 

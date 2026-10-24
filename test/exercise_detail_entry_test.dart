@@ -86,7 +86,6 @@ void main() {
       session = await store.createSession(
         templateId: 'push',
         templateName: 'Push day',
-        groupIds: <String>['chest'],
       );
     });
     return session;
@@ -109,7 +108,7 @@ void main() {
       expect(find.byKey(ExerciseDetailScreen.addToWorkoutKey), findsOneWidget);
     });
 
-    testWidgets('offers nothing during a template workout', (tester) async {
+    testWidgets('offers to add during a template workout too', (tester) async {
       final session = await openTemplate(tester);
 
       await pumpDetail(tester,
@@ -117,9 +116,10 @@ void main() {
 
       expect(
         find.byKey(ExerciseDetailScreen.addToWorkoutKey),
-        findsNothing,
-        reason: 'a template session is locked to the muscle groups the user '
-            'chose; that is the point of choosing one',
+        findsOneWidget,
+        reason: 'a template is a starting list, not a muscle lock '
+            '(docs/adr/0006): finishing Push day with curls is a normal thing '
+            'to want',
       );
     });
 

@@ -33,19 +33,56 @@ void main() {
       );
 
   group('starting a workout', () {
-    test('from a template, it carries the name, groups and today', () async {
+    test('from a template, it carries the name and today', () async {
       final session = await store.createSession(
         templateId: 'chest-triceps',
         templateName: 'Chest and triceps day',
-        groupIds: <String>['chest', 'triceps'],
       );
 
       expect(session.templateId, 'chest-triceps');
       expect(session.title, 'Chest and triceps day');
       expect(session.templateName, 'Chest and triceps day');
-      expect(session.groupIds, <String>['chest', 'triceps']);
       expect(session.performedOn, LocalDate.today());
       expect(session.isOpen, isTrue);
+    });
+
+    test('with exercises, they arrive with the session, in order', () async {
+      final session = await store.createSession(
+        templateId: 'push',
+        templateName: 'Push day',
+        exercises: <({String exerciseId, LoadType loadType})>[
+          (exerciseId: 'barbell-bench-press', loadType: LoadType.weighted),
+          (exerciseId: 'push-up', loadType: LoadType.bodyweight),
+        ],
+      );
+
+      expect(
+        session.exercises.map((e) => (e.exerciseId, e.position, e.loadType)),
+        <(String, int, LoadType?)>[
+          ('barbell-bench-press', 0, LoadType.weighted),
+          ('push-up', 1, LoadType.bodyweight),
+        ],
+      );
+      expect(
+        (await store.readOpenSession())!.exercises,
+        hasLength(2),
+        reason: 'they are in the same transaction as the session, so reading '
+            'it back never finds a session with some of its exercises',
+      );
+    });
+
+    test('a repeated exercise becomes one row with no gap in positions',
+        () async {
+      final session = await store.createSession(
+        exercises: <({String exerciseId, LoadType loadType})>[
+          (exerciseId: 'plank', loadType: LoadType.timed),
+          (exerciseId: 'plank', loadType: LoadType.timed),
+          (exerciseId: 'push-up', loadType: LoadType.bodyweight),
+        ],
+      );
+
+      expect(session.exercises.map((e) => (e.exerciseId, e.position)),
+          <(String, int)>[('plank', 0), ('push-up', 1)]);
     });
 
     test('ad-hoc, it has no title and no template', () async {
@@ -53,7 +90,7 @@ void main() {
 
       expect(session.title, isNull);
       expect(session.templateId, isNull);
-      expect(session.groupIds, isEmpty);
+      expect(session.exercises, isEmpty);
     });
 
     test('starting another releases the first marker rather than failing',

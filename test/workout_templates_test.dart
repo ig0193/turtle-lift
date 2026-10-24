@@ -1,15 +1,31 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:turtle_lift/src/data/exercise_index.dart';
+import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/data/generated/muscle_taxonomy.dart';
+import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
 
-/// Guards the shipped template set and the subtitle helper.
+/// Guards the shipped template set against the exercise library it points into.
 ///
-/// Modelled on `test/shipped_data_test.dart`: the counts are pinned against the
-/// docs so a hand-edit to the list fails here rather than showing up as a short
-/// screen. The filter-membership count is the one that matters most -- it is
-/// the only thing standing between `docs/00-build-spec.md` removing the
-/// unfiltered "All" value and a filter that renders nothing.
+/// A template is a list of exercise ids, and nothing in the type system says an
+/// id exists. So this is what stops a typo — or a regenerated library that
+/// dropped an exercise — from turning into a template row that quietly starts a
+/// shorter workout than it promised.
 void main() {
+  // `exerciseLibraryProvider` reaches `rootBundle`, which needs the binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late ExerciseIndex index;
+
+  setUpAll(() async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    index = ExerciseIndex.fromJson(
+      await container.read(exerciseLibraryProvider.future),
+    );
+  });
+
   group('the shipped set', () {
     test('is eleven templates, all predefined', () {
       expect(kPredefinedTemplates, hasLength(11));
@@ -25,110 +41,119 @@ void main() {
       expect(ids, hasLength(kPredefinedTemplates.length));
     });
 
-    test('every parent group id exists in the taxonomy', () {
-      for (final template in kPredefinedTemplates) {
-        expect(
-          template.groupIds,
-          isNotEmpty,
-          reason: '${template.id} must name at least one muscle group',
-        );
-        for (final id in template.groupIds) {
-          expect(
-            kMuscleGroupLabels.containsKey(id),
-            isTrue,
-            reason: '${template.id} names "$id", which is not a parent group',
-          );
-        }
-      }
-    });
-
-    test('stores parent groups only -- never a sub-group id', () {
-      for (final template in kPredefinedTemplates) {
-        for (final id in template.groupIds) {
-          expect(
-            id,
-            isNot(contains('/')),
-            reason: 'sub-groups derive from the taxonomy at render time',
-          );
-        }
-      }
-    });
-
-    test('the two additions resolve to a single group each', () {
-      expect(templateById('chest').groupIds, <String>['chest']);
-      expect(templateById('back').groupIds, <String>['back']);
-    });
-
-    test('full body day covers every parent group', () {
+    test('is listed in the order the landing renders it', () {
       expect(
-        templateById('full-body').groupIds.toSet(),
-        kMuscleTaxonomy.keys.toSet(),
+        kPredefinedTemplates.map((t) => t.id),
+        <String>[
+          'push',
+          'pull',
+          'leg',
+          'chest',
+          'back',
+          'shoulders',
+          'arms',
+          'chest-triceps',
+          'back-biceps',
+          'upper-body',
+          'full-body',
+        ],
       );
-    });
-
-    test('arms day is biceps and triceps -- "arms" is not a parent id', () {
-      expect(templateById('arms').groupIds, <String>['biceps', 'triceps']);
-      expect(kMuscleGroupLabels.containsKey('arms'), isFalse);
     });
   });
 
-  group('filter membership', () {
-    test('totals twelve across eleven templates', () {
-      final memberships = kPredefinedTemplates.fold<int>(
-        0,
-        (n, t) => n + t.filters.length,
-      );
-      expect(
-        memberships,
-        12,
-        reason: 'eleven templates, and leg day belongs to two filters',
-      );
+  group('every template points at real exercises', () {
+    test('each id exists in the library', () {
+      for (final template in kPredefinedTemplates) {
+        for (final id in template.exerciseIds) {
+          expect(
+            index.byId(id),
+            isNotNull,
+            reason: '${template.id} names "$id", which is not in the library',
+          );
+        }
+      }
     });
 
-    test('leg day is the only template in two filters', () {
-      final shared =
-          kPredefinedTemplates.where((t) => t.filters.length > 1).toList();
-      expect(shared.map((t) => t.id), <String>['leg']);
-      expect(
-        templateById('leg').filters,
-        {TemplateFilter.singleMuscle, TemplateFilter.pushPullLegs},
-      );
-    });
-
-    test('every filter yields at least one template', () {
-      for (final filter in TemplateFilter.values) {
+    test('each template has exercises, with none repeated', () {
+      for (final template in kPredefinedTemplates) {
         expect(
-          templatesFor(filter),
+          template.exerciseIds,
           isNotEmpty,
-          reason: 'there is no unfiltered value, so an empty filter is a dead '
-              'end the user cannot escape',
+          reason: '${template.id} would start an empty workout',
+        );
+        expect(
+          template.exerciseIds.toSet(),
+          hasLength(template.exerciseIds.length),
+          reason: 'a session holds one row per exercise, so a repeated id '
+              'would silently shorten ${template.id}',
         );
       }
     });
 
-    test('each filter yields the curated set, in order', () {
+    test('every exercise has a load type the session can log', () {
+      for (final template in kPredefinedTemplates) {
+        for (final id in template.exerciseIds) {
+          expect(
+            LoadType.fromName(index.byId(id)!.loadType),
+            isNotNull,
+            reason: '$id in ${template.id} would be skipped on start',
+          );
+        }
+      }
+    });
+  });
+
+  group('the muscle line a row shows', () {
+    test('is derived from the exercises, and says what each day is for', () {
+      // Pinned per template so that choosing an exercise whose *primary*
+      // muscle is a neighbouring group (a face pull, a hammer curl) cannot
+      // change what a template claims to cover without this failing.
+      const expected = <String, String>{
+        'push': 'Chest, shoulders, triceps',
+        'pull': 'Back, biceps',
+        'leg': 'Quads, hamstrings, glutes, calves',
+        'chest': 'Chest',
+        'back': 'Back',
+        'shoulders': 'Shoulders',
+        'arms': 'Biceps, triceps',
+        'chest-triceps': 'Chest, triceps',
+        'back-biceps': 'Back, biceps',
+        'upper-body': 'Chest, back, shoulders, biceps, triceps',
+      };
+      for (final entry in expected.entries) {
+        expect(
+          templateSubtitle(templateById(entry.key), index),
+          entry.value,
+          reason: entry.key,
+        );
+      }
+    });
+
+    test('full body day carries bespoke copy, not a long join', () {
       expect(
-        templatesFor(TemplateFilter.singleMuscle).map((t) => t.id),
-        <String>['chest', 'back', 'shoulders', 'arms', 'leg'],
-      );
-      expect(
-        templatesFor(TemplateFilter.multiSplit).map((t) => t.id),
-        <String>['upper-body', 'full-body', 'chest-triceps', 'back-biceps'],
-      );
-      expect(
-        templatesFor(TemplateFilter.pushPullLegs).map((t) => t.id),
-        <String>['push', 'pull', 'leg'],
+        templateSubtitle(templateById('full-body'), index),
+        'A mix across all major groups',
       );
     });
 
-    test('filter keys are stable and distinct from their labels', () {
-      expect(
-        TemplateFilter.values.map((f) => f.key),
-        <String>['single', 'multi', 'ppl'],
+    test('a template with no exercises says so rather than rendering blank', () {
+      const empty = WorkoutTemplate(
+        id: 'mine',
+        name: 'Mine',
+        exerciseIds: <String>[],
+        isPredefined: false,
       );
-      expect(TemplateFilter.fromKey('ppl'), TemplateFilter.pushPullLegs);
-      expect(TemplateFilter.fromKey('nonsense'), isNull);
-      expect(TemplateFilter.fromKey(null), isNull);
+      expect(templateSubtitle(empty, index), 'No exercises yet');
+    });
+
+    test('an id the library no longer has contributes nothing', () {
+      const stale = WorkoutTemplate(
+        id: 'mine',
+        name: 'Mine',
+        exerciseIds: <String>['barbell-bench-press', 'not-an-exercise'],
+        isPredefined: false,
+      );
+      expect(templateSubtitle(stale, index), 'Chest');
     });
   });
 
@@ -149,31 +174,12 @@ void main() {
       expect(muscleGroupSummary(const <String>[]), '');
     });
 
-    test('every predefined template renders a non-empty subtitle', () {
+    test('every id it is given is a real parent group', () {
       for (final template in kPredefinedTemplates) {
-        expect(
-          template.subtitle,
-          isNotEmpty,
-          reason: '${template.id} would render a blank second line',
-        );
+        for (final id in templateGroupIds(template, index)) {
+          expect(kMuscleGroupLabels.containsKey(id), isTrue, reason: id);
+        }
       }
-    });
-
-    test('full body day carries bespoke copy, not a twelve-label join', () {
-      final subtitle = templateById('full-body').subtitle;
-      expect(subtitle, 'A mix across all major groups');
-      expect(subtitle, isNot(contains('Calves')));
-      expect(subtitle, isNot(contains('calves')));
-    });
-
-    test('every other template joins its own labels', () {
-      expect(templateById('push').subtitle, 'Chest, shoulders, triceps');
-      expect(templateById('pull').subtitle, 'Back, biceps');
-      expect(
-        templateById('leg').subtitle,
-        'Quads, hamstrings, glutes, calves',
-      );
-      expect(templateById('chest').subtitle, 'Chest');
     });
   });
 }

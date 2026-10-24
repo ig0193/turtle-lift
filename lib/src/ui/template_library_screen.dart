@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/custom_templates.dart';
+import '../data/exercise_index.dart';
 import '../data/workout_templates.dart';
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
@@ -9,12 +10,13 @@ import 'template_row.dart';
 
 /// The only place templates are authored (`docs/00-build-spec.md` §11).
 ///
-/// **Three verbs, and the absence of a fourth is a decision.** A predefined
-/// template can be duplicated; the copy can be renamed and deleted. There is no
-/// way to build one from scratch and no way to change which muscle groups a
-/// copy contains — both are deferred (KD4), which means a duplicate currently
-/// differs from its original only in its name. That is a real limitation and
-/// `docs/04` records it rather than implying otherwise.
+/// **Three verbs here, and a fourth that lives elsewhere.** A predefined
+/// template can be duplicated; the copy can be renamed and deleted. A template
+/// is also made from a finished workout ("Save as template" on its summary), and
+/// there is still no way to edit which exercises a copy contains from this
+/// screen — so a duplicate currently differs from its original only in its name.
+/// That is a real limitation and `docs/04` records it rather than implying
+/// otherwise.
 ///
 /// **Predefined templates are immutable and the screen never offers to change
 /// one.** They are the reliable reference a user compares their own against; a
@@ -131,7 +133,7 @@ class TemplateLibraryScreen extends ConsumerWidget {
 
     await ref.read(customTemplateListProvider.notifier).add(
           name: duplicateName(source.name, existing),
-          groupIds: source.groupIds,
+          exerciseIds: source.exerciseIds,
           sourceTemplateId: source.id,
         );
   }
@@ -141,7 +143,7 @@ class TemplateLibraryScreen extends ConsumerWidget {
     WidgetRef ref,
     WorkoutTemplate template,
   ) async {
-    final name = await _promptForName(context, initial: template.name);
+    final name = await promptForTemplateName(context, initial: template.name);
     if (name == null) return;
     await ref.read(customTemplateListProvider.notifier).rename(
           template.id,
@@ -201,7 +203,7 @@ String duplicateName(String sourceName, Set<String> taken) {
 /// reader would have no way to reach it. `DividerRow` has the same shape. This
 /// follows their visual pattern with a trailing slot instead, the same way
 /// those two generalised the pattern for their own screens.
-class _LibraryRow extends StatelessWidget {
+class _LibraryRow extends ConsumerWidget {
   const _LibraryRow({
     required this.template,
     required this.actions,
@@ -212,7 +214,9 @@ class _LibraryRow extends StatelessWidget {
   final List<Widget> actions;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final subtitle =
+        templateSubtitle(template, ref.watch(exerciseIndexProvider));
     return Container(
       constraints: const BoxConstraints(minHeight: TemplateRow.minHeight),
       padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
@@ -228,7 +232,7 @@ class _LibraryRow extends StatelessWidget {
               children: <Widget>[
                 Text(template.name, style: kTemplateRowTitleStyle),
                 const SizedBox(height: 2),
-                Text(template.subtitle, style: kTemplateRowSubtitleStyle),
+                Text(subtitle, style: kTemplateRowSubtitleStyle),
               ],
             ),
           ),
@@ -304,19 +308,24 @@ class _GroupLabel extends StatelessWidget {
   }
 }
 
-/// Asks for a new template name, returning null when the user backs out.
+/// Asks for a template name, returning null when the user backs out or leaves
+/// it empty.
 ///
 /// Built from the palette rather than Material's `AlertDialog` defaults, for
 /// the reason `template_row.dart` gives about `ListTile`: this app has no
 /// Material text theme, so a stock dialog would arrive with a density and a
 /// colour scheme that exist nowhere else in it.
-Future<String?> _promptForName(
+///
+/// Public because it is asked from two places: renaming a template here, and
+/// naming one made from a finished workout on its summary.
+Future<String?> promptForTemplateName(
   BuildContext context, {
   required String initial,
+  String title = 'Rename template',
 }) {
   return showDialog<String>(
     context: context,
-    builder: (_) => _RenameDialog(initial: initial),
+    builder: (_) => _RenameDialog(initial: initial, title: title),
   );
 }
 
@@ -327,9 +336,10 @@ Future<String?> _promptForName(
 /// rebuilding the field, which throws. Owning it here ties its lifetime to the
 /// widget that actually uses it.
 class _RenameDialog extends StatefulWidget {
-  const _RenameDialog({required this.initial});
+  const _RenameDialog({required this.initial, required this.title});
 
   final String initial;
+  final String title;
 
   @override
   State<_RenameDialog> createState() => _RenameDialogState();
@@ -355,7 +365,7 @@ class _RenameDialogState extends State<_RenameDialog> {
   @override
   Widget build(BuildContext context) {
     return _PaletteDialog(
-      title: 'Rename template',
+      title: widget.title,
       body: TextField(
         controller: _controller,
         autofocus: true,

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import 'app_database.dart';
-import 'generated/muscle_taxonomy.dart';
 import 'settings_store.dart' show appDatabaseProvider;
 import 'workout_templates.dart';
 
@@ -14,12 +13,10 @@ import 'workout_templates.dart';
 /// do not learn drift's query API, and swapping the storage underneath them
 /// stays a change to this file.
 ///
-/// **It deals in the columns, not in [WorkoutTemplate].** The group ids come
+/// **It deals in the columns, not in [WorkoutTemplate].** The exercise ids come
 /// back as the stored comma-joined string and go in the same way. Deciding what
-/// that string means — which ids the taxonomy still knows, what order they
-/// render in — belongs to [encodeGroupIds] and [decodeGroupIds] below, which
-/// own that vocabulary, exactly as [SettingsStore] leaves the filter keys to
-/// the filter provider.
+/// that string means belongs to [encodeExerciseIds] and [decodeExerciseIds]
+/// below, which own that vocabulary.
 ///
 /// **Unlike the bodyweight series, these rows are fully mutable.** A bodyweight
 /// entry is immutable because the calorie estimate is derived from the weight
@@ -69,14 +66,14 @@ class CustomTemplateStore {
   Future<void> insertCustomTemplate({
     required String id,
     required String name,
-    required String groupIds,
+    required String exerciseIds,
     String? sourceTemplateId,
   }) async {
     await _db.into(_db.customTemplates).insertOnConflictUpdate(
           CustomTemplatesCompanion.insert(
             id: id,
             name: name,
-            groupIds: groupIds,
+            exerciseIds: Value<String>(exerciseIds),
             sourceTemplateId: Value<String?>(sourceTemplateId),
           ),
         );
@@ -86,7 +83,7 @@ class CustomTemplateStore {
   ///
   /// **A partial companion write, not a read-modify-write.** An
   /// [UpdateCompanion] carries only the columns it was given, so this leaves
-  /// `groupIds` and `sourceTemplateId` exactly as they were. Rebuilding the
+  /// `exerciseIds` and `sourceTemplateId` exactly as they were. Rebuilding the
   /// whole row from a read would blank whichever column the caller forgot, and
   /// nothing would fail — the same trap `PersonalDetailsStore.writeBodyGender`
   /// documents for the shared settings row.
@@ -116,53 +113,31 @@ final customTemplateStoreProvider = Provider<CustomTemplateStore>(
   (ref) => CustomTemplateStore(ref.watch(appDatabaseProvider)),
 );
 
-/// Parent muscle group ids as the single column the table stores.
+/// Exercise ids as the single column the table stores.
 ///
-/// **The taxonomy order is applied here, on the way in.** The column's contract
-/// is "comma-joined in taxonomy order", and a template's subtitle is derived by
-/// joining those ids — so two templates naming the same groups must produce the
-/// same string or they render differently for no reason the user can see.
-/// Normalising on write rather than on read means the stored value is already
-/// correct for anything that reads the column without going through
-/// [decodeGroupIds].
-///
-/// Ids the taxonomy does not know are dropped, because taxonomy order is
-/// undefined for them and a template cannot render a group that does not exist.
-/// Repeats collapse for the same reason: the set of groups is what a template
-/// is, and listing chest twice says nothing extra.
-String encodeGroupIds(List<String> groupIds) {
-  final wanted = groupIds.toSet();
-  return <String>[
-    for (final id in kMuscleTaxonomy.keys)
-      if (wanted.contains(id)) id,
-  ].join(',');
-}
+/// **Order is kept, and nothing else is changed.** The list is the order a
+/// session will show the exercises in, so unlike a set of muscle groups there is
+/// no canonical form to normalise to. Blank entries are dropped, because a
+/// phantom id would otherwise become a row in the session that names no
+/// exercise; ids the library no longer has are left alone, since this file does
+/// not know the library and the session resolves them (or skips them) on read.
+String encodeExerciseIds(List<String> exerciseIds) =>
+    exerciseIds.where((id) => id.isNotEmpty).join(',');
 
-/// The parent group ids a stored column names.
+/// The exercise ids a stored column names.
 ///
-/// **A plain split, because [encodeGroupIds] already did the work.** The empty
+/// **A plain split, because [encodeExerciseIds] already did the work.** The empty
 /// string is the case worth the method: `''.split(',')` yields `['']`, which
-/// would hang a phantom group off every template that has none.
-List<String> decodeGroupIds(String stored) {
+/// would hang a phantom exercise off every template that has none.
+List<String> decodeExerciseIds(String stored) {
   if (stored.isEmpty) return const <String>[];
   return stored.split(',');
 }
 
 /// One stored row as the template the rest of the app renders.
 ///
-/// **[WorkoutTemplate.filters] is empty, and that is the whole rule about
-/// custom templates.** They sit outside the split filter: `templatesFor` only
-/// ever walks [kPredefinedTemplates], and the landing lists these separately
-/// under their own heading whichever filter is showing. With no unfiltered
-/// "All" value, classifying a custom template by muscle composition would leave
-/// the user's own template reachable only from whichever bucket the classifier
-/// picked.
-///
-/// **No subtitle is stored.** [WorkoutTemplate.subtitle] derives it from the
-/// group ids, like every other display value in the app. The one predefined
-/// template that overrides its subtitle does so because twelve joined labels
-/// are too long a line; a custom template the user actually built is not going
-/// to hit that.
+/// **No subtitle is stored.** `templateSubtitle` derives it from the exercises,
+/// like every other display value in the app.
 ///
 /// [CustomTemplateRow.sourceTemplateId] deliberately does not come across.
 /// [WorkoutTemplate] has nowhere to put it, and the only thing that wants it is
@@ -172,8 +147,7 @@ List<String> decodeGroupIds(String stored) {
 WorkoutTemplate templateFromRow(CustomTemplateRow row) => WorkoutTemplate(
       id: row.id,
       name: row.name,
-      groupIds: decodeGroupIds(row.groupIds),
-      filters: const <TemplateFilter>{},
+      exerciseIds: decodeExerciseIds(row.exerciseIds),
       isPredefined: false,
     );
 
@@ -181,11 +155,10 @@ WorkoutTemplate templateFromRow(CustomTemplateRow row) => WorkoutTemplate(
 /// first frame**.
 ///
 /// **This exists to be overridden, and `main()` is what overrides it** — the
-/// same shape, and the same reasoning, as `initialTemplateFilterProvider` and
-/// `initialBodyweightLogProvider`. An `AsyncNotifier` reading the table in
+/// same shape, and the same reasoning, as `initialBodyweightLogProvider`. An `AsyncNotifier` reading the table in
 /// `build()` resolves a frame or more after the tree first builds, and the
 /// Workout landing is the app's opening screen: the custom group would be
-/// absent on the first frame and then appear, pushing the ad-hoc entry down
+/// absent on the first frame and then appear, pushing the rows below it down
 /// under the user's thumb. "Absent entirely" is a real state for a user with no
 /// templates, which is exactly why showing it to a user who has some is not a
 /// cosmetic glitch.
@@ -198,9 +171,9 @@ final initialCustomTemplatesProvider = Provider<List<WorkoutTemplate>>(
 
 /// Reads the stored rows into templates, in the order the list renders.
 ///
-/// Called once from `main()` before `runApp`. No fallback is needed: unlike a
-/// filter key there is no vocabulary to fail to recognise, and an empty table
-/// is the ordinary first-launch answer rather than an error.
+/// Called once from `main()` before `runApp`. No fallback is needed: there is
+/// no vocabulary to fail to recognise, and an empty table is the ordinary
+/// first-launch answer rather than an error.
 Future<List<WorkoutTemplate>> readStoredCustomTemplates(
   CustomTemplateStore store,
 ) async {
@@ -242,32 +215,31 @@ class CustomTemplateList extends Notifier<List<WorkoutTemplate>> {
   /// and is null for one built from scratch.
   Future<WorkoutTemplate> add({
     required String name,
-    required List<String> groupIds,
+    required List<String> exerciseIds,
     String? sourceTemplateId,
   }) async {
     final id = const Uuid().v4();
     await ref.read(customTemplateStoreProvider).insertCustomTemplate(
           id: id,
           name: name,
-          groupIds: encodeGroupIds(groupIds),
+          exerciseIds: encodeExerciseIds(exerciseIds),
           sourceTemplateId: sourceTemplateId,
         );
 
     // Built from the encoded ids rather than from the argument, so what the
     // caller gets back is what the next launch will read — a caller handing
-    // over an unknown id or a duplicate must not see it survive in memory only.
+    // over a blank id must not see it survive in memory only.
     final saved = WorkoutTemplate(
       id: id,
       name: name,
-      groupIds: decodeGroupIds(encodeGroupIds(groupIds)),
-      filters: const <TemplateFilter>{},
+      exerciseIds: decodeExerciseIds(encodeExerciseIds(exerciseIds)),
       isPredefined: false,
     );
     state = _sorted(<WorkoutTemplate>[...state, saved]);
     return saved;
   }
 
-  /// Renames the template with [id], leaving its groups alone. A stale id is a
+  /// Renames the template with [id], leaving its exercises alone. A stale id is a
   /// no-op in both the database and the list.
   Future<void> rename(String id, String name) async {
     await ref.read(customTemplateStoreProvider).renameCustomTemplate(id, name);
@@ -278,8 +250,7 @@ class CustomTemplateList extends Notifier<List<WorkoutTemplate>> {
           WorkoutTemplate(
             id: template.id,
             name: name,
-            groupIds: template.groupIds,
-            filters: template.filters,
+            exerciseIds: template.exerciseIds,
             isPredefined: template.isPredefined,
             subtitleOverride: template.subtitleOverride,
           )
@@ -337,13 +308,6 @@ final customTemplateListProvider =
 /// that calls `add`, `rename` or `delete` must seed
 /// [initialCustomTemplatesProvider] instead and leave this one alone, or it
 /// will watch a constant while the notifier changes underneath it.
-///
-/// **Custom templates sit outside the split filter.** They are shown whichever
-/// filter is selected. With no unfiltered "All" value, classifying them by
-/// muscle composition would leave a user's own template reachable only from
-/// whichever bucket the classifier picked, and an arbitrary catch-all would put
-/// a single-muscle custom template under Multi Split while the predefined
-/// equivalent sat under 1 Muscle per day.
 final customTemplatesProvider = Provider<List<WorkoutTemplate>>(
   (ref) => ref.watch(customTemplateListProvider),
 );

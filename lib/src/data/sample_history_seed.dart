@@ -4,7 +4,6 @@ import 'package:uuid/uuid.dart';
 import 'app_database.dart';
 import 'load_type.dart';
 import 'local_date.dart';
-import 'session_store.dart' show encodeGroupIds;
 
 /// Writes a handful of plausible workouts into an empty database, purely so
 /// the History tab has something to render while its calendar and Recent
@@ -73,7 +72,6 @@ Future<void> seedSampleHistoryIfEmpty(AppDatabase db) async {
   void workout({
     required int daysAgo,
     required String title,
-    required List<String> groupIds,
     required List<_SeedExercise> exercises,
   }) {
     final sessionId = uuid.v4();
@@ -83,7 +81,6 @@ Future<void> seedSampleHistoryIfEmpty(AppDatabase db) async {
       performedOn: dateDaysAgo(daysAgo),
       loggedAt: DateTime.now(),
       templateName: Value<String?>(title),
-      groupIds: Value<String?>(encodeGroupIds(groupIds)),
     ));
     addExerciseRows(sessionId, exercises);
   }
@@ -97,10 +94,6 @@ Future<void> seedSampleHistoryIfEmpty(AppDatabase db) async {
     ));
     addExerciseRows(sessionId, <_SeedExercise>[exercise]);
   }
-
-  const push = <String>['chest', 'shoulders', 'triceps'];
-  const pull = <String>['back', 'biceps'];
-  const legs = <String>['quads', 'hamstrings', 'calves'];
 
   _SeedExercise bench(double kg) => _SeedExercise.weighted(
         'barbell-bench-press',
@@ -146,56 +139,47 @@ Future<void> seedSampleHistoryIfEmpty(AppDatabase db) async {
   workout(
     daysAgo: 23,
     title: 'Push day',
-    groupIds: push,
     exercises: <_SeedExercise>[bench(70), ohp(42.5), tricepsPushdown(20)],
   );
   workout(
     daysAgo: 20,
     title: 'Pull day',
-    groupIds: pull,
     exercises: <_SeedExercise>[row(65), latPulldown(58), curl(27.5)],
   );
   workout(
     daysAgo: 17,
     title: 'Leg day',
-    groupIds: legs,
     exercises: <_SeedExercise>[squat(90), rdl(80), calfRaise(60)],
   );
   quickLog(daysAgo: 15, exercise: pullUp);
   workout(
     daysAgo: 13,
     title: 'Push day',
-    groupIds: push,
     exercises: <_SeedExercise>[bench(72.5), ohp(45), tricepsPushdown(22.5)],
   );
   workout(
     daysAgo: 10,
     title: 'Pull day',
-    groupIds: pull,
     exercises: <_SeedExercise>[row(67.5), latPulldown(60), curl(30)],
   );
   workout(
     daysAgo: 8,
     title: 'Leg day',
-    groupIds: legs,
     exercises: <_SeedExercise>[squat(95), rdl(82.5), calfRaise(65)],
   );
   workout(
     daysAgo: 5,
     title: 'Push day',
-    groupIds: push,
     exercises: <_SeedExercise>[bench(75), ohp(47.5), tricepsPushdown(22.5)],
   );
   workout(
     daysAgo: 3,
     title: 'Pull day',
-    groupIds: pull,
     exercises: <_SeedExercise>[row(70), latPulldown(62.5), curl(30)],
   );
   workout(
     daysAgo: 1,
     title: 'Leg day',
-    groupIds: legs,
     exercises: <_SeedExercise>[squat(100), rdl(85), calfRaise(65)],
   );
   // Today carries two sessions, so the calendar's two-dot day and the
@@ -203,7 +187,6 @@ Future<void> seedSampleHistoryIfEmpty(AppDatabase db) async {
   workout(
     daysAgo: 0,
     title: 'Push day',
-    groupIds: push,
     exercises: <_SeedExercise>[bench(77.5), ohp(47.5), tricepsPushdown(25)],
   );
   quickLog(daysAgo: 0, exercise: curl(32.5));

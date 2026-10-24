@@ -58,7 +58,6 @@ void main() {
         loggedAt: loggedAt ?? date.toDateTime(),
         templateId: null,
         templateName: null,
-        groupIds: const <String>[],
         isOpen: false,
         exercises: exercises,
       );

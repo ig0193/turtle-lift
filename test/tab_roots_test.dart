@@ -92,11 +92,10 @@ void main() {
     double height = 80,
     EdgeInsets padding = EdgeInsets.zero,
   }) {
-    // The Workout root reads providers (the split filter, the user's own
-    // templates), so every root in this registry now needs a scope around it --
-    // including the geometry tests below, which never look at that content but
-    // do mount the widget. No database is needed to *render*: the filter is
-    // seeded synchronously and the store is only touched when one is selected.
+    // The Workout root reads providers (the user's own templates and the
+    // exercise library), so every root in this registry now needs a scope
+    // around it -- including the geometry tests below, which never look at that
+    // content but do mount the widget. No database is needed to *render*.
     //
     // The index override is not optional: `exerciseIndexProvider` throws
     // without one by design, so the Muscles root would not mount at all.
@@ -154,10 +153,10 @@ void main() {
       (tester) async {
     await tester.pumpWidget(hostTall(const WorkoutRoot()));
 
-    expect(find.text('TEMPLATES'), findsOneWidget,
-        reason: 'the group label the filter control sits beside');
-    expect(find.text('Ad-hoc workout'), findsOneWidget,
-        reason: 'the ad-hoc entry sits below every template group');
+    expect(find.text('READY-MADE'), findsOneWidget,
+        reason: 'the group label over the templates that ship with the app');
+    expect(find.text('Start workout'), findsOneWidget,
+        reason: 'the pinned bar that starts an empty workout');
     expect(find.byType(EmptyState), findsNothing,
         reason: 'eleven templates ship with the app, so this landing has '
             'content on day one -- it has no zero-data condition to be in, and '
@@ -301,11 +300,10 @@ void main() {
       expect(position.pixels, 0,
           reason: '${entry.key}: a root opens at the top of its content');
 
-      // Well past the drag slop, and deliberately so. The Workout landing now
-      // has a tap target (the filter control) sitting under the centre of this
-      // viewport, and a movement barely over the slop leaves the tap and the
-      // scroll contesting the gesture. A decisive drag is what this test
-      // actually means to make.
+      // Well past the drag slop, and deliberately so. The Workout landing has
+      // tap targets (template tiles) under the centre of this viewport, and a
+      // movement barely over the slop leaves the tap and the scroll contesting
+      // the gesture. A decisive drag is what this test actually means to make.
       await tester.drag(rootScrollable(), const Offset(0, -60));
       await tester.pump();
 
@@ -332,13 +330,24 @@ void main() {
         ),
       );
 
-      final view = tester.widget<ListView>(find.byType(ListView));
-      expect(view.padding, expected,
+      final view = tester.widget<ListView>(find.byType(ListView).first);
+      // The Workout root also keeps its pinned Start workout bar clear: it
+      // spends the system inset plus the bar, where every other root spends
+      // the inset plus the gutter. Everything else is the one rule.
+      final isWorkout = entry.key == 'WorkoutRoot';
+      final expectedBottom = isWorkout
+          ? expected.bottom - kScreenGutter + kWorkoutStartBarClearance
+          : expected.bottom;
+      expect(view.padding, expected.copyWith(bottom: expectedBottom),
           reason: '${entry.key}: the scrollable pads itself with '
               'screenScrollPadding -- one rule, applied at the scrollable');
-      expect((view.padding! as EdgeInsets).bottom, kScreenGutter + barInset,
-          reason: '${entry.key}: the bottom edge carries the gutter plus the '
-              'floating bar');
+      expect(
+        (view.padding! as EdgeInsets).bottom,
+        isWorkout
+            ? barInset + kWorkoutStartBarClearance
+            : kScreenGutter + barInset,
+        reason: '${entry.key}: the bottom edge carries the floating bar',
+      );
     }
   });
 

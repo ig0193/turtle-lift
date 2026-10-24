@@ -117,17 +117,33 @@ are reviewed copy.
 - **App display name: `TurtleLift`.** One word. It is the wordmark on the
   summary card, which is built to be screenshotted, so it could not stay a
   bracketed placeholder.
-- **The two overview paths are two widgets, not one with a flag.** They share
-  the title, date control, body map and Finish/Discard as separate widgets and
-  differ only in their list — a nested muscle list against a flat exercise list,
-  which answer different questions.
+- ~~The two overview paths are two widgets, not one with a flag.~~ **Superseded
+  by `docs/adr/0006-workout-tab-is-exercise-first.md`.** A session is a list of
+  exercises; a template is a pre-filled one and ad-hoc is an empty one, so there
+  is one session screen (`SessionOverviewBody`) and nothing left for two
+  overviews to disagree about. Templates store exercise ids, not muscle groups;
+  there is no split filter, no nested muscle list, no `trained` tick and no
+  template lock. Muscles are shown only by the live body map.
+- **The Workout tab starts on a ready view.** Start opens the session with one
+  **Start logging** button; the exercise picker is a sheet over the map, and the
+  list appears only after it. "Started logging" is held in memory
+  (`loggingStartedProvider`), never stored.
+- **The live clock is display-only.** `sessionClockElapsed` derives it from
+  `loggedAt`; it is never stored and is shown nowhere but the live screen, and
+  only for a session dated the day it started and under six hours old.
+- **Schema is at version 5.** Step 5 gives a custom template its `exercise_ids`;
+  the old `group_ids` columns on `custom_templates` and `sessions` stay, unwritten
+  and unread, because SQLite cannot drop them without rebuilding a table that
+  holds user data. The drift output (`app_database.g.dart`) is committed; re-run
+  `dart run build_runner build` after any change to the tables.
 - **Session tables took the reserved schema version 2.** The personal-details
   work landed at 3 and numbered around the gap deliberately. That only worked
   because nothing had shipped: a device already at 3 never runs the reserved
   step, so a development install from before it has to have its data cleared
   once. **No later step may be numbered below the current version.**
-- **A muscle ticks on a completed set as well as on Mark exercise done.** A user
-  who logs three sets and walks to the next machine has trained it.
+- **A muscle fills on the map on a completed set as well as on Mark exercise
+  done.** A user who logs three sets and walks to the next machine has trained
+  it. (There is no tick list any more — see above.)
 - **Destructive actions use `#C4553A`,** the eleventh palette colour (`00` §12,
   `01` §Usage rules). `#D85A30` could not carry "delete": it means "active / this
   has been worked" *"wherever it appears"*, so a delete confirmation painted in it
@@ -140,7 +156,7 @@ are reviewed copy.
 
 ## Out of scope for V1 — do not build
 
-No login · no cloud sync · no soft delete · no rest timer · no workout duration ·
+No login · no cloud sync · no soft delete · no rest timer · no stored workout duration (the live clock is display-only) ·
 no notifications (except the opt-in reminders in ADR 0005, built after Schedule) · no wearables · no AI features · no premium tier · no ads ·
 no multi-day splits · no per-exercise illustrations ·
 no achievements, badges or level-ups.

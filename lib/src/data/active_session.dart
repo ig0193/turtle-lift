@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'exercise_index.dart';
 import 'load_type.dart';
 import 'local_date.dart';
 import 'session_store.dart';
@@ -83,19 +84,32 @@ class ActiveSession extends Notifier<WorkoutSession?> {
   Future<void> _refreshSaved() async =>
       ref.read(savedSessionsProvider.notifier).refresh();
 
-  /// Starts a workout from a template, carrying its name and muscle groups.
+  /// Starts a workout from a template, copying its exercises into the session.
   ///
-  /// The name and groups are snapshotted onto the session so the title chain
-  /// and the template lock keep working if that template is later deleted.
+  /// The name is snapshotted onto the session so the title chain keeps working
+  /// if a custom template is later deleted. **The exercises are copied, not
+  /// referenced**: from here the session's list is its own, and nothing done to
+  /// it writes back to the template.
+  ///
+  /// An id the library does not know, or one with a load type this build cannot
+  /// read, is skipped rather than failing the start — a stale id in a user's own
+  /// template must not stop them training.
   Future<void> startFromTemplate({
     required String templateId,
     required String templateName,
-    required List<String> groupIds,
+    required List<String> exerciseIds,
   }) async {
+    final index = ref.read(exerciseIndexProvider);
+    final exercises = <({String exerciseId, LoadType loadType})>[];
+    for (final id in exerciseIds) {
+      final loadType = LoadType.fromName(index.byId(id)?.loadType);
+      if (loadType == null) continue;
+      exercises.add((exerciseId: id, loadType: loadType));
+    }
     await _store.createSession(
       templateId: templateId,
       templateName: templateName,
-      groupIds: groupIds,
+      exercises: exercises,
     );
     await _refresh();
   }

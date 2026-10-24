@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/active_session.dart';
+import '../data/custom_templates.dart';
 import '../data/body_gender.dart';
 import '../data/derived.dart';
 import '../data/exercise_index.dart';
@@ -20,6 +21,7 @@ import 'exercise_detail_screen.dart' show MuscleFill;
 import 'finish_celebration.dart';
 import 'session_date_control.dart';
 import 'set_logging_screen.dart';
+import 'template_library_screen.dart' show promptForTemplateName;
 
 /// The card a finished workout lands on, and the record of it ever after.
 ///
@@ -45,6 +47,9 @@ class SessionSummaryScreen extends ConsumerStatefulWidget {
 
   /// The key a test taps to delete the workout.
   static const Key deleteKey = ValueKey<String>('delete-workout');
+
+  /// The key a test taps to save the workout as a template.
+  static const Key saveAsTemplateKey = ValueKey<String>('save-as-template');
 
   /// The key a test finds the personal-best pill by.
   static const Key pbPillKey = ValueKey<String>('pb-pill');
@@ -150,7 +155,13 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                     index.byId(exercise.exerciseId)?.name ?? 'this exercise',
                   ),
                 ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              // Below the screenshot composition, like Delete: it is an action
+              // on the record, not part of the card built to be posted.
+              _SaveAsTemplateButton(
+                onTap: () => _saveAsTemplate(context, session, name),
+              ),
+              const SizedBox(height: 8),
               // Below the screenshot composition, deliberately: this is the
               // permanent record, and the destructive action does not belong
               // in the part of the screen built to be posted.
@@ -166,6 +177,35 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
         ],
       ),
     );
+  }
+
+  /// Makes a template of this workout's exercises, in the order they were done.
+  ///
+  /// **How a user's own templates are made.** The workout they just did is the
+  /// routine they want to repeat, so there is no separate authoring step to find
+  /// or to build a list in. Only exercises with work in them are kept: an
+  /// exercise that was added and never touched is not part of what was done.
+  Future<void> _saveAsTemplate(
+    BuildContext context,
+    WorkoutSession session,
+    String name,
+  ) async {
+    final exerciseIds = <String>[
+      for (final exercise in session.exercises)
+        if (exercise.completedSets.isNotEmpty) exercise.exerciseId,
+    ];
+    final chosen = await promptForTemplateName(
+      context,
+      initial: name,
+      title: 'Save as template',
+    );
+    if (chosen == null) return;
+    await ref
+        .read(customTemplateListProvider.notifier)
+        .add(name: chosen, exerciseIds: exerciseIds);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('$chosen saved to My templates')));
   }
 
   Future<void> _removeExercise(
@@ -534,6 +574,37 @@ class _LoggedExercise extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SaveAsTemplateButton extends StatelessWidget {
+  const _SaveAsTemplateButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Save as template',
+        excludeSemantics: true,
+        child: GestureDetector(
+          key: SessionSummaryScreen.saveAsTemplateKey,
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppPalette.surface,
+              border: Border.all(color: AppPalette.border),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              'Save as template',
+              style: TextStyle(fontSize: 14, color: AppPalette.textSecondary),
+            ),
+          ),
+        ),
+      );
 }
 
 class _DeleteButton extends StatelessWidget {

@@ -72,14 +72,13 @@ bool countsAsTrained(SessionExercise exercise) =>
 /// The sub-muscle groups this session has trained **directly**.
 ///
 /// Primary muscles only. An incline press is primary upper chest and secondary
-/// front delt and triceps, so on a Push day it ticks upper chest and nothing
-/// else — the triceps row stays unticked because the user has not done a
-/// triceps movement.
+/// front delt and triceps, so it counts upper chest and nothing else — the user
+/// has not done a triceps movement.
 ///
-/// **The map and this list disagree on purpose.** The map answers "what got
-/// worked" and fills secondaries too; this answers "what have I trained
-/// directly". Both are correct, and `docs/02` is explicit that it must not be
-/// "fixed".
+/// No screen lists these any more (the nested muscle list went with
+/// `docs/adr/0006-workout-tab-is-exercise-first.md`); it survives because the
+/// resolved-title chain and the history figures still ask which muscles a
+/// session trained directly.
 Set<String> trainedSubGroups(WorkoutSession session, ExerciseIndex index) {
   final trained = <String>{};
   for (final exercise in session.exercises) {
@@ -89,6 +88,24 @@ Set<String> trainedSubGroups(WorkoutSession session, ExerciseIndex index) {
     trained.addAll(library.primary);
   }
   return trained;
+}
+
+/// The sub-muscle groups the session's exercises train directly, whether or not
+/// any of them has been worked yet.
+///
+/// What the body map outlines. **Primary only**, like [trainedSubGroups]: an
+/// outline says "this is what the workout is for", and a secondary muscle is a
+/// by-product rather than a goal. Every exercise on the list counts, so a
+/// template shows its whole plan from the first frame and an ad-hoc workout
+/// grows one as it is built.
+Set<String> plannedSubGroups(WorkoutSession session, ExerciseIndex index) {
+  final planned = <String>{};
+  for (final exercise in session.exercises) {
+    final library = index.byId(exercise.exerciseId);
+    if (library == null) continue;
+    planned.addAll(library.primary);
+  }
+  return planned;
 }
 
 /// Every sub-muscle group the session touched, split by how hard.

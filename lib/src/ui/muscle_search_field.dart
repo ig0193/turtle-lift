@@ -35,6 +35,7 @@ class MuscleSearchField extends StatelessWidget {
     this.controller,
     this.onChanged,
     this.autofocus = false,
+    this.hint = kMuscleSearchHint,
     super.key,
   });
 
@@ -52,11 +53,13 @@ class MuscleSearchField extends StatelessWidget {
     TextEditingController? controller,
     ValueChanged<String>? onChanged,
     bool autofocus = true,
+    String hint = kMuscleSearchHint,
     Key? key,
   }) : this._(
           controller: controller,
           onChanged: onChanged,
           autofocus: autofocus,
+          hint: hint,
           key: key,
         );
 
@@ -67,6 +70,11 @@ class MuscleSearchField extends StatelessWidget {
   final TextEditingController? controller;
   final ValueChanged<String>? onChanged;
   final bool autofocus;
+
+  /// The placeholder. The Muscles tab's own wording by default; a screen that
+  /// searches something else (the Workout landing searches templates and
+  /// exercises) says so rather than promising muscles.
+  final String hint;
 
   /// The field itself, so a test can find it without matching on placeholder
   /// copy that is allowed to change.
@@ -91,17 +99,17 @@ class MuscleSearchField extends StatelessWidget {
       style: kMuscleSearchTextStyle,
       cursorWidth: 1.6,
       textInputAction: TextInputAction.search,
-      decoration: const InputDecoration(
-        hintText: kMuscleSearchHint,
+      decoration: InputDecoration(
+        hintText: hint,
         // Sized and coloured here rather than left to `IconTheme`: the icon
         // sits inside the field's own padding, so it has to match the 13.5pt
         // line beside it rather than the app's default icon size.
-        prefixIcon: Icon(
+        prefixIcon: const Icon(
           Icons.search_rounded,
           size: 18,
           color: AppPalette.textMuted,
         ),
-        prefixIconConstraints: BoxConstraints(minWidth: 40, minHeight: 20),
+        prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 20),
       ),
     );
 

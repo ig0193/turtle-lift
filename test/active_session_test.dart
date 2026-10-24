@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/active_session.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
+import 'package:turtle_lift/src/data/exercise_index.dart';
+import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
@@ -12,9 +14,20 @@ import 'package:turtle_lift/src/data/settings_store.dart' show appDatabaseProvid
 /// Proves the seam the Workout tab reads to decide whether it shows the landing
 /// or the workout in progress.
 void main() {
+  // `exerciseLibraryProvider` reaches `rootBundle`, which needs the binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
   late AppDatabase database;
+  late ExerciseIndex index;
+
+  setUpAll(() async {
+    final boot = ProviderContainer();
+    addTearDown(boot.dispose);
+    index = ExerciseIndex.fromJson(
+      await boot.read(exerciseLibraryProvider.future),
+    );
+  });
 
   setUp(() => database = AppDatabase.forTesting(NativeDatabase.memory()));
   tearDown(() => database.close());
@@ -23,6 +36,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         appDatabaseProvider.overrideWithValue(database),
+        exerciseIndexProvider.overrideWithValue(index),
         if (initial != null)
           initialActiveSessionProvider.overrideWithValue(initial),
       ],
@@ -53,20 +67,90 @@ void main() {
   });
 
   group('starting and finishing', () {
-    test('a template start carries the name and groups onto the session',
+    test('a template start carries the name and copies its exercises in order',
         () async {
       final container = containerWith();
 
       await container.read(activeSessionProvider.notifier).startFromTemplate(
         templateId: 'chest-triceps',
         templateName: 'Chest and triceps day',
-        groupIds: <String>['chest', 'triceps'],
+        exerciseIds: <String>['barbell-bench-press', 'cable-rope-pushdown'],
       );
 
       final session = container.read(activeSessionProvider)!;
       expect(session.templateName, 'Chest and triceps day');
-      expect(session.groupIds, <String>['chest', 'triceps']);
       expect(session.isTemplateSession, isTrue);
+      expect(
+        session.exercises.map((e) => e.exerciseId),
+        <String>['barbell-bench-press', 'cable-rope-pushdown'],
+      );
+      expect(session.exercises.map((e) => e.position), <int>[0, 1]);
+      expect(
+        session.exercises.every((e) => e.loadType == LoadType.weighted),
+        isTrue,
+        reason: 'the load type is snapshotted from the library at start',
+      );
+      expect(
+        session.exercises.every((e) => e.sets.isEmpty && !e.markedDone),
+        isTrue,
+        reason: 'a template supplies what to do, never what was done',
+      );
+    });
+
+    test('a template start skips an id the library does not know', () async {
+      final container = containerWith();
+
+      await container.read(activeSessionProvider.notifier).startFromTemplate(
+        templateId: 'mine',
+        templateName: 'Mine',
+        exerciseIds: <String>['barbell-bench-press', 'not-an-exercise', 'plank'],
+      );
+
+      expect(
+        container.read(activeSessionProvider)!.exercises.map((e) => e.exerciseId),
+        <String>['barbell-bench-press', 'plank'],
+        reason: 'a stale id in a user\'s own template must not stop them '
+            'training, and positions stay contiguous',
+      );
+      expect(
+        container.read(activeSessionProvider)!.exercises.map((e) => e.position),
+        <int>[0, 1],
+      );
+    });
+
+    test('a template start collapses a repeated exercise to one row', () async {
+      final container = containerWith();
+
+      await container.read(activeSessionProvider.notifier).startFromTemplate(
+        templateId: 'mine',
+        templateName: 'Mine',
+        exerciseIds: <String>['plank', 'plank'],
+      );
+
+      expect(container.read(activeSessionProvider)!.exercises, hasLength(1));
+    });
+
+    test('an exercise added after a template start joins the end of its list',
+        () async {
+      final container = containerWith();
+      final notifier = container.read(activeSessionProvider.notifier);
+      await notifier.startFromTemplate(
+        templateId: 'mine',
+        templateName: 'Mine',
+        exerciseIds: <String>['barbell-bench-press'],
+      );
+
+      await notifier.addExercise(
+        exerciseId: 'barbell-curl',
+        loadType: LoadType.weighted,
+      );
+
+      expect(
+        container.read(activeSessionProvider)!.exercises.map((e) => e.exerciseId),
+        <String>['barbell-bench-press', 'barbell-curl'],
+        reason: 'a template session takes an addition from any muscle: the '
+            'template lock is gone',
+      );
     });
 
     test('an ad-hoc start has no title and is not a template session',
@@ -86,7 +170,7 @@ void main() {
       await notifier.startFromTemplate(
         templateId: 'push',
         templateName: 'Push day',
-        groupIds: <String>['chest'],
+        exerciseIds: <String>['barbell-bench-press'],
       );
 
       await notifier.finish();
@@ -213,7 +297,7 @@ void main() {
       await container.read(activeSessionProvider.notifier).startFromTemplate(
         templateId: 'push',
         templateName: 'Push day',
-        groupIds: <String>['chest'],
+        exerciseIds: <String>['barbell-bench-press'],
       );
 
       expect(container.read(activeSessionProvider)!.title, 'Push day');
