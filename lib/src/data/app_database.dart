@@ -15,7 +15,7 @@ part 'app_database.g.dart';
 /// units, sex and bodyweight). If you find yourself adding a column that could
 /// be recomputed from session rows, that is the rule catching you.
 ///
-/// Schema version 3, and the app's **first** migration — so the shape here is
+/// Schema version 4 (step 4 is the training-day plan), and the app's **first** migration — so the shape here is
 /// the one every later migration will be copied from.
 ///
 /// **Version 2 is the session tables and it has now landed.** Step 2 creates
@@ -38,6 +38,7 @@ part 'app_database.g.dart';
   tables: <Type>[
     Settings,
     BodyweightEntries,
+    TrainingPlanEntries,
     CustomTemplates,
     Sessions,
     SessionExercises,
@@ -59,7 +60,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   /// **The first migration in the app's history.** There was no
   /// [MigrationStrategy] before this one, so the shape here is the precedent:
@@ -108,6 +109,11 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(bodyweightEntries);
             await m.createTable(customTemplates);
             await m.addColumn(settings, settings.bodyGender);
+          }
+          if (from < 4) {
+            // The Schedule's dated training-day plan. Pure table creation, so
+            // the one-transaction, idempotent rule above holds.
+            await m.createTable(trainingPlanEntries);
           }
         },
       );
@@ -189,6 +195,40 @@ class BodyweightEntries extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{date};
+}
+
+/// The weekdays the user aims to train on, as a dated series.
+///
+/// **The same shape as [BodyweightEntries], for the same reason.**
+/// `docs/adr/0005-schedule-and-opt-in-notifications.md`: an entry is immutable
+/// and takes effect from the day it is saved, so a past week keeps being read
+/// against the plan that was in force *then*. One stored pattern, re-read
+/// against old weeks, would turn every past hit into a miss the moment the user
+/// changed a day. Whether a plan day was hit is derived on read from sessions
+/// and is never stored here.
+///
+/// There is no update or delete path in the store above this table.
+/// [effectiveFrom] is the primary key, so saving twice on one day replaces that
+/// day -- the user fixing a mis-tap, which is the only correction allowed
+/// because today is not yet history.
+@DataClassName('TrainingPlanEntryRow')
+class TrainingPlanEntries extends Table {
+  /// The local calendar date the plan took effect, as `YYYY-MM-DD`. Text for
+  /// the reason [BodyweightEntries.date] is.
+  TextColumn get effectiveFrom => text()();
+
+  /// The training weekdays as a bitmask: bit 0 is Monday ... bit 6 is Sunday.
+  /// Zero is a real answer -- "no training days from here" -- and is how a user
+  /// clears the plan without rewriting history.
+  IntColumn get weekdayMask => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{effectiveFrom};
+
+  @override
+  List<String> get customConstraints => <String>[
+        'CHECK (weekday_mask BETWEEN 0 AND 127)',
+      ];
 }
 
 /// The templates the user made for themselves.

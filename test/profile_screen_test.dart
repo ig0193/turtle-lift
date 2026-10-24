@@ -7,6 +7,7 @@ import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/app_screen.dart';
 import 'package:turtle_lift/src/ui/divider_row.dart';
+import 'package:turtle_lift/src/ui/profile_root.dart';
 import 'package:turtle_lift/src/ui/profile_screen.dart';
 
 /// The destination behind the header avatar: four doors, and one rule about
@@ -75,7 +76,7 @@ void main() {
         theme: buildAppTheme(),
         home: MediaQuery(
           data: MediaQueryData(padding: windowPadding),
-          child: const ProfileScreen(),
+          child: AppScreen.root(title: 'Profile', body: const ProfileRoot()),
         ),
       ),
     );
@@ -92,8 +93,8 @@ void main() {
         (tester) async {
       await tester.pumpWidget(host());
 
-      expect(find.text(ProfileScreen.yoursGroupLabel), findsOneWidget);
-      expect(find.text(ProfileScreen.dataGroupLabel), findsOneWidget);
+      expect(find.text(ProfilePersonalPane.yoursGroupLabel), findsOneWidget);
+      expect(find.text(ProfilePersonalPane.dataGroupLabel), findsOneWidget);
 
       expect(find.text(templatesRowTitle), findsOneWidget);
       expect(find.text(personalDetailsRowTitle), findsOneWidget);

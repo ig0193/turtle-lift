@@ -35,7 +35,7 @@ void main() {
       });
     }
 
-    testWidgets('all three render together with no bar around them',
+    testWidgets('all four render together with no bar around them',
         (tester) async {
       await tester.pumpWidget(
         host(
@@ -55,7 +55,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.byType(TabGlyphIcon), findsNWidgets(3));
+      expect(find.byType(TabGlyphIcon), findsNWidgets(TabGlyph.values.length));
     });
   });
 

@@ -522,6 +522,245 @@ class BodyweightEntriesCompanion extends UpdateCompanion<BodyweightEntryRow> {
   }
 }
 
+class $TrainingPlanEntriesTable extends TrainingPlanEntries
+    with TableInfo<$TrainingPlanEntriesTable, TrainingPlanEntryRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TrainingPlanEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _effectiveFromMeta = const VerificationMeta(
+    'effectiveFrom',
+  );
+  @override
+  late final GeneratedColumn<String> effectiveFrom = GeneratedColumn<String>(
+    'effective_from',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _weekdayMaskMeta = const VerificationMeta(
+    'weekdayMask',
+  );
+  @override
+  late final GeneratedColumn<int> weekdayMask = GeneratedColumn<int>(
+    'weekday_mask',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [effectiveFrom, weekdayMask];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'training_plan_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TrainingPlanEntryRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('effective_from')) {
+      context.handle(
+        _effectiveFromMeta,
+        effectiveFrom.isAcceptableOrUnknown(
+          data['effective_from']!,
+          _effectiveFromMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_effectiveFromMeta);
+    }
+    if (data.containsKey('weekday_mask')) {
+      context.handle(
+        _weekdayMaskMeta,
+        weekdayMask.isAcceptableOrUnknown(
+          data['weekday_mask']!,
+          _weekdayMaskMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_weekdayMaskMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {effectiveFrom};
+  @override
+  TrainingPlanEntryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TrainingPlanEntryRow(
+      effectiveFrom: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}effective_from'],
+      )!,
+      weekdayMask: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}weekday_mask'],
+      )!,
+    );
+  }
+
+  @override
+  $TrainingPlanEntriesTable createAlias(String alias) {
+    return $TrainingPlanEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class TrainingPlanEntryRow extends DataClass
+    implements Insertable<TrainingPlanEntryRow> {
+  /// The local calendar date the plan took effect, as `YYYY-MM-DD`. Text for
+  /// the reason [BodyweightEntries.date] is.
+  final String effectiveFrom;
+
+  /// The training weekdays as a bitmask: bit 0 is Monday ... bit 6 is Sunday.
+  /// Zero is a real answer -- "no training days from here" -- and is how a user
+  /// clears the plan without rewriting history.
+  final int weekdayMask;
+  const TrainingPlanEntryRow({
+    required this.effectiveFrom,
+    required this.weekdayMask,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['effective_from'] = Variable<String>(effectiveFrom);
+    map['weekday_mask'] = Variable<int>(weekdayMask);
+    return map;
+  }
+
+  TrainingPlanEntriesCompanion toCompanion(bool nullToAbsent) {
+    return TrainingPlanEntriesCompanion(
+      effectiveFrom: Value(effectiveFrom),
+      weekdayMask: Value(weekdayMask),
+    );
+  }
+
+  factory TrainingPlanEntryRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TrainingPlanEntryRow(
+      effectiveFrom: serializer.fromJson<String>(json['effectiveFrom']),
+      weekdayMask: serializer.fromJson<int>(json['weekdayMask']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'effectiveFrom': serializer.toJson<String>(effectiveFrom),
+      'weekdayMask': serializer.toJson<int>(weekdayMask),
+    };
+  }
+
+  TrainingPlanEntryRow copyWith({String? effectiveFrom, int? weekdayMask}) =>
+      TrainingPlanEntryRow(
+        effectiveFrom: effectiveFrom ?? this.effectiveFrom,
+        weekdayMask: weekdayMask ?? this.weekdayMask,
+      );
+  TrainingPlanEntryRow copyWithCompanion(TrainingPlanEntriesCompanion data) {
+    return TrainingPlanEntryRow(
+      effectiveFrom: data.effectiveFrom.present
+          ? data.effectiveFrom.value
+          : this.effectiveFrom,
+      weekdayMask: data.weekdayMask.present
+          ? data.weekdayMask.value
+          : this.weekdayMask,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrainingPlanEntryRow(')
+          ..write('effectiveFrom: $effectiveFrom, ')
+          ..write('weekdayMask: $weekdayMask')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(effectiveFrom, weekdayMask);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TrainingPlanEntryRow &&
+          other.effectiveFrom == this.effectiveFrom &&
+          other.weekdayMask == this.weekdayMask);
+}
+
+class TrainingPlanEntriesCompanion
+    extends UpdateCompanion<TrainingPlanEntryRow> {
+  final Value<String> effectiveFrom;
+  final Value<int> weekdayMask;
+  final Value<int> rowid;
+  const TrainingPlanEntriesCompanion({
+    this.effectiveFrom = const Value.absent(),
+    this.weekdayMask = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TrainingPlanEntriesCompanion.insert({
+    required String effectiveFrom,
+    required int weekdayMask,
+    this.rowid = const Value.absent(),
+  }) : effectiveFrom = Value(effectiveFrom),
+       weekdayMask = Value(weekdayMask);
+  static Insertable<TrainingPlanEntryRow> custom({
+    Expression<String>? effectiveFrom,
+    Expression<int>? weekdayMask,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (effectiveFrom != null) 'effective_from': effectiveFrom,
+      if (weekdayMask != null) 'weekday_mask': weekdayMask,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TrainingPlanEntriesCompanion copyWith({
+    Value<String>? effectiveFrom,
+    Value<int>? weekdayMask,
+    Value<int>? rowid,
+  }) {
+    return TrainingPlanEntriesCompanion(
+      effectiveFrom: effectiveFrom ?? this.effectiveFrom,
+      weekdayMask: weekdayMask ?? this.weekdayMask,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (effectiveFrom.present) {
+      map['effective_from'] = Variable<String>(effectiveFrom.value);
+    }
+    if (weekdayMask.present) {
+      map['weekday_mask'] = Variable<int>(weekdayMask.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrainingPlanEntriesCompanion(')
+          ..write('effectiveFrom: $effectiveFrom, ')
+          ..write('weekdayMask: $weekdayMask, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CustomTemplatesTable extends CustomTemplates
     with TableInfo<$CustomTemplatesTable, CustomTemplateRow> {
   @override
@@ -2440,6 +2679,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SettingsTable settings = $SettingsTable(this);
   late final $BodyweightEntriesTable bodyweightEntries =
       $BodyweightEntriesTable(this);
+  late final $TrainingPlanEntriesTable trainingPlanEntries =
+      $TrainingPlanEntriesTable(this);
   late final $CustomTemplatesTable customTemplates = $CustomTemplatesTable(
     this,
   );
@@ -2455,6 +2696,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     settings,
     bodyweightEntries,
+    trainingPlanEntries,
     customTemplates,
     sessions,
     sessionExercises,
@@ -2808,6 +3050,180 @@ typedef $$BodyweightEntriesTableProcessedTableManager =
         >,
       ),
       BodyweightEntryRow,
+      PrefetchHooks Function()
+    >;
+typedef $$TrainingPlanEntriesTableCreateCompanionBuilder =
+    TrainingPlanEntriesCompanion Function({
+      required String effectiveFrom,
+      required int weekdayMask,
+      Value<int> rowid,
+    });
+typedef $$TrainingPlanEntriesTableUpdateCompanionBuilder =
+    TrainingPlanEntriesCompanion Function({
+      Value<String> effectiveFrom,
+      Value<int> weekdayMask,
+      Value<int> rowid,
+    });
+
+class $$TrainingPlanEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $TrainingPlanEntriesTable> {
+  $$TrainingPlanEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get effectiveFrom => $composableBuilder(
+    column: $table.effectiveFrom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get weekdayMask => $composableBuilder(
+    column: $table.weekdayMask,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TrainingPlanEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $TrainingPlanEntriesTable> {
+  $$TrainingPlanEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get effectiveFrom => $composableBuilder(
+    column: $table.effectiveFrom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get weekdayMask => $composableBuilder(
+    column: $table.weekdayMask,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TrainingPlanEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TrainingPlanEntriesTable> {
+  $$TrainingPlanEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get effectiveFrom => $composableBuilder(
+    column: $table.effectiveFrom,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get weekdayMask => $composableBuilder(
+    column: $table.weekdayMask,
+    builder: (column) => column,
+  );
+}
+
+class $$TrainingPlanEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TrainingPlanEntriesTable,
+          TrainingPlanEntryRow,
+          $$TrainingPlanEntriesTableFilterComposer,
+          $$TrainingPlanEntriesTableOrderingComposer,
+          $$TrainingPlanEntriesTableAnnotationComposer,
+          $$TrainingPlanEntriesTableCreateCompanionBuilder,
+          $$TrainingPlanEntriesTableUpdateCompanionBuilder,
+          (
+            TrainingPlanEntryRow,
+            BaseReferences<
+              _$AppDatabase,
+              $TrainingPlanEntriesTable,
+              TrainingPlanEntryRow
+            >,
+          ),
+          TrainingPlanEntryRow,
+          PrefetchHooks Function()
+        > {
+  $$TrainingPlanEntriesTableTableManager(
+    _$AppDatabase db,
+    $TrainingPlanEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TrainingPlanEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TrainingPlanEntriesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$TrainingPlanEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> effectiveFrom = const Value.absent(),
+                Value<int> weekdayMask = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TrainingPlanEntriesCompanion(
+                effectiveFrom: effectiveFrom,
+                weekdayMask: weekdayMask,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String effectiveFrom,
+                required int weekdayMask,
+                Value<int> rowid = const Value.absent(),
+              }) => TrainingPlanEntriesCompanion.insert(
+                effectiveFrom: effectiveFrom,
+                weekdayMask: weekdayMask,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$TrainingPlanEntriesTable, TrainingPlanEntryRow>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $TrainingPlanEntriesTable,
+                    TrainingPlanEntryRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TrainingPlanEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TrainingPlanEntriesTable,
+      TrainingPlanEntryRow,
+      $$TrainingPlanEntriesTableFilterComposer,
+      $$TrainingPlanEntriesTableOrderingComposer,
+      $$TrainingPlanEntriesTableAnnotationComposer,
+      $$TrainingPlanEntriesTableCreateCompanionBuilder,
+      $$TrainingPlanEntriesTableUpdateCompanionBuilder,
+      (
+        TrainingPlanEntryRow,
+        BaseReferences<
+          _$AppDatabase,
+          $TrainingPlanEntriesTable,
+          TrainingPlanEntryRow
+        >,
+      ),
+      TrainingPlanEntryRow,
       PrefetchHooks Function()
     >;
 typedef $$CustomTemplatesTableCreateCompanionBuilder =
@@ -4217,6 +4633,8 @@ class $AppDatabaseManager {
       $$SettingsTableTableManager(_db, _db.settings);
   $$BodyweightEntriesTableTableManager get bodyweightEntries =>
       $$BodyweightEntriesTableTableManager(_db, _db.bodyweightEntries);
+  $$TrainingPlanEntriesTableTableManager get trainingPlanEntries =>
+      $$TrainingPlanEntriesTableTableManager(_db, _db.trainingPlanEntries);
   $$CustomTemplatesTableTableManager get customTemplates =>
       $$CustomTemplatesTableTableManager(_db, _db.customTemplates);
   $$SessionsTableTableManager get sessions =>

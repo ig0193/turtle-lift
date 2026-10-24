@@ -1,11 +1,13 @@
 # Profile — user flow
 
-> Profile is reached from the header avatar, not a tab, and workout history is
-> now its own tab. See `docs/adr/0003-l0-navigation-variant-a.md`.
+> Profile is the fourth tab, split into **Personal** and **Schedule** by a segmented
+> control; workout history is its own tab. See `docs/adr/0004-profile-returns-as-a-tab.md`
+> and `docs/adr/0005-schedule-and-opt-in-notifications.md`. Visual reference:
+> `prototypes/schedule-options.html`. **The mockups below that show an avatar entry are superseded.**
 
 **Purpose:** a single place to see everything the app remembers on the user's behalf — history and stats, with no manual tracking required.
 
-**Entry point:** Home → the profile avatar in the L0 header. Profile is not a tab (`docs/adr/0003-l0-navigation-variant-a.md`). **Workout history is now its own tab**, so the history list below belongs to the History tab; which of the remaining stats stay behind the avatar is unresolved.
+**Entry point:** the Profile tab in the L0 bar. **Workout history is now its own tab**, so the history list below belongs to the History tab; derived figures stay on History (one exception, the Schedule week summary).
 
 ---
 
@@ -40,7 +42,7 @@
 
 ### Stats
 
-> **These live on the History tab, not behind the avatar.** Every figure below is computed from session rows, and the split resolved in `docs/adr/0003-l0-navigation-variant-a.md` puts derived figures on the tab. The section stays here because it defines what the figures *mean*; it no longer says where they render.
+> **These live on the History tab, not on Profile.** Every figure below is computed from session rows, and the split resolved in `docs/adr/0003-l0-navigation-variant-a.md` puts derived figures on the tab. The section stays here because it defines what the figures *mean*; it no longer says where they render.
 - **Current streak** — workout days in a row where the user never went more than **3 days** without training. Computed as `streakAsOf(today)`, never read from a stored counter; full definition, rationale for the 3-day tolerance, and data-model notes are in `01-app-idea.md`.
   - Directly below the streak stat, a short explanation of how it works — same transparency pattern as the calorie estimate, and for the same reason: a stat the user can't predict is a stat that generates angry reviews. Draft copy:
 
@@ -52,6 +54,16 @@
   - **In-app nudge only:** on the final grace day, the streak stat can show a "streak ends tomorrow" hint. No notifications in V1.
 - Total workouts completed.
 - **Personal bests** — confirmed in V1. Derived, so no schema cost. Profile may show a lifetime PB count; the per-session count lives on each session's hero card.
+
+### Schedule (segment of the Profile tab)
+
+Top to bottom: **week summary** (this week as a compact hero — count, a dot per plan day, one line of what is left — plus a one-row "last week"), **training-day chips** (Mon–Sun, weekly pattern), **Remind me** switch and one **time**. Prototype: `prototypes/schedule-options.html`. Rules and rationale: `docs/adr/0005-schedule-and-opt-in-notifications.md`.
+
+- No plan chosen → the summary becomes one line prompting for days. Never "0 of 0".
+- Copy states counts, never verdicts: "2 of 3 this week · 1 more to go — next is Friday"; after the week, "2 of 3 plan days". No "missed".
+- "N more to go" appears only while plan days remain; today counts as remaining until it has a session.
+- The plan is a dated, immutable series; past weeks resolve against the plan in force then. Hit/not-hit is derived on read, never stored.
+- Turning **Remind me** on shows an explain-first sheet, then the system permission. Denied: days and summary still work. Notifications are built after this screen; until then the Remind me row is **visible but inert** — the switch and explain-first sheet work, but nothing is scheduled and no system permission is requested. Week starts Monday.
 
 ### Personal details (bodyweight + gender)
 - Two optional fields: bodyweight and gender. Together they're the only personal data the app collects in V1 — everything else works with zero input.

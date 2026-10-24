@@ -49,7 +49,7 @@
 
 - Splash screen — no login, no signup. Straight into the app.
 - Splash leads directly to the home screen.
-- Home screen has three tabs: **Workout | Muscles | History**. Profile is reached from an avatar in the header, not a tab (see `docs/adr/0003-l0-navigation-variant-a.md`).
+- Home screen has four tabs: **Workout | Muscles | History | Profile** (see `docs/adr/0003-l0-navigation-variant-a.md` and `docs/adr/0004-profile-returns-as-a-tab.md`).
 - No onboarding wizard. First-time and returning users land in the same place.
 
 | Tab | Purpose |
@@ -83,7 +83,7 @@ Note: the app doesn't suggest or auto-select a workout for the user (no "today's
   - Benefit of deriving rather than storing: if a sub-muscle group is ever added to the taxonomy (e.g. a real side-delt segment), every existing template picks it up with no data migration.
   - **A template is a curated shortlist to browse within, not a plan to complete.** Nothing in a template is ever "finished", and no muscle group has a completion state. This is why a seven-row Push day is unremarkable — seven options in a menu, not seven unchecked boxes.
   - **Templates are locked to their own muscle groups during a session.** An exercise outside the template's muscle groups cannot be added to a template-based session. Keeping the template coherent is the reason for choosing one; users who don't have a fixed plan should use the ad-hoc path instead. Full rationale and the accepted friction are documented in `02-workout-tab-userflow.md`.
-- User can create a fully custom template from scratch by picking muscle groups à la carte, give it a name, and save it for reuse. Template creation and management lives behind the Profile avatar; the Workout tab is just for starting a session from an already-saved template.
+- User can create a fully custom template from scratch by picking muscle groups à la carte, give it a name, and save it for reuse. Template creation and management lives on the Profile tab; the Workout tab is just for starting a session from an already-saved template.
 - User can build a one-off ad-hoc workout by searching and adding exercises directly, without any template or muscle-group structure. This is not saved as a reusable template — it's a single session.
 
 ### Exercise library
@@ -250,7 +250,7 @@ The reason is that sessions are editable and deletable after the fact — a weig
   - **Why derived rather than stored on the session:** if a user logs Wednesday and then backdates a Monday session, Wednesday's streak *should* become 2. With a derived value that happens for free — nothing was written down to go stale. Storing an incremented counter would need repair logic on every backdate, date-edit and delete, and would still drift. There is no performance argument for storing it: five years at 5 sessions a week is ~1,300 dates, so a full backward scan on render is free. Cache in memory if it ever shows up in a profile.
   - **The streak must decay against today, not just against the stored data.** If the last session was 5 days ago, `streakAsOf(today)` returns 0 even though nothing in storage changed. Getting this wrong produces the "app said 12, opened it a week later, still says 12" bug.
   - **Consequence for shareable cards:** a past session's hero card shows the streak *as it stood on that date*, so it can legitimately change later if the user backdates an earlier session. This is correct behaviour — the card is historically accurate rather than a frozen snapshot. Worth knowing when reading the Session Detail section of `04-profile-tab-userflow.md`.
-  - **In-app nudge (no notifications):** since the last workout date is known, Profile can show a "streak ends tomorrow" hint on the final grace day. This stays in-app only — notifications are out of scope for V1.
+  - **In-app nudge (no notifications):** since the last workout date is known, Profile can show a "streak ends tomorrow" hint on the final grace day. This stays in-app only; the user-scheduled reminders in `docs/adr/0005-schedule-and-opt-in-notifications.md` are separate and never react to the streak.
   - The user-facing explanation of all of this lives next to the streak stat in Profile — see `04-profile-tab-userflow.md`. Same transparency pattern as the calorie estimate.
 - **Naming: these are "personal bests", not "achievements".** There is no achievement or badge framework in V1 — no streak milestones, no workout-count trophies, no unlockables. Keeping the user-facing name literal is deliberate, so that a single PB counter does not become the seed of a general achievements system.
 - **Estimated calories burned** — a rough, clearly-labeled per-session estimate, shown as one of the hero stats on the workout summary / shareable card.
@@ -338,7 +338,7 @@ The app remembers everything on the user's behalf, so it must also let them corr
 
 ### Navigation and shell
 
-- **Three tabs: Workout · Muscles · History.** Plain over clever, for a beginner audience. "Muscles" rather than "Muscle groups" — shorter, same meaning. **Profile is a header avatar on the three tab roots, not a tab**, and **the tab bar appears only at L0** — pushing any screen hides it. History is promoted to a tab because it is the most-revisited surface in the app. Rationale and the architecture this rests on: `docs/adr/0003-l0-navigation-variant-a.md`.
+- **Four tabs: Workout · Muscles · History · Profile.** Plain over clever, for a beginner audience. "Muscles" rather than "Muscle groups" — shorter, same meaning. **Profile returned as a tab (ADR 0004; 0003 had put it behind an avatar)**, and **the tab bar appears only at L0** — pushing any screen hides it. History is promoted to a tab because it is the most-revisited surface in the app. Rationale and the architecture this rests on: `docs/adr/0003-l0-navigation-variant-a.md`.
 - **Splash screen is branding only and must never block.** The app is offline with no login and nothing to fetch, so there is nothing legitimate to wait for. Target roughly 600ms and never gate entry on it.
 
 ### Beginner experience
@@ -361,7 +361,7 @@ The app remembers everything on the user's behalf, so it must also let them corr
 - No cloud backup.
 - No rest timer (parked for a later version).
 - No workout duration tracking. Since some users log live during a workout and others log retrospectively (catching up later, or logging from memory), any duration the app calculated could be meaningless or actively misleading — especially since it would show up on the shareable summary card. Exercise count is used instead of duration wherever a stat is needed, since it's accurate regardless of when logging happened.
-- No notifications.
+- No notifications, except the opt-in, fixed-schedule reminders in `docs/adr/0005-schedule-and-opt-in-notifications.md`, built after the Schedule screen. Never behaviour-triggered.
 - No wearable integration.
 - No AI.
 - No premium plan.

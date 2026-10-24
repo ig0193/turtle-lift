@@ -70,7 +70,7 @@ void main() {
   }
 
   group('rendering and taps', () {
-    testWidgets('renders the three tabs, in order', (tester) async {
+    testWidgets('renders the four tabs, in order', (tester) async {
       await tester.pumpWidget(
         host(GlassTabBar(selectedIndex: 0, onSelected: (_) {})),
       );
@@ -78,11 +78,11 @@ void main() {
 
       expect(tester.takeException(), isNull,
           reason: 'the bar must lay out clean');
-      for (final label in const <String>['Workout', 'Muscles', 'History']) {
+      for (final label in const <String>['Workout', 'Muscles', 'History', 'Profile']) {
         expect(find.text(label), findsOneWidget,
             reason: 'the $label tab is missing');
       }
-      expect(find.byType(TabGlyphIcon), findsNWidgets(3),
+      expect(find.byType(TabGlyphIcon), findsNWidgets(4),
           reason: 'each tab carries exactly one stroked glyph');
     });
 
@@ -414,23 +414,23 @@ void main() {
     testWidgets('dragging past the last tab holds there instead of wrapping',
         (tester) async {
       final reported = <int>[];
-      await tester.pumpWidget(liveHost(1, reported));
+      await tester.pumpWidget(liveHost(2, reported));
       await tester.pumpAndSettle();
 
       final capsule = find.byKey(GlassTabBar.highlightKey);
       final gesture = await dragAcross(
         tester,
-        tabCentre(tester, 1),
+        tabCentre(tester, 2),
         // Well past the right edge of the bar.
-        tabCentre(tester, 2) + const Offset(400, 0),
+        tabCentre(tester, 3) + const Offset(400, 0),
       );
 
-      expect(reported, <int>[2],
+      expect(reported, <int>[3],
           reason: 'it must stop at the last tab, and report it once however '
               'far past the edge the finger goes');
       expect(
         tester.getCenter(capsule).dx,
-        moreOrLessEquals(tabCentre(tester, 2).dx, epsilon: 1),
+        moreOrLessEquals(tabCentre(tester, 3).dx, epsilon: 1),
         reason: 'the capsule clamps to the last slot rather than sliding out '
             'of the bar',
       );
@@ -758,7 +758,7 @@ void main() {
   });
 
   group('semantics', () {
-    testWidgets('three tabs under one tab bar, exactly one selected',
+    testWidgets('four tabs under one tab bar, exactly one selected',
         (tester) async {
       // Disposed at the end of the body, not via addTearDown: the framework
       // verifies no SemanticsHandle is outstanding before tearDowns run, so a
@@ -780,9 +780,9 @@ void main() {
         return true;
       });
 
-      expect(tabs, hasLength(3),
-          reason: 'the highlight capsule must not surface as a fourth child, '
-              'and the three tabs must not merge into one');
+      expect(tabs, hasLength(4),
+          reason: 'the highlight capsule must not surface as a fifth child, '
+              'and the four tabs must not merge into one');
 
       for (var i = 0; i < tabs.length; i++) {
         final data = tabs[i].getSemanticsData();

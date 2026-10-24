@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prototype — Profile (Personal / Schedule) v2</title>
+<style>
+:root{
+  --bg:#17140F; --card:#211D18; --line:#332C22; --off:#241F19;
+  --t1:#F5EFE8; --t2:#A89C8E; --t3:#6B6156;
+  --acc:#D85A30; --on-acc:#1B0C05; --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0C0A07;font-family:system-ui,-apple-system,sans-serif;color:var(--t1);
+     -webkit-font-smoothing:antialiased;padding:24px 16px 80px}
+.wrap{max-width:1200px;margin:0 auto}
+h1{font-size:20px;font-weight:600;margin-bottom:6px}
+.lead{font-size:13px;color:var(--t2);max-width:780px;line-height:1.55;margin-bottom:12px}
+.rule{font-size:12px;color:var(--t2);line-height:1.55;max-width:780px;background:#141109;border:1px solid var(--line);
+      border-radius:10px;padding:10px 14px;margin-bottom:30px}
+.rule b{color:var(--t1)}
+section{margin-bottom:56px}
+section>h2{font-size:15px;font-weight:600;margin-bottom:4px}
+section>p{font-size:12px;color:var(--t3);max-width:780px;line-height:1.55;margin-bottom:18px}
+.grid{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+figure{margin:0;width:300px}
+figcaption{margin-top:10px;font-size:12px;color:var(--t2);line-height:1.5}
+figcaption b{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--t1);margin-bottom:3px}
+.scrub{display:flex;align-items:center;gap:6px;margin-top:12px;flex-wrap:wrap}
+.scrub span{font-size:11px;color:var(--t3);margin-right:2px}
+.scrub button{background:#141109;border:1px solid var(--line);color:var(--t2);font:inherit;font-size:11px;
+              border-radius:7px;padding:4px 8px;cursor:pointer}
+.scrub button.on{background:var(--acc);border-color:var(--acc);color:var(--on-acc);font-weight:600}
+
+.phone{width:300px;height:600px;background:var(--bg);border-radius:28px;overflow:hidden;
+       border:1px solid #2A241C;display:flex;flex-direction:column;position:relative}
+.status{height:24px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;
+        padding:0 18px;font-size:10px;color:var(--t3)}
+.hdr{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:10px 16px 12px;background:var(--bg)}
+.hdr h3{font-size:22px;font-weight:600;letter-spacing:-.02em;flex:1}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--card);border:1px solid var(--line);
+        display:flex;align-items:center;justify-content:center;color:var(--t2)}
+.body{flex:1;overflow-y:auto;padding:0 16px 16px}
+.body::-webkit-scrollbar{width:0}
+.tabs{display:flex;border-top:1px solid var(--line);flex-shrink:0}
+.tabs div{flex:1;text-align:center;padding:10px 0 12px;font-size:10px;color:var(--t3)}
+.tabs div.on{color:var(--acc)}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+.lbl{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3);margin:18px 0 6px}
+.lbl.first{margin-top:4px}
+.grp{border-top:1px solid var(--line)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.row p{font-size:14px}
+.row small{display:block;font-size:12px;color:var(--t3);margin-top:2px}
+.row .chev{color:var(--t3);flex-shrink:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:13px}
+.note{font-size:11.5px;color:var(--t3);line-height:1.5;margin-top:10px}
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:3px;margin-bottom:14px}
+.seg button{flex:1;background:none;border:0;color:var(--t3);font:inherit;font-size:12.5px;font-weight:500;
+            padding:7px 0;border-radius:6px;cursor:pointer}
+.seg button.on{background:var(--acc);color:var(--on-acc)}
+
+.sw{width:42px;height:25px;border-radius:99px;background:var(--line);position:relative;border:0;cursor:pointer;flex-shrink:0;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:var(--t2);transition:transform .15s,background .15s}
+.sw[aria-checked=true]{background:var(--acc)}
+.sw[aria-checked=true]::after{transform:translateX(17px);background:var(--on-acc)}
+.chips{display:flex;gap:6px}
+.chip{flex:1;aspect-ratio:1;max-width:38px;border-radius:50%;background:var(--card);border:1px solid var(--line);
+      color:var(--t2);font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:var(--on-acc);font-weight:600}
+.time{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px;font-variant-numeric:tabular-nums}
+
+/* week summary */
+.big-n{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.big-n small{font-size:13px;color:var(--t3);font-weight:500;letter-spacing:0}
+.cap{font-size:12.5px;color:var(--t2);margin-top:6px;line-height:1.4}
+.pd{display:flex;gap:14px;margin-top:12px}
+.pd div{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10px;color:var(--t3)}
+.pd i{width:22px;height:22px;border-radius:50%;display:block}
+.k-hit{background:var(--acc)} .k-miss{border:1.5px dashed var(--t3)} .k-ahead{border:1.5px solid var(--acc)}
+.hero{padding:10px 12px}
+.hero .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.hero .big-n{font-size:22px}
+.hero .big-n small{font-size:11.5px;margin-left:3px}
+.hero .pd{margin:0;gap:9px}
+.hero .pd i{width:15px;height:15px}
+.hero .pd div{font-size:9px;gap:3px}
+.hero .cap{font-size:12px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.last{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:9px 12px;
+      background:var(--card);border:1px solid var(--line);border-radius:var(--r);font-size:13px;color:var(--t2)}
+.last b{color:var(--t1);font-weight:600;font-variant-numeric:tabular-nums}
+.dd{display:flex;gap:5px}
+.dd i{width:9px;height:9px;border-radius:50%;display:block}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tiles .card .t{font-size:11px;color:var(--t3);margin-bottom:8px;letter-spacing:.04em}
+.tiles .dd{margin-top:10px}
+.tiles .dd i{width:11px;height:11px}
+.empty{font-size:12.5px;color:var(--t2);line-height:1.5}
+
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end}
+.sheet{background:var(--card);border-top:1px solid var(--line);border-radius:18px 18px 0 0;padding:20px 18px 24px;width:100%}
+.sheet h4{font-size:16px;font-weight:600;margin-bottom:6px}
+.sheet p{font-size:13px;color:var(--t2);line-height:1.5;margin-bottom:16px}
+.sheet .big{width:100%;background:var(--acc);color:var(--on-acc);border:0;border-radius:var(--r);padding:13px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px}
+.sheet .txt{display:block;width:100%;background:none;border:0;color:var(--t2);font:inherit;font-size:13px;padding:8px;cursor:pointer}
+</style></head>
+<body><div class="wrap">
+
+<h1>Profile — Personal / Schedule (v2)</h1>
+<p class="lead">Profile is now the <b>fourth tab</b> (ADR 0004), so the header avatar is gone. Chosen so far: <b>A2</b> segmented Personal | Schedule, <b>B1</b> simple chips + one time + Remind me, <b>C1</b> explain-first permission sheet.
+The Schedule segment is now the whole screen inline (no second page to push), with a week summary panel on top.
+History-tab calendar changes are parked. Sample data: plan Mon · Wed · Fri, week starts Monday. Everything is clickable —
+tap the segment, the day chips, the Remind me switch, and use the "pretend today is" buttons under each Schedule phone.</p>
+<p class="rule"><b>Rule note.</b> <code>00</code> §11 says anything computed from session rows lives on History. The summary panel is computed, so it is a deliberate exception:
+it is the feedback loop for the plan, not a stat. It would need to be recorded in the ADR, and when the History calendar lands the same figure must not be shown in both places.</p>
+
+<section><h2>1 · Landing — Personal pane</h2>
+<p>Default segment. Same rows as today's Profile; nothing derived.</p>
+<div class="grid"><figure><div class="phone" data-init='{"pane":"p"}'></div>
+<figcaption><b>Personal</b>Tap "Schedule" to switch.</figcaption></figure></div></section>
+
+<section><h2>2 · Schedule pane — week summary (P1, decided)</h2>
+<p>This week's progress with last week for comparison. Copy is neutral by design — it states a count, never a verdict, and there is no wording like "missed".</p>
+<div class="grid">
+<figure><div class="phone" id="p1" data-init='{"pane":"s","v":1,"today":21}'></div>
+<div class="scrub" data-for="p1"><span>Pretend today is</span></div>
+<figcaption><b>P1 · This week as hero (chosen)</b>Count and day dots share one row, with one line saying what is left (now compact). Last week is a quiet single row beneath.</figcaption></figure>
+<figure><div class="phone" data-init='{"pane":"s","v":1,"today":21,"plan":[]}'></div>
+<figcaption><b>Empty state</b>No training days chosen, so there is nothing to compare — the panel becomes a one-line prompt. Tap a day chip.</figcaption></figure>
+</div></section>
+
+<section><h2>3 · Reminders permission (C1)</h2>
+<p>Turn on "Remind me" in any Schedule phone above and this sheet appears. "Allow reminders" is the only thing that triggers the system dialog.</p>
+<div class="grid"><figure><div class="phone" data-init='{"pane":"s","v":1,"today":21,"sheet":true}'></div>
+<figcaption><b>C1 · Explain first</b>Nothing else is sent — stated up front. "Not now" costs nothing; the days and summary keep working without notifications.</figcaption></figure></div></section>
+
+</div>
+<script>
+/* ---------- sample data: Oct 2026 ---------- */
+const trained=new Set([2,3,5,7,9,12,16,19,23,24]);
+const dow=d=>(d+2)%7;                              // Mon=0; 1 Oct 2026 = Thu
+const DN=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const DS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function weekOf(start,today,plan){
+  const days=[...Array(7)].map((_,i)=>start+i);
+  const pd=days.filter(d=>plan.includes(dow(d)));
+  const items=pd.map(d=>({d,l:DS[dow(d)][0],k:d<=today&&trained.has(d)?'hit':d<today?'miss':'ahead'}));
+  const hit=items.filter(x=>x.k==='hit').length;
+  const left=items.filter(x=>x.k==='ahead');
+  const extra=days.filter(d=>d<=today&&trained.has(d)&&!plan.includes(dow(d))).length;
+  return {items,planned:pd.length,hit,left,extra};
+}
+const dots=w=>`<span class="dd">${w.items.map(x=>`<i class="k-${x.k}"></i>`).join('')}</span>`;
+function thisCaption(w){
+  if(w.hit===w.planned) return `All ${w.planned} plan days done${w.extra?` · +${w.extra} extra`:''}`;
+  if(!w.left.length)    return `${w.hit} of ${w.planned} plan days${w.extra?` · +${w.extra} extra`:''}`;
+  const n=w.left.length, nxt=DN[dow(w.left[0].d)];
+  return `${n} more to go — next is ${nxt}${w.extra?` · +${w.extra} extra`:''}`;
+}
+
+const I={
+ chev:'<svg class="i chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
+ user:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>'
+};
+const row=(t,s,r)=>`<div class="row"><div><p>${t}</p>${s?`<small>${s}</small>`:''}</div>${r||I.chev}</div>`;
+const sw=(on,act)=>`<button class="sw" role="switch" aria-checked="${on}" ${act?`data-act="${act}"`:''}></button>`;
+
+function panel(s){
+  if(!s.plan.length) return `<div class="card"><p class="empty">Pick your training days below and this space will show how each week is going.</p></div>`;
+  const t=weekOf(19,s.today,s.plan), l=weekOf(12,99,s.plan);   // last week = 12–18, always complete
+  if(s.v===1) return `
+    <div class="card hero"><div class="top"><div class="big-n">${t.hit} of ${t.planned}<small> this week</small></div>
+      <div class="pd">${t.items.map(x=>`<div><i class="k-${x.k}"></i>${DS[dow(x.d)]}</div>`).join('')}</div></div>
+      <div class="cap">${thisCaption(t)}</div></div>
+    <div class="last"><span>Last week</span><span style="display:flex;gap:10px;align-items:center">${dots(l)}<b>${l.hit} of ${l.planned}</b></span></div>`;
+  return `
+    <div class="tiles">
+      <div class="card"><div class="t">LAST WEEK</div><div class="big-n">${l.hit}<small> of ${l.planned}</small></div>${dots(l)}</div>
+      <div class="card"><div class="t">THIS WEEK</div><div class="big-n">${t.hit}<small> of ${t.planned}</small></div>${dots(t)}</div>
+    </div><div class="cap" style="padding:0 2px">${thisCaption(t)}</div>`;
+}
+
+function render(ph){
+  const s=ph._s, p=s.plan;
+  const personal=`<div class="grp">${row('Personal details','Weight log · gender')}${row('My workout templates','11 predefined · 1 custom')}</div>
+    <div class="lbl">Data</div><div class="grp">${row('Export everything')}${row('<span style="color:#C4553A">Delete all data</span>')}</div>`;
+  const sched=`
+    <div class="lbl first">Your week</div>${panel(s)}
+    <div class="lbl">Training days</div>
+    <div class="chips">${['M','T','W','T','F','S','S'].map((l,i)=>`<button class="chip" data-act="day" data-v="${i}" aria-pressed="${p.includes(i)}">${l}</button>`).join('')}</div>
+    <p class="note">Days you aim for. You can train on any day — these just set what the summary compares against.</p>
+    <div class="lbl">Reminders</div><div class="grp">${row('Remind me','Notification on training days',sw(s.remind,'remind'))}${row('Time','','<span class="time">6:30 PM</span>')}</div>`;
+  ph.innerHTML=`<div class="status"><span>9:41</span><span>●●●</span></div>
+    <div class="hdr"><h3>Profile</h3></div>
+    <div class="body"><div class="seg"><button data-act="pane" data-v="p" class="${s.pane==='p'?'on':''}">Personal</button><button data-act="pane" data-v="s" class="${s.pane==='s'?'on':''}">Schedule</button></div>
+    ${s.pane==='p'?personal:sched}</div>
+    <div class="tabs"><div>Workout</div><div>Muscles</div><div>History</div><div class="on">Profile</div></div>
+    ${s.sheet?`<div class="scrim"><div class="sheet"><h4>Remind you on training days?</h4>
+      <p>TurtleLift will send one notification at 6:30 PM on ${p.length?p.map(i=>DS[i]).join(', '):'your training days'}. Nothing else — no streak alerts, no "you missed a day". You can turn it off any time.</p>
+      <button class="big" data-act="allow">Allow reminders</button><button class="txt" data-act="later">Not now</button></div></div>`:''}`;
+}
+
+document.querySelectorAll('.phone').forEach(ph=>{
+  const init=JSON.parse(ph.dataset.init);
+  ph._s={pane:'p',v:1,today:21,plan:[0,2,4],remind:false,sheet:false,...init};
+  render(ph);
+});
+document.querySelectorAll('.scrub').forEach(sc=>{
+  const ph=document.getElementById(sc.dataset.for);
+  [19,20,21,22,23,24,25].forEach(d=>{
+    const b=document.createElement('button'); b.textContent=DS[dow(d)]; b.dataset.d=d;
+    b.onclick=()=>{ph._s.today=d;render(ph);mark();};
+    sc.appendChild(b);
+  });
+  function mark(){sc.querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.d===ph._s.today));}
+  mark();
+});
+document.addEventListener('click',e=>{
+  const a=e.target.closest('[data-act]'); if(!a) return;
+  const ph=a.closest('.phone'), s=ph._s, v=a.dataset.v;
+  switch(a.dataset.act){
+    case 'pane': s.pane=v; break;
+    case 'day': {const i=+v; s.plan=s.plan.includes(i)?s.plan.filter(x=>x!==i):[...s.plan,i].sort(); break;}
+    case 'remind': if(s.remind) s.remind=false; else s.sheet=true; break;
+    case 'allow': s.remind=true; s.sheet=false; break;
+    case 'later': s.sheet=false; break;
+  }
+  const top=ph.querySelector('.body')?.scrollTop||0;
+  render(ph); const b=ph.querySelector('.body'); if(b) b.scrollTop=top;
+});
+</script>
+</body></html>

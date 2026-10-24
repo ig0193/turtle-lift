@@ -103,12 +103,12 @@ void main() {
       );
     });
 
-    test('reaches schema version 3', () async {
+    test('reaches schema version 4', () async {
       await createVersion1Database();
       final database = openUpgraded();
       await database.select(database.settings).get();
 
-      expect(database.schemaVersion, 3);
+      expect(database.schemaVersion, 4);
     });
 
     test('adds a usable bodyweight table', () async {
@@ -125,6 +125,37 @@ void main() {
       final entries = await database.select(database.bodyweightEntries).get();
       expect(entries.single.date, '2026-09-14');
       expect(entries.single.weightKg, 78.5);
+    });
+
+    test('adds a usable training-plan table', () async {
+      await createVersion1Database();
+      final database = openUpgraded();
+
+      await database.into(database.trainingPlanEntries).insert(
+            TrainingPlanEntriesCompanion.insert(
+              effectiveFrom: '2026-10-24',
+              weekdayMask: 0x15, // Monday, Wednesday, Friday
+            ),
+          );
+
+      final entries = await database.select(database.trainingPlanEntries).get();
+      expect(entries.single.effectiveFrom, '2026-10-24');
+      expect(entries.single.weekdayMask, 0x15);
+    });
+
+    test('the plan table rejects a mask outside the seven weekdays', () async {
+      await createVersion1Database();
+      final database = openUpgraded();
+
+      expect(
+        database.into(database.trainingPlanEntries).insert(
+              TrainingPlanEntriesCompanion.insert(
+                effectiveFrom: '2026-10-24',
+                weekdayMask: 128,
+              ),
+            ),
+        throwsA(anything),
+      );
     });
 
     test('adds a usable custom-templates table', () async {

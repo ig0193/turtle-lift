@@ -35,7 +35,7 @@ class TemplateFilterControl extends StatelessWidget {
   @visibleForTesting
   static const Key chipKey = ValueKey<String>('template-filter-chip');
 
-  /// The accessibility floor, matching `ProfileAvatarButton.tapTarget`.
+  /// The accessibility floor, matching the app's 48pt tap-target floor.
   ///
   /// This is the one control between the user and every template, tapped
   /// one-handed in a gym. The chip is ~34pt tall; the padding around it is

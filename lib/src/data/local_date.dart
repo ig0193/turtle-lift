@@ -66,6 +66,12 @@ class LocalDate implements Comparable<LocalDate> {
     return '$y-$m-$d';
   }
 
+  /// ISO weekday: Monday is 1 ... Sunday is 7.
+  ///
+  /// Read off local midnight on this date, so no time of day or zone can move
+  /// it a day.
+  int get weekday => toDateTime().weekday;
+
   /// Local midnight on this date, for the few APIs that insist on a `DateTime`.
   DateTime toDateTime() => DateTime(year, month, day);
 

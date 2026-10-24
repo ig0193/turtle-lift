@@ -8,7 +8,7 @@
 | `01-app-idea.md` | Scope, data model, muscle taxonomy, palette, and the reasoning behind every rule here. |
 | `02-workout-tab-userflow.md` | Workout tab flow + mockups. |
 | `03-muscle-groups-tab-userflow.md` | Muscle Groups tab flow + mockups. |
-| `04-profile-tab-userflow.md` | Profile flow + mockups. Profile is behind the header avatar; history is its own tab. |
+| `04-profile-tab-userflow.md` | Profile flow + mockups. Profile is the fourth tab (Personal | Schedule); history is its own tab. |
 
 Conflict resolution: if this file disagrees with `01`–`04`, **`01`–`04` win** — this is a digest, not a source of truth. Report the conflict.
 
@@ -147,7 +147,7 @@ streakAsOf(date) -> int
 - Profile hero = `streakAsOf(today)`. Past session card = `streakAsOf(session.performedOn)`.
 - **Must decay against today**, not just against stored data.
 - Never stored.
-- Optional in-app hint on the final grace day. No notifications.
+- Optional in-app hint on the final grace day. In-app only; reminders are separate and user-scheduled (`docs/adr/0005-schedule-and-opt-in-notifications.md`).
 
 ---
 
@@ -229,7 +229,7 @@ streakAsOf(date) -> int
 
 ## 11. Profile and History
 
-History is a tab; Profile is reached from the header avatar (`docs/adr/0003-l0-navigation-variant-a.md`). **The split is decided: anything computed from session rows lives on the History tab; anything the user typed lives behind the avatar. No figure appears in both places.** → `04`, and `docs/plans/2026-09-14-2324-feat-profile-split-plan.md`.
+History and Profile are both tabs (`docs/adr/0003-l0-navigation-variant-a.md`, amended by `docs/adr/0004-profile-returns-as-a-tab.md`). **The split is decided: anything computed from session rows lives on the History tab; anything the user typed lives on the Profile tab. One named exception: the Schedule pane's week summary (ADR 0004). No figure appears in both places.** → `04`, and `docs/plans/2026-09-14-2324-feat-profile-split-plan.md`.
 
 - Stats: streak, total workouts, total sets. Streak explainer copy sits below the stat. No volume stat. **These are derived, so they live on the History tab — never on the Profile landing.**
 - **Per-session PB count** — `pbCountFor(session)`. Rendered as a pill on the hero card **only when >= 1** (never "0 personal bests"). Individual PB exercises are marked in the session's exercise log below the card.
@@ -240,7 +240,7 @@ History is a tab; Profile is reached from the header avatar (`docs/adr/0003-l0-n
 - **Session detail is the same component as the live workout card**, not a read-only viewer. Editable: title, `performedOn`, set weight/reps, add/remove set, remove exercise.
 - Delete workout: session detail + history swipe. Confirm dialog. **Hard delete, no tombstone.**
 - Templates: predefined are immutable; duplicate → custom copy. **Duplicate, rename, delete custom**; building one from scratch by muscle-group multi-select is deferred. **Only place templates are authored** — but the Workout tab's picker carries a visible route *to* that surface, since navigation is not authoring.
-- Personal details: bodyweight and gender, both behind the avatar because the user types them.
+- Personal details: bodyweight and gender, both on the Profile tab because the user types them.
   - **Bodyweight is a dated series, not one number** (optional, kg, gates calories). An entry is immutable and takes effect from the day it is recorded: no edit, no delete, no backdating. A correction is a new entry that supersedes the old one going forward. One undated number plus derive-on-read would rewrite the calorie figure on every session already logged. → `04`.
   - `caloriesFor(session)` resolves the weight in effect on that session's `performedOn`. A session predating the earliest entry shows the add-weight prompt and never a figure, permanently — entering a weight later does not backfill it.
   - Gender (Male / Female / Prefer not to say, default male, selects asset pair).
@@ -273,7 +273,7 @@ History is a tab; Profile is reached from the header avatar (`docs/adr/0003-l0-n
 
 ## 13. Out of scope for V1
 
-No zone-lit human mascot (dead — see `mascot-brief.md`) · no per-exercise illustrations or silhouettes (V2; equipment glyphs instead) · no login · no cloud sync · no soft delete · no rest timer · no workout duration · no notifications · no wearables · no AI · no premium · no ads · no multi-day splits or weekly rotation · no "today's workout" suggestion · no exercise videos · no social features.
+No zone-lit human mascot (dead — see `mascot-brief.md`) · no per-exercise illustrations or silhouettes (V2; equipment glyphs instead) · no login · no cloud sync · no soft delete · no rest timer · no workout duration · no notifications except the opt-in, fixed-schedule reminders in ADR 0005 (built after the Schedule screen) · no wearables · no AI · no premium · no ads · no multi-day splits or weekly rotation · no "today's workout" suggestion · no exercise videos · no social features.
 
 Local storage only. Works fully offline. No onboarding wizard.
 

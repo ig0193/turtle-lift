@@ -71,14 +71,20 @@ class GlassTabBar extends StatelessWidget {
   /// pop-to-root dozens of times in one gesture.
   final ValueChanged<int> onSelected;
 
-  /// The three tabs, in order. Profile is a header avatar, not a tab
-  /// (`prototypes/l0-navigation-prototype.html`, variant A).
-  static const List<String> labels = <String>['Workout', 'Muscles', 'History'];
+  /// The four tabs, in order. Profile is the fourth tab again
+  /// (`docs/adr/0004-profile-returns-as-a-tab.md`).
+  static const List<String> labels = <String>[
+    'Workout',
+    'Muscles',
+    'History',
+    'Profile',
+  ];
 
   static const List<TabGlyph> glyphs = <TabGlyph>[
     TabGlyph.workout,
     TabGlyph.muscles,
     TabGlyph.history,
+    TabGlyph.profile,
   ];
 
   // --- Geometry (prototype: `.barwrap`, `.bar`, `.cap`, `.bar button`) ------
@@ -455,7 +461,7 @@ class _GlassTabBarBodyState extends State<_GlassTabBarBody> {
   /// would fire it ten times.
   int? _lastReported;
 
-  /// The padded box the three items share. One slot is its width over three,
+  /// The padded box the items share. One slot is its width over the tab count,
   /// so the drag needs neither [GlassTabBar.barPadding] arithmetic nor a
   /// `LayoutBuilder`: it measures the track that is actually on screen instead
   /// of reconstructing where the track ought to be.
@@ -543,10 +549,10 @@ class _GlassTabBarBodyState extends State<_GlassTabBarBody> {
 
   /// The capsule riding behind the active tab, or under the finger.
   ///
-  /// `.cap { width: calc((100% - 10px)/3); transform: translateX(--i * 100%) }`
-  /// becomes a [FractionallySizedBox] a third as wide inside an [AnimatedAlign]
-  /// -- for a child of exactly one-third width, `Alignment.x` of -1 / 0 / +1
-  /// lands it on slot 0 / 1 / 2 with no arithmetic against the bar's measured
+  /// `.cap { width: calc((100% - 10px)/n); transform: translateX(--i * 100%) }`
+  /// becomes a [FractionallySizedBox] 1/n as wide inside an [AnimatedAlign]
+  /// -- for a child of exactly 1/n width, `Alignment.x` of -1 + 2k/(n-1)
+  /// lands it on slot k with no arithmetic against the bar's measured
   /// width, so it is correct at every screen size without a [LayoutBuilder].
   /// That the mapping is *linear* is what lets the drag reuse it: a fractional
   /// slot of 1.5 is `Alignment.x` 0.5 and lands exactly halfway between.
@@ -591,9 +597,14 @@ class _GlassTabBarBodyState extends State<_GlassTabBarBody> {
               final stretch = pull * GlassTabBar.maxDragStretch;
 
               return Align(
-                alignment: Alignment(slot - 1.0, 0),
+                // Slot k of n sits at x = -1 + 2k/(n-1) for a child 1/n wide;
+                // for n = 3 that is the old `slot - 1`.
+                alignment: Alignment(
+                  slot * 2 / (GlassTabBar.labels.length - 1) - 1.0,
+                  0,
+                ),
                 child: FractionallySizedBox(
-                  widthFactor: 1 / 3,
+                  widthFactor: 1 / GlassTabBar.labels.length,
                   heightFactor: 1,
                   child: Transform(
                     // Anchored at the trailing edge, so the capsule only ever

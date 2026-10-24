@@ -16,7 +16,7 @@
 
 | Row | What it is |
 |---|---|
-| Pinned header | `Workout`, with the Profile avatar trailing. Outside the scroll body — it never moves. |
+| Pinned header | `Workout`. Outside the scroll body — it never moves. |
 | `TEMPLATES` | A quiet small-caps group label, with the split filter control on its right. |
 | Count line | `4 templates` — how many the current split yields. |
 | Template rows | The predefined templates for the selected split, in a curated order. |
@@ -60,7 +60,7 @@ Search for exercises directly and add them to a session. No template or muscle-g
 
 Custom templates sit **outside** the filter and are shown whichever split is selected. With no unfiltered value to fall back on, filing them under one split would make a user's own template invisible from the other two — and a classifier would put a single-muscle custom template under Multi Split while the predefined equivalent sat under 1 Muscle per day, which reads as a bug.
 
-Creating and editing them happens **behind the Profile avatar**, never here; this screen only selects an already-saved template to run. Until that authoring flow exists, the group is always absent.
+Creating and editing them happens **on the Profile tab**, never here; this screen only selects an already-saved template to run. Until that authoring flow exists, the group is always absent.
 
 ### What this screen deliberately does not have
 
@@ -180,7 +180,7 @@ Both paths — a template and ad-hoc — converge into the same underlying sessi
 
 A separate template-picker screen is **not** in this list any more. Whether one comes back as a "see all templates" destination — showing every template regardless of split — is open; the landing works either way.
 
-Note: creating/editing a custom workout template is a separate flow that lives behind the Profile avatar — see that document.
+Note: creating/editing a custom workout template is a separate flow that lives on the Profile tab — see that document.
 
 ## Animations specific to this tab
 
@@ -205,7 +205,7 @@ Reference HTML/CSS mockups for this tab's key screens, using the Coral palette d
 
 ### Workout tab landing
 
-Shows the Push-Pull-Legs split selected. The tab bar is Workout / Muscles / History — Profile is the header avatar, not a tab (`docs/adr/0003-l0-navigation-variant-a.md`).
+Shows the Push-Pull-Legs split selected. The tab bar is Workout / Muscles / History / Profile (`docs/adr/0004-profile-returns-as-a-tab.md`).
 
 ```html
 <div style="background:#17140F; border-radius:16px; max-width:340px; overflow:hidden; font-family:system-ui;">

@@ -13,6 +13,7 @@ import 'src/data/sample_history_seed.dart';
 import 'src/data/session_store.dart';
 import 'src/data/settings_store.dart';
 import 'src/data/template_filter.dart';
+import 'src/data/training_plan.dart';
 import 'src/theme/app_theme.dart';
 import 'src/ui/l0_shell.dart';
 import 'src/ui/session_summary_screen.dart' show kAppDisplayName;
@@ -83,6 +84,7 @@ Future<void> main() async {
     initialCustomTemplates,
     initialSession,
     initialSavedSessions,
+    initialTrainingPlan,
   ) = await (
     readStoredTemplateFilter(SettingsStore(database)),
     boot.read(exerciseLibraryProvider.future),
@@ -91,6 +93,7 @@ Future<void> main() async {
     readStoredCustomTemplates(CustomTemplateStore(database)),
     readOpenSession(SessionStore(database)),
     readSavedSessions(SessionStore(database)),
+    readStoredTrainingPlan(TrainingPlanStore(database)),
   ).wait;
   boot.dispose();
 
@@ -101,6 +104,7 @@ Future<void> main() async {
         initialTemplateFilterProvider.overrideWithValue(initialFilter),
         initialBodyGenderProvider.overrideWithValue(initialGender),
         initialBodyweightLogProvider.overrideWithValue(initialBodyweight),
+        initialTrainingPlanProvider.overrideWithValue(initialTrainingPlan),
         initialActiveSessionProvider.overrideWithValue(initialSession),
         initialSavedSessionsProvider.overrideWithValue(initialSavedSessions),
         initialCustomTemplatesProvider

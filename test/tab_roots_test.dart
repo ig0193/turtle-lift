@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:turtle_lift/src/data/custom_templates.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/data/history_preview_data.dart';
+import 'package:turtle_lift/src/data/workout_templates.dart';
 import 'package:turtle_lift/src/ui/app_screen.dart';
 import 'package:turtle_lift/src/data/body_gender.dart';
 import 'package:turtle_lift/src/ui/body_diagram.dart';
@@ -12,6 +14,7 @@ import 'package:turtle_lift/src/ui/empty_state.dart';
 import 'package:turtle_lift/src/ui/history_root.dart';
 import 'package:turtle_lift/src/ui/muscle_search_field.dart';
 import 'package:turtle_lift/src/ui/muscles_root.dart';
+import 'package:turtle_lift/src/ui/profile_root.dart';
 import 'package:turtle_lift/src/ui/tab_glyph.dart';
 import 'package:turtle_lift/src/ui/workout_root.dart';
 
@@ -73,6 +76,8 @@ void main() {
     // overflows the viewport and no row is ever reached.
     'MusclesRoot': (build: () => const MusclesRoot(), clearanceHeight: 300),
     'HistoryRoot': (build: () => const HistoryRoot(), clearanceHeight: 120),
+    // Personal pane: a segmented control, two group labels and four rows.
+    'ProfileRoot': (build: () => const ProfileRoot(), clearanceHeight: 200),
   };
 
   /// Hosts a root as the shell does: a bare body inside a fixed viewport, with
@@ -102,6 +107,8 @@ void main() {
         // History starts with no sessions. Its populated form is
         // `test/history_root_test.dart`'s subject.
         historySessionsProvider.overrideWithValue(const <HistorySession>[]),
+        // Profile counts the user's custom templates; none is the common case.
+        customTemplatesProvider.overrideWithValue(const <WorkoutTemplate>[]),
       ],
       child: MaterialApp(
         theme: buildAppTheme(),

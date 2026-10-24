@@ -4,7 +4,7 @@ Date: 2026-09-14
 
 ## Status
 
-Accepted.
+Accepted. **The Profile-behind-an-avatar half is superseded by [ADR 0004](0004-profile-returns-as-a-tab.md)** — Profile is a fourth tab. History as a tab and the two riders below stand.
 
 ## Context
 

@@ -43,7 +43,7 @@ class TemplateRow extends StatelessWidget {
   final Color background;
 
   /// The minimum row height, matching the app's other tap target
-  /// (`ProfileAvatarButton.tapTarget`).
+  /// (the app's 48pt tap-target floor).
   static const double minHeight = 48;
 
   @override

@@ -96,47 +96,37 @@ String templateCountLabel({required int predefined, required int custom}) =>
 /// a weight, a name or an account — and this app has no account.
 const String personalDetailsRowSubtitle = 'Weight log · gender';
 
-/// The destination behind the L0 header avatar: everything the app remembers
-/// because the user *told* it, and the two ways out of it.
+/// The Personal pane of the Profile tab: everything the app remembers because
+/// the user *told* it, and the two ways out of it.
 ///
-/// **Authored lives here; derived lives on the History tab** (KD1). The split
-/// is not a layout preference — it is the same axis `app_database.dart` already
-/// sorts storage on ("Everything here is a preference, never a derived value"),
-/// so a field's home on screen and its home in the schema can never disagree,
-/// and the next field the app grows is placed by the rule rather than by
-/// argument. Concretely: no streak, no workout or set count, no personal-best
-/// tally and no calorie figure appears on this screen. `docs/04` §Screen list
-/// says the same thing ("**No stats summary**").
+/// **Authored lives on Profile; derived lives on the History tab** (KD1,
+/// `docs/adr/0004-profile-returns-as-a-tab.md`). The split is not a layout
+/// preference -- it is the same axis `app_database.dart` already sorts storage
+/// on ("Everything here is a preference, never a derived value"), so a field's
+/// home on screen and its home in the schema can never disagree. Concretely: no
+/// streak, no workout or set count, no personal-best tally and no calorie
+/// figure appears on this pane. The one named exception is the **Schedule**
+/// pane's week summary, which lives next to it in [ProfileRoot] and not here.
 ///
-/// **`prototypes/screens.html` screen 4 is stale here and is deliberately not
-/// followed.** It still renders the three-stat grid and the history list that
-/// `docs/adr/0003-l0-navigation-variant-a.md` moved to the History tab. The
-/// prototype leads the docs on *layout*; it does not lead them on *where a
-/// figure lives*, and this is that case. The corrected mockup in `docs/04`
-/// §Profile landing — four rows, two groups, nothing derived — is what this
-/// screen is built from.
+/// **A pane, not a screen.** It is a [Column] of rows with no scrollable and no
+/// [AppScreen]: [ProfileRoot] owns the one scroll view, the pinned header and
+/// the bottom clearance, so this widget cannot get any of those wrong.
 ///
 /// **Four rows, and the fourth is the reason the palette has eleven colours.**
-/// Delete-all is painted [AppPalette.danger]; nothing else on this screen is.
+/// Delete-all is painted [AppPalette.danger]; nothing else here is.
 ///
-/// **A `ConsumerWidget`** only to read the custom-template count and the four
+/// A `ConsumerWidget` only to read the custom-template count and the four
 /// destination seams. It watches no session provider, and a future edit that
 /// makes it watch one is the regression the test sweep is aimed at.
-///
-/// The body is a `ListView` carrying [screenScrollPadding] — four rows do not
-/// fill a phone today, but a pushed screen still picks up the home indicator on
-/// the bottom edge, and there is one rule for that edge rather than one per
-/// screen. **No `SafeArea`**: see [AppScreen]'s doc for why adding one silently
-/// zeroes that padding.
-class ProfileScreen extends ConsumerWidget {
-  const ProfileScreen({super.key});
+class ProfilePersonalPane extends ConsumerWidget {
+  const ProfilePersonalPane({super.key});
 
   /// The heading over the two rows that lead to the user's own content.
   @visibleForTesting
   static const String yoursGroupLabel = 'YOURS';
 
   /// The heading over the two data actions. Separate from [yoursGroupLabel]
-  /// because these two do not open your things — they hand all of them over or
+  /// because these two do not open your things -- they hand all of them over or
   /// destroy all of them, and a row that erases everything should not sit in
   /// the same block as a row that renames a template.
   @visibleForTesting
@@ -144,46 +134,43 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // The only provider this screen reads for *content*, and it is authored
+    // The only provider this pane reads for *content*, and it is authored
     // data: templates the user saved. Watched rather than read, so adding a
     // template and coming back shows the new count.
     final customCount = ref.watch(customTemplatesProvider).length;
 
-    return AppScreen.pushed(
-      title: 'Profile',
-      body: ListView(
-        padding: screenScrollPadding(context),
-        children: <Widget>[
-          const _GroupLabel(ProfileScreen.yoursGroupLabel),
-          _ProfileRow(
-            id: 'templates',
-            title: templatesRowTitle,
-            subtitle: templateCountLabel(
-              predefined: kPredefinedTemplates.length,
-              custom: customCount,
-            ),
-            destination: profileTemplatesDestinationProvider,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        const _GroupLabel(ProfilePersonalPane.yoursGroupLabel),
+        _ProfileRow(
+          id: 'templates',
+          title: templatesRowTitle,
+          subtitle: templateCountLabel(
+            predefined: kPredefinedTemplates.length,
+            custom: customCount,
           ),
-          _ProfileRow(
-            id: 'personal-details',
-            title: personalDetailsRowTitle,
-            subtitle: personalDetailsRowSubtitle,
-            destination: profilePersonalDetailsDestinationProvider,
-          ),
-          const _GroupLabel(ProfileScreen.dataGroupLabel),
-          _ProfileRow(
-            id: 'export',
-            title: exportRowTitle,
-            destination: profileExportDestinationProvider,
-          ),
-          _ProfileRow(
-            id: 'delete-all',
-            title: deleteAllRowTitle,
-            destructive: true,
-            destination: profileDeleteAllDestinationProvider,
-          ),
-        ],
-      ),
+          destination: profileTemplatesDestinationProvider,
+        ),
+        _ProfileRow(
+          id: 'personal-details',
+          title: personalDetailsRowTitle,
+          subtitle: personalDetailsRowSubtitle,
+          destination: profilePersonalDetailsDestinationProvider,
+        ),
+        const _GroupLabel(ProfilePersonalPane.dataGroupLabel),
+        _ProfileRow(
+          id: 'export',
+          title: exportRowTitle,
+          destination: profileExportDestinationProvider,
+        ),
+        _ProfileRow(
+          id: 'delete-all',
+          title: deleteAllRowTitle,
+          destructive: true,
+          destination: profileDeleteAllDestinationProvider,
+        ),
+      ],
     );
   }
 }

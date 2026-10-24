@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// the *navigation* fact and that is the bar's *rendering* of it. The shell
 /// asserts the two agree (`L0Shell.tabs`), so a fourth tab added to one and not
 /// the other fails loudly instead of rendering a bar with an unreachable slot.
-const int kL0TabCount = 3;
+const int kL0TabCount = 4;
 
 /// Which L0 tab is showing.
 ///

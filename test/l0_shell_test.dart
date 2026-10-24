@@ -4,10 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:turtle_lift/src/data/custom_templates.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/data/history_preview_data.dart';
-import 'package:turtle_lift/src/theme/app_palette.dart';
+import 'package:turtle_lift/src/data/workout_templates.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
 import 'package:turtle_lift/src/ui/history_root.dart';
@@ -24,7 +25,7 @@ import 'package:turtle_lift/src/ui/workout_root.dart';
 ///   and every tab silently forgets its scroll position,
 /// * a title that changes for sighted users while a screen reader keeps
 ///   announcing the first tab,
-/// * a `SafeArea` reintroduced around the body — three roots quietly lose the
+/// * a `SafeArea` reintroduced around the body — four roots quietly lose the
 ///   clearance that keeps their last row out from under the floating bar,
 /// * a bar hidden with `Navigator.canPop` instead of route opacity — it then
 ///   disappears behind dialogs, which it must not,
@@ -37,7 +38,7 @@ void main() {
 
   /// The shipped library, indexed as `main()` indexes it.
   ///
-  /// The shell mounts all three roots eagerly in an `IndexedStack`, so the
+  /// The shell mounts all four roots eagerly in an `IndexedStack`, so the
   /// Muscles root builds on the very first pump of every test in this file —
   /// and `exerciseIndexProvider` throws without an override rather than
   /// defaulting to an empty index.
@@ -59,6 +60,8 @@ void main() {
           // empty History keeps these tests independent of the session fixture,
           // so changing that fixture cannot break the shell suite.
           historySessionsProvider.overrideWithValue(const <HistorySession>[]),
+          // Profile mounts with the other roots and counts custom templates.
+          customTemplatesProvider.overrideWithValue(const <WorkoutTemplate>[]),
         ],
         child: MaterialApp(
           theme: buildAppTheme(),
@@ -76,7 +79,7 @@ void main() {
         ),
       );
 
-  /// The active root's own scrollable, scoped by root type. **All three roots
+  /// The active root's own scrollable, scoped by root type. **All four roots
   /// stay mounted**, so a bare `find.byType(ListView)` matches three of them.
   Finder scrollableIn(Type rootType) => find.descendant(
         of: find.byType(rootType),
@@ -110,6 +113,7 @@ void main() {
     // viewport `useShortScreen` sets up.
     'Front', // MusclesRoot
     'No workouts yet', // HistoryRoot, seeded empty above
+    ProfilePersonalPane.yoursGroupLabel, // ProfileRoot, Personal pane
   ];
 
   group('tabs', () {
@@ -135,7 +139,7 @@ void main() {
         await tester.tap(find.byKey(GlassTabBar.itemKey(tab)));
         await tester.pumpAndSettle();
 
-        // Hit-testability, not presence: an IndexedStack keeps all three roots
+        // Hit-testability, not presence: an IndexedStack keeps all four roots
         // mounted on purpose, so `findsOneWidget` on any of them is true at
         // every moment and proves nothing. Only the displayed child is
         // hit-tested (`RenderIndexedStack.hitTestChildren`).
@@ -282,7 +286,7 @@ void main() {
       // The direct guard on the missing SafeArea. Wrapping the shell's body in
       // one consumes the padding `extendBody` injects and strips it from the
       // descendant MediaQuery: `screenScrollPadding` then reads zero in all
-      // three roots, they render perfectly, and their last row hides behind
+      // four roots, they render perfectly, and their last row hides behind
       // the bar.
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
@@ -295,7 +299,7 @@ void main() {
         MusclesRoot,
         HistoryRoot,
       ]) {
-        // skipOffstage: false — IndexedStack keeps all three roots mounted but
+        // skipOffstage: false — IndexedStack keeps all four roots mounted but
         // only the selected one is onstage, and the inset has to reach the two
         // that are not being painted just as much as the one that is.
         final inset = MediaQuery.paddingOf(
@@ -368,36 +372,38 @@ void main() {
           reason: 'the bar must still occupy its space under the barrier');
     });
 
-    testWidgets('the avatar pushes Profile and the bar goes with the shell',
+    testWidgets('a push from the Profile tab covers the bar, and pops back',
         (tester) async {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
-      // Captured first: once Profile is up the shell is offstage and
+      // Captured first: once a route is up the shell is offstage and
       // `find.byType(L0Shell)` matches nothing.
       final navigator = navigatorOf(tester);
 
-      await tester.tap(find.byKey(ProfileAvatarButton.tapTargetKey));
+      await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(profileRowKey('export')));
       await tester.pumpAndSettle();
 
-      expect(find.byType(ProfileScreen), findsOneWidget,
-          reason: 'the header avatar pushes the Profile destination');
       // Offstage-ness, not hit-testability, is what separates an opaque route
-      // from a modal one. A dialog also leaves the bar un-hit-testable behind
+      // from a modal one: a dialog also leaves the bar un-hit-testable behind
       // its barrier, so hitTestable() alone would pass for the very thing this
       // is meant to rule out -- the dialog test above asserts exactly that.
       expect(find.byType(GlassTabBar), findsNothing,
-          reason: 'Profile is an opaque page route, so the bar goes offstage; '
-              'a modal sheet here would leave it onstage underneath');
+          reason: 'a Profile row opens an opaque page route, so the bar goes '
+              'offstage; a modal sheet would leave it onstage underneath');
       expect(find.byType(GlassTabBar, skipOffstage: false), findsOneWidget,
-          reason: 'the shell stays mounted beneath the route, it is not torn '
-              'down -- which is why the tab survives the pop below');
+          reason: 'the shell stays mounted beneath the route, so the tab '
+              'survives the pop below');
 
-      // And it comes back, so Profile is genuinely a push and not a replace.
       navigator.pop();
       await tester.pumpAndSettle();
       expect(find.byType(GlassTabBar).hitTestable(), findsOneWidget,
-          reason: 'popping Profile returns to the shell');
+          reason: 'popping returns to the shell');
+      expect(tester.widget<GlassTabBar>(find.byType(GlassTabBar)).selectedIndex,
+          3,
+          reason: 'and to the same tab');
     });
   });
 
@@ -458,110 +464,6 @@ void main() {
           reason: 'system back at L0 must not throw');
       expect(find.byType(GlassTabBar).hitTestable(), findsOneWidget,
           reason: 'the shell is still up');
-    });
-  });
-
-  group('the profile avatar', () {
-    testWidgets('is a 32pt disc on surface with a 1pt border', (tester) async {
-      await tester.pumpWidget(host());
-      await tester.pumpAndSettle();
-
-      final circle = find.byKey(ProfileAvatarButton.circleKey);
-      expect(tester.getSize(circle),
-          const Size(ProfileAvatarButton.size, ProfileAvatarButton.size),
-          reason: 'the prototype gives .avatar a 32px box');
-
-      final decoration =
-          tester.widget<Container>(circle).decoration! as BoxDecoration;
-      // Packed ARGB, never Color identity — the repo's rule for colour checks.
-      expect(decoration.color!.toARGB32(), AppPalette.surface.toARGB32(),
-          reason: 'the disc is filled with the card surface');
-      expect(decoration.shape, BoxShape.circle, reason: 'it is a circle');
-      expect(decoration.border!.top.color.toARGB32(),
-          AppPalette.border.toARGB32(),
-          reason: 'the resting ring is the border colour');
-      expect(decoration.border!.top.width, ProfileAvatarButton.borderWidth,
-          reason: 'a 1pt ring, not a heavier one');
-
-      expect(
-        tester.widget<ProfileGlyphIcon>(find.byType(ProfileGlyphIcon)).color
-            .toARGB32(),
-        AppPalette.textSecondary.toARGB32(),
-        reason: 'the resting glyph is the secondary text colour',
-      );
-    });
-
-    testWidgets('flips both the ring and the glyph to accent while pressed',
-        (tester) async {
-      // Tinting only the ring is the easy half to ship, and at 32pt on a dark
-      // surface it reads as nothing having happened.
-      await tester.pumpWidget(host());
-      await tester.pumpAndSettle();
-
-      final gesture = await tester.startGesture(
-        tester.getCenter(find.byKey(ProfileAvatarButton.tapTargetKey)),
-      );
-      await tester.pump();
-
-      final pressed = tester
-          .widget<Container>(find.byKey(ProfileAvatarButton.circleKey))
-          .decoration! as BoxDecoration;
-      expect(pressed.border!.top.color.toARGB32(),
-          AppPalette.accentStrong.toARGB32(),
-          reason: 'the ring must accent while pressed');
-      expect(
-        tester.widget<ProfileGlyphIcon>(find.byType(ProfileGlyphIcon)).color
-            .toARGB32(),
-        AppPalette.accentStrong.toARGB32(),
-        reason: 'the glyph must accent with it — `.avatar:active` sets both '
-            'border-color and color, and the SVG strokes currentColor',
-      );
-
-      // cancel, not up: releasing on the button fires the tap and pushes the
-      // Profile route over the shell, which takes the avatar offstage and
-      // leaves nothing to measure. A cancelled press is the gesture that ends
-      // without navigating, which is the one this assertion is about.
-      await gesture.cancel();
-      await tester.pumpAndSettle();
-
-      final released = tester
-          .widget<Container>(find.byKey(ProfileAvatarButton.circleKey))
-          .decoration! as BoxDecoration;
-      expect(released.border!.top.color.toARGB32(), AppPalette.border.toARGB32(),
-          reason: 'the ring must return to rest when the press ends');
-    });
-
-    testWidgets('is at least a 48x48 target', (tester) async {
-      await tester.pumpWidget(host());
-      await tester.pumpAndSettle();
-
-      final size =
-          tester.getSize(find.byKey(ProfileAvatarButton.tapTargetKey));
-      expect(size.width, greaterThanOrEqualTo(48),
-          reason: 'the 32pt disc is smaller than the minimum touch target, so '
-              'the box around it has to make up the difference');
-      expect(size.height, greaterThanOrEqualTo(48),
-          reason: 'M3 centres app-bar actions rather than stretching them, so '
-              'the height is the control\'s own');
-    });
-
-    testWidgets('announces itself as a button named Profile', (tester) async {
-      final handle = tester.ensureSemantics();
-
-      await tester.pumpWidget(host());
-      await tester.pumpAndSettle();
-
-      // isSemantics, not matchesSemantics: this asserts the three things that
-      // matter and stays quiet about the flags the framework adds around them.
-      // (containsSemantics is the same matcher, deprecated after v3.40.)
-      expect(
-        tester.getSemantics(find.byKey(ProfileAvatarButton.tapTargetKey)),
-        isSemantics(label: 'Profile', isButton: true, hasTapAction: true),
-        reason: 'an unlabelled icon control is unusable with a screen reader, '
-            'and a labelled one with no tap action is worse',
-      );
-
-      handle.dispose();
     });
   });
 }

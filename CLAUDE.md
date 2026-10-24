@@ -85,8 +85,9 @@ are reviewed copy.
 5. Summary and celebration.
 6. Muscles tab.
 7. History tab.
-8. Profile screen — reached from the header avatar, not a tab
-   (`docs/adr/0003-l0-navigation-variant-a.md`).
+8. Profile tab — fourth tab, Personal | Schedule
+   (`docs/adr/0004-profile-returns-as-a-tab.md`), then the Schedule screen and
+   reminders (`docs/adr/0005-schedule-and-opt-in-notifications.md`, notifications last).
 
 ## Decided in session 1
 
@@ -140,7 +141,7 @@ are reviewed copy.
 ## Out of scope for V1 — do not build
 
 No login · no cloud sync · no soft delete · no rest timer · no workout duration ·
-no notifications · no wearables · no AI features · no premium tier · no ads ·
+no notifications (except the opt-in reminders in ADR 0005, built after Schedule) · no wearables · no AI features · no premium tier · no ads ·
 no multi-day splits · no per-exercise illustrations ·
 no achievements, badges or level-ups.
 

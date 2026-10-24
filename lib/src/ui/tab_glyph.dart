@@ -4,7 +4,7 @@ import 'stroke_glyph.dart';
 
 import '../theme/app_palette.dart';
 
-/// The three tab-bar icons, drawn as strokes rather than font glyphs.
+/// The four tab-bar icons, drawn as strokes rather than font glyphs.
 ///
 /// **They are hand-painted because the bar animates the stroke.** The L0
 /// prototype gives `.bar svg` `stroke-width:1.7` and the selected tab
@@ -32,6 +32,9 @@ enum TabGlyph {
 
   /// A clock. `circle cx=12 cy=12 r=8` + `M12 7v5l3 2`
   history,
+
+  /// Head and shoulders. `circle cx=12 cy=8 r=3.5` + `M5 20c0-3.5 3-6 7-6s7 2.5 7 6`
+  profile,
 }
 
 /// Paints one [TabGlyph] at [size]×[size].
@@ -153,6 +156,15 @@ Path _basePath(TabGlyph glyph) => _basePaths.putIfAbsent(glyph, () {
             ..moveTo(12, 7)
             ..lineTo(12, 12)
             ..lineTo(15, 14);
+        // Head and shoulders, the shape the header avatar used to draw. The
+        // shoulders' smooth-cubic `s` is written out as its reflected control
+        // point: (8,14) mirrored through the join (12,14) is (16,14).
+        case TabGlyph.profile:
+          path
+            ..addOval(Rect.fromCircle(center: const Offset(12, 8), radius: 3.5))
+            ..moveTo(5, 20)
+            ..cubicTo(5, 16.5, 8, 14, 12, 14)
+            ..cubicTo(16, 14, 19, 16.5, 19, 20);
       }
       return path;
     });
