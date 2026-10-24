@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +9,7 @@ import 'src/data/custom_templates.dart';
 import 'src/data/exercise_index.dart';
 import 'src/data/exercise_library.dart';
 import 'src/data/personal_details_store.dart';
+import 'src/data/sample_history_seed.dart';
 import 'src/data/session_store.dart';
 import 'src/data/settings_store.dart';
 import 'src/data/template_filter.dart';
@@ -57,6 +59,16 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final database = openAppDatabase();
+
+  // **Debug-only, temporary.** Seeds a few weeks of plausible workouts so the
+  // History tab's calendar and Recent list have something real to render on
+  // a fresh install while that redesign is being reviewed on-device. No-ops
+  // once any real session exists, and `kDebugMode` keeps it out of release
+  // builds entirely. See `sample_history_seed.dart` for removal notes.
+  if (kDebugMode) {
+    await seedSampleHistoryIfEmpty(SessionStore(database));
+  }
+
   // A throwaway container, because `exerciseLibraryProvider` is where the
   // asset read and the decode live and there must not be a second copy of
   // either. It is disposed before the scope below is built, so the raw maps are

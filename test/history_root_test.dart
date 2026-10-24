@@ -4,16 +4,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/generated/muscle_taxonomy.dart';
 import 'package:turtle_lift/src/data/history_preview_data.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
+import 'package:turtle_lift/src/ui/all_sessions_screen.dart';
+import 'package:turtle_lift/src/ui/history_calendar_card.dart';
 import 'package:turtle_lift/src/ui/history_root.dart';
 import 'package:turtle_lift/src/ui/history_session_detail_screen.dart';
 
-/// The History tab as the scannable trail: what a row carries, and the
-/// projection behind the figures it carries.
+/// The History tab root: a calendar card, then a short Recent trail, then the
+/// door to everything else.
 ///
-/// The projection tests matter more than the rendering ones. A PB pill on every
-/// row is only affordable because the whole screen is one chronological pass;
-/// if that pass is ever wrong, every row is wrong and nothing else here would
-/// notice.
+/// The projection tests matter more than the rendering ones. A PB pill on
+/// every row is only affordable because the whole screen is one chronological
+/// pass; if that pass is ever wrong, every row is wrong and nothing else here
+/// would notice. The full chronological list this root used to render is
+/// tested in `all_sessions_screen_test.dart` now that it lives there.
 void main() {
   DateTime day(int daysAgo) {
     final now = DateTime.now();
@@ -189,139 +192,127 @@ void main() {
     });
   });
 
-  group('the rows', () {
-    testWidgets('lists sessions newest first, by the day they happened',
-        (tester) async {
-      await tester.pumpWidget(host(<HistorySession>[
-        session('old', 10, title: 'Older', exercises: const <HistoryExercise>[
-          HistoryExercise(
-            name: 'A',
-            primaryGroupIds: <String>['chest'],
-            setScores: <double>[1],
-          ),
-        ]),
-        session('new', 1, title: 'Newer', exercises: const <HistoryExercise>[
-          HistoryExercise(
-            name: 'A',
-            primaryGroupIds: <String>['chest'],
-            setScores: <double>[1],
-          ),
-        ]),
-      ]));
+  group('monthYearLabel', () {
+    test('names the month and year', () {
+      expect(monthYearLabel(DateTime(2026, 9, 14)), 'September 2026');
+      expect(monthYearLabel(DateTime(2026, 1, 1)), 'January 2026');
+    });
+  });
 
-      expect(
-        tester.getRect(find.byKey(HistoryRoot.rowKey('new'))).top,
-        lessThan(tester.getRect(find.byKey(HistoryRoot.rowKey('old'))).top),
-      );
+  group('groupSessionsByDay', () {
+    test('keys by the local calendar day, dropping any time component', () {
+      final s = session('a', 0);
+      final byDay = groupSessionsByDay(<HistorySession>[s]);
+      final today = DateTime.now();
+      expect(byDay[DateTime(today.year, today.month, today.day)], <HistorySession>[s]);
     });
 
-    testWidgets('shows a PB pill only when the session set one',
-        (tester) async {
-      await tester.pumpWidget(host(<HistorySession>[
-        session('first', 5, title: 'First', exercises: const <HistoryExercise>[
-          HistoryExercise(
-            name: 'Bench',
-            primaryGroupIds: <String>['chest'],
-            setScores: <double>[100],
-          ),
-        ]),
-        session('pb', 1, title: 'Record', exercises: const <HistoryExercise>[
-          HistoryExercise(
-            name: 'Bench',
-            primaryGroupIds: <String>['chest'],
-            setScores: <double>[105],
-          ),
-        ]),
-      ]));
-
-      expect(find.text('1 PB'), findsOneWidget);
-      expect(
-        find.textContaining('0 PB'),
-        findsNothing,
-        reason: 'the spec forbids rendering "0 personal bests"',
-      );
+    test('a day with two sessions holds both, in the order given', () {
+      final morning = session('a', 2);
+      final later = session('b', 2);
+      final byDay = groupSessionsByDay(<HistorySession>[morning, later]);
+      final key = DateTime(morning.performedOn.year, morning.performedOn.month,
+          morning.performedOn.day);
+      expect(byDay[key], <HistorySession>[morning, later]);
     });
+  });
 
-    testWidgets('tags a quick log so its shorter line reads as a kind of entry',
+  group('the root', () {
+    // Every test below needs the calendar card plus a full Recent list on
+    // screen at once. `ListView`'s sliver backing only builds elements inside
+    // the viewport (unlike a plain `Column`), so a row below the fold of the
+    // default 800x600 test surface genuinely cannot be found by `find.byKey`
+    // -- not because it is missing, but because flutter_test never built it.
+    void growViewport(WidgetTester tester) {
+      tester.view.physicalSize = const Size(400, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+    }
+
+    testWidgets('shows the empty state when there is nothing to list',
         (tester) async {
-      await tester.pumpWidget(host(<HistorySession>[
-        session('q', 1, quick: true, exercises: const <HistoryExercise>[
-          HistoryExercise(
-            name: 'Barbell curl',
-            primaryGroupIds: <String>['biceps'],
-            setScores: <double>[30],
-          ),
-        ]),
-      ]));
-
-      expect(find.text('quick log'), findsOneWidget);
-      expect(find.text('Barbell curl'), findsOneWidget);
-    });
-
-    testWidgets('a row carries the date, exercise count and set count',
-        (tester) async {
-      await tester.pumpWidget(host(<HistorySession>[
-        session('a', 0, title: 'Push day', exercises: const <HistoryExercise>[
-          HistoryExercise(
-            name: 'Bench',
-            primaryGroupIds: <String>['chest'],
-            setScores: <double>[80, 80, 75],
-          ),
-          HistoryExercise(
-            name: 'Press',
-            primaryGroupIds: <String>['shoulders'],
-            setScores: <double>[45, 45],
-          ),
-        ]),
-      ]));
-
-      expect(find.text('Today · 2 exercises · 5 sets'), findsOneWidget);
-    });
-
-    testWidgets('a single-exercise session is not pluralised', (tester) async {
-      await tester.pumpWidget(host(<HistorySession>[
-        session('a', 2, title: 'One', exercises: const <HistoryExercise>[
-          HistoryExercise(
-            name: 'Bench',
-            primaryGroupIds: <String>['chest'],
-            setScores: <double>[80],
-          ),
-        ]),
-      ]));
-
-      expect(find.textContaining('1 exercise ·'), findsOneWidget);
-    });
-
-    testWidgets('still shows the empty state when there is nothing to list',
-        (tester) async {
+      growViewport(tester);
       await tester.pumpWidget(host(const <HistorySession>[]));
 
       expect(find.text('No workouts yet'), findsOneWidget);
-      expect(
-        find.byKey(HistoryRoot.rowKey('anything')),
-        findsNothing,
-      );
+      expect(find.byType(HistoryCalendarCard), findsNothing,
+          reason: 'a calendar with nothing on it is not an empty state');
     });
 
-    testWidgets('groups rows under the month they happened in', (tester) async {
-      await tester.pumpWidget(host(kPreviewSessions));
+    testWidgets('shows the calendar once there is at least one session',
+        (tester) async {
+      growViewport(tester);
+      await tester.pumpWidget(host(<HistorySession>[session('a', 0)]));
+
+      expect(find.byType(HistoryCalendarCard), findsOneWidget);
+    });
+
+    testWidgets('the Recent list caps at HistoryRoot.recentCount, newest first',
+        (tester) async {
+      growViewport(tester);
+      final sessions = <HistorySession>[
+        for (var i = 0; i < HistoryRoot.recentCount + 2; i++)
+          session('s$i', i, title: 'Session $i'),
+      ];
+      await tester.pumpWidget(host(sessions));
+
+      for (var i = 0; i < HistoryRoot.recentCount; i++) {
+        expect(find.byKey(HistoryRoot.recentRowKey('s$i')), findsOneWidget,
+            reason: 'the $i-th newest session should be in Recent');
+      }
+      for (var i = HistoryRoot.recentCount; i < sessions.length; i++) {
+        expect(find.byKey(HistoryRoot.recentRowKey('s$i')), findsNothing,
+            reason: 'older sessions belong behind "See all", not in Recent');
+      }
+    });
+
+    testWidgets('"See all" names the total, not just the Recent count',
+        (tester) async {
+      growViewport(tester);
+      final sessions = <HistorySession>[
+        for (var i = 0; i < HistoryRoot.recentCount + 3; i++) session('s$i', i),
+      ];
+      await tester.pumpWidget(host(sessions));
+
+      expect(find.text('See all ${sessions.length} sessions ›'), findsOneWidget);
+    });
+
+    testWidgets('a single total session reads "1 session", not "1 sessions"',
+        (tester) async {
+      growViewport(tester);
+      await tester.pumpWidget(host(<HistorySession>[session('a', 0)]));
+
+      expect(find.text('See all 1 session ›'), findsOneWidget);
+    });
+
+    testWidgets('"See all" opens the full chronological list', (tester) async {
+      growViewport(tester);
+      await tester.pumpWidget(host(<HistorySession>[
+        session('a', 0, title: 'Today'),
+        session('b', 40, title: 'Last month'),
+      ]));
+
+      await tester.tap(find.byKey(HistoryRoot.seeAllKey));
       await tester.pumpAndSettle();
 
-      // Whatever today is, the newest session's month heads the list.
-      final newest = <HistorySession>[...kPreviewSessions]
-        ..sort((a, b) => b.performedOn.compareTo(a.performedOn));
-      final first = newest.first.performedOn;
-      const months = <String>[
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December',
-      ];
+      expect(find.byType(AllSessionsScreen), findsOneWidget);
+      // The older session is reachable there even though Recent never showed
+      // it (with a short enough Recent list to make the point meaningfully
+      // this would need recentCount+ sessions; here it just confirms the
+      // destination renders the full, not a truncated, set).
+      expect(find.text('Last month'), findsOneWidget);
+    });
 
-      expect(
-        find.byKey(
-          HistoryRoot.monthKey('${months[first.month - 1]} ${first.year}'),
-        ),
-        findsOneWidget,
-      );
+    testWidgets('a Recent row opens that session, same as everywhere else',
+        (tester) async {
+      await tester.pumpWidget(host(<HistorySession>[
+        session('a', 0, title: 'Push day'),
+      ]));
+
+      await tester.tap(find.byKey(HistoryRoot.recentRowKey('a')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HistorySessionDetailScreen), findsOneWidget);
     });
   });
 }

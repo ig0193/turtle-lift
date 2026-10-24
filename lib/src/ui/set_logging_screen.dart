@@ -13,6 +13,7 @@ import '../theme/app_typography.dart';
 import 'app_screen.dart';
 import 'exercise_detail_screen.dart';
 import 'exercise_history_screen.dart';
+import 'ghost_button.dart';
 import 'muscle_exercise_list_screen.dart' show RowTagChip;
 import 'set_row.dart';
 
@@ -98,7 +99,7 @@ class _SetLoggingScreenState extends ConsumerState<SetLoggingScreen> {
           const SizedBox(height: 4),
           ..._setRows(sessionExercise, loadType, saved),
           const SizedBox(height: 4),
-          _GhostButton(
+          GhostButton(
             buttonKey: SetLoggingScreen.addSetKey,
             label: '+ Add set',
             onTap: () => setState(() => _addedRows++),
@@ -295,7 +296,7 @@ class _SetLoggingScreenState extends ConsumerState<SetLoggingScreen> {
           ),
         ),
       const SizedBox(height: 6),
-      _GhostButton(
+      GhostButton(
         buttonKey: SetLoggingScreen.seeAllKey,
         label: 'See all ${history.length} '
             '${history.length == 1 ? 'session' : 'sessions'} ›',
@@ -386,46 +387,6 @@ class _InfoButton extends StatelessWidget {
             height: 48,
             child: Icon(Icons.info_outline,
                 size: 19, color: AppPalette.textSecondary),
-          ),
-        ),
-      );
-}
-
-class _GhostButton extends StatelessWidget {
-  const _GhostButton({
-    required this.buttonKey,
-    required this.label,
-    required this.onTap,
-  });
-
-  final Key buttonKey;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: label,
-        excludeSemantics: true,
-        child: GestureDetector(
-          key: buttonKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppPalette.surface,
-              border: Border.all(color: AppPalette.border),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppPalette.textSecondary,
-              ),
-            ),
           ),
         ),
       );

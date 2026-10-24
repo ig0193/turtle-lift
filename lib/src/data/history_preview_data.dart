@@ -254,6 +254,43 @@ final historySessionsNewestFirstProvider = Provider<List<HistorySession>>(
     ..sort((a, b) => b.performedOn.compareTo(a.performedOn)),
 );
 
+/// "September 2026" for the date a session happened on.
+///
+/// The History tab's month-grouped list and the calendar card both need this,
+/// so it lives here rather than being a private array in either widget -- two
+/// copies of the month-name table is exactly the drift `exerciseCountLabel`
+/// (`divider_row.dart`) was written to avoid for pluralisation.
+String monthYearLabel(DateTime date) {
+  const months = <String>[
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+  return '${months[date.month - 1]} ${date.year}';
+}
+
+/// Every session, keyed by the local calendar day it happened on.
+///
+/// **The calendar card's only read of session data.** A day can hold more than
+/// one entry -- a full workout and a later quick log both filed under
+/// [HistorySession.performedOn] with no time component -- so the value is a
+/// list, never a single session. The key always carries a zero time, matching
+/// [HistorySession.performedOn] itself, so a lookup only ever has to build the
+/// same kind of key back with `DateTime(year, month, day)`.
+Map<DateTime, List<HistorySession>> groupSessionsByDay(
+  List<HistorySession> sessions,
+) {
+  final byDay = <DateTime, List<HistorySession>>{};
+  for (final session in sessions) {
+    final day = DateTime(
+      session.performedOn.year,
+      session.performedOn.month,
+      session.performedOn.day,
+    );
+    (byDay[day] ??= <HistorySession>[]).add(session);
+  }
+  return byDay;
+}
+
 DateTime _day(int daysAgo) {
   final now = DateTime.now();
   return DateTime(now.year, now.month, now.day - daysAgo);
