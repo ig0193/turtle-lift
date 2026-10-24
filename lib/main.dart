@@ -66,7 +66,7 @@ Future<void> main() async {
   // once any real session exists, and `kDebugMode` keeps it out of release
   // builds entirely. See `sample_history_seed.dart` for removal notes.
   if (kDebugMode) {
-    await seedSampleHistoryIfEmpty(SessionStore(database));
+    await seedSampleHistoryIfEmpty(database);
   }
 
   // A throwaway container, because `exerciseLibraryProvider` is where the
