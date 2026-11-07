@@ -61,7 +61,7 @@ class TemplateRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
           decoration: BoxDecoration(
             color: background,
-            borderRadius: BorderRadius.circular(13),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppPalette.border),
           ),
           child: Row(
@@ -107,12 +107,12 @@ const TextStyle kTemplateRowTitleStyle = TextStyle(
 /// The muscle-group line. Muted rather than secondary: it is supporting detail
 /// under a name the eye lands on first.
 const TextStyle kTemplateRowSubtitleStyle = TextStyle(
-  fontSize: 11.5,
+  fontSize: 12,
   color: AppPalette.textMuted,
 );
 
 /// The count line under the filter control.
 const TextStyle kLandingCountStyle = TextStyle(
-  fontSize: 11.5,
+  fontSize: 12,
   color: AppPalette.textMuted,
 );

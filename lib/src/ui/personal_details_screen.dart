@@ -29,11 +29,11 @@ class PersonalDetailsScreen extends ConsumerStatefulWidget {
 
   /// The heading over the gender choice.
   @visibleForTesting
-  static const String genderGroupLabel = 'BODY DIAGRAM';
+  static const String genderGroupLabel = 'Body diagram';
 
   /// The heading over the weight series.
   @visibleForTesting
-  static const String weightGroupLabel = 'BODYWEIGHT';
+  static const String weightGroupLabel = 'Bodyweight';
 
   /// What the weight group says before the user has recorded anything.
   ///
@@ -194,18 +194,22 @@ class _GenderChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 13),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? AppPalette.accentStrong : AppPalette.surface,
+            // Selected = raised neutral, ice outline and label: the same
+            // selection language as the Front/Back toggle and the Profile
+            // switch. A solid accent is reserved for the primary action.
+            color: selected ? AppPalette.mutedSurface : AppPalette.surface,
             border: Border.all(
               color: selected ? AppPalette.accentStrong : AppPalette.border,
             ),
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
             label,
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: selected ? AppPalette.onAccent : AppPalette.textSecondary,
+              color:
+                  selected ? AppPalette.accentStrong : AppPalette.textSecondary,
             ),
           ),
         ),
@@ -267,9 +271,11 @@ class _WeightField extends StatelessWidget {
               height: 44,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppPalette.accentStrong,
-                borderRadius: BorderRadius.circular(9),
+              // The screen's primary action, so it takes the primary button's
+              // look: a capsule in the liquid gradient.
+              decoration: const ShapeDecoration(
+                shape: StadiumBorder(),
+                gradient: AppGradients.liquid,
               ),
               child: const Text(
                 'Record',
@@ -340,7 +346,7 @@ class _CalorieExplainer extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppPalette.surface,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,8 +357,8 @@ class _CalorieExplainer extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           for (final tier in const <(String, String)>[
-            ('1–9 sets', 'Light effort'),
-            ('10–20 sets', 'Moderate effort'),
+            ('1-9 sets', 'Light effort'),
+            ('10-20 sets', 'Moderate effort'),
             ('21+ sets', 'Vigorous effort'),
           ])
             Padding(
@@ -368,7 +374,7 @@ class _CalorieExplainer extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Each session uses the weight in effect on the day it happened, '
-            'not your newest one — so recording a weight today never changes '
+            'not your newest one, so recording a weight today never changes '
             'a workout you already logged. Actual calories burned vary by '
             'person and effort.',
             style: kTemplateRowSubtitleStyle,

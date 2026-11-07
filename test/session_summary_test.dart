@@ -15,6 +15,7 @@ import 'package:turtle_lift/src/data/personal_details_store.dart'
 import 'package:turtle_lift/src/data/session_store.dart';
 import 'package:turtle_lift/src/data/settings_store.dart'
     show appDatabaseProvider;
+import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/body_diagram.dart';
 import 'package:turtle_lift/src/ui/destructive_confirmation.dart';
@@ -449,7 +450,7 @@ void main() {
           matching: find.byType(Text),
         ),
       );
-      expect(label.style!.color, const Color(0xFFC4553A));
+      expect(label.style!.color, AppPalette.danger);
     });
   });
 

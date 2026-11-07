@@ -75,6 +75,41 @@ class _StepperFieldState extends State<StepperField> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Typing changes the text's width, and the fitted size below depends on
+    // it, so a keystroke has to rebuild.
+    _controller.addListener(_onText);
+  }
+
+  void _onText() => setState(() {});
+
+  /// The largest size, from 15 down to 9, at which [text] fits [maxWidth].
+  ///
+  /// **Shrink to fit rather than clip.** The field shares a row with a second
+  /// stepper, two units and a checkmark, so on a small phone -- or at a large
+  /// system text size -- "102.5" does not fit at 15pt, and a clipped "102."
+  /// is a wrong number on the screen that decides what goes on the bar.
+  double _fittedSize(String text, double maxWidth, TextScaler scaler) {
+    if (text.isEmpty || !maxWidth.isFinite) return 15;
+    for (var size = 15.0; size > 9; size -= 0.5) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(fontSize: size, fontWeight: FontWeight.w600),
+        ),
+        textDirection: TextDirection.ltr,
+        textScaler: scaler,
+        maxLines: 1,
+      )..layout();
+      final fits = painter.width <= maxWidth - 6;
+      painter.dispose();
+      if (fits) return size;
+    }
+    return 9;
+  }
+
+  @override
   void didUpdateWidget(StepperField oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Only rewrite the field when the value changed underneath us and the user
@@ -86,7 +121,9 @@ class _StepperFieldState extends State<StepperField> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller
+      ..removeListener(_onText)
+      ..dispose();
     // Only the node this widget made; a caller-supplied one is the caller's.
     _ownedFocusNode?.dispose();
     super.dispose();
@@ -121,33 +158,59 @@ class _StepperFieldState extends State<StepperField> {
           // real phone's width the fixed version overflowed by 24 points —
           // which a test at a desk-sized viewport never sees.
           Expanded(
-            child: TextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: colour,
-              ),
-              // Unsigned, and decimal only where the field takes decimals.
-              keyboardType: TextInputType.numberWithOptions(
-                decimal: widget.decimals > 0,
-                signed: false,
-              ),
-              inputFormatters: <TextInputFormatter>[
-                FilteringTextInputFormatter.allow(
-                  widget.decimals > 0
-                      ? RegExp(r'[0-9.]')
-                      : RegExp(r'[0-9]'),
+            // The value ignores the system text size: it is already a bold
+            // 15pt, and at 1.3x the steppers and units around it grow until
+            // the box is narrower than "77.5". Fitting below is the backstop.
+            child: MediaQuery.withNoTextScaling(
+              child: LayoutBuilder(
+                builder: (context, constraints) => TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: _fittedSize(
+                      _controller.text,
+                      constraints.maxWidth,
+                      MediaQuery.textScalerOf(context),
+                    ),
+                    fontWeight: FontWeight.w600,
+                    color: colour,
+                    // Steppers change the value in place; tabular digits keep
+                    // it from shifting sideways as 77.5 becomes 80.
+                    fontFeatures: const <FontFeature>[
+                      FontFeature.tabularFigures(),
+                    ],
+                  ),
+                  // Unsigned, and decimal only where the field takes decimals.
+                  keyboardType: TextInputType.numberWithOptions(
+                    decimal: widget.decimals > 0,
+                    signed: false,
+                  ),
+                  inputFormatters: <TextInputFormatter>[
+                    FilteringTextInputFormatter.allow(
+                      widget.decimals > 0
+                          ? RegExp(r'[0-9.]')
+                          : RegExp(r'[0-9]'),
+                    ),
+                  ],
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    // An empty field says what goes in it rather than showing a
+                    // blank box, which on a first-ever set reads as broken.
+                    hintText: '0',
+                    // Fainter than a prefilled guess (full textMuted), so "0"
+                    // never reads as a value the app suggested.
+                    hintStyle: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppPalette.textMuted.withValues(alpha: 0.45),
+                    ),
+                  ),
+                  onChanged: (text) => widget
+                      .onChanged(text.isEmpty ? null : double.tryParse(text)),
                 ),
-              ],
-              decoration: const InputDecoration(
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 8),
               ),
-              onChanged: (text) =>
-                  widget.onChanged(text.isEmpty ? null : double.tryParse(text)),
             ),
           ),
           _StepButton(

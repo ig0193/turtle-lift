@@ -25,9 +25,9 @@ import '../theme/app_typography.dart';
 class SchedulePane extends ConsumerStatefulWidget {
   const SchedulePane({super.key});
 
-  static const String weekLabel = 'YOUR WEEK';
-  static const String daysLabel = 'TRAINING DAYS';
-  static const String remindersLabel = 'REMINDERS';
+  static const String weekLabel = 'Your week';
+  static const String daysLabel = 'Training days';
+  static const String remindersLabel = 'Reminders';
 
   /// Shown instead of the summary when no training days are in force.
   static const String emptySummary =
@@ -35,7 +35,7 @@ class SchedulePane extends ConsumerStatefulWidget {
       'is going.';
 
   static const String daysNote =
-      'Days you aim for. You can train on any day — these just set what the '
+      'Days you aim for. You can train on any day. These just set what the '
       'summary compares against.';
 
   @visibleForTesting
@@ -96,7 +96,7 @@ String weekCaption(WeekSummary week) {
   }
   final left = week.remaining;
   if (left.isEmpty) return '${week.hit} of ${week.planned} plan $days$extra';
-  return '${left.length} more to go — next is ${_dayLong[left.first.weekday]}'
+  return '${left.length} more to go. Next is ${_dayLong[left.first.weekday]}'
       '$extra';
 }
 
@@ -181,7 +181,7 @@ class _SchedulePaneState extends ConsumerState<SchedulePane> {
           child: Text(
             SchedulePane.daysNote,
             style: TextStyle(
-              fontSize: 11.5,
+              fontSize: 12,
               height: 1.5,
               color: AppPalette.textMuted,
             ),
@@ -254,7 +254,7 @@ class _Card extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppPalette.surface,
         border: Border.all(color: AppPalette.border),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: child,
     );
@@ -304,7 +304,7 @@ class _WeekHero extends StatelessWidget {
                       const TextSpan(
                         text: '  this week',
                         style: TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 12,
                           color: AppPalette.textMuted,
                         ),
                       ),
@@ -325,7 +325,7 @@ class _WeekHero extends StatelessWidget {
                             Text(
                               _dayShort[day.weekday],
                               style: const TextStyle(
-                                fontSize: 9,
+                                fontSize: 12,
                                 color: AppPalette.textMuted,
                               ),
                             ),
@@ -376,7 +376,7 @@ class _LastWeekRow extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppPalette.surface,
           border: Border.all(color: AppPalette.border),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: <Widget>[
@@ -700,7 +700,7 @@ class _ExplainSheet extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'TurtleLift will send one notification at $time on '
-            '${names.isEmpty ? 'your training days' : names}. Nothing else — '
+            '${names.isEmpty ? 'your training days' : names}. Nothing else: '
             'no streak alerts, no "you missed a day". You can turn it off any '
             'time.',
             style: const TextStyle(
@@ -719,7 +719,7 @@ class _ExplainSheet extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: AppPalette.accentStrong,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: const Text(
                 'Allow reminders',

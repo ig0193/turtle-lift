@@ -50,7 +50,7 @@ class SessionOverviewBody extends ConsumerWidget {
 
   /// The label over the list.
   @visibleForTesting
-  static const String keepLoggingLabel = 'KEEP LOGGING';
+  static const String keepLoggingLabel = 'Keep logging';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -74,7 +74,7 @@ class SessionOverviewBody extends ConsumerWidget {
               Text(
                 '${done.length} of ${session.exercises.length} done',
                 style: const TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 12,
                   color: AppPalette.textMuted,
                 ),
               ),
@@ -183,11 +183,10 @@ class LiveStrip extends StatelessWidget {
             const _PulseDot(),
             const SizedBox(width: 8),
             const Text(
-              'WORKOUT IN PROGRESS',
+              'Workout in progress',
               style: TextStyle(
-                fontSize: 10.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 1.1,
                 color: AppPalette.accentStrong,
               ),
             ),
@@ -348,7 +347,7 @@ class SessionExerciseRow extends ConsumerWidget {
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
             color: AppPalette.surface,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isNext ? AppPalette.accentStrong : AppPalette.border,
             ),
@@ -366,11 +365,10 @@ class SessionExerciseRow extends ConsumerWidget {
                 const Padding(
                   padding: EdgeInsets.only(bottom: 2),
                   child: Text(
-                    'UP NEXT',
+                    'Up next',
                     style: TextStyle(
-                      fontSize: 9.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
                       color: AppPalette.accentStrong,
                     ),
                   ),
@@ -398,7 +396,7 @@ class SessionExerciseRow extends ConsumerWidget {
                 Text(
                   sets,
                   style: const TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 12,
                     color: AppPalette.textMuted,
                   ),
                 ),
@@ -454,7 +452,7 @@ class _ProgressTag extends StatelessWidget {
       child: Text(
         progress.label,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
           color: foreground,
         ),
@@ -481,9 +479,9 @@ class _AddExerciseButton extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 48),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppPalette.surface,
+              color: AppPalette.mutedSurface,
               border: Border.all(color: AppPalette.border),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(999),
             ),
             child: const Text(
               '+ Add exercise',

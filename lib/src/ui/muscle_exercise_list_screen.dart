@@ -45,11 +45,9 @@ class MuscleExerciseListScreen extends ConsumerWidget {
   /// The header over the rows. Counted from the list it sits above rather than
   /// typed, for the reason `MusclesRoot.listLabel` gives.
   ///
-  /// The shouting is this header's own, but the sentence is not: it upper-cases
-  /// [exerciseCountLabel] rather than restating it, so a header cannot end up
-  /// pluralising differently from the rows beneath it.
-  static String countLabel(int count) =>
-      exerciseCountLabel(count).toUpperCase();
+  /// It reuses [exerciseCountLabel] rather than restating it, so a header
+  /// cannot end up pluralising differently from the rows beneath it.
+  static String countLabel(int count) => exerciseCountLabel(count);
 
   /// The screen's title: the taxonomy's own label, falling back to the id.
   ///
@@ -144,11 +142,13 @@ Key exerciseRowKey(String exerciseId) =>
 
 /// How an equipment value is written on a row.
 ///
-/// The shipped values are lower-case keys (`barbell`, `kettlebell`); the
-/// prototype's `.eqchip` upper-cases them in CSS. Doing it here rather than in
-/// the data keeps the library's own spelling on `Exercise.equipment`, which is
-/// what `ExerciseIndex.withEquipment` matches on.
-String exerciseEquipmentLabel(String equipment) => equipment.toUpperCase();
+/// The shipped values are lower-case keys (`barbell`, `kettlebell`); a chip
+/// shows them in sentence case ("Barbell"), never tracked capitals. Doing it
+/// here rather than in the data keeps the library's own spelling on
+/// `Exercise.equipment`, which is what `ExerciseIndex.withEquipment` matches on.
+String exerciseEquipmentLabel(String equipment) => equipment.isEmpty
+    ? equipment
+    : equipment[0].toUpperCase() + equipment.substring(1);
 
 /// One exercise, as a row: its name, the equipment it needs, and a chevron.
 ///
@@ -198,7 +198,7 @@ class ExerciseRow extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             subtitle!,
-            style: const TextStyle(fontSize: 11.5, color: AppPalette.textMuted),
+            style: const TextStyle(fontSize: 12, color: AppPalette.textMuted),
           ),
         ],
       ],
@@ -244,8 +244,7 @@ const TextStyle kExerciseRowNameStyle = kSubGroupRowLabelStyle;
 /// `.eqchip` type: small, tracked out, quiet enough to sit under the name
 /// without competing with it.
 const TextStyle kExerciseEquipmentChipStyle = TextStyle(
-  fontSize: 10,
-  letterSpacing: 0.4,
+  fontSize: 12,
   fontWeight: FontWeight.w600,
   color: AppPalette.textMuted,
 );

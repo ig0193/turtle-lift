@@ -256,8 +256,8 @@ void main() {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
-      expect(find.text('1–9 sets'), findsOneWidget);
-      expect(find.text('10–20 sets'), findsOneWidget);
+      expect(find.text('1-9 sets'), findsOneWidget);
+      expect(find.text('10-20 sets'), findsOneWidget);
       expect(find.text('21+ sets'), findsOneWidget);
       expect(find.textContaining('vary by person'), findsOneWidget);
     });

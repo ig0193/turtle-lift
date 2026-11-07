@@ -72,7 +72,7 @@ class MusclesRoot extends ConsumerWidget {
   /// The label over the sub-group list, counted from the taxonomy rather than
   /// typed. A regenerated taxonomy with a twentieth group would otherwise leave
   /// a heading that lies about the list directly beneath it.
-  static String get listLabel => 'ALL ${kSubMuscleGroups.length} SUB-GROUPS';
+  static String get listLabel => 'All ${kSubMuscleGroups.length} sub-groups';
 
   /// The line under the map. It is what tells a user the rows below are the
   /// same destinations as the polygons above, rather than a second, different
@@ -212,7 +212,7 @@ class _BodyViewButton extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected ? AppPalette.mutedSurface : AppPalette.surface,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(999),
             border: Border.all(color: border),
           ),
           child: Text(
@@ -253,6 +253,6 @@ const TextStyle kBodyViewButtonStyle = TextStyle(
 /// The centred line under the map — quieter than a row's own copy, because it
 /// explains the screen rather than being part of it.
 const TextStyle kMusclesMapHintStyle = TextStyle(
-  fontSize: 11.5,
+  fontSize: 12,
   color: AppPalette.textMuted,
 );

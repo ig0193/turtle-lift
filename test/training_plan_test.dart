@@ -91,13 +91,13 @@ void main() {
       expect(w.hit, 1);
       expect(w.remaining.map((d) => d.date), <LocalDate>[oct(21), oct(23)],
           reason: 'today counts as remaining until it has a session');
-      expect(weekCaption(w), '2 more to go — next is Wednesday');
+      expect(weekCaption(w), '2 more to go. Next is Wednesday');
     });
 
     test('a session today turns today into a hit', () {
       final w = week(today: 21, sessions: <int>[19, 21]);
       expect(w.hit, 2);
-      expect(weekCaption(w), '1 more to go — next is Friday');
+      expect(weekCaption(w), '1 more to go. Next is Friday');
     });
 
     test('a skipped day is empty, never counted against what is left', () {
@@ -107,7 +107,7 @@ void main() {
         PlanDayState.empty,
         PlanDayState.ahead,
       ]);
-      expect(weekCaption(w), '1 more to go — next is Friday');
+      expect(weekCaption(w), '1 more to go. Next is Friday');
     });
 
     test('once the week is over it reads as a plain count', () {

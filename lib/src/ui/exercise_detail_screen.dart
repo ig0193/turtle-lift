@@ -254,15 +254,16 @@ Future<void> pushExerciseDetail(
 
 /// The line under the header: what the lift needs, and how it is loaded.
 ///
-/// Both are the library's own lower-case keys, upper-cased here for the same
-/// reason [exerciseEquipmentLabel] upper-cases equipment on a row — the
+/// Both are the library's own lower-case keys, written in sentence case for
+/// the same reason [exerciseEquipmentLabel] gives — the
 /// display spelling belongs to the screen, and `Exercise.loadType` stays the
 /// value the set-logging screen will match on.
 String exerciseFactsLabel(Exercise exercise) =>
-    '${exercise.equipment.toUpperCase()} · ${exercise.loadType.toUpperCase()}';
+    '${exerciseEquipmentLabel(exercise.equipment)} · '
+    '${exerciseEquipmentLabel(exercise.loadType)}';
 
 /// The label over the chips and the diagram.
-const String kExerciseMusclesLabel = 'MUSCLES';
+const String kExerciseMusclesLabel = 'Muscles';
 
 /// The row for [field], so a test can open one by name rather than by
 /// position.
@@ -293,12 +294,12 @@ List<({String field, String label, String text})> exerciseContentFields(
     <({String field, String label, String text})>[
       (
         field: 'commonMistakes',
-        label: 'COMMON MISTAKES',
+        label: 'Common mistakes',
         text: exercise.commonMistakes,
       ),
-      (field: 'setup', label: 'SETUP', text: exercise.setup),
-      (field: 'posture', label: 'POSTURE', text: exercise.posture),
-      (field: 'execution', label: 'EXECUTION', text: exercise.execution),
+      (field: 'setup', label: 'Setup', text: exercise.setup),
+      (field: 'posture', label: 'Posture', text: exercise.posture),
+      (field: 'execution', label: 'Execution', text: exercise.execution),
     ];
 
 /// The body views needed to show every muscle [exercise] names.
@@ -497,11 +498,11 @@ String substituteRailLabel(Exercise exercise) {
   if (exercise.primary.length != 1) return kNeutralSubstituteRailLabel;
   final id = exercise.primary.single;
   final label = kSubMuscleGroups[id]?.label ?? id;
-  return 'OTHER EXERCISES FOR ${label.toUpperCase()}';
+  return 'Other exercises for ${label.toLowerCase()}';
 }
 
 /// Said when the exercise has more than one primary muscle.
-const String kNeutralSubstituteRailLabel = 'OTHER EXERCISES FOR THESE MUSCLES';
+const String kNeutralSubstituteRailLabel = 'Other exercises for these muscles';
 
 /// The muscles this exercise trains, as chips over the diagram they colour.
 ///
@@ -667,7 +668,7 @@ class _SubstituteCard extends StatelessWidget {
           padding: const EdgeInsets.all(11),
           decoration: BoxDecoration(
             color: AppPalette.surface,
-            borderRadius: BorderRadius.circular(11),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppPalette.border),
           ),
           child: Column(
@@ -705,7 +706,7 @@ const double kSubstituteCardHeight = 92;
 /// A primary muscle: the diagram's own fill, so the chip and the polygon read
 /// as the same statement.
 const TextStyle kMuscleChipPrimaryStyle = TextStyle(
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: FontWeight.w600,
   color: AppPalette.onAccent,
 );
@@ -716,7 +717,7 @@ const TextStyle kMuscleChipPrimaryStyle = TextStyle(
 /// chips, and the ordering — primaries first — is what pairs them with the
 /// body.
 const TextStyle kMuscleChipSecondaryStyle = TextStyle(
-  fontSize: 11,
+  fontSize: 12,
   color: AppPalette.textSecondary,
 );
 

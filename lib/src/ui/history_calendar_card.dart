@@ -119,7 +119,7 @@ class _HistoryCalendarCardState extends ConsumerState<HistoryCalendarCard> {
       decoration: BoxDecoration(
         color: AppPalette.surface,
         border: Border.all(color: AppPalette.border),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -179,12 +179,9 @@ class _HistoryCalendarCardState extends ConsumerState<HistoryCalendarCard> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            '‹ Swipe to change month ›',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 10.5, color: AppPalette.textMuted),
-          ),
+          // No "swipe to change month" hint: the chevrons in the header do the
+          // same job visibly, and a gesture cue under a calendar is noise.
+          const SizedBox(height: 4),
           if (_expandedDay != null && expandedDaySessions != null)
             _DayDetail(
               day: _expandedDay!,
@@ -251,7 +248,7 @@ class _WeekdayHeader extends StatelessWidget {
                   child: Text(
                     label,
                     style: const TextStyle(
-                      fontSize: 9.5,
+                      fontSize: 12,
                       color: AppPalette.textMuted,
                     ),
                   ),
@@ -382,7 +379,7 @@ class _DayCell extends StatelessWidget {
           Text(
             '$day',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
               color: numberColor,
             ),
@@ -468,9 +465,8 @@ class _DayDetail extends StatelessWidget {
             child: Text(
               label,
               style: const TextStyle(
-                fontSize: 10.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 0.4,
                 color: AppPalette.textMuted,
               ),
             ),

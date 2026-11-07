@@ -153,7 +153,7 @@ void main() {
           findsOneWidget);
       expect(find.byKey(ExercisePickerSheet.rowKey('bench-press')),
           findsOneWidget);
-      expect(find.text('EXERCISES'), findsOneWidget,
+      expect(find.text('Exercises'), findsOneWidget,
           reason: 'with nothing in the workout there is no planned section');
     });
 
@@ -191,7 +191,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'zzz');
       await tester.pump();
 
-      expect(find.text('No exercise matches.'), findsOneWidget);
+      expect(find.textContaining('No exercise called'), findsOneWidget);
     });
 
     testWidgets("the workout's own exercises come first, under their own label",
@@ -210,8 +210,8 @@ void main() {
       await pumpHost(tester, session: session);
       await openPicker(tester);
 
-      expect(find.text('IN THIS WORKOUT'), findsOneWidget);
-      expect(find.text('ADD ANOTHER'), findsOneWidget);
+      expect(find.text('In this workout'), findsOneWidget);
+      expect(find.text('Add another'), findsOneWidget);
       final planned = tester.getTopLeft(
           find.byKey(ExercisePickerSheet.rowKey('hammer-curl')));
       final other = tester.getTopLeft(

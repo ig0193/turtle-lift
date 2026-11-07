@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
@@ -294,14 +295,14 @@ void main() {
 
       final mutedStyle =
           tester.widget<TextField>(find.byType(TextField).first).style!;
-      expect(mutedStyle.color, const Color(0xFF6B6156));
+      expect(mutedStyle.color, AppPalette.textMuted);
 
       await pumpRow(tester,
           loadType: LoadType.weighted, value: entry(weightKg: 60, reps: 8));
 
       final enteredStyle =
           tester.widget<TextField>(find.byType(TextField).first).style!;
-      expect(enteredStyle.color, const Color(0xFFF5EFE8));
+      expect(enteredStyle.color, AppPalette.textPrimary);
     });
   });
 

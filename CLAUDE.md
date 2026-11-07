@@ -144,8 +144,24 @@ are reviewed copy.
 - **A muscle fills on the map on a completed set as well as on Mark exercise
   done.** A user who logs three sets and walks to the next machine has trained
   it. (There is no tick list any more — see above.)
-- **Destructive actions use `#C4553A`,** the eleventh palette colour (`00` §12,
-  `01` §Usage rules). `#D85A30` could not carry "delete": it means "active / this
+- **Palette is ONE DAY's cool titanium** (`docs/one-day-theme-reference.md`, option A):
+  ice `#A9D8FF` accent, lilac `#C9B6FF` secondary muscle, liquid gradient on primary
+  buttons only. Role names in `AppPalette` are unchanged from the old warm palette.
+- **Taste pass (turtle-taste skill, `.claude/skills/turtle-taste/`).** Labels
+  are sentence case, never tracked capitals; no text under 12pt; `textMuted` is
+  `#838A94` (not ONE DAY's `#5C616C`, which failed contrast at 2.9:1); one
+  radius scale (16 cards, capsule buttons and chips); selection controls are
+  outlined, only the primary action is filled. System text size is honoured up
+  to 1.3x (`main.dart`); the set-logging number ignores it and fits its box.
+  `tool/taste_shots.sh` screenshots every screen on a small and a large iPhone.
+- **Export and Delete all data are built** (`lib/src/ui/data_screens.dart`).
+  Export writes entered data only (nothing derived) as JSON and opens the
+  share sheet via `share_plus` + `path_provider` (both ship `Package.swift`).
+  Delete wipes every table in one transaction, then re-runs boot through
+  `appRestartProvider` so no notifier keeps deleted state; the debug sample
+  seed is not re-run after a wipe.
+- **Destructive actions use `#FF8A8A`,** the eleventh palette colour (`00` §12,
+  `01` §Usage rules). The accent `#A9D8FF` could not carry "delete": it means "active / this
   has been worked" *"wherever it appears"*, so a delete confirmation painted in it
   reads as approval. `test/theme_palette_test.dart` fails on any colour outside §12.
 

@@ -51,7 +51,7 @@ class SessionDateControl extends ConsumerWidget {
                 border: Border.all(
                   color: isToday ? AppPalette.border : AppPalette.accentStrong,
                 ),
-                borderRadius: BorderRadius.circular(9),
+                borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
                 isToday ? 'Today' : longDateLabel(date),

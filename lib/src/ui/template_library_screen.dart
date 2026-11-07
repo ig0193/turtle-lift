@@ -28,11 +28,11 @@ class TemplateLibraryScreen extends ConsumerWidget {
 
   /// The heading over the eleven templates that ship with the app.
   @visibleForTesting
-  static const String predefinedGroupLabel = 'PREDEFINED';
+  static const String predefinedGroupLabel = 'Predefined';
 
   /// The heading over the user's own copies.
   @visibleForTesting
-  static const String customGroupLabel = 'YOURS';
+  static const String customGroupLabel = 'Yours';
 
   /// What the custom group says before the user has duplicated anything.
   ///
@@ -431,7 +431,7 @@ class _PaletteDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: AppPalette.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppPalette.border),
       ),
       child: Padding(

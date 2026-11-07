@@ -281,7 +281,7 @@ Storage note: `assistKg` is stored as its own positive field, **not** as a negat
 
 - **A set is complete when the user taps its checkmark and its required field is > 0.** Tapping the checkmark with an empty required field focuses that field instead of completing the set. Optional fields never gate completion.
 - **This is the definition the streak and the calorie tier both consume** — a 45-second plank set and a heavy squat set each count as exactly one set. Crude by design; the calorie model is already a coarse set-count proxy.
-- **Prefill from history.** The first set of an exercise prefills from the same set index in the user's last session of that exercise; each subsequent set added prefills from the previous set in the current session. Prefilled values render in `#6B6156` (muted) until touched or confirmed, so the user can tell what they typed from what the app guessed.
+- **Prefill from history.** The first set of an exercise prefills from the same set index in the user's last session of that exercise; each subsequent set added prefills from the previous set in the current session. Prefilled values render in `#838A94` (muted) until touched or confirmed, so the user can tell what they typed from what the app guessed.
 - **Optional weight is a collapsed chip, not a visible field.** It expands on tap. Users who never add weight to a push-up never see an input they have to skip past.
 - **No capability flags.** The optional weight field is offered on every `bodyweight` and `timed` exercise. Auditing 61 exercises to hide a chip nobody would notice is not worth it.
 - Each set row supports delete (swipe or long-press). Removing a set recomputes everything derived.
@@ -401,28 +401,30 @@ Not downloads. Not revenue. Success means:
 
 ## Visual theme — Coral
 
-A single dark, warm palette. One hue family throughout (coral/orange), so there's no risk of competing accent colors — the muscle map's "worked" color and the app's action color are literally the same color, at different intensities. This also matches the near-universal convention of muscle heat-maps being red/orange, so the core visual (muscles lighting up as they're worked) reads instantly without the user needing to learn a color code.
+A single dark, cool palette: brushed titanium with one iridescent accent (ice blue to lilac), adopted from `docs/one-day-theme-reference.md`, option A. The muscle map's "worked" colour and the app's action colour are still literally the same colour, ice, with lilac as its lighter partner for secondary muscles. The heat-map reading now comes from lit against unlit (bright ice on dark titanium) rather than from a red/orange convention.
+
+*Superseded:* the original warm coral/orange palette (`#17140F` background, `#D85A30` accent). Same roles, same rules, new values.
 
 ### Palette
 
 | Role | Value | Usage |
 |---|---|---|
-| Page background | `#17140F` | App background, base layer |
-| Card / elevated surface | `#211D18` | Cards, list rows, input backgrounds |
-| Border / divider | `#332C22` | Hairline separators, outlines |
-| Muted surface (unfilled regions) | `#241F19` | Muscle map regions not yet logged, disabled states |
-| Text primary | `#F5EFE8` | Headings, primary content |
-| Text secondary | `#A89C8E` | Subtitles, supporting text |
-| Text muted | `#6B6156` | Placeholder text, "not started" labels |
-| Accent — strong | `#D85A30` | Primary buttons, primary muscle fill, active nav tab, checkmarks/done states |
-| Accent — light | `#F0997B` | Secondary muscle fill, lighter emphasis, less prominent accents |
-| Text on accent fill | `#1B0C05` | Text/icon color when placed on top of a strong-accent-filled background (e.g. button label) |
-| Destructive | `#C4553A` | Delete a workout, discard a session. Nothing else. |
+| Page background | `#07080A` | App background, base layer |
+| Card / elevated surface | `#15171C` | Cards, list rows, input backgrounds |
+| Border / divider | `#2A2D34` | Hairline separators, outlines |
+| Muted surface (unfilled regions) | `#1D2027` | Muscle map regions not yet logged, disabled states |
+| Text primary | `#F2F4F7` | Headings, primary content |
+| Text secondary | `#9EA3AE` | Subtitles, supporting text |
+| Text muted | `#838A94` | Placeholder text, "not started" labels |
+| Accent — strong | `#A9D8FF` | Primary buttons, primary muscle fill, active nav tab, checkmarks/done states |
+| Accent — light | `#C9B6FF` | Secondary muscle fill, lighter emphasis, less prominent accents |
+| Text on accent fill | `#07080A` | Text/icon color when placed on top of a strong-accent-filled background (e.g. button label) |
+| Destructive | `#FF8A8A` | Delete a workout, discard a session. Nothing else. |
 
 ### Usage rules
 
-- **Accent strong (`#D85A30`)** is the "this is active / this has been worked" color — used consistently for primary buttons, the active tab bar icon, primary muscle-map fill, and completion checkmarks. Same meaning wherever it appears.
-- **Accent light (`#F0997B`)** is reserved for secondary muscle indication and lower-emphasis accents — never used for primary actions.
-- **Destructive (`#C4553A`)** is for destructive actions only — delete a workout, discard a session. It exists because accent strong could not carry it: accent strong means "active / this has been worked", so a delete confirmation painted in it reads as approval. Never a primary action, never a fill behind body text. Sessions are deletable, so this surface is real, not hypothetical.
-- Everything else (body text, borders, unfilled states, secondary buttons) stays neutral gray/off-white. No other colors are introduced — this keeps the palette calm and prevents visual competition on screens that combine the muscle map with buttons or list states.
+- **Accent strong (`#A9D8FF`)** is the "this is active / this has been worked" color — used consistently for primary buttons, the active tab bar icon, primary muscle-map fill, and completion checkmarks. Same meaning wherever it appears.
+- **Accent light (`#C9B6FF`)** is reserved for secondary muscle indication and lower-emphasis accents — never used for primary actions.
+- **Destructive (`#FF8A8A`)** is for destructive actions only — delete a workout, discard a session. It exists because accent strong could not carry it: accent strong means "active / this has been worked", so a delete confirmation painted in it reads as approval. Never a primary action, never a fill behind body text. Sessions are deletable, so this surface is real, not hypothetical.
+- Everything else (body text, borders, unfilled states, secondary buttons) stays neutral gray/off-white. The one gradient, *liquid* (`#E8ECF2` → `#A9D8FF` → `#C9B6FF` → `#F4E3FF`), is the accent as a fill and appears only on primary buttons. No other colors are introduced — this keeps the palette calm and prevents visual competition on screens that combine the muscle map with buttons or list states.
 - Because it's a single hue family, new screens can freely reuse the same two accent values without needing to re-derive a color rule each time — unlike a two-color brand system, there's no governance overhead to maintain as the app grows.

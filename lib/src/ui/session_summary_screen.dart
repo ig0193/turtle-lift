@@ -130,7 +130,7 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                     .renameSaved(session.id, value),
               ),
               const SizedBox(height: 18),
-              const Text('WHAT YOU DID', style: kLandingSectionLabelStyle),
+              const Text('What you did', style: kLandingSectionLabelStyle),
               const SizedBox(height: 8),
               for (final exercise in session.exercises)
                 _LoggedExercise(
@@ -278,7 +278,7 @@ class _ShareCard extends StatelessWidget {
             session.performedOn == LocalDate.today()
                 ? 'Today'
                 : longDateLabel(session.performedOn),
-            style: const TextStyle(fontSize: 11.5, color: AppPalette.textMuted),
+            style: const TextStyle(fontSize: 12, color: AppPalette.textMuted),
           ),
           const SizedBox(height: 4),
           // Inline-editable: the workout is already saved, and the name is
@@ -359,7 +359,7 @@ class _ShareCard extends StatelessWidget {
             child: Text(
               kAppDisplayName.toUpperCase(),
               style: const TextStyle(
-                fontSize: 10,
+                fontSize: 12,
                 letterSpacing: 2,
                 color: AppPalette.textMuted,
               ),
@@ -395,7 +395,7 @@ class _Stat extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                  fontSize: 10.5, color: AppPalette.textMuted),
+                  fontSize: 12, color: AppPalette.textMuted),
             ),
           ],
         ),
@@ -424,7 +424,7 @@ class _CalorieStat extends StatelessWidget {
             key: SessionSummaryScreen.addWeightKey,
             'add weight\nto see kcal',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 10.5, color: AppPalette.textMuted),
+            style: const TextStyle(fontSize: 12, color: AppPalette.textMuted),
           ),
         ),
       );
@@ -446,7 +446,7 @@ class _CalorieStat extends StatelessWidget {
             children: <Widget>[
               const Text('kcal',
                   style: TextStyle(
-                      fontSize: 10.5, color: AppPalette.textMuted)),
+                      fontSize: 12, color: AppPalette.textMuted)),
               const SizedBox(width: 3),
               Builder(
                 builder: (context) => Semantics(
@@ -475,7 +475,7 @@ class _CalorieStat extends StatelessWidget {
         backgroundColor: AppPalette.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: AppPalette.border),
         ),
         title: const Text(
@@ -556,7 +556,7 @@ class _LoggedExercise extends StatelessWidget {
                       ? '★ PB · lightest assist'
                       : '★ PB',
                   style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: AppPalette.accentStrong,
                   ),
@@ -596,7 +596,7 @@ class _SaveAsTemplateButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppPalette.surface,
               border: Border.all(color: AppPalette.border),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(999),
             ),
             child: const Text(
               'Save as template',

@@ -84,11 +84,11 @@ class WorkoutLandingBody extends ConsumerStatefulWidget {
 
   /// The heading over the user's own templates.
   @visibleForTesting
-  static const String customGroupLabel = 'MY TEMPLATES';
+  static const String customGroupLabel = 'My templates';
 
   /// The heading over the templates that ship with the app.
   @visibleForTesting
-  static const String predefinedGroupLabel = 'READY-MADE';
+  static const String predefinedGroupLabel = 'Ready-made';
 
   /// The pinned bar's button.
   @visibleForTesting
@@ -257,7 +257,7 @@ class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
 
     return <Widget>[
       if (templates.isNotEmpty) ...<Widget>[
-        const _GroupLabel('TEMPLATES'),
+        const _GroupLabel('Templates'),
         for (final template in templates)
           TemplateRow(
             key: WorkoutLandingBody.templateKey(template.id),
@@ -267,7 +267,7 @@ class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
           ),
       ],
       if (exercises.isNotEmpty) ...<Widget>[
-        const _GroupLabel('EXERCISES · TAP TO START LOGGING'),
+        const _GroupLabel('Exercises · tap to start logging'),
         for (final exercise in exercises)
           KeyedSubtree(
             key: WorkoutLandingBody.exerciseResultKey(exercise.id),
@@ -416,7 +416,7 @@ class _TemplateTile extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: AppPalette.surface,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppPalette.border),
           ),
           child: Column(
@@ -440,7 +440,7 @@ class _TemplateTile extends StatelessWidget {
               Text(
                 '$count exercise${count == 1 ? '' : 's'}',
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   color: AppPalette.textSecondary,
                 ),
               ),
@@ -479,7 +479,7 @@ class _StartBar extends StatelessWidget {
               Text(
                 'Add exercises as you go',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   color: AppPalette.onAccent.withValues(alpha: 0.75),
                 ),
               ),

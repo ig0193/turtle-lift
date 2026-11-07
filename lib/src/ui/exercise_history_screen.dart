@@ -172,7 +172,7 @@ class _SessionBlock extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppPalette.surface,
             border: Border.all(color: AppPalette.border),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,7 +192,7 @@ class _SessionBlock extends StatelessWidget {
                     child: Text(
                       _relative(session.performedOn),
                       style: const TextStyle(
-                          fontSize: 11, color: AppPalette.textMuted),
+                          fontSize: 12, color: AppPalette.textMuted),
                     ),
                   ),
                   if (isRecord)
@@ -201,7 +201,7 @@ class _SessionBlock extends StatelessWidget {
                           ? '★ PB · lightest assist'
                           : '★ PB',
                       style: const TextStyle(
-                        fontSize: 10.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: AppPalette.accentStrong,
                       ),
@@ -219,12 +219,12 @@ class _SessionBlock extends StatelessWidget {
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppPalette.mutedSurface,
-                        borderRadius: BorderRadius.circular(7),
+                        borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
                         formatSet(exercise.loadType, set),
                         style: const TextStyle(
-                            fontSize: 11.5, color: AppPalette.textSecondary),
+                            fontSize: 12, color: AppPalette.textSecondary),
                       ),
                     ),
                 ],

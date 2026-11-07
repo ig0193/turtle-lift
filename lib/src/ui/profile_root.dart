@@ -78,7 +78,7 @@ class _SegmentedControl extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppPalette.surface,
         border: Border.all(color: AppPalette.border),
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         children: <Widget>[
@@ -99,10 +99,14 @@ class _SegmentedControl extends StatelessWidget {
                       height: 38,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
+                        // Selected reads like the tab bar's highlight: a
+                        // raised neutral with the label in the accent. A solid
+                        // ice slab would be the loudest thing on the screen
+                        // for a control that only switches a view.
                         color: segment == selected
-                            ? AppPalette.accentStrong
+                            ? AppPalette.mutedSurface
                             : null,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
                         segment.label,
@@ -110,7 +114,7 @@ class _SegmentedControl extends StatelessWidget {
                           fontSize: 12.5,
                           fontWeight: FontWeight.w500,
                           color: segment == selected
-                              ? AppPalette.onAccent
+                              ? AppPalette.accentStrong
                               : AppPalette.textMuted,
                         ),
                       ),

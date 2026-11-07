@@ -6,6 +6,7 @@ import 'src/data/active_session.dart';
 import 'src/data/app_database.dart';
 import 'src/data/body_gender.dart';
 import 'src/data/custom_templates.dart';
+import 'src/data/data_reset.dart';
 import 'src/data/exercise_index.dart';
 import 'src/data/exercise_library.dart';
 import 'src/data/personal_details_store.dart';
@@ -69,6 +70,17 @@ Future<void> main() async {
     await seedSampleHistoryIfEmpty(database);
   }
 
+  await _bootFrom(database);
+}
+
+/// Reads everything the first frame needs and runs the app on it.
+///
+/// Called once by [main], and again by `appRestartProvider` after "Delete all
+/// data" -- a second `runApp` replaces the whole tree, `ProviderScope`
+/// included, so every notifier is re-seeded from the (now empty) database and
+/// no screen can keep showing what was deleted. The sample seed is not re-run:
+/// a user who deleted everything must land on an empty app, debug or not.
+Future<void> _bootFrom(AppDatabase database) async {
   // A throwaway container, because `exerciseLibraryProvider` is where the
   // asset read and the decode live and there must not be a second copy of
   // either. It is disposed before the scope below is built, so the raw maps are
@@ -96,8 +108,12 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
+      // A fresh key per boot, so a restart is a new scope rather than an
+      // update of the old one.
+      key: UniqueKey(),
       overrides: [
         appDatabaseProvider.overrideWithValue(database),
+        appRestartProvider.overrideWithValue(() => _bootFrom(database)),
         initialBodyGenderProvider.overrideWithValue(initialGender),
         initialBodyweightLogProvider.overrideWithValue(initialBodyweight),
         initialTrainingPlanProvider.overrideWithValue(initialTrainingPlan),
@@ -142,10 +158,22 @@ class TurtleLiftApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      // Placeholder name -- see CLAUDE.md "Still undecided".
       title: kAppDisplayName,
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
+      // Honour the system text size, up to 1.3x. Past that the set-logging row
+      // (two steppers, units and a checkmark on one line) cannot fit a phone's
+      // width, and a row that overflows is less readable than one that stops
+      // growing. Smaller-than-default settings pass through untouched.
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: media.textScaler.clamp(maxScaleFactor: 1.3),
+          ),
+          child: child!,
+        );
+      },
       // Straight into the shell, with no splash route ahead of it. Anything
       // that later pops back to an L0 root should predicate on the shell route
       // rather than `isFirst`: a splash added in front would otherwise become

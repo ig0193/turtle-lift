@@ -120,21 +120,21 @@ void main() {
     expect(find.byKey(SessionOverviewBody.startLoggingKey), findsOneWidget);
     expect(find.text('6 exercises planned'), findsOneWidget);
     expect(find.text('Today'), findsOneWidget);
-    expect(find.text('WORKOUT IN PROGRESS'), findsNothing,
+    expect(find.text('Workout in progress'), findsNothing,
         reason: 'nothing has started yet');
 
     // Start logging opens the picker over the map, planned exercises first.
     await tester.tap(find.byKey(SessionOverviewBody.startLoggingKey));
     await settle(tester);
     expect(find.text('What are you starting with?'), findsOneWidget);
-    expect(find.text('IN THIS WORKOUT'), findsOneWidget);
+    expect(find.text('In this workout'), findsOneWidget);
 
     // Dismissing it leaves the list, with the live strip.
     await tester.tapAt(const Offset(10, 10));
     await settle(tester);
     expect(find.text(SessionOverviewBody.keepLoggingLabel), findsOneWidget);
-    expect(find.text('WORKOUT IN PROGRESS'), findsOneWidget);
-    expect(find.text('UP NEXT'), findsOneWidget);
+    expect(find.text('Workout in progress'), findsOneWidget);
+    expect(find.text('Up next'), findsOneWidget);
 
     // Finish with nothing logged: the workout is dropped, never saved.
     await tester.tap(find.byKey(SessionActions.finishKey));
@@ -184,7 +184,7 @@ void main() {
     expect(find.text('30kg × 10'), findsOneWidget,
         reason: 'the set renders through the one shared formatter');
     expect(find.text('Done'), findsOneWidget);
-    expect(find.text('WORKOUT IN PROGRESS'), findsOneWidget);
+    expect(find.text('Workout in progress'), findsOneWidget);
 
     // Finishing saves it and lands on the card.
     await tester.tap(find.byKey(SessionActions.finishKey));

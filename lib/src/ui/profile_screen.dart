@@ -5,11 +5,10 @@ import '../data/custom_templates.dart';
 import '../data/workout_templates.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
-import 'app_screen.dart';
+import 'data_screens.dart';
 import 'divider_row.dart';
 import 'personal_details_screen.dart';
 import 'template_library_screen.dart';
-import 'empty_state.dart';
 
 /// Where the "My workout templates" row goes.
 ///
@@ -34,7 +33,7 @@ import 'empty_state.dart';
 /// without that regression.
 ///
 /// **To wire a real screen in, replace this provider's default body** — one
-/// line, here, where the placeholder is. Tests override it by value:
+/// line, here. Tests override it by value:
 /// `profileTemplatesDestinationProvider.overrideWithValue((_) => const Foo())`.
 final profileTemplatesDestinationProvider = Provider<WidgetBuilder>(
   (ref) => (_) => const TemplateLibraryScreen(),
@@ -49,7 +48,7 @@ final profilePersonalDetailsDestinationProvider = Provider<WidgetBuilder>(
 /// Where the "Export everything" row goes. See
 /// [profileTemplatesDestinationProvider] for the shape and how to wire it.
 final profileExportDestinationProvider = Provider<WidgetBuilder>(
-  (ref) => (_) => const _UnbuiltDestination(title: exportRowTitle),
+  (ref) => (_) => const ExportScreen(),
 );
 
 /// Where the "Delete all data" row goes. See
@@ -58,7 +57,7 @@ final profileExportDestinationProvider = Provider<WidgetBuilder>(
 /// destination's: replacing the builder does not change how the row is
 /// painted.
 final profileDeleteAllDestinationProvider = Provider<WidgetBuilder>(
-  (ref) => (_) => const _UnbuiltDestination(title: deleteAllRowTitle),
+  (ref) => (_) => const DeleteAllDataScreen(),
 );
 
 /// The first row: the user's template library, predefined and custom together.
@@ -123,14 +122,14 @@ class ProfilePersonalPane extends ConsumerWidget {
 
   /// The heading over the two rows that lead to the user's own content.
   @visibleForTesting
-  static const String yoursGroupLabel = 'YOURS';
+  static const String yoursGroupLabel = 'Yours';
 
   /// The heading over the two data actions. Separate from [yoursGroupLabel]
   /// because these two do not open your things -- they hand all of them over or
   /// destroy all of them, and a row that erases everything should not sit in
   /// the same block as a row that renames a template.
   @visibleForTesting
-  static const String dataGroupLabel = 'DATA';
+  static const String dataGroupLabel = 'Data';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -279,35 +278,6 @@ class _ProfileRow extends ConsumerWidget {
 /// The row for [id], so a test can tap "delete all" without matching on copy.
 @visibleForTesting
 Key profileRowKey(String id) => ValueKey<String>('profile-row-$id');
-
-/// What is behind a destination that has not been built yet.
-///
-/// **A real screen rather than a no-op tap.** A row that does nothing when
-/// tapped is indistinguishable from a bug, and this app's own rule is that a
-/// push must be an [AppScreen.pushed] on an opaque route (see `L0Shell`) — so
-/// the placeholder is the same shape as the thing that replaces it, and
-/// swapping one in changes a builder rather than a navigation model.
-///
-/// Delete this class when the last of the four seams points at a real screen.
-class _UnbuiltDestination extends StatelessWidget {
-  const _UnbuiltDestination({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppScreen.pushed(
-      title: title,
-      body: ListView(
-        padding: screenScrollPadding(context),
-        children: const <Widget>[
-          SizedBox(height: 24),
-          Text('Not built yet.', style: kEmptyStateBodyStyle),
-        ],
-      ),
-    );
-  }
-}
 
 /// The row's name.
 ///

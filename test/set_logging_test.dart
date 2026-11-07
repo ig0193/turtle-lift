@@ -284,7 +284,7 @@ void main() {
           tester, exerciseId: 'bench', loadType: LoadType.weighted);
 
       expect(
-        find.text('RECENT'),
+        find.text('Recent'),
         findsNothing,
         reason: 'an empty group is no group rather than a heading over nothing',
       );
@@ -320,7 +320,7 @@ void main() {
       await pumpLogging(
           tester, exerciseId: 'bench', loadType: LoadType.weighted);
 
-      expect(find.text('RECENT'), findsOneWidget);
+      expect(find.text('Recent'), findsOneWidget);
       expect(find.text('60kg × 10 · 60kg × 8'), findsOneWidget);
       expect(find.byKey(SetLoggingScreen.seeAllKey), findsOneWidget);
     });

@@ -38,10 +38,8 @@ enum SearchResultKind {
 
   /// How the kind is written on the row.
   ///
-  /// Upper-cased here rather than stored that way, for the reason
-  /// [exerciseEquipmentLabel] gives: the tag is a chip, the label is a word,
-  /// and a screen reader should hear the word.
-  String get tag => label.toUpperCase();
+  /// The label itself, in sentence case like every chip in the app.
+  String get tag => label;
 }
 
 /// One row of results: what it is, which vocabulary it came from, and enough
@@ -244,10 +242,10 @@ Key searchResultKey(SearchResultKind kind, String id) =>
     ValueKey<String>('search-${kind.name}-$id');
 
 /// Said over the fallback's muscle list.
-const String kSearchMusclesHeading = 'MUSCLES';
+const String kSearchMusclesHeading = 'Muscles';
 
 /// Said over the fallback's equipment list.
-const String kSearchEquipmentHeading = 'EQUIPMENT';
+const String kSearchEquipmentHeading = 'Equipment';
 
 /// Said above both, when a query failed.
 ///

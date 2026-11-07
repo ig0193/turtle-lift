@@ -24,7 +24,8 @@ void main() {
       AppPalette.textMuted,
       AppPalette.accentStrong,
       AppPalette.accentLight,
-      AppPalette.onAccent,
+      // AppPalette.onAccent is the same value as pageBackground (ONE DAY
+      // `ink` does both jobs), so it is already in the set.
       AppPalette.danger,
       // Overlays, not palette entries.
       Color(0xFF000000),

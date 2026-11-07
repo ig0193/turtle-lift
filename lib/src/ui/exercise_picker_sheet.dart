@@ -178,21 +178,23 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
                 ),
                 children: <Widget>[
                   if (planned.isNotEmpty) ...<Widget>[
-                    const _SectionLabel('IN THIS WORKOUT'),
+                    const _SectionLabel('In this workout'),
                     for (final exercise in planned) _row(exercise, saved),
                   ],
                   if (others.isNotEmpty) ...<Widget>[
-                    _SectionLabel(planned.isEmpty ? 'EXERCISES' : 'ADD ANOTHER'),
+                    _SectionLabel(planned.isEmpty ? 'Exercises' : 'Add another'),
                     for (final exercise in others) _row(exercise, saved),
                   ],
                   if (planned.isEmpty && others.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
                       child: Text(
-                        'No exercise matches.',
-                        style: TextStyle(
+                        'No exercise called “${_query.trim()}”. '
+                        'Try part of the name, like “press” or “curl”.',
+                        style: const TextStyle(
                           fontSize: 13,
-                          color: AppPalette.textMuted,
+                          height: 1.45,
+                          color: AppPalette.textSecondary,
                         ),
                       ),
                     ),

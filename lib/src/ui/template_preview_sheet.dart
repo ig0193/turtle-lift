@@ -172,7 +172,7 @@ class _PreviewRow extends StatelessWidget {
               Text(
                 exerciseEquipmentLabel(equipment!),
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   color: AppPalette.textMuted,
                 ),
               ),

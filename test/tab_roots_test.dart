@@ -153,7 +153,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(hostTall(const WorkoutRoot()));
 
-    expect(find.text('READY-MADE'), findsOneWidget,
+    expect(find.text('Ready-made'), findsOneWidget,
         reason: 'the group label over the templates that ship with the app');
     expect(find.text('Start workout'), findsOneWidget,
         reason: 'the pinned bar that starts an empty workout');

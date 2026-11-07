@@ -86,7 +86,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('2 more to go — next is Wednesday'), findsOneWidget);
+      expect(find.text('2 more to go. Next is Wednesday'), findsOneWidget);
       expect(find.byKey(SchedulePane.lastWeekKey), findsOneWidget);
       expect(
         find.descendant(
@@ -110,7 +110,7 @@ void main() {
 
       expect(
         find.bySemanticsLabel(
-          'This week: 1 of 3 plan days. 2 more to go — next is Wednesday',
+          'This week: 1 of 3 plan days. 2 more to go. Next is Wednesday',
         ),
         findsOneWidget,
       );
@@ -162,7 +162,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(SchedulePane.heroKey), findsOneWidget);
-      expect(find.text('1 more to go — next is Friday'), findsOneWidget);
+      expect(find.text('1 more to go. Next is Friday'), findsOneWidget);
 
       final stored = await readStoredTrainingPlan(TrainingPlanStore(database));
       expect(stored, <TrainingPlanEntry>[

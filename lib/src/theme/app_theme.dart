@@ -13,7 +13,7 @@ ThemeData buildAppTheme() {
   const scheme = ColorScheme(
     brightness: Brightness.dark,
 
-    // Primary = the one action colour. §12: "#D85A30 = active / trained /
+    // Primary = the one action colour. §12: "#A9D8FF = active / trained /
     // primary action."
     primary: AppPalette.accentStrong,
     onPrimary: AppPalette.onAccent,
@@ -24,7 +24,7 @@ ThemeData buildAppTheme() {
     onPrimaryFixed: AppPalette.onAccent,
     onPrimaryFixedVariant: AppPalette.onAccent,
 
-    // accentLight (#F0997B) is deliberately absent from this scheme. §12:
+    // accentLight (#C9B6FF) is deliberately absent from this scheme. §12:
     // "secondary muscle only, never a primary action" -- and `secondary` is
     // exactly the slot Material paints interactive chrome from. It belongs to
     // the diagram painter, nowhere else.
@@ -112,7 +112,7 @@ ThemeData buildAppTheme() {
       color: AppPalette.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppPalette.border),
       ),
     ),
@@ -122,14 +122,19 @@ ThemeData buildAppTheme() {
       space: 1,
     ),
     filledButtonTheme: FilledButtonThemeData(
+      // The primary action: a capsule filled with liquid metal (ONE DAY
+      // `LiquidButton`). The Material colour underneath stays the solid accent,
+      // so ink splashes and any state the builder does not paint still read as
+      // the accent; the gradient is laid over it only while enabled.
       style: FilledButton.styleFrom(
         backgroundColor: AppPalette.accentStrong,
         foregroundColor: AppPalette.onAccent,
+        disabledBackgroundColor: AppPalette.mutedSurface,
+        disabledForegroundColor: AppPalette.textMuted,
         minimumSize: const Size.fromHeight(48),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        shape: const StadiumBorder(),
+      ).copyWith(backgroundBuilder: _liquidBackground),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(foregroundColor: AppPalette.accentStrong),
@@ -170,15 +175,17 @@ ThemeData buildAppTheme() {
       focusedBorder: _inputBorder(AppPalette.accentStrong),
       errorBorder: _inputBorder(AppPalette.danger),
       focusedErrorBorder: _inputBorder(AppPalette.danger),
-      errorStyle: const TextStyle(fontSize: 11.5, color: AppPalette.danger),
+      errorStyle: const TextStyle(fontSize: 12, color: AppPalette.danger),
     ),
     // The caret and the selection band. Left unset they come from
     // `colorScheme.primary`, which happens to be on-palette today and would
     // stop being so the moment that role moved; naming them keeps the input's
     // colours in one place with the rest of its decoration.
-    textSelectionTheme: const TextSelectionThemeData(
+    textSelectionTheme: TextSelectionThemeData(
       cursorColor: AppPalette.accentStrong,
-      selectionColor: AppPalette.accentLight,
+      // The accent at low alpha: an opaque band of a light colour behind light
+      // text would erase the text it is selecting.
+      selectionColor: AppPalette.accentStrong.withValues(alpha: 0.35),
       selectionHandleColor: AppPalette.accentStrong,
     ),
     // No bottomNavigationBarTheme: that themes Material 2's BottomNavigationBar,
@@ -197,3 +204,25 @@ OutlineInputBorder _inputBorder(Color color) => OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(color: color),
     );
+
+/// Lays the liquid gradient behind an enabled primary button.
+///
+/// **A top-level function, not a closure in [buildAppTheme].** A closure is a
+/// new object on every call, so two built themes would stop comparing equal --
+/// and `MaterialApp` animates between unequal themes, which leaves an
+/// animation running after every rebuild (and breaks reduced motion). A
+/// tear-off of a top-level function is canonical, so the themes stay equal.
+Widget _liquidBackground(
+  BuildContext context,
+  Set<WidgetState> states,
+  Widget? child,
+) =>
+    states.contains(WidgetState.disabled)
+        ? child!
+        : DecoratedBox(
+            decoration: const ShapeDecoration(
+              shape: StadiumBorder(),
+              gradient: AppGradients.liquid,
+            ),
+            child: child,
+          );

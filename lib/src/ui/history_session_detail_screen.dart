@@ -10,19 +10,15 @@ import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'app_screen.dart';
 import 'body_diagram.dart';
+import 'ghost_button.dart';
+import 'session_summary_screen.dart';
 
 /// One logged session, opened from a History row.
 ///
-/// **This is the read half only.** `docs/04` specifies session detail as the
-/// *same component as the live workout card* — editable title, editable
-/// `performedOn`, editable sets, add and remove, and delete. All of that
-/// belongs to the session-flow work
-/// (`docs/plans/2026-09-14-2351-feat-workout-session-flow-plan.md`), which owns
-/// the session tables and every `session_*.dart` file. Building an editor here
-/// would collide with it and would be editing a fixture besides.
-///
-/// So this screen shows what a session *was*, from the same preview data the
-/// History tab lists, and says nothing it cannot back up.
+/// **This is the read half.** Editing (title, `performedOn`, sets) and delete
+/// live on `SessionSummaryScreen`, the screen a workout lands on when it is
+/// finished; the Edit workout button at the foot of the log opens it, so there
+/// is one editor and nothing for two of them to disagree about.
 ///
 /// **The card is the shareable part; the log is the reason to scroll past it.**
 /// `docs/04` draws that line explicitly: the card is a summary someone would
@@ -38,6 +34,9 @@ class HistorySessionDetailScreen extends ConsumerWidget {
   /// Finds one exercise block in the log.
   @visibleForTesting
   static Key exerciseKey(String name) => ValueKey<String>('log-$name');
+
+  /// The button that opens the editable summary: title, date, sets, delete.
+  static const Key editKey = ValueKey<String>('session-edit');
 
   /// Finds the calorie figure, or the prompt standing in for it.
   @visibleForTesting
@@ -103,9 +102,9 @@ class HistorySessionDetailScreen extends ConsumerWidget {
             header: true,
             child: Text(
               figures.pbCount > 0
-                  ? 'LOGGED · ${figures.pbCount} PERSONAL BEST'
-                      '${figures.pbCount == 1 ? '' : 'S'}'
-                  : 'LOGGED',
+                  ? 'Logged · ${figures.pbCount} personal best'
+                      '${figures.pbCount == 1 ? '' : 's'}'
+                  : 'Logged',
               style: kLandingSectionLabelStyle,
             ),
           ),
@@ -119,7 +118,11 @@ class HistorySessionDetailScreen extends ConsumerWidget {
               recordScore: _recordScoreFor(sessions, session, exercise),
             ),
           const SizedBox(height: 22),
-          const _ReadOnlyNote(),
+          GhostButton(
+            buttonKey: HistorySessionDetailScreen.editKey,
+            label: 'Edit workout',
+            onTap: () => pushSessionSummary(context, sessionId),
+          ),
         ],
       ),
     );
@@ -199,7 +202,7 @@ class _HeroCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: AppPalette.surface,
         border: Border.all(color: AppPalette.border),
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,7 +230,7 @@ class _HeroCard extends ConsumerWidget {
                   child: Text(
                     '${figures.pbCount} PB',
                     style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: AppPalette.accentLight,
                     ),
@@ -239,7 +242,7 @@ class _HeroCard extends ConsumerWidget {
           Text(
             _longDate(session.performedOn) +
                 (session.isQuickLog ? ' · quick log' : ''),
-            style: const TextStyle(fontSize: 11.5, color: AppPalette.textMuted),
+            style: const TextStyle(fontSize: 12, color: AppPalette.textMuted),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -263,9 +266,9 @@ class _HeroCard extends ConsumerWidget {
             ),
             child: Row(
               children: <Widget>[
-                _Figure(value: '${figures.setCount}', label: 'SETS'),
-                _Figure(value: '${figures.exerciseCount}', label: 'EXERCISES'),
-                _Figure(value: '$streak', label: 'STREAK'),
+                _Figure(value: '${figures.setCount}', label: 'Sets'),
+                _Figure(value: '${figures.exerciseCount}', label: 'Exercises'),
+                _Figure(value: '$streak', label: 'Streak'),
                 // The calorie slot is a prompt rather than a number when no
                 // weight was in effect on this day. A figure derived from
                 // today's weight would be the retroactive rewrite the dated
@@ -285,17 +288,16 @@ class _HeroCard extends ConsumerWidget {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'ADD WEIGHT',
+                              'Add weight',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 8,
-                                letterSpacing: 0.04,
+                                fontSize: 12,
                                 color: AppPalette.textMuted,
                               ),
                             ),
                           ],
                         )
-                      : _Figure(value: '$kcal', label: 'KCAL'),
+                      : _Figure(value: '$kcal', label: 'kcal'),
                 ),
               ],
             ),
@@ -369,8 +371,7 @@ class _Figure extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontSize: 8,
-              letterSpacing: 0.04,
+              fontSize: 12,
               color: AppPalette.textMuted,
             ),
           ),
@@ -461,43 +462,16 @@ class _SetPill extends StatelessWidget {
               ? AppPalette.accentStrong.withValues(alpha: 0.42)
               : AppPalette.border,
         ),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         score == score.roundToDouble()
             ? '${score.toStringAsFixed(0)} kg'
             : '$score kg',
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: 12,
           fontWeight: isRecord ? FontWeight.w600 : FontWeight.w400,
           color: isRecord ? AppPalette.accentLight : AppPalette.textSecondary,
-        ),
-      ),
-    );
-  }
-}
-
-/// Says plainly what this screen cannot do, rather than leaving a user hunting
-/// for an edit control that is not there yet.
-class _ReadOnlyNote extends StatelessWidget {
-  const _ReadOnlyNote();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: AppPalette.mutedSurface,
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: const Text(
-        'Editing and deleting a past workout arrive with the session tables. '
-        'This history is sample data, so the figures above are real '
-        'derivations over it rather than stored numbers.',
-        style: TextStyle(
-          fontSize: 11.5,
-          height: 1.5,
-          color: AppPalette.textMuted,
         ),
       ),
     );

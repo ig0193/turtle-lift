@@ -44,9 +44,9 @@ class GhostButton extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 48),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppPalette.surface,
+              color: AppPalette.mutedSurface,
               border: Border.all(color: AppPalette.border),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
               label,

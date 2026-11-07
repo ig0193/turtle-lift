@@ -14,7 +14,8 @@ import 'app_screen.dart';
 import 'exercise_detail_screen.dart';
 import 'exercise_history_screen.dart';
 import 'ghost_button.dart';
-import 'muscle_exercise_list_screen.dart' show RowTagChip;
+import 'muscle_exercise_list_screen.dart'
+    show RowTagChip, exerciseEquipmentLabel;
 import 'set_row.dart';
 
 /// Where sets are logged. The app's most-used screen.
@@ -270,7 +271,7 @@ class _SetLoggingScreenState extends ConsumerState<SetLoggingScreen> {
     final recent = history.take(2);
     return <Widget>[
       const SizedBox(height: 18),
-      const Text('RECENT', style: kLandingSectionLabelStyle),
+      const Text('Recent', style: kLandingSectionLabelStyle),
       const SizedBox(height: 8),
       for (final session in recent)
         Padding(
@@ -289,7 +290,10 @@ class _SetLoggingScreenState extends ConsumerState<SetLoggingScreen> {
                       .firstWhere((e) => e.exerciseId == exerciseId)),
                   textAlign: TextAlign.right,
                   style: const TextStyle(
-                      fontSize: 12.5, color: AppPalette.textSecondary),
+                    fontSize: 12.5,
+                    color: AppPalette.textSecondary,
+                    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                  ),
                 ),
               ),
             ],
@@ -328,7 +332,7 @@ class _FactsRow extends StatelessWidget {
         child: Wrap(
           spacing: 6,
           children: <Widget>[
-            RowTagChip(label: exercise.equipment),
+            RowTagChip(label: exerciseEquipmentLabel(exercise.equipment)),
             RowTagChip(label: _shape),
           ],
         ),
@@ -353,7 +357,7 @@ class _AssistedBanner extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppPalette.mutedSurface,
           border: Border.all(color: AppPalette.border),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: const Text(
           'Less assistance is better. Your record is the lightest assist '

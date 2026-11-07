@@ -272,8 +272,8 @@ void main() {
 
       await pumpOverview(tester, updated);
 
-      expect(find.text('UP NEXT'), findsOneWidget);
-      final upNext = tester.getTopLeft(find.text('UP NEXT')).dy;
+      expect(find.text('Up next'), findsOneWidget);
+      final upNext = tester.getTopLeft(find.text('Up next')).dy;
       final fly = tester.getTopLeft(find.text('Cable fly')).dy;
       final bench = tester.getTopLeft(find.text('Bench press')).dy;
       expect(upNext, greaterThan(bench));
@@ -354,7 +354,7 @@ void main() {
         now: session.loggedAt.add(const Duration(minutes: 12, seconds: 34)),
       );
 
-      expect(find.text('WORKOUT IN PROGRESS'), findsOneWidget);
+      expect(find.text('Workout in progress'), findsOneWidget);
       expect(find.byKey(SessionClock.clockKey), findsOneWidget);
       expect(find.text('12:34'), findsOneWidget);
     });
@@ -368,7 +368,7 @@ void main() {
         now: session.loggedAt.add(const Duration(minutes: 3)),
       );
 
-      expect(find.text('WORKOUT IN PROGRESS'), findsNothing);
+      expect(find.text('Workout in progress'), findsNothing);
       expect(find.byKey(SessionClock.clockKey), findsNothing);
     });
 
@@ -396,7 +396,7 @@ void main() {
         now: backdated.loggedAt.add(const Duration(minutes: 3)),
       );
 
-      expect(find.text('WORKOUT IN PROGRESS'), findsOneWidget,
+      expect(find.text('Workout in progress'), findsOneWidget,
           reason: 'it is still a workout in progress');
       expect(find.byKey(SessionClock.clockKey), findsNothing,
           reason: 'but it was logged afterwards, so there is no elapsed time '

@@ -114,7 +114,7 @@ Load from `muscle_taxonomy.dart`. **12 parents, 19 sub-groups, 1 mapping excepti
 - **One diagram treatment everywhere: full body, unmodified viewBox.** There is no zoomed or cropped view anywhere in V1. Used on Workout Overview, Muscle Groups landing, Exercise Detail, summary and session cards.
   - **The crop system has been deleted** (`muscle_crops.json`, `muscle_crops.dart`, `generate_muscle_crops.py`). Its last two consumers both stopped needing it: Exercise Detail moved to full body during prototyping, because crops produced unreadable letterbox strips and lost the anatomical context that makes the diagram educational, and the sub-muscle-group selection screen was deleted outright (§10). **Do not reintroduce cropping.** `03`'s exercise-detail mockup note used to call for a zoomed viewBox; it has been corrected.
 - Exercise Detail: **full-body** diagram. If relevant muscles span both views, show **both side by side**, each full body. If one view covers everything, show one, centred.
-- Fill colours: primary `#D85A30`, secondary `#F0997B`, untrained `#241F19`.
+- Fill colours: primary `#A9D8FF`, secondary `#C9B6FF`, untrained `#1D2027`.
 - **Uniformity rule:** every muscle map comes from these SVGs. No screen gets its own simplified diagram. Mockup SVGs in `02`–`04` are layout references only.
 - **No body figure other than the four traced diagrams.** Workout Summary and Session Detail use the same anatomical diagram as everywhere else — no zone-lit human figure exists and none should be built.
 - **Mascot is a turtle** (`mascot-brief.md`). It is a decorative companion, not a body diagram, and never replaces a muscle map. Four states: resting, lifting, pleased, hidden. Appears on workout overview (52px corner tile), celebration, empty states, app icon. **Not on the share card.** **Never reacts to inactivity** — no decay, no guilt, no notifications, no achievement on the tap easter egg. Not a blocker; build last.
@@ -177,7 +177,7 @@ streakAsOf(date) -> int
 
 **Session screen** (after Start logging)
 - Pulsing `WORKOUT IN PROGRESS` strip (one pulse, no loop) with the **clock**; editable title (no caption line); editable date, prominent when ≠ today; `N of M done`.
-- **Body map is the hero** and shrinks in steps as the list grows. It fills live: primary `#D85A30`, secondary `#F0997B`; muscles the list plans to train and has not worked are **outlined**.
+- **Body map is the hero** and shrinks in steps as the list grows. It fills live: primary `#A9D8FF`, secondary `#C9B6FF`; muscles the list plans to train and has not worked are **outlined**.
 - `KEEP LOGGING`: one flat exercise list for both paths, tri-state `To do / In progress / Done` (derived), the first not-done row tagged `UP NEXT`. `+ Add exercise`. Finish (primary) + Discard (secondary, confirm dialog).
 - **No muscle list, no `trained` tick, no template lock.** Any exercise can be added to any session.
 
@@ -249,23 +249,27 @@ History and Profile are both tabs (`docs/adr/0003-l0-navigation-variant-a.md`, a
 
 ## 12. Palette
 
+Cool brushed-titanium, one iridescent accent. Source: `docs/one-day-theme-reference.md`, option A (full re-skin).
+
 | Role | Hex |
 |---|---|
-| Page background | `#17140F` |
-| Card / elevated surface | `#211D18` |
-| Border / divider | `#332C22` |
-| Muted surface / unfilled region | `#241F19` |
-| Text primary | `#F5EFE8` |
-| Text secondary | `#A89C8E` |
-| Text muted | `#6B6156` |
-| Accent strong | `#D85A30` |
-| Accent light | `#F0997B` |
-| Text on accent fill | `#1B0C05` |
-| Destructive action | `#C4553A` |
+| Page background | `#07080A` |
+| Card / elevated surface | `#15171C` |
+| Border / divider | `#2A2D34` |
+| Muted surface / unfilled region | `#1D2027` |
+| Text primary | `#F2F4F7` |
+| Text secondary | `#9EA3AE` |
+| Text muted | `#838A94` |
+| Accent strong | `#A9D8FF` |
+| Accent light | `#C9B6FF` |
+| Text on accent fill | `#07080A` |
+| Destructive action | `#FF8A8A` |
 
-`#D85A30` = active / trained / primary action. `#F0997B` = secondary muscle only, never a primary action. `#C4553A` = destructive action only (delete a workout, discard a session) — never a primary action, never a fill behind body text. No other colours.
+**Gradient (one):** *liquid* — `#E8ECF2` → `#A9D8FF` → `#C9B6FF` → `#F4E3FF`, top-left to bottom-right. It is the accent as a fill: primary buttons only. The two end stops exist only inside this gradient.
 
-⚠ `#D85A30` must not carry "delete". `01` §Usage rules gives it one meaning, *"same meaning wherever it appears"*, so a delete confirmation painted in it reads as approval. That is why the destructive colour exists; it is not a general-purpose red.
+`#A9D8FF` = active / trained / primary action. `#C9B6FF` = secondary muscle only, never a primary action. `#FF8A8A` = destructive action only (delete a workout, discard a session) — never a primary action, never a fill behind body text. No other colours.
+
+⚠ `#A9D8FF` must not carry "delete". `01` §Usage rules gives it one meaning, *"same meaning wherever it appears"*, so a delete confirmation painted in it reads as approval. That is why the destructive colour exists; it is not a general-purpose red.
 
 ---
 

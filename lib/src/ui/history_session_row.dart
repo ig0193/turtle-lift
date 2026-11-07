@@ -92,7 +92,7 @@ class HistorySessionRow extends StatelessWidget {
                     Text(
                       meta,
                       style: const TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 12,
                         color: AppPalette.textMuted,
                       ),
                     ),
@@ -174,9 +174,8 @@ class _PbPill extends StatelessWidget {
       child: Text(
         '$count PB',
         style: const TextStyle(
-          fontSize: 9.5,
+          fontSize: 12,
           fontWeight: FontWeight.w700,
-          letterSpacing: 0.05,
           color: AppPalette.accentLight,
         ),
       ),
@@ -201,8 +200,7 @@ class _QuickLogTag extends StatelessWidget {
       child: const Text(
         'quick log',
         style: TextStyle(
-          fontSize: 9.5,
-          letterSpacing: 0.05,
+          fontSize: 12,
           color: AppPalette.textMuted,
         ),
       ),

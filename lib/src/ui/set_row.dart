@@ -243,7 +243,13 @@ class _SetRowState extends State<SetRow> {
               onChanged: (v) => _emit(_copy(durationSec: v?.round())),
             ),
           ),
-          _Unit(formatDuration(widget.entry.durationSec ?? 0)),
+          // "sec" until there is a value, then the value as m:ss -- "0:00"
+          // beside an empty field reads as a reading, not a prompt.
+          _Unit(
+            widget.entry.durationSec == null
+                ? 'sec'
+                : formatDuration(widget.entry.durationSec!),
+          ),
           _optionalWeight(
             value: widget.entry.weightKg,
             onChanged: (v) => _emit(_copy(weightKg: v)),

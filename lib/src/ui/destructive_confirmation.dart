@@ -28,7 +28,7 @@ Future<bool> confirmDestructive(
       backgroundColor: AppPalette.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppPalette.border),
       ),
       title: Text(

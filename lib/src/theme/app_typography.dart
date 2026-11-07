@@ -14,15 +14,15 @@ import 'app_palette.dart';
 /// next to that screen, where its reasoning is readable beside the thing it
 /// describes.
 
-/// A small-caps section label — "Templates", "Your templates", "MUSCLES",
-/// "12 EXERCISES".
+/// A section label: "Templates", "Your templates", "Muscles", "12 exercises".
 ///
 /// Not a heading in the `kEmptyStateHeadingStyle` sense: those introduce a
 /// screen, this labels a group within one. It is deliberately quiet, because
 /// the rows beneath it are the content.
 const TextStyle kLandingSectionLabelStyle = TextStyle(
-  fontSize: 10.5,
-  fontWeight: FontWeight.w700,
-  letterSpacing: 1.1,
-  color: AppPalette.textMuted,
+  // Sentence case, no tracking: ONE DAY's eyebrow (13 / semibold / text2), and
+  // the taste skill's rule that labels are never tracked capitals.
+  fontSize: 13,
+  fontWeight: FontWeight.w600,
+  color: AppPalette.textSecondary,
 );

@@ -131,7 +131,7 @@ void main() {
           reason: 'the header names the exercise');
       expect(find.text(exerciseFactsLabel(exercise)), findsOneWidget,
           reason: 'R16: the equipment and the load type are both stated');
-      expect(exerciseFactsLabel(exercise), 'BARBELL · WEIGHTED');
+      expect(exerciseFactsLabel(exercise), 'Barbell · Weighted');
 
       for (final id in exercise.primary) {
         expect(find.text(kSubMuscleGroups[id]!.label), findsOneWidget,
@@ -213,10 +213,10 @@ void main() {
 
       expect(find.text(exercise.setup), findsNothing);
 
-      await tapContentRow(tester, 'SETUP');
+      await tapContentRow(tester, 'Setup');
       expect(find.text(exercise.setup), findsOneWidget);
 
-      await tapContentRow(tester, 'SETUP');
+      await tapContentRow(tester, 'Setup');
       expect(find.text(exercise.setup), findsNothing);
     });
 
@@ -227,7 +227,7 @@ void main() {
       await tester.pumpWidget(host(exercise));
       await tester.pumpAndSettle();
 
-      await tapContentRow(tester, 'COMMON MISTAKES');
+      await tapContentRow(tester, 'Common mistakes');
       expect(find.text(exercise.commonMistakes), findsNothing);
     });
   });
@@ -546,7 +546,7 @@ void main() {
       }
 
       expect(find.text(substituteRailLabel(exercise)), findsOneWidget);
-      expect(substituteRailLabel(exercise), 'OTHER EXERCISES FOR LOWER CHEST',
+      expect(substituteRailLabel(exercise), 'Other exercises for lower chest',
           reason: 'one primary muscle, so the rail is named after it');
     });
 
@@ -633,7 +633,7 @@ void main() {
       expect(substituteRailLabel(exercise), kNeutralSubstituteRailLabel,
           reason: 'naming the rail after the first of two primaries would '
               'mislabel every card matching the second');
-      expect(find.text('OTHER EXERCISES FOR LATS'), findsNothing);
+      expect(find.text('Other exercises for lats'), findsNothing);
     });
 
     testWidgets('every exercise in the library opens, and the rail never '
