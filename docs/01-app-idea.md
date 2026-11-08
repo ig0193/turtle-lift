@@ -24,8 +24,8 @@
 ## Not trying to be
 
 - An AI fitness coach.
-- A nutrition app.
-- A calorie tracking app — the app shows one rough, clearly-labeled calorie *estimate* per session as a fun/motivational stat (see Progress tracking below), but this is not calorie tracking: no goals, no budgets, no logging food, no daily totals, no claim of precision.
+- A nutrition app in the calorie-or-macro sense, or a food diary. **One narrow exception (`docs/adr/0007-diet-in-profile.md`): a protein-only weekly meal plan** — foods from a bundled, reviewed list, each day's planned protein against an optional daily target, and an optional "eaten" tick per meal. No calories, carbs, fat or macros, no free-form food logging, no custom foods.
+- A calorie tracking app — the app shows one rough, clearly-labeled calorie *estimate* per session as a fun/motivational stat (see Progress tracking below), but this is not calorie tracking: no calorie goals, no budgets, no food logging, no daily calorie totals, no claim of precision. (The protein plan's daily total, ADR 0007, is protein only and lives on Profile → Diet.)
 - A social fitness platform.
 - A replacement for a personal trainer.
 
@@ -56,7 +56,7 @@
 |---|---|
 | **Workout** | Start a workout session — by choosing a saved workout template, or by building an ad-hoc session via exercise search. |
 | **Muscle Groups** | Explore and reference — browse by body diagram or search by exercise name. Pure reference; no logging happens here. Can add an exercise to an active workout session if one is running. |
-| **Profile** | Workout history, stats, streak, and managing/creating workout templates. |
+| **Profile** | Three segments: **Personal** (details, workout templates, data actions) · **Schedule** (ADR 0005) · **Diet**, the protein-only weekly plan (`docs/adr/0007-diet-in-profile.md`). Diet is a segment, not a fifth tab. |
 
 Note: the app doesn't suggest or auto-select a workout for the user (no "today's workout" recommendation) — there's no AI or rotation logic in V1. There is also no multi-day split system or weekly rotation of any kind — every workout template is a single, self-contained day (e.g. "Push day"), not part of a sequence. The user always actively chooses which template to run, or goes ad-hoc.
 
@@ -281,7 +281,7 @@ Storage note: `assistKg` is stored as its own positive field, **not** as a negat
 
 - **A set is complete when the user taps its checkmark and its required field is > 0.** Tapping the checkmark with an empty required field focuses that field instead of completing the set. Optional fields never gate completion.
 - **This is the definition the streak and the calorie tier both consume** — a 45-second plank set and a heavy squat set each count as exactly one set. Crude by design; the calorie model is already a coarse set-count proxy.
-- **Prefill from history.** The first set of an exercise prefills from the same set index in the user's last session of that exercise; each subsequent set added prefills from the previous set in the current session. Prefilled values render in `#838A94` (muted) until touched or confirmed, so the user can tell what they typed from what the app guessed.
+- **Prefill from history.** The first set of an exercise prefills from the same set index in the user's last session of that exercise; each subsequent set added prefills from the previous set in the current session. Prefilled values render in `#8B8B90` (muted) until touched or confirmed, so the user can tell what they typed from what the app guessed.
 - **Optional weight is a collapsed chip, not a visible field.** It expands on tap. Users who never add weight to a push-up never see an input they have to skip past.
 - **No capability flags.** The optional weight field is offered on every `bodyweight` and `timed` exercise. Auditing 61 exercises to hide a chip nobody would notice is not worth it.
 - Each set row supports delete (swipe or long-press). Removing a set recomputes everything derived.
@@ -357,7 +357,7 @@ The app remembers everything on the user's behalf, so it must also let them corr
 - No cloud backup.
 - No rest timer (parked for a later version).
 - No **stored** workout duration. Since some users log live during a workout and others log retrospectively (catching up later, or logging from memory), any duration the app saved could be meaningless or actively misleading — especially since it would show up on the shareable summary card. Exercise count is used instead of duration wherever a stat is needed, since it's accurate regardless of when logging happened. **One narrow exception (`docs/adr/0006`): a display-only live clock** on the workout in progress, derived from when it started, never stored and shown nowhere else — not in History, not on the summary or share card — and shown only for a workout that is happening now (dated the day it started, under six hours old).
-- No notifications, except the opt-in, fixed-schedule reminders in `docs/adr/0005-schedule-and-opt-in-notifications.md`, built after the Schedule screen. Never behaviour-triggered.
+- No notifications, except the opt-in, fixed-schedule reminders in `docs/adr/0005-schedule-and-opt-in-notifications.md`, built after the Schedule screen, and the diet reminders that ADR 0007 brings under the same rules. Never behaviour-triggered.
 - No wearable integration.
 - No AI.
 - No premium plan.
@@ -383,8 +383,8 @@ Not downloads. Not revenue. Success means:
 - AI workout suggestions
 - AI form analysis
 - Exercise videos
-- Nutrition tracking
-- Meal plans
+- Nutrition tracking (calories, macros, food diary) — the protein-only weekly plan is V1, ADR 0007
+- Meal plans beyond that protein plan
 - Wearable integration
 - Apple Health / Google Fit
 - Friends
@@ -399,32 +399,33 @@ Not downloads. Not revenue. Success means:
 
 ---
 
-## Visual theme — Coral
+## Visual theme — Chalk & Shell
 
-A single dark, cool palette: brushed titanium with one iridescent accent (ice blue to lilac), adopted from `docs/one-day-theme-reference.md`, option A. The muscle map's "worked" colour and the app's action colour are still literally the same colour, ice, with lilac as its lighter partner for secondary muscles. The heat-map reading now comes from lit against unlit (bright ice on dark titanium) rather than from a red/orange convention.
+A single dark palette built from the iron end of a gym: graphite plates, chalk, and the turtle's shell as the one warm colour. Surfaces are neutral graphite with no tint, because people look at them for hours. Chalk carries the text and the primary button. Shell amber is the muscle map's "worked" colour and means nothing else; steel marks the secondary muscle. There are no gradients. Source and reasoning: `docs/research/unslop-audit.md`.
 
-*Superseded:* the original warm coral/orange palette (`#17140F` background, `#D85A30` accent). Same roles, same rules, new values.
+*Superseded:* the original warm coral/orange palette (`#17140F` background, `#D85A30` accent), and after it a cool titanium palette with an ice-to-lilac gradient on primary buttons. Same roles, new values and rules.
 
 ### Palette
 
 | Role | Value | Usage |
 |---|---|---|
-| Page background | `#07080A` | App background, base layer |
-| Card / elevated surface | `#15171C` | Cards, list rows, input backgrounds |
-| Border / divider | `#2A2D34` | Hairline separators, outlines |
-| Muted surface (unfilled regions) | `#1D2027` | Muscle map regions not yet logged, disabled states |
-| Text primary | `#F2F4F7` | Headings, primary content |
-| Text secondary | `#9EA3AE` | Subtitles, supporting text |
-| Text muted | `#838A94` | Placeholder text, "not started" labels |
-| Accent — strong | `#A9D8FF` | Primary buttons, primary muscle fill, active nav tab, checkmarks/done states |
-| Accent — light | `#C9B6FF` | Secondary muscle fill, lighter emphasis, less prominent accents |
-| Text on accent fill | `#07080A` | Text/icon color when placed on top of a strong-accent-filled background (e.g. button label) |
-| Destructive | `#FF8A8A` | Delete a workout, discard a session. Nothing else. |
+| Page background | `#0E0E0F` | App background, base layer |
+| Card / elevated surface | `#18181A` | Cards, list rows, input backgrounds |
+| Border / divider | `#2E2E32` | Hairline separators, outlines |
+| Muted surface (unfilled regions) | `#222225` | Muscle map regions not yet logged, raised controls, disabled states |
+| Text primary (chalk) | `#EDEDEB` | Headings, primary content, **the primary button fill** |
+| Text secondary | `#A3A3A7` | Subtitles, supporting text |
+| Text muted | `#8B8B90` | Placeholder text, "not started" labels, units |
+| Accent — strong (shell amber) | `#FFA53D` | Primary muscle fill, active nav tab, selection, completed-set tick, personal best |
+| Accent — light (steel) | `#93ABCB` | Secondary muscle fill and its legend dot. Nothing else. |
+| Text on a filled control | `#0E0E0F` | Label on the chalk primary button or on an amber fill |
+| Destructive | `#FF7A85` | Delete a workout, discard a session. Nothing else. |
 
 ### Usage rules
 
-- **Accent strong (`#A9D8FF`)** is the "this is active / this has been worked" color — used consistently for primary buttons, the active tab bar icon, primary muscle-map fill, and completion checkmarks. Same meaning wherever it appears.
-- **Accent light (`#C9B6FF`)** is reserved for secondary muscle indication and lower-emphasis accents — never used for primary actions.
-- **Destructive (`#FF8A8A`)** is for destructive actions only — delete a workout, discard a session. It exists because accent strong could not carry it: accent strong means "active / this has been worked", so a delete confirmation painted in it reads as approval. Never a primary action, never a fill behind body text. Sessions are deletable, so this surface is real, not hypothetical.
-- Everything else (body text, borders, unfilled states, secondary buttons) stays neutral gray/off-white. The one gradient, *liquid* (`#E8ECF2` → `#A9D8FF` → `#C9B6FF` → `#F4E3FF`), is the accent as a fill and appears only on primary buttons. No other colors are introduced — this keeps the palette calm and prevents visual competition on screens that combine the muscle map with buttons or list states.
-- Because it's a single hue family, new screens can freely reuse the same two accent values without needing to re-derive a color rule each time — unlike a two-color brand system, there's no governance overhead to maintain as the app grows.
+- **The primary action is a chalk capsule** (`#EDEDEB` fill, `#0E0E0F` label), one per view. Secondary actions are text. Amber is not a button colour: putting the strongest colour in the app on the chrome of every screen would compete with the map.
+- **Accent strong (`#FFA53D`)** is the "this is active / this has been worked" color — used consistently for the active tab bar icon, primary muscle-map fill, the selection, completed sets and the personal-best mark. Same meaning wherever it appears.
+- **Accent light (`#93ABCB`)** is reserved for secondary muscle indication — never used for actions, chrome, status or press states. Amber and steel sit on the blue–yellow axis, so they stay distinct under red–green colour blindness.
+- **Destructive (`#FF7A85`)** is for destructive actions only — delete a workout, discard a session. It exists because accent strong could not carry it: accent strong means "active / this has been worked", so a delete confirmation painted in it reads as approval. Never a primary action, never a fill behind body text. Sessions are deletable, so this surface is real, not hypothetical.
+- Everything else (body text, borders, unfilled states, secondary buttons) stays neutral graphite and chalk. **No gradients**, and no other colors are introduced — this keeps the palette calm and prevents visual competition on screens that combine the muscle map with buttons or list states.
+- Colour gets rich only in two places: the body map and the summary card built around it.

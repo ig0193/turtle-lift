@@ -387,7 +387,7 @@ void main() {
           find.text("Finish your first session and it'll show up here."),
         )
         .style!;
-    expect(body.fontSize, 12.5, reason: '.empty p font-size');
+    expect(body.fontSize, 13, reason: '.empty p font-size (12.5 snapped to the type scale)');
     expect(body.height, 1.55, reason: '.empty p line-height');
   });
 }

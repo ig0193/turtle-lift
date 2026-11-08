@@ -57,8 +57,8 @@ class TemplateRow extends StatelessWidget {
         onTap: onTap,
         child: Container(
           constraints: const BoxConstraints(minHeight: minHeight),
-          margin: const EdgeInsets.only(bottom: 9),
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
           decoration: BoxDecoration(
             color: background,
             borderRadius: BorderRadius.circular(16),
@@ -72,7 +72,7 @@ class TemplateRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Text(title, style: kTemplateRowTitleStyle),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: kTemplateRowSubtitleStyle,
@@ -100,7 +100,6 @@ class TemplateRow extends StatelessWidget {
 const TextStyle kTemplateRowTitleStyle = TextStyle(
   fontSize: 15,
   fontWeight: FontWeight.w600,
-  letterSpacing: -0.1,
   color: AppPalette.textPrimary,
 );
 

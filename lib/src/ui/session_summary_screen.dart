@@ -129,7 +129,7 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                     .read(activeSessionProvider.notifier)
                     .renameSaved(session.id, value),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
               const Text('What you did', style: kLandingSectionLabelStyle),
               const SizedBox(height: 8),
               for (final exercise in session.exercises)
@@ -265,7 +265,7 @@ class _ShareCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       decoration: BoxDecoration(
         color: AppPalette.surface,
         border: Border.all(color: AppPalette.border),
@@ -310,51 +310,54 @@ class _ShareCard extends StatelessWidget {
                 onRename(value.trim().isEmpty ? null : value.trim()),
             onTapOutside: (_) => FocusScope.of(context).unfocus(),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           // Only the views that carry trained muscles; never an empty second
-          // diagram beside a filled one.
+          // diagram beside a filled one. The map is the card's moment, so it
+          // takes the card's width and most of its height.
           SizedBox(
-            height: 190,
+            height: 280,
             child: Row(
               children: <Widget>[
-                for (final view in views)
+                for (final view in views) ...<Widget>[
+                  if (view != views.first) const SizedBox(width: 12),
                   Expanded(child: BodyDiagram(view: view, fill: fill.colorFor)),
+                ],
               ],
             ),
           ),
-          if (records > 0) ...<Widget>[
-            const SizedBox(height: 12),
-            Center(
-              child: Container(
-                key: SessionSummaryScreen.pbPillKey,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppPalette.mutedSurface,
-                  border: Border.all(color: AppPalette.accentStrong),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  records == 1 ? '1 personal best' : '$records personal bests',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppPalette.accentStrong,
-                  ),
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Row(
             children: <Widget>[
               _Stat(value: '${setCountOf(session)}', label: 'Sets'),
               _Stat(value: '${exerciseCountOf(session)}', label: 'Exercises'),
               _Stat(value: '$streak', label: 'Day streak'),
-              _CalorieStat(calories: calories),
+              // A figure among the figures, in the PB colour -- not an
+              // outlined pill under the map. Absent at zero: never "0 PB" on
+              // a card built to be screenshotted.
+              if (records > 0)
+                _Stat(
+                  key: SessionSummaryScreen.pbPillKey,
+                  value: '$records',
+                  label: 'PB',
+                  valueColor: AppPalette.accentStrong,
+                ),
+              if (calories != null) _CalorieStat(calories: calories!),
             ],
           ),
-          const SizedBox(height: 12),
+          // A workout logged before the user ever weighed in cannot have an
+          // honest estimate, and adding a weight later does not back-fill it.
+          // So there is no kcal figure -- and the instruction sits under the
+          // row rather than in a figure's slot.
+          if (calories == null) ...<Widget>[
+            const SizedBox(height: 12),
+            const Text(
+              key: SessionSummaryScreen.addWeightKey,
+              kNoWeightKcalNote,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: AppPalette.textMuted),
+            ),
+          ],
+          const SizedBox(height: 16),
           Center(
             child: Text(
               kAppDisplayName.toUpperCase(),
@@ -371,14 +374,24 @@ class _ShareCard extends StatelessWidget {
   }
 }
 
+/// What stands in for the calorie figure when no bodyweight was in effect on
+/// the session's day. Shared by the summary card and Session Detail.
+const String kNoWeightKcalNote = 'Add your bodyweight in Profile to see kcal';
+
 /// The app's display name, as it appears on a card meant to be posted.
 const String kAppDisplayName = 'TurtleLift';
 
 class _Stat extends StatelessWidget {
-  const _Stat({required this.value, required this.label});
+  const _Stat({
+    required this.value,
+    required this.label,
+    this.valueColor = AppPalette.textPrimary,
+    super.key,
+  });
 
   final String value;
   final String label;
+  final Color valueColor;
 
   @override
   Widget build(BuildContext context) => Expanded(
@@ -386,10 +399,13 @@ class _Stat extends StatelessWidget {
           children: <Widget>[
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 22,
+              style: TextStyle(
+                fontSize: 24,
                 fontWeight: FontWeight.w600,
-                color: AppPalette.textPrimary,
+                color: valueColor,
+                fontFeatures: const <FontFeature>[
+                  FontFeature.tabularFigures(),
+                ],
               ),
             ),
             Text(
@@ -402,43 +418,27 @@ class _Stat extends StatelessWidget {
       );
 }
 
-/// Calories, or the prompt that stands in for them.
+/// Calories, with the way to read how they are estimated.
 ///
-/// **A prompt rather than a hidden slot or a wrong number.** A workout logged
-/// before the user ever weighed in cannot have an honest estimate, and adding a
-/// weight later does not back-fill it.
+/// Built only when there is an honest figure; the summary shows
+/// [kNoWeightKcalNote] under the row otherwise.
 class _CalorieStat extends StatelessWidget {
   const _CalorieStat({required this.calories});
 
-  final double? calories;
+  final double calories;
 
   @override
   Widget build(BuildContext context) {
-    if (calories == null) {
-      return Expanded(
-        child: Semantics(
-          button: true,
-          label: 'Add your weight to see calories',
-          excludeSemantics: true,
-          child: Text(
-            key: SessionSummaryScreen.addWeightKey,
-            'add weight\nto see kcal',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, color: AppPalette.textMuted),
-          ),
-        ),
-      );
-    }
-
     return Expanded(
       child: Column(
         children: <Widget>[
           Text(
-            '${calories!.round()}',
+            '${calories.round()}',
             style: const TextStyle(
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: FontWeight.w600,
               color: AppPalette.textPrimary,
+              fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
             ),
           ),
           Row(
@@ -447,7 +447,7 @@ class _CalorieStat extends StatelessWidget {
               const Text('kcal',
                   style: TextStyle(
                       fontSize: 12, color: AppPalette.textMuted)),
-              const SizedBox(width: 3),
+              const SizedBox(width: 4),
               Builder(
                 builder: (context) => Semantics(
                   button: true,
@@ -457,7 +457,7 @@ class _CalorieStat extends StatelessWidget {
                     key: SessionSummaryScreen.calorieInfoKey,
                     onTap: () => _explain(context),
                     child: const Icon(Icons.info_outline,
-                        size: 12, color: AppPalette.textMuted),
+                        size: 13, color: AppPalette.textMuted),
                   ),
                 ),
               ),
@@ -480,13 +480,13 @@ class _CalorieStat extends StatelessWidget {
         ),
         title: const Text(
           'How this is estimated',
-          style: TextStyle(fontSize: 16, color: AppPalette.textPrimary),
+          style: TextStyle(fontSize: 17, color: AppPalette.textPrimary),
         ),
         content: const Text(
           'Estimated from the sets you logged and your body weight, using '
           'standard exercise-science averages for resistance training. Actual '
           'calories burned vary by person and effort.',
-          style: TextStyle(fontSize: 13.5, color: AppPalette.textSecondary),
+          style: TextStyle(fontSize: 15, color: AppPalette.textSecondary),
         ),
         actions: <Widget>[
           TextButton(
@@ -531,7 +531,7 @@ class _LoggedExercise extends StatelessWidget {
       onTap: onEdit,
       onLongPress: onRemove,
       child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -541,8 +541,8 @@ class _LoggedExercise extends StatelessWidget {
                 child: Text(
                   name,
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
                     color: AppPalette.textPrimary,
                   ),
                 ),
@@ -553,21 +553,20 @@ class _LoggedExercise extends StatelessWidget {
                   // smaller number would otherwise read as a bug weeks later.
                   // The logging screen's banner is not on this page.
                   exercise.loadType?.name == 'assisted'
-                      ? '★ PB · lightest assist'
-                      : '★ PB',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppPalette.accentStrong,
-                  ),
+                      ? 'PB · lightest assist'
+                      : 'PB',
+                  style: kPbMarkStyle,
                 ),
             ],
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 4),
           Text(
             sets,
-            style:
-                const TextStyle(fontSize: 12, color: AppPalette.textSecondary),
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppPalette.textSecondary,
+              fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+            ),
           ),
         ],
       ),
@@ -600,7 +599,7 @@ class _SaveAsTemplateButton extends StatelessWidget {
             ),
             child: const Text(
               'Save as template',
-              style: TextStyle(fontSize: 14, color: AppPalette.textSecondary),
+              style: TextStyle(fontSize: 15, color: AppPalette.textSecondary),
             ),
           ),
         ),
@@ -626,7 +625,7 @@ class _DeleteButton extends StatelessWidget {
             alignment: Alignment.center,
             child: const Text(
               'Delete workout',
-              style: TextStyle(fontSize: 14, color: AppPalette.danger),
+              style: TextStyle(fontSize: 15, color: AppPalette.danger),
             ),
           ),
         ),

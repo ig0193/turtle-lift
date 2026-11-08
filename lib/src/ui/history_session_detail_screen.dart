@@ -6,6 +6,7 @@ import '../data/bodyweight_resolution.dart';
 import '../data/generated/muscle_taxonomy.dart';
 import '../data/history_preview_data.dart';
 import '../data/personal_details_store.dart';
+import '../data/set_format.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'app_screen.dart';
@@ -97,7 +98,7 @@ class HistorySessionDetailScreen extends ConsumerWidget {
             streak: streak,
             kcal: kcal,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           Semantics(
             header: true,
             child: Text(
@@ -117,7 +118,7 @@ class HistorySessionDetailScreen extends ConsumerWidget {
               // than just saying the session had one.
               recordScore: _recordScoreFor(sessions, session, exercise),
             ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 24),
           GhostButton(
             buttonKey: HistorySessionDetailScreen.editKey,
             label: 'Edit workout',
@@ -219,26 +220,12 @@ class _HeroCard extends ConsumerWidget {
                   ),
                 ),
               ),
+              // The app's one PB mark: the word in amber, no pill, no icon.
               if (figures.pbCount > 0)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppPalette.accentStrong.withValues(alpha: 0.17),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '${figures.pbCount} PB',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppPalette.accentLight,
-                    ),
-                  ),
-                ),
+                Text('${figures.pbCount} PB', style: kPbMarkStyle),
             ],
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 4),
           Text(
             _longDate(session.performedOn) +
                 (session.isQuickLog ? ' · quick log' : ''),
@@ -246,11 +233,11 @@ class _HeroCard extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 168,
+            height: 200,
             child: Row(
               children: <Widget>[
                 for (final view in views) ...<Widget>[
-                  if (view != views.first) const SizedBox(width: 10),
+                  if (view != views.first) const SizedBox(width: 12),
                   Expanded(
                     child: BodyDiagram(view: view, fill: fill.colorFor),
                   ),
@@ -260,7 +247,7 @@ class _HeroCard extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.only(top: 13),
+            padding: const EdgeInsets.only(top: 12),
             decoration: const BoxDecoration(
               border: Border(top: BorderSide(color: AppPalette.border)),
             ),
@@ -269,39 +256,27 @@ class _HeroCard extends ConsumerWidget {
                 _Figure(value: '${figures.setCount}', label: 'Sets'),
                 _Figure(value: '${figures.exerciseCount}', label: 'Exercises'),
                 _Figure(value: '$streak', label: 'Streak'),
-                // The calorie slot is a prompt rather than a number when no
-                // weight was in effect on this day. A figure derived from
-                // today's weight would be the retroactive rewrite the dated
-                // series exists to prevent.
-                Expanded(
-                  key: HistorySessionDetailScreen.calorieKey,
-                  child: kcal == null
-                      ? const Column(
-                          children: <Widget>[
-                            Text(
-                              '—',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: AppPalette.textMuted,
-                              ),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Add weight',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppPalette.textMuted,
-                              ),
-                            ),
-                          ],
-                        )
-                      : _Figure(value: '$kcal', label: 'kcal'),
-                ),
+                if (kcal != null)
+                  _Figure(
+                    key: HistorySessionDetailScreen.calorieKey,
+                    value: '$kcal',
+                    label: 'kcal',
+                  ),
               ],
             ),
           ),
+          // No weight was in effect on this day, so there is no figure -- and
+          // an instruction does not belong in a figure's slot. A figure derived
+          // from today's weight would be the retroactive rewrite the dated
+          // series exists to prevent.
+          if (kcal == null) ...<Widget>[
+            const SizedBox(height: 12),
+            const Text(
+              key: HistorySessionDetailScreen.calorieKey,
+              kNoWeightKcalNote,
+              style: TextStyle(fontSize: 12, color: AppPalette.textMuted),
+            ),
+          ],
         ],
       ),
     );
@@ -349,7 +324,7 @@ class _SessionMuscleFill {
 }
 
 class _Figure extends StatelessWidget {
-  const _Figure({required this.value, required this.label});
+  const _Figure({required this.value, required this.label, super.key});
 
   final String value;
   final String label;
@@ -362,9 +337,10 @@ class _Figure extends StatelessWidget {
           Text(
             value,
             style: const TextStyle(
-              fontSize: 15,
+              fontSize: 17,
               fontWeight: FontWeight.w600,
               color: AppPalette.textPrimary,
+              fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
             ),
           ),
           const SizedBox(height: 2),
@@ -398,7 +374,7 @@ class _ExerciseBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 11),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: AppPalette.border)),
       ),
@@ -411,70 +387,61 @@ class _ExerciseBlock extends StatelessWidget {
                 child: Text(
                   exercise.name,
                   style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
                     color: AppPalette.textPrimary,
                   ),
                 ),
               ),
               if (recordScore != null) ...<Widget>[
-                const SizedBox(width: 6),
-                const Icon(
-                  Icons.emoji_events_outlined,
-                  size: 14,
-                  color: AppPalette.accentLight,
-                ),
+                const SizedBox(width: 8),
+                const Text('PB', style: kPbMarkStyle),
               ],
             ],
           ),
-          const SizedBox(height: 7),
-          Wrap(
-            spacing: 5,
-            runSpacing: 5,
-            children: <Widget>[
-              for (final score in exercise.setScores)
-                _SetPill(score: score, isRecord: score == recordScore),
-            ],
-          ),
+          const SizedBox(height: 4),
+          _SetLine(scores: exercise.setScores, recordScore: recordScore),
         ],
       ),
     );
   }
 }
 
-/// One set. The record-setting one is the only thing in the log painted accent.
-class _SetPill extends StatelessWidget {
-  const _SetPill({required this.score, required this.isRecord});
+/// Every set as one muted line, `77.5kg · 77.5kg · 75kg`, with the
+/// record-setting set the only thing in the log painted amber.
+///
+/// **A line, not a pill per set.** The sets are a record to read, not controls;
+/// pills made them look tappable and made the log the loudest part of the
+/// screen.
+class _SetLine extends StatelessWidget {
+  const _SetLine({required this.scores, required this.recordScore});
 
-  final double score;
-  final bool isRecord;
+  final List<double> scores;
+  final double? recordScore;
+
+  static const _style = TextStyle(
+    fontSize: 13,
+    color: AppPalette.textSecondary,
+    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+  );
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isRecord
-            ? AppPalette.accentStrong.withValues(alpha: 0.17)
-            : AppPalette.mutedSurface,
-        border: Border.all(
-          color: isRecord
-              ? AppPalette.accentStrong.withValues(alpha: 0.42)
-              : AppPalette.border,
-        ),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        score == score.roundToDouble()
-            ? '${score.toStringAsFixed(0)} kg'
-            : '$score kg',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: isRecord ? FontWeight.w600 : FontWeight.w400,
-          color: isRecord ? AppPalette.accentLight : AppPalette.textSecondary,
-        ),
-      ),
-    );
+    final spans = <InlineSpan>[];
+    for (var i = 0; i < scores.length; i++) {
+      if (i > 0) spans.add(const TextSpan(text: ' · '));
+      final isRecord = scores[i] == recordScore;
+      spans.add(TextSpan(
+        text: '${formatWeight(scores[i])}kg',
+        style: isRecord
+            ? const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: AppPalette.accentStrong,
+              )
+            : null,
+      ));
+    }
+    return Text.rich(TextSpan(style: _style, children: spans));
   }
 }
 

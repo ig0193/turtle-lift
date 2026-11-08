@@ -278,8 +278,8 @@ void main() {
     // muscle. These assert the two halves a reader depends on: the muscle
     // lights up, and it says which muscle it is.
 
-    testWidgets('holding paints the light accent, releasing paints the full '
-        'one', (tester) async {
+    testWidgets('holding outlines the muscle in chalk, releasing paints the '
+        'full accent', (tester) async {
       // The two states answer different questions: holding asks which muscle
       // this is, releasing says that it is the chosen one.
       Set<String>? opened;
@@ -313,10 +313,13 @@ void main() {
 
       final gesture = await tester.startGesture(topLeft + point);
       await tester.pump();
-      expect(paintedColours(), contains(AppPalette.accentLight.toARGB32()),
-          reason: 'holding is the hover: the light accent');
+      expect(paintedColours(), contains(AppPalette.textPrimary.toARGB32()),
+          reason: 'holding is the hover: a chalk outline');
       expect(paintedColours(),
           isNot(contains(AppPalette.accentStrong.toARGB32())));
+      expect(paintedColours(),
+          isNot(contains(AppPalette.accentLight.toARGB32())),
+          reason: '§12: the secondary-muscle colour is never a press state');
 
       await gesture.up();
       await tester.pump();
@@ -468,7 +471,7 @@ void main() {
               'sharing one fill colour merge into one shape');
       for (final stroke in separators) {
         expect(stroke.style, PaintingStyle.stroke);
-        expect(stroke.color.toARGB32(), AppPalette.border.toARGB32());
+        expect(stroke.color.toARGB32(), kBodySegmentSeparatorColor.toARGB32());
         expect(stroke.strokeWidth, kBodySegmentSeparatorWidth);
       }
 
@@ -510,7 +513,7 @@ void main() {
             <int>{
               AppPalette.surface.toARGB32(),
               AppPalette.mutedSurface.toARGB32(),
-              AppPalette.border.toARGB32(),
+              kBodySegmentSeparatorColor.toARGB32(),
             },
           );
         }

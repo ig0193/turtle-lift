@@ -16,9 +16,12 @@ part 'app_database.g.dart';
 /// units, sex and bodyweight). If you find yourself adding a column that could
 /// be recomputed from session rows, that is the rule catching you.
 ///
-/// Schema version 5 (step 5 gives a custom template its exercise list, see
-/// `docs/adr/0006-workout-tab-is-exercise-first.md`; step 4 is the training-day
-/// plan), and the app's **first** migration — so the shape here is the one every
+/// Schema version 7 (step 7 is the reminder preferences, see
+/// `docs/adr/0005-schedule-and-opt-in-notifications.md` and ADR 0007; step 6
+/// is the Diet plan, meal ticks and protein target,
+/// see `docs/adr/0007-diet-in-profile.md`; step 5 gives a custom template its
+/// exercise list, see `docs/adr/0006-workout-tab-is-exercise-first.md`; step 4
+/// is the training-day plan), and the app's **first** migration — so the shape here is the one every
 /// later migration will be copied from.
 ///
 /// **Version 2 is the session tables and it has now landed.** Step 2 creates
@@ -46,6 +49,10 @@ part 'app_database.g.dart';
     Sessions,
     SessionExercises,
     SetEntries,
+    DietPlanVersions,
+    DietPlanItems,
+    MealTicks,
+    ReminderPrefs,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -63,7 +70,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 7;
 
   /// **The first migration in the app's history.** There was no
   /// [MigrationStrategy] before this one, so the shape here is the precedent:
@@ -141,6 +148,24 @@ class AppDatabase extends _$AppDatabase {
               );
             }
           }
+          if (from < 6) {
+            // The Diet plan. Pure DDL, so the one-transaction, idempotent rule
+            // above holds.
+            //
+            // **`addColumn` is safe for every `from` here.** Unlike step 5,
+            // no earlier step creates `settings`: it exists from version 1,
+            // so a user upgrading from any older version is still missing
+            // the column at this point, and nobody gets a duplicate.
+            await m.createTable(dietPlanVersions);
+            await m.createTable(dietPlanItems);
+            await m.createTable(mealTicks);
+            await m.addColumn(settings, settings.proteinTargetG);
+          }
+          if (from < 7) {
+            // Reminder preferences, one row. Pure table creation, so the
+            // one-transaction, idempotent rule above holds.
+            await m.createTable(reminderPrefs);
+          }
         },
       );
 }
@@ -179,6 +204,24 @@ class Settings extends Table {
   /// Stores the enum's name, not its index: reordering the enum must not
   /// repaint a user's diagrams.
   TextColumn get bodyGender => text().nullable()();
+
+  /// The user's daily protein target in grams, 1 to 400, or null when they
+  /// have never set one (`docs/adr/0007-diet-in-profile.md`).
+  ///
+  /// **One value, not a dated series** like [BodyweightEntries]: no screen
+  /// shows a past week's target, so a series would buy nothing visible.
+  /// Nullable for the reason [bodyGender] is.
+  ///
+  /// **The CHECK is on the column, not in a table-level constraint.** This
+  /// column reaches an existing install through `ALTER TABLE ADD COLUMN`,
+  /// which carries a column's own constraints and never a table's, so a
+  /// table-level CHECK would guard fresh installs only. A custom constraint
+  /// rather than drift's `check()`, because `check()` naming its own column is
+  /// the recursive getter [SetEntries] explains.
+  IntColumn get proteinTargetG => integer().nullable().customConstraint(
+        'NULL CHECK (protein_target_g IS NULL '
+        'OR protein_target_g BETWEEN 1 AND 400)',
+      )();
 
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};
@@ -463,3 +506,179 @@ class SetEntries extends Table {
         'CHECK (duration_sec IS NULL OR duration_sec >= 0)',
       ];
 }
+
+/// The four meal slots, by the name stored in [DietPlanItems.slot] and
+/// [MealTicks.slot]. Inlined into both tables' CHECKs, so a fifth slot is a
+/// schema step, not a quiet new string.
+const String _mealSlotCheck =
+    "CHECK (slot IN ('breakfast', 'lunch', 'snack', 'dinner'))";
+
+/// One whole-week version of the Diet plan, keyed by the Monday it takes
+/// effect from (`docs/adr/0007-diet-in-profile.md`).
+///
+/// **The same dated-series idea as [TrainingPlanEntries].** An edit in week W
+/// copies the latest earlier version into a new one at W's Monday before it
+/// applies, so a past week keeps reading the plan that was in force then. The
+/// store, not this table, keeps the Monday rule and never writes an older
+/// version: a CHECK cannot see "this week".
+///
+/// A version with no items is a real answer, "nothing planned from here", in
+/// the way a zero weekday mask is.
+@DataClassName('DietPlanVersionRow')
+class DietPlanVersions extends Table {
+  /// The Monday this version takes effect from, as `YYYY-MM-DD`.
+  TextColumn get effectiveFrom => text().map(const LocalDateConverter())();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{effectiveFrom};
+}
+
+/// One food in one meal slot of one weekday, within a [DietPlanVersions] week.
+///
+/// **No protein figure is stored.** Every total is derived on read from
+/// [foodId] and [servingsHalves] against the bundled food list, so a corrected
+/// food value flows into the plan rather than being frozen into old rows.
+@DataClassName('DietPlanItemRow')
+class DietPlanItems extends Table {
+  TextColumn get id => text()();
+
+  /// The version this item belongs to. Deleting the version takes its items.
+  TextColumn get effectiveFrom => text()
+      .map(const LocalDateConverter())
+      .references(DietPlanVersions, #effectiveFrom,
+          onDelete: KeyAction.cascade)();
+
+  /// 0 is Monday ... 6 is Sunday, matching [TrainingPlanEntries]' bit order.
+  IntColumn get weekday => integer()();
+
+  /// `breakfast`, `lunch`, `snack` or `dinner`. Stored by name, never index.
+  TextColumn get slot => text()();
+
+  /// The bundled food's id. **No foreign key**: the food list is an asset,
+  /// not a table, which is the `Sessions.templateId` precedent.
+  TextColumn get foodId => text()();
+
+  /// Servings as a count of halves, 1 to 8, so 0.5 to 4 servings with no
+  /// floating-point drift.
+  IntColumn get servingsHalves => integer()();
+
+  /// Order within the slot, as the user added the foods.
+  IntColumn get position => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+
+  /// The UNIQUE makes a repeat add of the same food to the same slot a
+  /// replace rather than a second row that double counts every total.
+  @override
+  List<String> get customConstraints => <String>[
+        'UNIQUE (effective_from, weekday, slot, food_id)',
+        'CHECK (weekday BETWEEN 0 AND 6)',
+        _mealSlotCheck,
+        'CHECK (servings_halves BETWEEN 1 AND 8)',
+      ];
+}
+
+/// A meal the user ticked as eaten on a calendar day.
+///
+/// **Presence means eaten; an untick is a hard delete.** There is no "false"
+/// row. Which dates may be ticked (this week, never the future) is the store's
+/// rule, because a CHECK cannot see "today".
+@DataClassName('MealTickRow')
+class MealTicks extends Table {
+  /// The local calendar day, as `YYYY-MM-DD`. Text for the reason
+  /// [BodyweightEntries.date] is.
+  TextColumn get date => text().map(const LocalDateConverter())();
+
+  /// `breakfast`, `lunch`, `snack` or `dinner`.
+  TextColumn get slot => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{date, slot};
+
+  @override
+  List<String> get customConstraints => <String>[_mealSlotCheck];
+}
+
+/// The user's reminder preferences, as exactly one row
+/// (`docs/adr/0005-schedule-and-opt-in-notifications.md`, ADR 0007).
+///
+/// **One row by construction, as [Settings] is:** [id] is the primary key and
+/// every write pins it to [kReminderPrefsRowId]. A separate table rather than
+/// more columns on [Settings], so reminder state is one unit to wipe and test,
+/// and the settings row whose legacy columns cannot be dropped stops growing.
+///
+/// **Every switch defaults to off.** Reminders are opt-in (ADR 0005 §3), and a
+/// missing row reads as these defaults, so a fresh install and an upgraded one
+/// agree without a seed row. Times are minutes after local midnight, the
+/// defaults from the plan's A7. What a reminder says is never stored: its text
+/// is built from the plan on every reschedule.
+@DataClassName('ReminderPrefsRow')
+class ReminderPrefs extends Table {
+  IntColumn get id => integer()();
+
+  /// The Schedule tab's training-day reminder (ADR 0005).
+  BoolColumn get scheduleOn => boolean().withDefault(const Constant(false))();
+
+  IntColumn get scheduleMinute => integer()
+      .withDefault(const Constant(kDefaultScheduleReminderMinute))();
+
+  /// The Diet master switch. Off silences every diet reminder below while
+  /// keeping each one's own switch and time for when it comes back on.
+  BoolColumn get dietOn => boolean().withDefault(const Constant(false))();
+
+  /// The morning summary of the day's plan.
+  BoolColumn get summaryOn => boolean().withDefault(const Constant(false))();
+
+  IntColumn get summaryMinute => integer()
+      .withDefault(const Constant(7 * 60 + 30))();
+
+  BoolColumn get breakfastOn => boolean().withDefault(const Constant(false))();
+
+  IntColumn get breakfastMinute => integer()
+      .withDefault(const Constant(8 * 60))();
+
+  BoolColumn get lunchOn => boolean().withDefault(const Constant(false))();
+
+  IntColumn get lunchMinute => integer()
+      .withDefault(const Constant(13 * 60))();
+
+  BoolColumn get snackOn => boolean().withDefault(const Constant(false))();
+
+  IntColumn get snackMinute => integer()
+      .withDefault(const Constant(17 * 60))();
+
+  BoolColumn get dinnerOn => boolean().withDefault(const Constant(false))();
+
+  IntColumn get dinnerMinute => integer()
+      .withDefault(const Constant(20 * 60 + 30))();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+
+  /// Every time is a minute of the day, 0 (00:00) to 1439 (23:59).
+  ///
+  /// **Table-level, unlike [Settings.proteinTargetG]'s column CHECK.** That
+  /// column arrives by `ALTER TABLE`, which drops table constraints; this whole
+  /// table arrives by `CREATE TABLE` in step 7, so a table-level CHECK reaches
+  /// fresh and upgraded installs alike.
+  @override
+  List<String> get customConstraints => <String>[
+        for (final column in <String>[
+          'schedule_minute',
+          'summary_minute',
+          'breakfast_minute',
+          'lunch_minute',
+          'snack_minute',
+          'dinner_minute',
+        ])
+          'CHECK ($column BETWEEN 0 AND 1439)',
+      ];
+}
+
+/// The id of the one reminder-preferences row.
+const int kReminderPrefsRowId = 1;
+
+/// The Schedule reminder's default time, 18:30: the time the Schedule pane's
+/// Remind me row has shown since it shipped inert.
+const int kDefaultScheduleReminderMinute = 18 * 60 + 30;

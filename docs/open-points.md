@@ -5,14 +5,19 @@ committed yet.
 
 ## Before shipping
 
-### 1. The "Remind me" switch does nothing
-- **Where:** Profile → Schedule (`lib/src/ui/schedule_pane.dart`).
-- **Problem:** the switch flips but doesn't save, and no notification is ever
-  scheduled.
-- **Why it's still open:** notifications are deliberately last in the build
-  order (`CLAUDE.md`, `docs/adr/0005-schedule-and-opt-in-notifications.md`).
-- **Decide:** build the opt-in reminders, or hide the switch until they exist.
-  It shouldn't ship as is.
+### 1. ~~The "Remind me" switch does nothing~~ Resolved
+- **Resolved by U16** of `docs/plans/2026-11-08-1702-feat-diet-weekly-protein-plan.md`.
+  The switch and time are stored (`ReminderPrefs`, schema v7). Turning it on
+  shows the explain-first sheet, then the system prompt. Once allowed, one
+  weekly notification is scheduled per training day at the chosen time
+  (`lib/src/data/training_reminders.dart`). They are rescheduled after every
+  plan or time change, at boot and on resume. If permission is refused, the
+  switch stays off with a line pointing to Settings. The row is hidden where
+  notifications are unsupported. The shared controls are in
+  `lib/src/ui/reminder_controls.dart`.
+- **Still to check on a device:** a delivered training reminder, and that
+  tapping it opens Profile → Schedule (the simulator smoke in the plan's
+  Verification Contract).
 
 ### 2. Export hasn't been tried end to end
 - **Where:** Profile → Export everything (`lib/src/ui/data_screens.dart`).
@@ -31,17 +36,16 @@ committed yet.
 
 ## Decisions for you
 
-### 4. The ONE DAY theme conflicts with tasteskill.dev
-- tasteskill.dev bans gradient buttons and violet tones.
-- The ice-to-lilac liquid gradient (primary buttons) and lilac `#C9B6FF`
-  (secondary muscle) stay because you chose ONE DAY option A.
-- Revisit only if you want stricter alignment with the web skill.
+### 4. Palette replaced (resolved)
+- The titanium palette and its ice-to-lilac gradient were replaced by Chalk &
+  Shell (`docs/research/unslop-audit.md`): graphite neutrals, a chalk primary
+  button, shell amber for worked / active / PB, steel for the secondary muscle,
+  no gradients. Recorded in `00` §12, `01`, `CLAUDE.md` and the turtle-taste
+  skill.
 
-### 5. Muted grey is lighter than ONE DAY
-- **Change:** `textMuted` is `#838A94` instead of ONE DAY's `#5C616C`. The old
-  value measured 2.9:1 contrast; WCAG AA needs 4.5:1.
-- **Where it's recorded:** `00` §12, `01`, and `CLAUDE.md`.
-- **Still to do:** `docs/one-day-theme-reference.md` still lists the old value.
+### 5. Muted grey contrast (resolved)
+- `textMuted` is `#8B8B90`: 4.68:1 on the muted surface, 5.2:1 or better on the
+  others, above WCAG AA's 4.5:1.
 
 ### 6. Sentence case departs from the prototype
 - `prototypes/screens.html` uses tracked capitals for labels and chips.

@@ -92,7 +92,8 @@ class HistoryRoot extends ConsumerWidget {
         GhostButton(
           buttonKey: seeAllKey,
           label: 'See all ${sessions.length} '
-              '${sessions.length == 1 ? 'session' : 'sessions'} ›',
+              '${sessions.length == 1 ? 'session' : 'sessions'}',
+          trailingIcon: Icons.chevron_right_rounded,
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const AllSessionsScreen()),
           ),

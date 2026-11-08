@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:turtle_lift/main.dart' as app;
+import 'package:turtle_lift/src/data/meal_slot.dart';
 import 'package:turtle_lift/src/ui/destructive_confirmation.dart';
+import 'package:turtle_lift/src/ui/diet_slot_card.dart';
 import 'package:turtle_lift/src/ui/exercise_picker_sheet.dart';
+import 'package:turtle_lift/src/ui/food_picker_screen.dart';
+import 'package:turtle_lift/src/ui/food_serving_sheet.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
 import 'package:turtle_lift/src/ui/l0_shell.dart';
+import 'package:turtle_lift/src/ui/profile_root.dart';
 import 'package:turtle_lift/src/ui/session_actions.dart';
 import 'package:turtle_lift/src/ui/session_overview_body.dart';
 import 'package:turtle_lift/src/ui/session_summary_screen.dart';
@@ -221,6 +226,78 @@ void main() {
     await settle(tester);
     expect(find.text(WorkoutLandingBody.customGroupLabel), findsOneWidget);
     expect(find.text('Curl day'), findsWidgets);
+  });
+
+  testWidgets('an open workout survives a Profile, Diet round trip that '
+      'adds a food (U18)', (tester) async {
+    await bootToLanding(tester);
+
+    // An empty workout with one completed set.
+    await tester.tap(find.byKey(WorkoutLandingBody.startWorkoutKey));
+    await settle(tester);
+    await tester.tap(find.byKey(SessionOverviewBody.startLoggingKey));
+    await settle(tester);
+    await tester.enterText(pickerField(), 'barbell curl');
+    await settle(tester);
+    await tester.tap(find.byKey(ExercisePickerSheet.rowKey('barbell-curl')));
+    await settle(tester);
+    if (find.text('Start logging').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Start logging'));
+      await settle(tester);
+    }
+    await tester.enterText(find.byType(TextField).first, '30');
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).at(1), '10');
+    await settle(tester);
+    await tester.tap(find.byKey(SetRow.checkKey(0)));
+    await settle(tester);
+    await tester.tap(find.byKey(SetLoggingScreen.markDoneKey));
+    await settle(tester);
+    expect(find.text('30kg × 10'), findsOneWidget);
+
+    // Profile, Diet: add soya bean to today's lunch through the picker and
+    // the serving sheet. No seeded plan uses it, so the row is new.
+    await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
+    await settle(tester);
+    await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.diet)));
+    await settle(tester);
+    final addLunch = find.byKey(DietSlotCard.addFoodKey(MealSlot.lunch));
+    await tester.scrollUntilVisible(addLunch, 300,
+        scrollable: find.byType(Scrollable).first);
+    await settle(tester);
+    await tester.tap(addLunch);
+    await settle(tester);
+    await tester.enterText(find.byKey(FoodPickerScreen.searchKey), 'soya');
+    await settle(tester);
+    await tester.tap(find.byKey(FoodPickerScreen.rowKey('soya-bean')));
+    await settle(tester);
+    await tester.tap(find.byKey(FoodServingSheet.commitKey));
+    await settle(tester);
+    final row = find.byKey(DietSlotCard.rowKey(MealSlot.lunch, 'soya-bean'));
+    expect(row, findsOneWidget, reason: 'the food landed in the slot');
+
+    // Back to Workout: the session and its set are untouched.
+    await tester.tap(find.byKey(GlassTabBar.itemKey(0)));
+    await settle(tester);
+    expect(find.byType(SessionOverviewBody), findsOneWidget,
+        reason: 'the open workout still owns the Workout tab');
+    expect(find.text('Barbell curl'), findsOneWidget);
+    expect(find.text('30kg × 10'), findsOneWidget,
+        reason: 'the completed set survived the trip to Diet');
+
+    // Leave no data behind: remove the food, discard the workout.
+    await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
+    await settle(tester);
+    await tester.scrollUntilVisible(row, 300,
+        scrollable: find.byType(Scrollable).first);
+    await settle(tester);
+    await tester.tap(row);
+    await settle(tester);
+    await tester.tap(find.byKey(FoodServingSheet.removeKey));
+    await settle(tester);
+    await tester.tap(find.byKey(GlassTabBar.itemKey(0)));
+    await settle(tester);
+    await endOpenWorkout(tester);
   });
 
   testWidgets('an open workout survives a restart', (tester) async {

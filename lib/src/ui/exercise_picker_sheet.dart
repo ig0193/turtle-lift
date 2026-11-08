@@ -122,14 +122,14 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Semantics(
                 header: true,
                 child: Text(
                   widget.title,
                   key: ExercisePickerSheet.titleKey,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.w600,
                     letterSpacing: -0.2,
                     color: AppPalette.textPrimary,
@@ -138,7 +138,7 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 10),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
               child: MuscleSearchField.editable(
                 controller: _controller,
                 autofocus: false,
@@ -149,7 +149,7 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
               height: 36,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: <Widget>[
                   _GroupChip(
                     key: ExercisePickerSheet.chipKey('all'),
@@ -274,7 +274,7 @@ class _GroupChip extends StatelessWidget {
             onTap: onTap,
             child: Container(
               alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 13),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: selected ? AppPalette.mutedSurface : AppPalette.surface,
                 borderRadius: BorderRadius.circular(999),
@@ -285,7 +285,7 @@ class _GroupChip extends StatelessWidget {
               child: Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: selected
                       ? AppPalette.accentStrong

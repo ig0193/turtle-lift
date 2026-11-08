@@ -317,9 +317,11 @@ void main() {
       final read = <Object>{};
       await tester.pumpWidget(host(observer: _RecordingObserver(read)));
 
+      // `profileSegmentProvider` is which pane is showing (KTD2): in-memory
+      // UI state that holds no content, so it is not a second source of truth.
       expect(
         read,
-        <Object>{customTemplatesProvider},
+        <Object>{customTemplatesProvider, profileSegmentProvider},
         reason: 'the screen reads exactly one provider for content, and it '
             'holds authored data. A new entry here is a new source of truth '
             'on a screen that is meant to have one -- check it is not '

@@ -232,7 +232,7 @@ void main() {
 
       expect(find.text(PersonalDetailsScreen.noWeightLabel), findsOneWidget);
       expect(
-        find.text('0 kg'),
+        find.text('0kg'),
         findsNothing,
         reason: 'docs/01 chose a prompt over a wrong number everywhere the '
             'calorie stat is gated',

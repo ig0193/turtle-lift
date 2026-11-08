@@ -187,7 +187,7 @@ class _GroupLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 18, 2, 6),
+      padding: const EdgeInsets.fromLTRB(2, 16, 2, 6),
       child: Semantics(
         header: true,
         child: Text(label, style: kLandingSectionLabelStyle),
@@ -286,9 +286,8 @@ Key profileRowKey(String id) => ValueKey<String>('profile-row-$id');
 /// once, at the top of the screen you reach from the avatar, and `docs/04`'s
 /// mockup sets it at 14. The pair below moves with it.
 const TextStyle kProfileRowTitleStyle = TextStyle(
-  fontSize: 14,
+  fontSize: 15,
   fontWeight: FontWeight.w600,
-  letterSpacing: -0.1,
   color: AppPalette.textPrimary,
 );
 
@@ -296,9 +295,8 @@ const TextStyle kProfileRowTitleStyle = TextStyle(
 /// rather than a `copyWith` at the call site so the one place the app spends
 /// [AppPalette.danger] is greppable.
 const TextStyle kProfileRowDestructiveTitleStyle = TextStyle(
-  fontSize: 14,
+  fontSize: 15,
   fontWeight: FontWeight.w600,
-  letterSpacing: -0.1,
   color: AppPalette.danger,
 );
 

@@ -114,7 +114,7 @@ class _HistoryCalendarCardState extends ConsumerState<HistoryCalendarCard> {
         _expandedDay == null ? null : byDay[_expandedDay];
 
     return Container(
-      margin: const EdgeInsets.only(top: 6, bottom: 18),
+      margin: const EdgeInsets.only(top: 6, bottom: 16),
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
       decoration: BoxDecoration(
         color: AppPalette.surface,
@@ -140,8 +140,8 @@ class _HistoryCalendarCardState extends ConsumerState<HistoryCalendarCard> {
                 child: Text(
                   monthYearLabel(month),
                   style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                     color: AppPalette.textPrimary,
                   ),
                 ),
@@ -380,11 +380,11 @@ class _DayCell extends StatelessWidget {
             '$day',
             style: TextStyle(
               fontSize: 12,
-              fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
+              fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
               color: numberColor,
             ),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 4),
           SizedBox(
             height: 4,
             child: hasData
@@ -466,7 +466,7 @@ class _DayDetail extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 color: AppPalette.textMuted,
               ),
             ),

@@ -285,13 +285,13 @@ class _SearchFallback extends StatelessWidget {
           header: true,
           child: Text(kSearchMusclesHeading, style: kLandingSectionLabelStyle),
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 8),
         ...subGroupRows(
           index: index,
           onSelected: (subGroupId) =>
               pushMuscleExerciseList(context, subGroupId),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 24),
         Semantics(
           header: true,
           child: Text(
@@ -299,7 +299,7 @@ class _SearchFallback extends StatelessWidget {
             style: kLandingSectionLabelStyle,
           ),
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 8),
         for (final value in index.equipmentValues)
           SearchResultRow(
             key: searchResultKey(SearchResultKind.equipment, value),
@@ -368,7 +368,7 @@ class SearchResultRow extends StatelessWidget {
               ),
             ),
             if (showKind) ...<Widget>[
-              const SizedBox(width: 7),
+              const SizedBox(width: 8),
               // The prototype's `.kind` chip, which is deliberately the same
               // muted pill the equipment chip on an exercise row is: both are
               // a fact about the row rather than a state of it.

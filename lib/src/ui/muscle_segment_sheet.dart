@@ -113,7 +113,7 @@ class MuscleSegmentSheet extends ConsumerWidget {
       // taking the top one as well would pad a gap that is off-screen.
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -125,7 +125,7 @@ class MuscleSegmentSheet extends ConsumerWidget {
                 style: kLandingSectionLabelStyle,
               ),
             ),
-            const SizedBox(height: 9),
+            const SizedBox(height: 8),
             for (final id in subGroupIds)
               // The same row as the landing's list, deliberately: the user is
               // choosing between the same two things they could have chosen

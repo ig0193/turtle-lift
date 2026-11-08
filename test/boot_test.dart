@@ -5,11 +5,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/main.dart' as app;
 import 'package:turtle_lift/src/data/app_database.dart';
+import 'package:turtle_lift/src/data/data_reset.dart';
+import 'package:turtle_lift/src/data/diet_plan.dart';
+import 'package:turtle_lift/src/data/diet_plan_store.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
+import 'package:turtle_lift/src/data/food_index.dart';
+import 'package:turtle_lift/src/data/local_date.dart';
+import 'package:turtle_lift/src/data/meal_slot.dart';
+import 'package:turtle_lift/src/data/meal_ticks.dart';
+import 'package:turtle_lift/src/data/reminder_prefs.dart';
+import 'package:turtle_lift/src/data/reminder_scheduler.dart';
+import 'package:turtle_lift/src/data/settings_store.dart';
 import 'package:turtle_lift/src/theme/app_palette.dart';
+import 'package:turtle_lift/src/ui/diet_pane.dart';
+import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
+import 'package:turtle_lift/src/ui/history_root.dart';
 import 'package:turtle_lift/src/ui/l0_shell.dart';
 import 'package:turtle_lift/src/ui/muscles_root.dart';
+import 'package:turtle_lift/src/ui/profile_root.dart';
+import 'package:turtle_lift/src/ui/tab_index.dart';
+import 'package:turtle_lift/src/ui/workout_root.dart';
+
+import 'support/fake_reminder_scheduler.dart';
 
 /// What the app opens on. Cheap to break and expensive to notice: `main.dart`
 /// is edited rarely and by hand, and a wrong `home:` still compiles, still
@@ -35,6 +53,19 @@ void main() {
   /// deliberately does not build an index of its own — `main()` building the
   /// right one is the thing being asserted.
   late ExerciseIndex index;
+
+  // `main()` starts reminders through a seam, because the notification plugin
+  // and `flutter_timezone` have no platform channel here. Every test that runs
+  // `main()` gets a launch with no notification unless it says otherwise.
+  var prepareCalls = 0;
+  setUp(() {
+    prepareCalls = 0;
+    app.prepareReminders = () async {
+      prepareCalls++;
+      return null;
+    };
+  });
+  tearDown(() => app.prepareReminders = pluginReminderScheduler.initialize);
 
   setUpAll(() async {
     final container = ProviderContainer();
@@ -122,5 +153,216 @@ void main() {
           'overrides with -- an empty one renders the whole tab as zeroes, '
           'silently',
     );
+
+    // The food list joins the same boot record (KTD11). Like the exercise
+    // index, the provider throws without an override; unlike it, the real
+    // asset must have loaded into an available index, not the fallback.
+    final foods =
+        ProviderScope.containerOf(shellContext).read(foodIndexProvider);
+    expect(foods.isAvailable, isTrue,
+        reason: 'main() must load the shipped food list, not fall back');
+    expect(foods.all, isNotEmpty);
+  });
+
+  testWidgets('a broken food list still boots, Diet is unavailable and every '
+      'tab renders (KTD11, R26)', (tester) async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    app.openAppDatabase = () => database;
+    app.readFoodListAsset = () async => '[{"id": "curd",';
+    final reported = <FlutterErrorDetails>[];
+    final previousOnError = FlutterError.onError;
+    FlutterError.onError = reported.add;
+    addTearDown(() async {
+      FlutterError.onError = previousOnError;
+      app.openAppDatabase = AppDatabase.new;
+      app.readFoodListAsset = readShippedFoodList;
+      await database.close();
+    });
+
+    await tester.runAsync(app.main);
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull,
+        reason: 'a bad food asset must not fail boot');
+    expect(reported, hasLength(1),
+        reason: 'the load failure is reported, not swallowed');
+    expect(reported.single.exception, isA<FormatException>());
+
+    final shellContext = tester.element(find.byType(L0Shell));
+    final container = ProviderScope.containerOf(shellContext);
+    expect(container.read(foodIndexProvider).isAvailable, isFalse);
+    expect(container.read(exerciseIndexProvider).all, hasLength(260),
+        reason: 'the exercise library is unaffected by the food list');
+
+    // Every tab still renders: walk the bar and look for each root on stage.
+    final roots = <Type>[WorkoutRoot, MusclesRoot, HistoryRoot, ProfileRoot];
+    for (var tab = 0; tab < roots.length; tab++) {
+      await tester.tap(find.byKey(GlassTabBar.itemKey(tab)));
+      await tester.pumpAndSettle();
+      expect(find.byType(roots[tab]), findsOneWidget,
+          reason: 'tab $tab must render with the food list unavailable');
+    }
+    expect(find.byType(ErrorWidget), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('main() seeds the Diet plan, ticks and target from the '
+      'database, and refreshes today on resume', (tester) async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    app.openAppDatabase = () => database;
+    addTearDown(() async {
+      app.openAppDatabase = AppDatabase.new;
+      await database.close();
+    });
+    final today = LocalDate.today();
+    await tester.runAsync(() async {
+      await DietPlanStore(database).addFood(
+        weekdays: <int>{today.weekday - 1},
+        slot: MealSlot.lunch,
+        foodId: 'any-food',
+        halves: 2,
+      );
+      await MealTickStore(database).toggle(today, MealSlot.lunch);
+      await SettingsStore(database).writeProteinTarget(140);
+    });
+
+    await tester.runAsync(app.main);
+    await tester.pumpAndSettle();
+
+    final container =
+        ProviderScope.containerOf(tester.element(find.byType(L0Shell)));
+    expect(container.read(dietPlanLogProvider).single.items.single.foodId,
+        'any-food');
+    expect(container.read(mealTicksProvider),
+        <MealTick>{MealTick(date: today, slot: MealSlot.lunch)});
+    expect(container.read(proteinTargetProvider), 140);
+    expect(find.byType(app.RefreshTodayOnResume), findsOneWidget,
+        reason: 'the app must re-read today when it comes back (KTD13)');
+  });
+
+  testWidgets('a debug main() over an empty database seeds a sample Diet '
+      '(U18)', (tester) async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    app.openAppDatabase = () => database;
+    addTearDown(() async {
+      app.openAppDatabase = AppDatabase.new;
+      await database.close();
+    });
+
+    await tester.runAsync(app.main);
+    await tester.pumpAndSettle();
+
+    final container =
+        ProviderScope.containerOf(tester.element(find.byType(L0Shell)));
+    expect(container.read(proteinTargetProvider), isNotNull,
+        reason: 'tests run in debug mode, where main() seeds a sample diet');
+    expect(container.read(dietPlanLogProvider).single.items, isNotEmpty);
+    expect(container.read(mealTicksProvider), hasLength(1));
+  });
+
+  group('reminders at boot (KTD17)', () {
+    ProviderContainer shellContainer(WidgetTester tester) =>
+        ProviderScope.containerOf(tester.element(find.byType(L0Shell)));
+
+    testWidgets('a cold-start diet/today launch boots into Profile with Diet '
+        'selected (AE6)', (tester) async {
+      final database = AppDatabase.forTesting(NativeDatabase.memory());
+      app.openAppDatabase = () => database;
+      app.prepareReminders = () async => ReminderTarget.dietToday;
+      addTearDown(() async {
+        app.openAppDatabase = AppDatabase.new;
+        await database.close();
+      });
+
+      await tester.runAsync(app.main);
+      await tester.pump();
+
+      final container = shellContainer(tester);
+      expect(container.read(tabIndexProvider), 3);
+      expect(container.read(profileSegmentProvider), ProfileSegment.diet);
+      expect(find.byType(DietPane), findsOneWidget,
+          reason: 'the first frame after boot is Profile, Diet');
+    });
+
+    testWidgets('after a cold-start diet launch, Delete all data and the '
+        'reboot land on Personal, not Diet (AE8)', (tester) async {
+      final database = AppDatabase.forTesting(NativeDatabase.memory());
+      app.openAppDatabase = () => database;
+      app.prepareReminders = () async {
+        prepareCalls++;
+        return ReminderTarget.dietToday;
+      };
+      addTearDown(() async {
+        app.openAppDatabase = AppDatabase.new;
+        await database.close();
+      });
+
+      await tester.runAsync(app.main);
+      await tester.pumpAndSettle();
+      expect(shellContainer(tester).read(profileSegmentProvider),
+          ProfileSegment.diet);
+
+      final restart = shellContainer(tester).read(appRestartProvider);
+      final reminders = FakeReminderScheduler();
+      await tester.runAsync(() async {
+        await wipeAllData(database, reminders: reminders);
+        await restart();
+      });
+      await tester.pumpAndSettle();
+
+      final rebooted = shellContainer(tester);
+      expect(rebooted.read(profileSegmentProvider), ProfileSegment.personal,
+          reason: 'the launch target belongs to the first boot only; the '
+              'plugin reports it for the whole process');
+      expect(rebooted.read(tabIndexProvider), 0);
+      expect(rebooted.read(dietPlanLogProvider), isEmpty,
+          reason: 'the debug sample diet is never re-seeded after a wipe');
+      expect(rebooted.read(proteinTargetProvider), isNull);
+      expect(prepareCalls, 1,
+          reason: 'reminders start once per process, never on the reboot');
+      expect(reminders.cancelAllCount, 1);
+    });
+
+    testWidgets('main() seeds the reminder preferences from the database',
+        (tester) async {
+      final database = AppDatabase.forTesting(NativeDatabase.memory());
+      app.openAppDatabase = () => database;
+      addTearDown(() async {
+        app.openAppDatabase = AppDatabase.new;
+        await database.close();
+      });
+      final stored = ReminderPreferences.defaults
+          .copyWith(dietOn: true, summaryOn: true, summaryMinute: 6 * 60);
+      await tester.runAsync(() => ReminderPrefsStore(database).write(stored));
+
+      await tester.runAsync(app.main);
+      await tester.pumpAndSettle();
+
+      expect(shellContainer(tester).read(reminderPrefsProvider), stored);
+      expect(shellContainer(tester).read(tabIndexProvider), 0,
+          reason: 'with no launch target the app opens on Workout');
+    });
+
+    testWidgets('reminders that fail to start are reported and the app still '
+        'boots', (tester) async {
+      final database = AppDatabase.forTesting(NativeDatabase.memory());
+      app.openAppDatabase = () => database;
+      app.prepareReminders = () async => throw StateError('no plugin');
+      final reported = <FlutterErrorDetails>[];
+      final previousOnError = FlutterError.onError;
+      FlutterError.onError = reported.add;
+      addTearDown(() async {
+        FlutterError.onError = previousOnError;
+        app.openAppDatabase = AppDatabase.new;
+        await database.close();
+      });
+
+      await tester.runAsync(app.main);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(L0Shell), findsOneWidget);
+      expect(reported.single.exception, isA<StateError>());
+    });
   });
 }

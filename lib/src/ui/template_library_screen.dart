@@ -299,7 +299,7 @@ class _GroupLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 18, bottom: 8),
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Semantics(
         header: true,
         child: Text(label, style: kLandingSectionLabelStyle),
@@ -435,7 +435,7 @@ class _PaletteDialog extends StatelessWidget {
         side: const BorderSide(color: AppPalette.border),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(19),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

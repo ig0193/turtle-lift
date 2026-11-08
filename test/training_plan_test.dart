@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:turtle_lift/main.dart' show RefreshTodayOnResume;
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/history_preview_data.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
@@ -342,6 +344,62 @@ void main() {
           reason: 'last week keeps the plan it was lived under');
       expect(c.read(thisWeekSummaryProvider)!.days.map((d) => d.weekday),
           <int>[1, 3]);
+    });
+  });
+
+  group('today follows the clock across a resume', () {
+    HistorySession session(String id, int day) => HistorySession(
+          id: id,
+          performedOn: DateTime(2026, 10, day),
+          exercises: const <HistoryExercise>[],
+        );
+
+    testWidgets('an app left open from Sunday re-reads the date on resume, '
+        'and the week summary moves with it', (tester) async {
+      var now = oct(25); // Sunday
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          planClockProvider.overrideWithValue(() => now),
+          historySessionsProvider
+              .overrideWithValue(<HistorySession>[session('a', 19)]),
+          initialTrainingPlanProvider
+              .overrideWithValue(<TrainingPlanEntry>[plan(1, monWedFri)]),
+        ],
+        child: RefreshTodayOnResume(
+          child: Consumer(
+            builder: (context, ref, _) {
+              final summary = ref.watch(thisWeekSummaryProvider)!;
+              return Text(
+                '${ref.watch(planTodayProvider)} ${summary.start} '
+                '${summary.hit}',
+                textDirection: TextDirection.ltr,
+              );
+            },
+          ),
+        ),
+      ));
+      expect(find.text('2026-10-25 2026-10-19 1'), findsOneWidget);
+
+      now = oct(26); // past midnight, still in the background
+      await tester.pump();
+      expect(find.text('2026-10-25 2026-10-19 1'), findsOneWidget,
+          reason: 'nothing re-reads the clock until the app comes back');
+
+      // The order the platform reports a trip to the background and back.
+      for (final state in <AppLifecycleState>[
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+      await tester.pump();
+
+      expect(find.text('2026-10-26 2026-10-26 0'), findsOneWidget,
+          reason: 'Monday starts a new week with nothing done yet');
     });
   });
 }

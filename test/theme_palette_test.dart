@@ -24,8 +24,8 @@ void main() {
       AppPalette.textMuted,
       AppPalette.accentStrong,
       AppPalette.accentLight,
-      // AppPalette.onAccent is the same value as pageBackground (ONE DAY
-      // `ink` does both jobs), so it is already in the set.
+      // AppPalette.onAccent is the same value as pageBackground (graphite
+      // does both jobs), so it is already in the set.
       AppPalette.danger,
       // Overlays, not palette entries.
       Color(0xFF000000),
@@ -99,5 +99,33 @@ void main() {
       isNot(contains(AppPalette.accentLight)),
       reason: 'accentLight must stay out of the ColorScheme (§12)',
     );
+  });
+
+  test('the palette is exactly §12 (Chalk & Shell)', () {
+    // The values, pinned. A role drifting to a nearby hex would still pass the
+    // scheme walk above, because that walk compares against AppPalette itself.
+    expect(AppPalette.pageBackground, const Color(0xFF0E0E0F));
+    expect(AppPalette.surface, const Color(0xFF18181A));
+    expect(AppPalette.border, const Color(0xFF2E2E32));
+    expect(AppPalette.mutedSurface, const Color(0xFF222225));
+    expect(AppPalette.textPrimary, const Color(0xFFEDEDEB));
+    expect(AppPalette.textSecondary, const Color(0xFFA3A3A7));
+    expect(AppPalette.textMuted, const Color(0xFF8B8B90));
+    expect(AppPalette.accentStrong, const Color(0xFFFFA53D));
+    expect(AppPalette.accentLight, const Color(0xFF93ABCB));
+    expect(AppPalette.onAccent, AppPalette.pageBackground);
+    expect(AppPalette.danger, const Color(0xFFFF7A85));
+  });
+
+  test('the primary button is a chalk capsule with no gradient', () {
+    // §12: primary action = chalk fill, dark label. Amber means "worked /
+    // active / record" and is not a button colour.
+    final style = buildAppTheme().filledButtonTheme.style!;
+    expect(style.backgroundColor!.resolve(<WidgetState>{}),
+        AppPalette.textPrimary);
+    expect(style.foregroundColor!.resolve(<WidgetState>{}),
+        AppPalette.onAccent);
+    expect(style.backgroundBuilder, isNull,
+        reason: '§12: no gradients; nothing is painted over the fill');
   });
 }

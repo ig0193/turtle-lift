@@ -34,14 +34,14 @@ Future<bool> confirmDestructive(
       title: Text(
         title,
         style: const TextStyle(
-          fontSize: 16,
+          fontSize: 17,
           fontWeight: FontWeight.w600,
           color: AppPalette.textPrimary,
         ),
       ),
       content: Text(
         message,
-        style: const TextStyle(fontSize: 13.5, color: AppPalette.textSecondary),
+        style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary),
       ),
       actions: <Widget>[
         TextButton(

@@ -139,11 +139,13 @@ class _BodyDiagramState extends ConsumerState<BodyDiagram> {
 
   /// True once the finger lifts, for the moment before the muscle opens.
   ///
-  /// **Hold and commit are different colours because they answer different
-  /// questions.** Holding asks "which one is this?" and gets the light accent —
-  /// the prototype's hover. Lifting answers "this one", and gets the full
-  /// accent, §12's "active", so the choice is visibly made before the screen
-  /// changes under it.
+  /// **Hold and commit look different because they answer different
+  /// questions.** Holding asks "which one is this?" and gets a chalk outline —
+  /// the prototype's hover, without claiming anything about the muscle's fill.
+  /// Lifting answers "this one", and gets the full accent, §12's "active", so
+  /// the choice is visibly made before the screen changes under it. The
+  /// secondary-muscle colour is never used for either: it means "secondary
+  /// muscle" and nothing else.
   bool _committed = false;
 
   void _clear() {
@@ -174,14 +176,14 @@ class _BodyDiagramState extends ConsumerState<BodyDiagram> {
       view: widget.view,
       gender: ref.watch(bodyGenderProvider),
       planned: widget.planned,
-      // The muscle under the finger is painted over whatever the caller asked
-      // for: the light accent while held, the full accent once chosen. Both are
-      // owned by the touch and gone when it ends, so neither ever claims
-      // anything about training.
-      fill: pressedIds == null
+      // The muscle under the finger: outlined in chalk while held, filled with
+      // the full accent once chosen. Both are owned by the touch and gone when
+      // it ends, so neither ever claims anything about training.
+      pressed: _committed ? null : pressedIds,
+      fill: pressedIds == null || !_committed
           ? widget.fill
           : (ids) => identical(ids, pressedIds)
-              ? (_committed ? AppPalette.accentStrong : AppPalette.accentLight)
+              ? AppPalette.accentStrong
               : widget.fill(ids),
     );
 
@@ -294,7 +296,7 @@ class _MuscleNameLabel extends StatelessWidget {
                   labelFor(ids),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: AppPalette.textPrimary,
                   ),
@@ -340,6 +342,12 @@ Size bodyDiagramSize(BoxConstraints constraints, Size viewBox) {
 /// How thick the line between two muscles is, in logical pixels.
 const double kBodySegmentSeparatorWidth = 2.5;
 
+/// The separator's colour: [AppPalette.textMuted] at 40%, an overlay of a
+/// palette grey rather than a new colour. See
+/// [BodyDiagramPainter.buildSeparatorPaint].
+final Color kBodySegmentSeparatorColor =
+    AppPalette.textMuted.withValues(alpha: 0.4);
+
 /// How thick the outline on a planned muscle is, in logical pixels. Thicker than
 /// the separator it is drawn over, so it reads as an outline and not as a seam.
 const double kBodyPlannedOutlineWidth = 3.5;
@@ -350,6 +358,7 @@ class BodyDiagramPainter extends CustomPainter {
     required this.gender,
     required this.fill,
     this.planned = const <String>{},
+    this.pressed,
   });
 
   final BodyView view;
@@ -358,6 +367,10 @@ class BodyDiagramPainter extends CustomPainter {
 
   /// See [BodyDiagram.planned].
   final Set<String> planned;
+
+  /// The ids of the segment under the finger, outlined in chalk over its own
+  /// fill. Matched by identity: it is the very set [segmentAt] handed back.
+  final Set<String>? pressed;
 
   /// The `kBodyAssets` key these two fields name. The join lives in
   /// `body_gender.dart`; this is the only thing that asks for it.
@@ -415,11 +428,13 @@ class BodyDiagramPainter extends CustomPainter {
   /// (`prototypes/muscles-tab-variants.html`), and `CLAUDE.md` gives the
   /// prototype authority over how a screen looks.
   ///
-  /// [AppPalette.border] is the palette's own divider colour and is lighter
-  /// than the muted fill, so each muscle reads as an outlined region the way an
-  /// anatomical drawing does. A darker line was tried first and cut the body
-  /// into gaps instead of drawing it; §12 ends "No other colours", so a third
-  /// option was never available.
+  /// [AppPalette.textMuted] at partial opacity is lighter than the muted fill,
+  /// so each muscle reads as an outlined region the way an anatomical drawing
+  /// does. A darker line was tried first and cut the body into gaps instead of
+  /// drawing it. The plain divider colour ([AppPalette.border]) was tried
+  /// next and was too close to both the fill and the page: the whole figure
+  /// read as a shadow. §12 ends "No other colours", so the line is a palette
+  /// grey with alpha rather than a new value.
   ///
   /// The width is in logical pixels and is deliberately **not** scaled with the
   /// geometry — the same rule `stroke_glyph.dart` follows, so the separation
@@ -427,7 +442,7 @@ class BodyDiagramPainter extends CustomPainter {
   Paint buildSeparatorPaint() => Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = kBodySegmentSeparatorWidth
-    ..color = AppPalette.border
+    ..color = kBodySegmentSeparatorColor
     ..isAntiAlias = true
     ..strokeJoin = StrokeJoin.round;
 
@@ -442,6 +457,14 @@ class BodyDiagramPainter extends CustomPainter {
     ..style = PaintingStyle.stroke
     ..strokeWidth = kBodyPlannedOutlineWidth
     ..color = AppPalette.accentStrong.withValues(alpha: 0.75)
+    ..isAntiAlias = true
+    ..strokeJoin = StrokeJoin.round;
+
+  /// The chalk outline on the segment under the finger.
+  Paint buildPressedPaint() => Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = kBodyPlannedOutlineWidth
+    ..color = AppPalette.textPrimary
     ..isAntiAlias = true
     ..strokeJoin = StrokeJoin.round;
 
@@ -492,6 +515,15 @@ class BodyDiagramPainter extends CustomPainter {
         }
       }
     }
+    final pressedIds = pressed;
+    if (pressedIds != null) {
+      final outline = buildPressedPaint();
+      for (final segment in segments) {
+        if (identical(segment.subMuscleGroupIds, pressedIds)) {
+          canvas.drawPath(segment.path, outline);
+        }
+      }
+    }
     canvas.restore();
   }
 
@@ -500,6 +532,7 @@ class BodyDiagramPainter extends CustomPainter {
       oldDelegate.view != view ||
       oldDelegate.gender != gender ||
       oldDelegate.fill != fill ||
+      !identical(oldDelegate.pressed, pressed) ||
       !setEquals(oldDelegate.planned, planned);
 
   /// [view] is handed over rather than left to be read back out of

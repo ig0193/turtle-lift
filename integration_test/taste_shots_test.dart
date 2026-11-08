@@ -11,14 +11,23 @@
 // so one broken step never costs the rest of the shots.
 //
 // It leaves no data behind: the workouts it opens are discarded, and the one
-// it finishes (to reach the summary) is deleted from the summary.
+// it finishes (to reach the summary) is deleted from the summary. The food the
+// Diet section adds is removed again (that is the undo shot). The very last
+// section runs Delete all data, to reach Diet's first-time state; a debug
+// build re-seeds its sample data on the next cold start.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:turtle_lift/main.dart' as app;
 import 'package:turtle_lift/src/ui/data_screens.dart';
+import 'package:turtle_lift/src/data/meal_slot.dart';
 import 'package:turtle_lift/src/ui/destructive_confirmation.dart';
+import 'package:turtle_lift/src/ui/diet_pane.dart';
+import 'package:turtle_lift/src/ui/diet_reminders_screen.dart';
+import 'package:turtle_lift/src/ui/diet_slot_card.dart';
 import 'package:turtle_lift/src/ui/exercise_picker_sheet.dart';
+import 'package:turtle_lift/src/ui/food_picker_screen.dart';
+import 'package:turtle_lift/src/ui/food_serving_sheet.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
 import 'package:turtle_lift/src/ui/history_root.dart';
 import 'package:turtle_lift/src/ui/history_session_row.dart';
@@ -272,6 +281,109 @@ void main() {
       await tester.drag(scrollable(), const Offset(0, -1500));
       await snap(tester, 'schedule-bottom');
       await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.personal)));
+      await settle(tester);
+    });
+
+    // --- Profile, Diet. The debug seed gives it a target, a planned week and
+    // one tick today; the first-time state is shot last, after a wipe.
+    Future<void> openDiet() async {
+      await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
+      await settle(tester);
+      // Profile keeps its scroll offset, and the segments scroll with it.
+      await tester.drag(scrollable(), const Offset(0, 3000));
+      await settle(tester);
+      await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.diet)));
+      await settle(tester);
+    }
+
+    await section(tester, 'diet', () async {
+      await openDiet();
+      await snap(tester, 'diet-today');
+      // Another day of the week: Wednesday, or Thursday when today is
+      // Wednesday, so the shot is never of the day already shown.
+      final today = DateTime.now().weekday - 1;
+      await tester.tap(find.byKey(DietPane.weekDayKey(today == 2 ? 3 : 2)));
+      await snap(tester, 'diet-other-day');
+      await tester.tap(find.byKey(DietPane.weekDayKey(today)));
+      await settle(tester);
+
+      // The picker for today's snack, a search with no match, then the add
+      // sheet with today preselected under Repeat on.
+      await scrollToAndTap(
+          tester, find.byKey(DietSlotCard.addFoodKey(MealSlot.snack)));
+      await snap(tester, 'diet-picker');
+      await tester.enterText(find.byKey(FoodPickerScreen.searchKey), 'zzzz');
+      await snap(tester, 'diet-picker-no-match');
+      // Clear search, then scroll to the food: once `snap` has unfocused
+      // the field, a second `enterText` does not reach it on a device.
+      await tester.tap(find.byKey(FoodPickerScreen.clearSearchKey));
+      await settle(tester);
+      await scrollToAndTap(tester, find.byKey(FoodPickerScreen.rowKey('paneer')));
+      await snap(tester, 'diet-add-sheet');
+      await tester.tap(find.byKey(FoodServingSheet.commitKey));
+      await settle(tester);
+
+      // The row just added: its edit sheet, then Remove and the undo window.
+      await scrollToAndTap(
+          tester, find.byKey(DietSlotCard.rowKey(MealSlot.snack, 'paneer')));
+      await snap(tester, 'diet-edit-sheet');
+      await tester.tap(find.byKey(FoodServingSheet.removeKey));
+      await snap(tester, 'diet-undo');
+      await tester.pump(FoodServingSheet.undoDuration);
+      await settle(tester);
+
+      // Target, with the suggestion the seeded bodyweight gives.
+      await scrollToAndTap(tester, find.byKey(DietPane.targetRowKey));
+      await snap(tester, 'diet-target');
+      await tester.pageBack();
+      await settle(tester);
+
+      // Reminders: the row exists only where notifications work.
+      await scrollToAndTap(tester, find.byKey(DietPane.remindersRowKey));
+      await snap(tester, 'diet-reminders');
+      await tester.tap(find.byKey(DietRemindersScreen.masterKey));
+      await settle(tester);
+      if (find.byKey(DietRemindersScreen.notNowKey).evaluate().isNotEmpty) {
+        await snap(tester, 'diet-reminders-explain');
+        await tester.tap(find.byKey(DietRemindersScreen.notNowKey));
+        await settle(tester);
+      } else {
+        // Permission was already granted, so the tap turned them on; put the
+        // switch back as it was.
+        await snap(tester, 'diet-reminders-on');
+        await tester.tap(find.byKey(DietRemindersScreen.masterKey));
+        await settle(tester);
+      }
+      await tester.pageBack();
+      await settle(tester);
+
+      await tester.drag(scrollable(), const Offset(0, -3000));
+      await snap(tester, 'diet-bottom');
+    });
+
+    // Last, because it wipes everything: Diet's first-time state, and the
+    // target screen with no bodyweight to suggest from.
+    await section(tester, 'diet-empty', () async {
+      await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
+      await settle(tester);
+      await tester.drag(scrollable(), const Offset(0, 3000));
+      await settle(tester);
+      await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.personal)));
+      await settle(tester);
+      await scrollToAndTap(tester, find.text('Delete all data'));
+      await tester.tap(find.byKey(DeleteAllDataScreen.deleteKey));
+      await settle(tester);
+      await tester.tap(find.byKey(confirmDestructiveKey));
+      // The wipe reboots the app (`appRestartProvider`).
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 250));
+      }
+      await settle(tester);
+      await openDiet();
+      await snap(tester, 'diet-empty');
+      await tester.tap(find.byKey(DietPane.setTargetKey));
+      await snap(tester, 'diet-target-no-bodyweight');
+      await tester.pageBack();
       await settle(tester);
     });
 

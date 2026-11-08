@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/generated/muscle_taxonomy.dart';
 import 'package:turtle_lift/src/data/history_preview_data.dart';
+import 'package:turtle_lift/src/data/personal_details_store.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/all_sessions_screen.dart';
 import 'package:turtle_lift/src/ui/history_calendar_card.dart';
@@ -274,7 +275,7 @@ void main() {
       ];
       await tester.pumpWidget(host(sessions));
 
-      expect(find.text('See all ${sessions.length} sessions ›'), findsOneWidget);
+      expect(find.text('See all ${sessions.length} sessions'), findsOneWidget);
     });
 
     testWidgets('a single total session reads "1 session", not "1 sessions"',
@@ -282,7 +283,7 @@ void main() {
       growViewport(tester);
       await tester.pumpWidget(host(<HistorySession>[session('a', 0)]));
 
-      expect(find.text('See all 1 session ›'), findsOneWidget);
+      expect(find.text('See all 1 session'), findsOneWidget);
     });
 
     testWidgets('"See all" opens the full chronological list', (tester) async {
@@ -313,6 +314,38 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(HistorySessionDetailScreen), findsOneWidget);
+    });
+
+    testWidgets('with a bodyweight in effect the detail shows kcal and lays '
+        'out without a framework error', (tester) async {
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          historySessionsProvider.overrideWithValue(<HistorySession>[
+            session('a', 0, title: 'Push day', exercises: const <HistoryExercise>[
+              HistoryExercise(
+                name: 'Bench',
+                primaryGroupIds: <String>['chest'],
+                setScores: <double>[60, 60, 60],
+              ),
+            ]),
+          ]),
+          initialBodyweightLogProvider.overrideWithValue(<BodyweightEntry>[
+            BodyweightEntry(date: day(30), weightKg: 72),
+          ]),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(body: HistoryRoot()),
+        ),
+      ));
+
+      await tester.tap(find.byKey(HistoryRoot.recentRowKey('a')));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull,
+          reason: 'the kcal figure must not nest one Expanded in another');
+      expect(find.text('kcal'), findsOneWidget);
+      expect(find.byKey(HistorySessionDetailScreen.calorieKey), findsOneWidget);
     });
   });
 }

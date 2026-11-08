@@ -45,7 +45,7 @@ class SessionDateControl extends ConsumerWidget {
             alignment: Alignment.centerLeft,
             child: Container(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: isToday ? AppPalette.surface : AppPalette.mutedSurface,
                 border: Border.all(
@@ -56,7 +56,7 @@ class SessionDateControl extends ConsumerWidget {
               child: Text(
                 isToday ? 'Today' : longDateLabel(date),
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13,
                   fontWeight: isToday ? FontWeight.w400 : FontWeight.w600,
                   color: isToday
                       ? AppPalette.textSecondary

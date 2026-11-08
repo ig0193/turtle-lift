@@ -8,7 +8,8 @@
 | `01-app-idea.md` | Scope, data model, muscle taxonomy, palette, and the reasoning behind every rule here. |
 | `02-workout-tab-userflow.md` | Workout tab flow + mockups. |
 | `03-muscle-groups-tab-userflow.md` | Muscle Groups tab flow + mockups. |
-| `04-profile-tab-userflow.md` | Profile flow + mockups. Profile is the fourth tab (Personal | Schedule); history is its own tab. |
+| `04-profile-tab-userflow.md` | Profile flow + mockups. Profile is the fourth tab (Personal | Schedule | Diet — Diet per `docs/adr/0007-diet-in-profile.md`); history is its own tab. |
+| `06-diet-tab-userflow.md` | Diet flow. Placement superseded by ADR 0007: a Profile segment, not a tab. |
 
 Conflict resolution: if this file disagrees with `01`–`04`, **`01`–`04` win** — this is a digest, not a source of truth. Report the conflict.
 
@@ -24,6 +25,8 @@ Conflict resolution: if this file disagrees with `01`–`04`, **`01`–`04` win*
 | `body-diagrams/body-diagram-back-female.svg` | Female back, 9 |
 | `body-diagrams/muscle_taxonomy.dart` / `.json` | Parent groups, sub-groups, labels, segment mapping |
 | `body-diagrams/generate_muscle_taxonomy.py` | Regenerates taxonomy; self-validates against SVGs |
+| `foods/foods.json` | Protein food list for Diet (ADR 0007). Reviewed nutrition copy, every food citing an IFCT 2017 code. Never hand-edit |
+| `foods/food_catalogue.py` + `foods/foods_*.py` + `foods/validate_food_catalogue.py` | Source tables (one module per family) and the validator that emits `foods.json` (and `foods.csv` for review); CI fails on drift. A shipped food id is never removed or reused: `foods/food_ids_ever.csv` is the ledger, changed only by `--update-ledger` |
 
 Re-run the taxonomy generator after any SVG change. It fails loudly on drift.
 
@@ -81,11 +84,22 @@ Average 76 words per exercise across all four. Every entry mentions breathing; 1
 
 **No muscle-level state exists in the model.** → `01` §Muscle training state.
 
+**Diet** (`docs/adr/0007-diet-in-profile.md`) — schema v6:
+
+| Table | Rules |
+|---|---|
+| `DietPlanVersions` | `effectiveFrom` PK, always a Monday. Copy-on-write: an edit in week W writes only the version at `monday(W)`; no path writes an older version. |
+| `DietPlanItems` | `effectiveFrom` (cascade), `weekday` 0 = Mon … 6 = Sun, `slot` ∈ breakfast · lunch · snack · dinner, `foodId` (asset id, no FK), `servingsHalves` 1–8, `position`. Unique per `(effectiveFrom, weekday, slot, foodId)`. |
+| `MealTicks` | `(date, slot)` composite PK, local calendar date. Presence = eaten; untick is a hard delete. Only today and earlier days of this week. |
+| `Settings.proteinTargetG` | Nullable int, 1–400. Null = never set. Accepting the suggestion stores the number, never a flag. |
+
+`ReminderPrefs` — schema v7, one row: Schedule reminder and diet reminder switches and minutes (0–1439).
+
 ---
 
 ## 3. Derived values — compute on read, never store
 
-`streak` · exercise count · set count · personal bests · **per-session PB count** · calorie estimate · resolved title · a template row's muscle line.
+`streak` · exercise count · set count · personal bests · **per-session PB count** · calorie estimate · resolved title · a template row's muscle line · diet planned / eaten / to-go protein, week meters, the target suggestion and reminder text (ADR 0007).
 
 **No lifted-volume (kg) metric anywhere in V1** — it cannot include bodyweight or timed exercises. Set count is the headline **volume proxy** in its place. → `01` §Derived values. (It stands in for the banned kg figure; it is not an instruction about which stat renders largest.)
 
@@ -114,7 +128,7 @@ Load from `muscle_taxonomy.dart`. **12 parents, 19 sub-groups, 1 mapping excepti
 - **One diagram treatment everywhere: full body, unmodified viewBox.** There is no zoomed or cropped view anywhere in V1. Used on Workout Overview, Muscle Groups landing, Exercise Detail, summary and session cards.
   - **The crop system has been deleted** (`muscle_crops.json`, `muscle_crops.dart`, `generate_muscle_crops.py`). Its last two consumers both stopped needing it: Exercise Detail moved to full body during prototyping, because crops produced unreadable letterbox strips and lost the anatomical context that makes the diagram educational, and the sub-muscle-group selection screen was deleted outright (§10). **Do not reintroduce cropping.** `03`'s exercise-detail mockup note used to call for a zoomed viewBox; it has been corrected.
 - Exercise Detail: **full-body** diagram. If relevant muscles span both views, show **both side by side**, each full body. If one view covers everything, show one, centred.
-- Fill colours: primary `#A9D8FF`, secondary `#C9B6FF`, untrained `#1D2027`.
+- Fill colours: primary `#FFA53D`, secondary `#93ABCB`, untrained `#222225`. Each segment is outlined in text muted (`#8B8B90`) at 40% so the figure reads against the page.
 - **Uniformity rule:** every muscle map comes from these SVGs. No screen gets its own simplified diagram. Mockup SVGs in `02`–`04` are layout references only.
 - **No body figure other than the four traced diagrams.** Workout Summary and Session Detail use the same anatomical diagram as everywhere else — no zone-lit human figure exists and none should be built.
 - **Mascot is a turtle** (`mascot-brief.md`). It is a decorative companion, not a body diagram, and never replaces a muscle map. Four states: resting, lifting, pleased, hidden. Appears on workout overview (52px corner tile), celebration, empty states, app icon. **Not on the share card.** **Never reacts to inactivity** — no decay, no guilt, no notifications, no achievement on the tap easter egg. Not a blocker; build last.
@@ -177,7 +191,7 @@ streakAsOf(date) -> int
 
 **Session screen** (after Start logging)
 - Pulsing `WORKOUT IN PROGRESS` strip (one pulse, no loop) with the **clock**; editable title (no caption line); editable date, prominent when ≠ today; `N of M done`.
-- **Body map is the hero** and shrinks in steps as the list grows. It fills live: primary `#A9D8FF`, secondary `#C9B6FF`; muscles the list plans to train and has not worked are **outlined**.
+- **Body map is the hero** and shrinks in steps as the list grows. It fills live: primary `#FFA53D`, secondary `#93ABCB`; muscles the list plans to train and has not worked are **outlined**.
 - `KEEP LOGGING`: one flat exercise list for both paths, tri-state `To do / In progress / Done` (derived), the first not-done row tagged `UP NEXT`. `+ Add exercise`. Finish (primary) + Discard (secondary, confirm dialog).
 - **No muscle list, no `trained` tick, no template lock.** Any exercise can be added to any session.
 
@@ -227,7 +241,7 @@ streakAsOf(date) -> int
 
 ## 11. Profile and History
 
-History and Profile are both tabs (`docs/adr/0003-l0-navigation-variant-a.md`, amended by `docs/adr/0004-profile-returns-as-a-tab.md`). **The split is decided: anything computed from session rows lives on the History tab; anything the user typed lives on the Profile tab. One named exception: the Schedule pane's week summary (ADR 0004). No figure appears in both places.** → `04`, and `docs/plans/2026-09-14-2324-feat-profile-split-plan.md`.
+History and Profile are both tabs (`docs/adr/0003-l0-navigation-variant-a.md`, amended by `docs/adr/0004-profile-returns-as-a-tab.md`). **The split is decided: anything computed from session rows lives on the History tab; anything the user typed lives on the Profile tab. Two named exceptions: the Schedule pane's week summary (ADR 0004) and the Diet pane's protein figures (`docs/adr/0007-diet-in-profile.md`), which never render on History, the summary card or the share card. No figure appears in both places.** → `04`, and `docs/plans/2026-09-14-2324-feat-profile-split-plan.md`.
 
 - Stats: streak, total workouts, total sets. Streak explainer copy sits below the stat. No volume stat. **These are derived, so they live on the History tab — never on the Profile landing.**
 - **Per-session PB count** — `pbCountFor(session)`. Rendered as a pill on the hero card **only when >= 1** (never "0 personal bests"). Individual PB exercises are marked in the session's exercise log below the card.
@@ -249,33 +263,35 @@ History and Profile are both tabs (`docs/adr/0003-l0-navigation-variant-a.md`, a
 
 ## 12. Palette
 
-Cool brushed-titanium, one iridescent accent. Source: `docs/one-day-theme-reference.md`, option A (full re-skin).
+**Chalk & Shell.** Graphite neutrals with no tint, chalk text and a chalk primary button, one warm colour (shell amber) for worked / active / record, steel for the secondary muscle. No gradients. Source: `docs/research/unslop-audit.md`.
 
 | Role | Hex |
 |---|---|
-| Page background | `#07080A` |
-| Card / elevated surface | `#15171C` |
-| Border / divider | `#2A2D34` |
-| Muted surface / unfilled region | `#1D2027` |
-| Text primary | `#F2F4F7` |
-| Text secondary | `#9EA3AE` |
-| Text muted | `#838A94` |
-| Accent strong | `#A9D8FF` |
-| Accent light | `#C9B6FF` |
-| Text on accent fill | `#07080A` |
-| Destructive action | `#FF8A8A` |
+| Page background | `#0E0E0F` |
+| Card / elevated surface | `#18181A` |
+| Border / divider | `#2E2E32` |
+| Muted surface / unfilled region | `#222225` |
+| Text primary (chalk; also the primary button fill) | `#EDEDEB` |
+| Text secondary | `#A3A3A7` |
+| Text muted | `#8B8B90` |
+| Accent strong (shell amber) | `#FFA53D` |
+| Accent light (steel) | `#93ABCB` |
+| Text on a filled control | `#0E0E0F` |
+| Destructive action | `#FF7A85` |
 
-**Gradient (one):** *liquid* — `#E8ECF2` → `#A9D8FF` → `#C9B6FF` → `#F4E3FF`, top-left to bottom-right. It is the accent as a fill: primary buttons only. The two end stops exist only inside this gradient.
+**Primary action = a chalk capsule:** `#EDEDEB` fill, `#0E0E0F` label. Exactly one per view. Secondary actions are text, not capsules.
 
-`#A9D8FF` = active / trained / primary action. `#C9B6FF` = secondary muscle only, never a primary action. `#FF8A8A` = destructive action only (delete a workout, discard a session) — never a primary action, never a fill behind body text. No other colours.
+`#FFA53D` = trained muscle, active tab, selection, personal best. It is **not** the button colour. `#93ABCB` = secondary muscle only — never chrome, never a press state, never a PB or status mark. `#FF7A85` = destructive action only (delete a workout, discard a session) — never a primary action, never a fill behind body text. **No gradients. No other colours.** Overlays (black scrims and shadows, a palette colour at partial alpha) are not new colours.
 
-⚠ `#A9D8FF` must not carry "delete". `01` §Usage rules gives it one meaning, *"same meaning wherever it appears"*, so a delete confirmation painted in it reads as approval. That is why the destructive colour exists; it is not a general-purpose red.
+⚠ `#FFA53D` must not carry "delete". `01` §Usage rules gives it one meaning, *"same meaning wherever it appears"*, so a delete confirmation painted in it reads as approval. That is why the destructive colour exists; it is not a general-purpose red.
+
+**One PB mark everywhere:** the word "PB" (or "2 PB") in amber, semibold, no pill and no icon. A trophy reads as an achievement (§13).
 
 ---
 
 ## 13. Out of scope for V1
 
-No zone-lit human mascot (dead — see `mascot-brief.md`) · no per-exercise illustrations or silhouettes (V2; equipment glyphs instead) · no login · no cloud sync · no soft delete · no rest timer · no stored workout duration (the live clock is display-only, §9) · no notifications except the opt-in, fixed-schedule reminders in ADR 0005 (built after the Schedule screen) · no wearables · no AI · no premium · no ads · no multi-day splits or weekly rotation · no "today's workout" suggestion · no exercise videos · no social features.
+No zone-lit human mascot (dead — see `mascot-brief.md`) · no per-exercise illustrations or silhouettes (V2; equipment glyphs instead) · no login · no cloud sync · no soft delete · no rest timer · no stored workout duration (the live clock is display-only, §9) · no notifications except the opt-in, fixed-schedule reminders in ADR 0005 (built after the Schedule screen) and diet reminders under the same rules (ADR 0007) · no calorie, macro or food-diary tracking (Diet is a protein-only weekly plan with a daily protein total, ADR 0007) · no wearables · no AI · no premium · no ads · no multi-day splits or weekly rotation · no "today's workout" suggestion · no exercise videos · no social features.
 
 Local storage only. Works fully offline. No onboarding wizard.
 

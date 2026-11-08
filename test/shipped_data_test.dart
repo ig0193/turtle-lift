@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
+import 'package:turtle_lift/src/data/food.dart';
+import 'package:turtle_lift/src/data/food_index.dart';
 import 'package:turtle_lift/src/data/generated/body_paths.dart';
 import 'package:turtle_lift/src/data/generated/muscle_taxonomy.dart';
 import 'package:turtle_lift/src/data/shipped_data.dart';
@@ -50,5 +53,48 @@ void main() {
 
     final exercises = await container.read(exerciseLibraryProvider.future);
     expect(exercises, hasLength(260));
+  });
+
+  test('the bundled food list parses and meets the A10 minimums', () async {
+    // Invariants only, never exact counts or protein values: the list is
+    // reviewed copy still being corrected (U19), and its generator's own
+    // validator (assets/foods/validate_food_catalogue.py) is what pins the
+    // values. This proves the app can read what the generator wrote.
+    final reported = <FlutterErrorDetails>[];
+    final previous = FlutterError.onError;
+    FlutterError.onError = reported.add;
+    addTearDown(() => FlutterError.onError = previous);
+
+    final index = await loadFoodIndex(readShippedFoodList);
+    expect(reported, isEmpty,
+        reason: 'the shipped food list must load without a reported error');
+    expect(index.isAvailable, isTrue);
+
+    final foods = index.all;
+    expect({for (final f in foods) f.id}, hasLength(foods.length),
+        reason: 'food ids are unique');
+    for (final f in foods) {
+      expect(f.ifctCode.trim(), isNotEmpty, reason: '${f.id} has no IFCT code');
+      expect(f.gramsPerServing, greaterThan(0), reason: f.id);
+      expect(f.proteinPerServingG, greaterThan(0), reason: f.id);
+      expect(f.proteinPerServingG, lessThanOrEqualTo(f.gramsPerServing),
+          reason: f.id);
+    }
+
+    // A10: at least 100 foods, 60 veg and 25 non-veg, and every IFCT 2017
+    // egg entry (group M, M001 to M015) carried by an egg row.
+    int count(DietType type) => foods.where((f) => f.dietType == type).length;
+    expect(foods.length, greaterThanOrEqualTo(100));
+    expect(count(DietType.veg), greaterThanOrEqualTo(60));
+    expect(count(DietType.nonVeg), greaterThanOrEqualTo(25));
+    final eggCodes = {
+      for (final f in foods)
+        if (f.dietType == DietType.egg) f.ifctCode,
+    };
+    for (var n = 1; n <= 15; n++) {
+      final code = 'M${n.toString().padLeft(3, '0')}';
+      expect(eggCodes, contains(code),
+          reason: 'IFCT egg entry $code is carried by no egg food');
+    }
   });
 }

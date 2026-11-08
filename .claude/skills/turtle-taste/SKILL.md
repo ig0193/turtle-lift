@@ -18,11 +18,12 @@ breaks one is not a fix.
 
 - `CLAUDE.md`, `docs/00-build-spec.md` (and `01`–`04` over `00`).
 - **Closed palette.** `00` §12 lists every colour; `test/theme_palette_test.dart`
-  fails on anything else. Never add a hex in a widget. Use `AppPalette` /
-  `AppGradients`. A new colour is a spec change: ask first.
-- **One accent, one meaning.** `accentStrong` = active / trained / primary
-  action. `accentLight` = secondary muscle only. `danger` = destructive only.
-  The liquid gradient = primary buttons only.
+  fails on anything else. Never add a hex in a widget. Use `AppPalette`.
+  A new colour is a spec change: ask first.
+- **One accent, one meaning.** `accentStrong` (shell amber) = trained /
+  active / selection / PB. It is not the button colour. `accentLight` (steel)
+  = secondary muscle only. `danger` = destructive only. **Primary action =
+  chalk fill** (`textPrimary`, `onAccent` label). No gradients anywhere.
 - **Typeface is undecided.** Do not bundle or fetch a font. The web skill's
   font-pairing advice does not apply until the user picks one.
 - **Pinned header** via `AppScreen`. No collapsing or floating app bars.
@@ -64,7 +65,8 @@ overflowing at that size is a FAIL.
 ## 2. Design read (one line, before any change)
 
 > Native dark workout logger, used mid-set with one thumb, glanced at between
-> lifts. Calm, dense-but-legible, cool titanium with one ice accent.
+> lifts. Calm, dense-but-legible, graphite and chalk with one shell-amber
+> accent that only means "worked".
 
 Dials for this app (from the web skill's three dials):
 `DESIGN_VARIANCE 3` (predictable beats clever on a gym floor) ·
@@ -91,20 +93,27 @@ only with a reason you can state to a designer, written in the report.
 - No invented data in shipped UI; sample data is debug-only.
 
 **Colour**
-- One accent on screen at a time. If ice appears on more than the primary
-  action, the active tab and trained muscles, it has lost its meaning.
-- No glows, no gradient text on body copy, no second gradient.
+- One accent on screen at a time. If amber appears on more than trained
+  muscles, the active tab, the selection and the PB mark, it has lost its
+  meaning. Steel on anything but a secondary muscle is a FAIL.
+- No glows, no gradients, no gradient text.
 - No pure `#000000` surfaces (scrims and shadows are overlays, fine).
 - Status never by colour alone: pair with an icon or a word.
 - Contrast: muted text 4.5:1 or better on every surface (`textMuted`
-  `#838A94` was chosen for this); primary text 7:1. FAIL below.
-- Exactly one filled (liquid) button per view: the main action. Selection
-  controls are outlined (raised neutral + ice border/label), never filled.
+  `#8B8B90` was chosen for this); primary text 7:1. FAIL below.
+- Exactly one filled (chalk) button per view: the main action. Secondary
+  actions are text (`GhostButton`), not stacked capsules. Selection controls
+  are outlined (raised neutral + amber border/label), never filled.
+- One PB mark: the word "PB" in amber (`kPbMarkStyle`). No pill, no trophy,
+  no star.
 
 **Typography** (platform font until decided)
 - Hierarchy by weight and grey level (`textPrimary` / `textSecondary` /
   `textMuted`), not by ever-larger sizes. `textMuted` should be the most-used
-  grey, as in ONE DAY.
+  grey.
+- One size scale: 12 / 13 / 15 / 17 / 20 / 24 (`AppTypeScale`), plus the
+  fitted set-logging numeral. No half points. Weights 400 / 500 / 600, no
+  700. Zero letter spacing below 16pt.
 - Numbers that change or align (weights, reps, times, counts) use
   `FontFeature.tabularFigures()`, so digits don't jitter as they change.
 - **Sentence case everywhere.** Labels 13pt semibold `textSecondary`
@@ -118,7 +127,8 @@ only with a reason you can state to a designer, written in the report.
 
 **Shape**
 - One radius scale: 16 for cards and fields, capsule for buttons and chips.
-  A stray 10 or 12 next to a 16 reads as a bug.
+  A stray 10 or 12 next to a 16 reads as a bug. Status tags, counts, equipment
+  and set lists are quiet text, not pills.
 - Cards only where elevation means hierarchy. Otherwise group with dividers
   or space.
 
@@ -133,14 +143,15 @@ only with a reason you can state to a designer, written in the report.
 
 **States**
 - Every list has an empty state that says how to fill it (`EmptyState`).
-- Disabled looks disabled (grey, no gradient) and says why nearby.
+- Disabled looks disabled (`mutedSurface` fill, `textMuted` label) and says
+  why nearby.
 - Pressed feedback on custom tappables (`GestureDetector`-built buttons have
   none by default).
 - Button labels fit on one line at 17e width.
 - A number never clips: values shrink to fit their box (`StepperField`), and
   never break from their unit.
-- Contrast: text on liquid uses `onAccent`; muted text still passes WCAG AA
-  for its size against its surface.
+- Contrast: text on a chalk or amber fill uses `onAccent`; muted text still
+  passes WCAG AA for its size against its surface.
 
 **Motion**
 - Purposeful only (state change, spatial continuity). 150–300ms.

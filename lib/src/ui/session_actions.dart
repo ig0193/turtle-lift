@@ -63,18 +63,19 @@ class SessionActions extends ConsumerWidget {
             key: discardKey,
             behavior: HitTestBehavior.opaque,
             onTap: () => _discard(context, ref),
+            // Text, not a second capsule under Finish: one filled action per
+            // view, and the destructive one should not look like an equal
+            // choice. The confirmation dialog carries the danger colour.
             child: Container(
               constraints: const BoxConstraints(minHeight: 48),
               alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppPalette.mutedSurface,
-                border: Border.all(color: AppPalette.border),
-                borderRadius: BorderRadius.circular(999),
-              ),
               child: const Text(
                 'Discard workout',
-                style:
-                    TextStyle(fontSize: 14, color: AppPalette.textSecondary),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppPalette.textSecondary,
+                ),
               ),
             ),
           ),

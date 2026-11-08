@@ -142,9 +142,10 @@ void main() {
       host(AppScreen.pushed(title: 'Lower chest', body: longList())),
     );
     final pushed = tester.widget<Text>(find.text('Lower chest')).style!;
-    expect(pushed.fontSize, 16, reason: 'pushed title size');
+    expect(pushed.fontSize, 17, reason: 'pushed title size');
     expect(pushed.fontWeight, FontWeight.w600, reason: 'pushed title weight');
-    expect(pushed.letterSpacing, -0.16, reason: 'pushed title tracking');
+    expect(pushed.letterSpacing, isNull,
+        reason: 'no tracking below the display size');
   });
 
   testWidgets('the title is announced as a header', (tester) async {

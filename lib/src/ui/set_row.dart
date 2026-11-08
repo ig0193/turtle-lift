@@ -139,12 +139,13 @@ class _SetRowState extends State<SetRow> {
           child: Row(
             children: <Widget>[
               SizedBox(
-                width: 18,
+                width: 20,
                 child: Text(
                   '${widget.index + 1}',
                   style: const TextStyle(
                     fontSize: 13,
                     color: AppPalette.textMuted,
+                    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
                   ),
                 ),
               ),
@@ -172,10 +173,10 @@ class _SetRowState extends State<SetRow> {
             decimals: 1,
             isPrefill: widget.isPrefill,
             semanticsLabel: 'Weight in kilograms',
+            unit: 'kg',
               onChanged: (v) => _emit(_copy(weightKg: v)),
             ),
           ),
-          const _Unit('kg'),
           Expanded(
             child: StepperField(
             focusNode: _requiredFieldFocus,
@@ -183,10 +184,10 @@ class _SetRowState extends State<SetRow> {
             step: 1,
             isPrefill: widget.isPrefill,
             semanticsLabel: 'Repetitions',
+            unit: 'reps',
               onChanged: (v) => _emit(_copy(reps: v?.round())),
             ),
           ),
-          const _Unit('reps'),
         ];
       case LoadType.assisted:
         return <Widget>[
@@ -197,10 +198,10 @@ class _SetRowState extends State<SetRow> {
             decimals: 1,
             isPrefill: widget.isPrefill,
             semanticsLabel: 'Assistance in kilograms',
+            unit: 'kg assist',
               onChanged: (v) => _emit(_copy(assistKg: v)),
             ),
           ),
-          const _Unit('assist'),
           Expanded(
             child: StepperField(
             focusNode: _requiredFieldFocus,
@@ -208,10 +209,10 @@ class _SetRowState extends State<SetRow> {
             step: 1,
             isPrefill: widget.isPrefill,
             semanticsLabel: 'Repetitions',
+            unit: 'reps',
               onChanged: (v) => _emit(_copy(reps: v?.round())),
             ),
           ),
-          const _Unit('reps'),
         ];
       case LoadType.bodyweight:
         return <Widget>[
@@ -222,10 +223,10 @@ class _SetRowState extends State<SetRow> {
             step: 1,
             isPrefill: widget.isPrefill,
             semanticsLabel: 'Repetitions',
+            unit: 'reps',
               onChanged: (v) => _emit(_copy(reps: v?.round())),
             ),
           ),
-          const _Unit('reps'),
           _optionalWeight(
             value: widget.entry.addedKg,
             onChanged: (v) => _emit(_copy(addedKg: v)),
@@ -240,15 +241,13 @@ class _SetRowState extends State<SetRow> {
             step: 5,
             isPrefill: widget.isPrefill,
             semanticsLabel: 'Duration in seconds',
-              onChanged: (v) => _emit(_copy(durationSec: v?.round())),
-            ),
-          ),
-          // "sec" until there is a value, then the value as m:ss -- "0:00"
-          // beside an empty field reads as a reading, not a prompt.
-          _Unit(
-            widget.entry.durationSec == null
+            // "sec" until there is a value, then the value as m:ss -- "0:00"
+            // under an empty field reads as a reading, not a prompt.
+            unit: widget.entry.durationSec == null
                 ? 'sec'
                 : formatDuration(widget.entry.durationSec!),
+              onChanged: (v) => _emit(_copy(durationSec: v?.round())),
+            ),
           ),
           _optionalWeight(
             value: widget.entry.weightKg,
@@ -275,10 +274,24 @@ class _SetRowState extends State<SetRow> {
           child: Container(
             constraints: const BoxConstraints(minHeight: 48),
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: const Text(
-              '+ weight',
-              style: TextStyle(fontSize: 12.5, color: AppPalette.textSecondary),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(
+                  Icons.add_rounded,
+                  size: 16,
+                  color: AppPalette.textSecondary,
+                ),
+                SizedBox(width: 4),
+                Text(
+                  'weight',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppPalette.textSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -294,29 +307,14 @@ class _SetRowState extends State<SetRow> {
               decimals: 1,
               isPrefill: widget.isPrefill,
               semanticsLabel: 'Added weight in kilograms',
+              unit: 'kg',
               onChanged: onChanged,
             ),
           ),
-          const _Unit('kg'),
         ],
       ),
     );
   }
-}
-
-class _Unit extends StatelessWidget {
-  const _Unit(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(left: 2, right: 5),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: AppPalette.textMuted),
-        ),
-      );
 }
 
 class _CheckButton extends StatelessWidget {
@@ -354,7 +352,7 @@ class _CheckButton extends StatelessWidget {
                   color:
                       completed ? AppPalette.accentStrong : AppPalette.border,
                 ),
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 Icons.check,

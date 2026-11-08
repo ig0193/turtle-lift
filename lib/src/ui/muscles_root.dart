@@ -116,12 +116,12 @@ class MusclesRoot extends ConsumerWidget {
         ),
         const SizedBox(height: 10),
         Text(mapHint, style: kMusclesMapHintStyle, textAlign: TextAlign.center),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
         Semantics(
           header: true,
           child: Text(listLabel, style: kLandingSectionLabelStyle),
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 8),
         ...subGroupRows(
           index: index,
           // The same destination a segment tap reaches (R8) — and the only
@@ -158,7 +158,7 @@ class _BodyViewControl extends StatelessWidget {
     return Row(
       children: <Widget>[
         for (final view in BodyView.values) ...<Widget>[
-          if (view != BodyView.values.first) const SizedBox(width: 7),
+          if (view != BodyView.values.first) const SizedBox(width: 8),
           Expanded(
             child: _BodyViewButton(
               view: view,
@@ -247,7 +247,6 @@ const double kBodyViewButtonHeight = 48;
 const TextStyle kBodyViewButtonStyle = TextStyle(
   fontSize: 13,
   fontWeight: FontWeight.w600,
-  letterSpacing: -0.1,
 );
 
 /// The centred line under the map — quieter than a row's own copy, because it

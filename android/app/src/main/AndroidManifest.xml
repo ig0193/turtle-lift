@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Opt-in reminders (docs/adr/0005, 0007). POST_NOTIFICATIONS is asked for
+         only after the explain-first sheet; RECEIVE_BOOT_COMPLETED lets the
+         plugin put weekly reminders back after a reboot. No exact-alarm
+         permission: reminders are scheduled inexactly on purpose. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- enableOnBackInvokedCallback: predictive back. Android 16 (targetSdk 36)
          turns it on by default, so testing on a current device hides the
          omission entirely; on 13, 14 and 15 the gesture is silently absent
@@ -30,6 +36,17 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- flutter_local_notifications: shows scheduled reminders, and
+             reschedules them after a reboot or an app update. -->
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

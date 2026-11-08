@@ -131,9 +131,8 @@ bool hasOwnArtwork(String subGroupId) =>
 /// The row's name. A shade larger than the template row's subtitle and a shade
 /// smaller than its title: this is a list of 19, read by scanning.
 const TextStyle kSubGroupRowLabelStyle = TextStyle(
-  fontSize: 13.5,
+  fontSize: 13,
   fontWeight: FontWeight.w600,
-  letterSpacing: -0.1,
   color: AppPalette.textPrimary,
 );
 

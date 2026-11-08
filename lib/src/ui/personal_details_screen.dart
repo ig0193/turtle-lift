@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/body_gender.dart';
 import '../data/personal_details_store.dart';
+import '../data/set_format.dart';
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
 import 'template_row.dart';
@@ -190,11 +191,11 @@ class _GenderChip extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 13),
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            // Selected = raised neutral, ice outline and label: the same
+            // Selected = raised neutral, amber outline and label: the same
             // selection language as the Front/Back toggle and the Profile
             // switch. A solid accent is reserved for the primary action.
             color: selected ? AppPalette.mutedSurface : AppPalette.surface,
@@ -206,7 +207,7 @@ class _GenderChip extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
               color:
                   selected ? AppPalette.accentStrong : AppPalette.textSecondary,
@@ -240,21 +241,16 @@ class _WeightField extends StatelessWidget {
             style: kTemplateRowTitleStyle,
             cursorColor: AppPalette.accentStrong,
             onSubmitted: (_) => onRecord(),
+            // The theme's field: 16pt radius, hairline border, amber on
+            // focus -- the same box as the search field, not Material's 4pt
+            // default sitting next to a capsule.
             decoration: const InputDecoration(
-              isDense: true,
               hintText: 'Weight in kg',
               hintStyle: kTemplateRowSubtitleStyle,
               suffixText: 'kg',
               suffixStyle: kTemplateRowSubtitleStyle,
-              border: OutlineInputBorder(
-                borderSide: BorderSide(color: AppPalette.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: AppPalette.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: AppPalette.accentStrong),
-              ),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),
         ),
@@ -268,19 +264,19 @@ class _WeightField extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: onRecord,
             child: Container(
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               alignment: Alignment.center,
               // The screen's primary action, so it takes the primary button's
-              // look: a capsule in the liquid gradient.
+              // look: a chalk capsule.
               decoration: const ShapeDecoration(
                 shape: StadiumBorder(),
-                gradient: AppGradients.liquid,
+                color: AppPalette.textPrimary,
               ),
               child: const Text(
                 'Record',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: AppPalette.onAccent,
                 ),
@@ -308,14 +304,14 @@ class _WeightRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(minHeight: TemplateRow.minHeight),
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: AppPalette.border)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          Text('${_trimZero(entry.weightKg)} kg',
+          Text('${formatWeight(entry.weightKg)}kg',
               style: kTemplateRowTitleStyle),
           Text(
             'from ${encodeCalendarDate(entry.date)}',
@@ -326,10 +322,6 @@ class _WeightRow extends StatelessWidget {
     );
   }
 }
-
-/// `78.0` reads as a precision the scale did not offer; `78.5` keeps its half.
-String _trimZero(double kg) =>
-    kg == kg.roundToDouble() ? kg.toStringAsFixed(0) : kg.toString();
 
 /// How the calorie estimate works, carried from `docs/04` §Personal details.
 ///
@@ -362,7 +354,7 @@ class _CalorieExplainer extends StatelessWidget {
             ('21+ sets', 'Vigorous effort'),
           ])
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
@@ -394,7 +386,7 @@ class _GroupLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 18, bottom: 8),
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Semantics(
         header: true,
         child: Text(label, style: kLandingSectionLabelStyle),

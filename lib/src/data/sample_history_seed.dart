@@ -2,8 +2,13 @@ import 'package:drift/drift.dart' show Value;
 import 'package:uuid/uuid.dart';
 
 import 'app_database.dart';
+import 'diet_plan_store.dart';
 import 'load_type.dart';
 import 'local_date.dart';
+import 'meal_slot.dart';
+import 'meal_ticks.dart';
+import 'personal_details_store.dart';
+import 'settings_store.dart';
 
 /// Writes a handful of plausible workouts into an empty database, purely so
 /// the History tab has something to render while its calendar and Recent
@@ -196,6 +201,61 @@ Future<void> seedSampleHistoryIfEmpty(AppDatabase db) async {
     batch.insertAll(db.sessionExercises, exerciseRows);
     batch.insertAll(db.setEntries, setRows);
   });
+}
+
+/// Writes a sample Diet into a database that has none: a daily target, a
+/// week planned with Repeat on, and one slot ticked today, so the Diet pane
+/// can be reviewed on a device with its target bar, meters and ticks showing.
+///
+/// **Debug-only, and temporary, like [seedSampleHistoryIfEmpty].** `main.dart`
+/// calls it behind `kDebugMode`, and only from `main()`: the reboot after
+/// Delete all data never runs it, so a wiped app shows Diet's first-time
+/// state, debug or not. It does nothing if any plan, target or tick exists.
+///
+/// **Through the stores, not a batch.** About ten writes, the way a user plans
+/// a week in the serving sheet (Repeat on), so the seed exercises the real
+/// copy-on-write path and lands in this week's version. Sunday dinner is left
+/// empty so an empty slot is on screen too.
+///
+/// A bodyweight two weeks old is recorded when there is none, so the target
+/// screen shows its suggestion (1.6 g per kg of 72 kg, 115 g).
+Future<void> seedSampleDietIfEmpty(
+  AppDatabase db, {
+  LocalDate Function()? today,
+}) async {
+  final clock = today ?? LocalDate.today;
+  final plan = DietPlanStore(db, today: clock);
+  final ticks = MealTickStore(db, today: clock);
+  final settings = SettingsStore(db);
+  if ((await plan.readVersions()).isNotEmpty ||
+      await settings.readProteinTarget() != null ||
+      (await ticks.read()).isNotEmpty) {
+    return;
+  }
+
+  const everyDay = <int>{0, 1, 2, 3, 4, 5, 6};
+  const weekdays = <int>{0, 1, 2, 3, 4};
+  const weekend = <int>{5, 6};
+  Future<void> add(Set<int> days, MealSlot slot, String foodId, int halves) =>
+      plan.addFood(weekdays: days, slot: slot, foodId: foodId, halves: halves);
+
+  await settings.writeProteinTarget(120);
+  await add(everyDay, MealSlot.breakfast, 'boiled-egg', 4);
+  await add(everyDay, MealSlot.breakfast, 'cow-milk', 2);
+  await add(weekdays, MealSlot.lunch, 'chicken-breast', 3);
+  await add(weekdays, MealSlot.lunch, 'roti', 4);
+  await add(weekend, MealSlot.lunch, 'rajma', 2);
+  await add(weekend, MealSlot.lunch, 'rice', 2);
+  await add(everyDay, MealSlot.snack, 'peanuts', 2);
+  await add(everyDay, MealSlot.snack, 'curd', 2);
+  await add(<int>{0, 1, 2, 3, 4, 5}, MealSlot.dinner, 'paneer', 4);
+  await add(<int>{0, 1, 2, 3, 4, 5}, MealSlot.dinner, 'toor-dal', 2);
+  await ticks.toggle(clock(), MealSlot.breakfast);
+
+  final personal = PersonalDetailsStore(db);
+  if ((await personal.readBodyweightEntries()).isEmpty) {
+    await personal.appendBodyweightEntry(clock().addDays(-14).encode(), 72);
+  }
 }
 
 /// One exercise's worth of seed sets, load-type aware so [seedSampleHistoryIfEmpty]

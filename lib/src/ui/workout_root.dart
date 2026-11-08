@@ -379,7 +379,7 @@ class _GroupLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 18, bottom: 8),
+        padding: const EdgeInsets.only(top: 16, bottom: 8),
         child: Semantics(
           header: true,
           child: Text(text, style: kLandingSectionLabelStyle),
@@ -426,9 +426,9 @@ class _TemplateTile extends StatelessWidget {
                 template.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: kTemplateRowTitleStyle.copyWith(fontSize: 14),
+                style: kTemplateRowTitleStyle.copyWith(fontSize: 15),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               Expanded(
                 child: Text(
                   subtitle,
@@ -474,7 +474,7 @@ class _StartBar extends StatelessWidget {
             children: <Widget>[
               const Text(
                 'Start workout',
-                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
               Text(
                 'Add exercises as you go',

@@ -103,7 +103,7 @@ class _SessionTitleFieldState extends ConsumerState<SessionTitleField> {
         onSubmitted: (_) => _commit(),
         onTapOutside: (_) => _focusNode.unfocus(),
         style: const TextStyle(
-          fontSize: 19,
+          fontSize: 20,
           fontWeight: FontWeight.w600,
           color: AppPalette.textPrimary,
         ),
@@ -117,7 +117,7 @@ class _SessionTitleFieldState extends ConsumerState<SessionTitleField> {
           focusedBorder: InputBorder.none,
           hintText: SessionTitleField.placeholder,
           hintStyle: TextStyle(
-            fontSize: 19,
+            fontSize: 20,
             fontWeight: FontWeight.w600,
             color: AppPalette.textMuted,
           ),

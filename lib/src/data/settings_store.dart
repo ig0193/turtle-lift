@@ -1,7 +1,14 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app_database.dart';
+
+/// The smallest daily protein target, in grams.
+const int kMinProteinTargetG = 1;
+
+/// The largest daily protein target, in grams.
+const int kMaxProteinTargetG = 400;
 
 /// Reads and writes the app's one settings row.
 ///
@@ -17,6 +24,35 @@ class SettingsStore {
   const SettingsStore(this._db);
 
   final AppDatabase _db;
+
+  /// The daily protein target in grams, or null when the user has never set
+  /// one (or cleared it).
+  Future<int?> readProteinTarget() async {
+    final row = await (_db.select(_db.settings)
+          ..where((s) => s.id.equals(kSettingsRowId)))
+        .getSingleOrNull();
+    return row?.proteinTargetG;
+  }
+
+  /// Stores [grams] as the daily protein target; null clears it.
+  ///
+  /// Throws [ArgumentError] outside [kMinProteinTargetG]..[kMaxProteinTargetG],
+  /// the same bounds the column's CHECK holds, before anything is written.
+  /// The same partial upsert as `PersonalDetailsStore.writeBodyGender`, so the
+  /// other columns on the one settings row are left alone.
+  Future<void> writeProteinTarget(int? grams) async {
+    if (grams != null &&
+        (grams < kMinProteinTargetG || grams > kMaxProteinTargetG)) {
+      throw ArgumentError.value(grams, 'grams',
+          'must be $kMinProteinTargetG to $kMaxProteinTargetG, or null');
+    }
+    await _db.into(_db.settings).insertOnConflictUpdate(
+          SettingsCompanion.insert(
+            id: const Value<int>(kSettingsRowId),
+            proteinTargetG: Value<int?>(grams),
+          ),
+        );
+  }
 
   /// How many settings rows exist. Only a test should care — it is the guard
   /// that the one settings row really is one row.

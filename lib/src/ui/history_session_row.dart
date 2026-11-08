@@ -76,8 +76,7 @@ class HistorySessionRow extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.1,
+                              fontWeight: FontWeight.w500,
                               color: AppPalette.textPrimary,
                             ),
                           ),
@@ -88,7 +87,7 @@ class HistorySessionRow extends StatelessWidget {
                         if (session.isQuickLog) const _QuickLogTag(),
                       ],
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(
                       meta,
                       style: const TextStyle(
@@ -99,7 +98,7 @@ class HistorySessionRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               const Icon(
                 Icons.chevron_right_rounded,
                 size: 18,
@@ -153,34 +152,17 @@ class HistoryMonthLabel extends StatelessWidget {
   }
 }
 
-/// The personal-best count, as a pill.
+/// The personal-best count: the app's one PB mark ([kPbMarkStyle]).
 class _PbPill extends StatelessWidget {
   const _PbPill({required this.count});
 
   final int count;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(left: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        // accentStrong means "active / this has been worked" everywhere in the
-        // app. A record is the strongest form of that, so the pill borrows it
-        // at low opacity rather than introducing a colour.
-        color: AppPalette.accentStrong.withValues(alpha: 0.17),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        '$count PB',
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: AppPalette.accentLight,
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(left: 8),
+        child: Text('$count PB', style: kPbMarkStyle),
+      );
 }
 
 /// Marks a single-exercise session, so its shorter line reads as a kind of
@@ -190,14 +172,10 @@ class _QuickLogTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(left: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppPalette.border),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: const Text(
+    // Quiet text, not a pill: it states a kind of entry, it is not a control.
+    return const Padding(
+      padding: EdgeInsets.only(left: 8),
+      child: Text(
         'quick log',
         style: TextStyle(
           fontSize: 12,

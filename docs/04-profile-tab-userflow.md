@@ -1,7 +1,7 @@
 # Profile — user flow
 
-> Profile is the fourth tab, split into **Personal** and **Schedule** by a segmented
-> control; workout history is its own tab. See `docs/adr/0004-profile-returns-as-a-tab.md`
+> Profile is the fourth tab, split into **Personal**, **Schedule** and **Diet** by a segmented
+> control (Diet added by `docs/adr/0007-diet-in-profile.md`); workout history is its own tab. See `docs/adr/0004-profile-returns-as-a-tab.md`
 > and `docs/adr/0005-schedule-and-opt-in-notifications.md`. Visual reference:
 > `prototypes/schedule-options.html`. **The mockups below that show an avatar entry are superseded.**
 

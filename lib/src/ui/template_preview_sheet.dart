@@ -58,7 +58,7 @@ class TemplatePreviewSheet extends ConsumerWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -68,14 +68,14 @@ class TemplatePreviewSheet extends ConsumerWidget {
               child: Text(
                 template.name,
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.w600,
                   letterSpacing: -0.2,
                   color: AppPalette.textPrimary,
                 ),
               ),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 4),
             Text(
               templateSubtitle(template, index),
               style: const TextStyle(fontSize: 12, color: AppPalette.textMuted),
@@ -163,7 +163,7 @@ class _PreviewRow extends StatelessWidget {
               child: Text(
                 name,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   color: AppPalette.textPrimary,
                 ),
               ),

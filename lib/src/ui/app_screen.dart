@@ -147,9 +147,8 @@ class AppScreen extends StatelessWidget {
             color: AppPalette.textPrimary,
           )
         : const TextStyle(
-            fontSize: 16,
+            fontSize: 17,
             fontWeight: FontWeight.w600,
-            letterSpacing: -0.16,
             color: AppPalette.textPrimary,
           );
 

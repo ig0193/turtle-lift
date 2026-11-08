@@ -1,7 +1,10 @@
 import 'dart:convert';
 
 import 'body_gender.dart';
+import 'diet_plan_store.dart';
 import 'exercise_index.dart';
+import 'food_index.dart';
+import 'meal_ticks.dart';
 import 'personal_details_store.dart';
 import 'session_store.dart';
 import 'training_plan.dart';
@@ -20,6 +23,15 @@ const int kExportFormatVersion = 1;
 ///
 /// Exercise names travel next to their ids, so the file is readable without
 /// the app's library; the ids are what an import would match on.
+///
+/// **Diet** (KTD19, R25) is the top-level `diet` key: the target or null,
+/// every plan version (`effectiveFrom` and its items, servings as a decimal),
+/// and the eaten ticks as `date` + `slot`. Food names travel beside their ids
+/// the same way; an id the food list no longer knows exports its id with a
+/// null `name`, exactly as an unknown exercise does, rather than the "Unknown
+/// food" display string, which is UI copy and not data. No total, eaten sum,
+/// to-go figure or suggestion is written. Adding a key is not a rename, so
+/// [kExportFormatVersion] stays 1.
 String buildExportJson({
   required List<WorkoutSession> sessions,
   required List<BodyweightEntry> bodyweight,
@@ -27,8 +39,17 @@ String buildExportJson({
   required List<TrainingPlanEntry> trainingPlan,
   required BodyGender gender,
   required ExerciseIndex index,
+  required List<DietPlanVersion> dietPlan,
+  required Iterable<MealTick> mealTicks,
+  required int? proteinTargetG,
+  required FoodIndex foods,
   required DateTime exportedAt,
 }) {
+  final ticks = mealTicks.toList()
+    ..sort((a, b) {
+      final byDate = a.date.compareTo(b.date);
+      return byDate != 0 ? byDate : a.slot.index.compareTo(b.slot.index);
+    });
   final document = <String, Object?>{
     'app': 'TurtleLift',
     'formatVersion': kExportFormatVersion,
@@ -87,6 +108,29 @@ String buildExportJson({
           'weekdays': (entry.weekdays.toList()..sort()),
         },
     ],
+    'diet': <String, Object?>{
+      'proteinTargetG': proteinTargetG,
+      'planVersions': <Object?>[
+        for (final version in dietPlan)
+          <String, Object?>{
+            'effectiveFrom': version.effectiveFrom.encode(),
+            'items': <Object?>[
+              for (final item in version.items)
+                <String, Object?>{
+                  'weekday': item.weekday,
+                  'slot': item.slot.name,
+                  'foodId': item.foodId,
+                  'name': foods.byId(item.foodId)?.name,
+                  'servings': item.servingsHalves / 2,
+                },
+            ],
+          },
+      ],
+      'eaten': <Object?>[
+        for (final tick in ticks)
+          <String, Object?>{'date': tick.date.encode(), 'slot': tick.slot.name},
+      ],
+    },
   };
   return const JsonEncoder.withIndent('  ').convert(document);
 }

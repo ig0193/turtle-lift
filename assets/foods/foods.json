@@ -1,0 +1,1628 @@
+[
+  {
+    "id": "almonds",
+    "name": "Almonds",
+    "aliases": [
+      "badam"
+    ],
+    "dietType": "veg",
+    "servingLabel": "10 almonds, 12 g",
+    "gramsPerServing": 12,
+    "proteinPerServingG": 2.2,
+    "proteinPer100g": 18.41,
+    "ifctCode": "H001",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "bajra",
+    "name": "Bajra",
+    "aliases": [
+      "pearl millet",
+      "sajje",
+      "kambu"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 bajra roti, 40 g flour",
+    "gramsPerServing": 40,
+    "proteinPerServingG": 4.4,
+    "proteinPer100g": 10.96,
+    "ifctCode": "A003",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "barley",
+    "name": "Barley",
+    "aliases": [
+      "jau"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked barley, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 3.3,
+    "proteinPer100g": 10.94,
+    "ifctCode": "A004",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "besan",
+    "name": "Besan",
+    "aliases": [
+      "gram flour",
+      "chickpea flour"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 besan chilla, 30 g besan",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 6.5,
+    "proteinPer100g": 21.55,
+    "ifctCode": "B001",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "black-pomfret",
+    "name": "Black pomfret",
+    "aliases": [
+      "halwa fish",
+      "karuppu vavval"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 medium piece, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 14.2,
+    "proteinPer100g": 18.91,
+    "ifctCode": "P055",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "boiled-country-egg",
+    "name": "Boiled country egg",
+    "aliases": [
+      "ubla desi anda"
+    ],
+    "dietType": "egg",
+    "servingLabel": "1 boiled country egg, 40 g",
+    "gramsPerServing": 40,
+    "proteinPerServingG": 5.8,
+    "proteinPer100g": 14.43,
+    "ifctCode": "M009",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "boiled-duck-egg",
+    "name": "Boiled duck egg",
+    "aliases": [
+      "ubla batakh ka anda"
+    ],
+    "dietType": "egg",
+    "servingLabel": "1 boiled duck egg, 65 g",
+    "gramsPerServing": 65,
+    "proteinPerServingG": 9.0,
+    "proteinPer100g": 13.8,
+    "ifctCode": "M011",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "boiled-egg",
+    "name": "Boiled egg",
+    "aliases": [
+      "ubla anda",
+      "hard-boiled egg"
+    ],
+    "dietType": "egg",
+    "servingLabel": "1 boiled egg, 50 g",
+    "gramsPerServing": 50,
+    "proteinPerServingG": 6.7,
+    "proteinPer100g": 13.43,
+    "ifctCode": "M004",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "boiled-egg-white",
+    "name": "Boiled egg white",
+    "aliases": [
+      "ubla anda safedi",
+      "boiled egg whites"
+    ],
+    "dietType": "egg",
+    "servingLabel": "1 boiled egg white, 33 g",
+    "gramsPerServing": 33,
+    "proteinPerServingG": 4.1,
+    "proteinPer100g": 12.37,
+    "ifctCode": "M005",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "boiled-egg-yolk",
+    "name": "Boiled egg yolk",
+    "aliases": [
+      "ubla anda zardi"
+    ],
+    "dietType": "egg",
+    "servingLabel": "1 boiled egg yolk, 17 g",
+    "gramsPerServing": 17,
+    "proteinPerServingG": 2.7,
+    "proteinPer100g": 16.13,
+    "ifctCode": "M006",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "boiled-quail-egg",
+    "name": "Boiled quail egg",
+    "aliases": [
+      "ubla bater ka anda"
+    ],
+    "dietType": "egg",
+    "servingLabel": "5 boiled quail eggs, 50 g",
+    "gramsPerServing": 50,
+    "proteinPerServingG": 6.5,
+    "proteinPer100g": 13.03,
+    "ifctCode": "M015",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "bombay-duck",
+    "name": "Bombay duck",
+    "aliases": [
+      "bombil",
+      "bombili"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "2 pieces, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 10.1,
+    "proteinPer100g": 13.53,
+    "ifctCode": "P007",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "brown-rice",
+    "name": "Brown rice",
+    "aliases": [],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked rice, 50 g raw",
+    "gramsPerServing": 50,
+    "proteinPerServingG": 4.6,
+    "proteinPer100g": 9.16,
+    "ifctCode": "A013",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "buffalo-milk",
+    "name": "Buffalo milk",
+    "aliases": [
+      "bhains ka doodh"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 glass, 200 g",
+    "gramsPerServing": 200,
+    "proteinPerServingG": 7.4,
+    "proteinPer100g": 3.68,
+    "ifctCode": "L001",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "button-mushroom",
+    "name": "Button mushroom",
+    "aliases": [
+      "khumb",
+      "mushroom"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori sliced, 100 g",
+    "gramsPerServing": 100,
+    "proteinPerServingG": 3.7,
+    "proteinPer100g": 3.68,
+    "ifctCode": "J001",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "cashews",
+    "name": "Cashews",
+    "aliases": [
+      "kaju"
+    ],
+    "dietType": "veg",
+    "servingLabel": "10 cashews, 15 g",
+    "gramsPerServing": 15,
+    "proteinPerServingG": 2.8,
+    "proteinPer100g": 18.78,
+    "ifctCode": "H005",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "catla",
+    "name": "Catla",
+    "aliases": [
+      "katla",
+      "bhakur"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 medium piece, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 13.5,
+    "proteinPer100g": 17.94,
+    "ifctCode": "S002",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "cauliflower",
+    "name": "Cauliflower",
+    "aliases": [
+      "gobhi",
+      "phool gobhi"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori sabzi, 100 g raw",
+    "gramsPerServing": 100,
+    "proteinPerServingG": 2.2,
+    "proteinPer100g": 2.15,
+    "ifctCode": "D036",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "chana-dal",
+    "name": "Chana dal",
+    "aliases": [
+      "bengal gram dal",
+      "split chickpea"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked dal, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 6.5,
+    "proteinPer100g": 21.55,
+    "ifctCode": "B001",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "chicken-breast",
+    "name": "Chicken breast",
+    "aliases": [
+      "murgh breast",
+      "boneless chicken"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "100 g raw, about 1 katori cooked",
+    "gramsPerServing": 100,
+    "proteinPerServingG": 21.8,
+    "proteinPer100g": 21.81,
+    "ifctCode": "N003",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "chicken-gizzard",
+    "name": "Chicken gizzard",
+    "aliases": [
+      "pota"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 katori cooked, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 13.7,
+    "proteinPer100g": 18.22,
+    "ifctCode": "N006",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "chicken-leg",
+    "name": "Chicken leg",
+    "aliases": [
+      "chicken drumstick",
+      "tangdi"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "2 drumsticks, 100 g raw meat",
+    "gramsPerServing": 100,
+    "proteinPerServingG": 19.4,
+    "proteinPer100g": 19.44,
+    "ifctCode": "N001",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "chicken-liver",
+    "name": "Chicken liver",
+    "aliases": [
+      "kaleji"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 katori cooked, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 16.2,
+    "proteinPer100g": 21.57,
+    "ifctCode": "N005",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "chicken-thigh",
+    "name": "Chicken thigh",
+    "aliases": [],
+    "dietType": "nonVeg",
+    "servingLabel": "100 g raw, about 1 katori cooked",
+    "gramsPerServing": 100,
+    "proteinPerServingG": 18.2,
+    "proteinPer100g": 18.18,
+    "ifctCode": "N002",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "chicken-wing",
+    "name": "Chicken wing",
+    "aliases": [],
+    "dietType": "nonVeg",
+    "servingLabel": "2 wings, 60 g raw meat",
+    "gramsPerServing": 60,
+    "proteinPerServingG": 10.5,
+    "proteinPer100g": 17.42,
+    "ifctCode": "N004",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "chitra-rajma",
+    "name": "Chitra rajma",
+    "aliases": [
+      "brown rajma",
+      "speckled kidney beans"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori rajma curry, 35 g dry",
+    "gramsPerServing": 35,
+    "proteinPerServingG": 6.8,
+    "proteinPer100g": 19.5,
+    "ifctCode": "B019",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "country-chicken",
+    "name": "Country chicken",
+    "aliases": [
+      "desi murga",
+      "nattu kozhi"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "100 g raw, about 1 katori cooked",
+    "gramsPerServing": 100,
+    "proteinPerServingG": 17.0,
+    "proteinPer100g": 17.01,
+    "ifctCode": "N007",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "country-egg",
+    "name": "Country egg",
+    "aliases": [
+      "desi anda",
+      "nattu kozhi muttai"
+    ],
+    "dietType": "egg",
+    "servingLabel": "1 country egg, 40 g",
+    "gramsPerServing": 40,
+    "proteinPerServingG": 5.3,
+    "proteinPer100g": 13.14,
+    "ifctCode": "M008",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "country-egg-omelette",
+    "name": "Country egg omelette",
+    "aliases": [
+      "desi anda amlet"
+    ],
+    "dietType": "egg",
+    "servingLabel": "1-egg omelette, 40 g",
+    "gramsPerServing": 40,
+    "proteinPerServingG": 5.9,
+    "proteinPer100g": 14.8,
+    "ifctCode": "M010",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "cow-milk",
+    "name": "Cow milk",
+    "aliases": [
+      "doodh",
+      "gaay ka doodh",
+      "whole milk"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 glass, 200 g",
+    "gramsPerServing": 200,
+    "proteinPerServingG": 6.5,
+    "proteinPer100g": 3.26,
+    "ifctCode": "L002",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "crab",
+    "name": "Crab",
+    "aliases": [
+      "kekda",
+      "nandu",
+      "kurlya"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 katori cooked, 75 g raw meat",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 7.5,
+    "proteinPer100g": 10.0,
+    "ifctCode": "Q005",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "curd",
+    "name": "Curd",
+    "aliases": [
+      "dahi",
+      "yogurt",
+      "thayir"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori curd, 100 g",
+    "gramsPerServing": 100,
+    "proteinPerServingG": 3.3,
+    "proteinPer100g": 3.26,
+    "ifctCode": "L002",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "dalia",
+    "name": "Dalia",
+    "aliases": [
+      "broken wheat",
+      "lapsi"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked dalia, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 3.2,
+    "proteinPer100g": 10.59,
+    "ifctCode": "A020",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "dried-peas",
+    "name": "Dried peas",
+    "aliases": [
+      "sukhe matar",
+      "vatana",
+      "safed matar"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked ragda, 35 g dry",
+    "gramsPerServing": 35,
+    "proteinPerServingG": 7.2,
+    "proteinPer100g": 20.43,
+    "ifctCode": "B017",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "drumstick-leaves",
+    "name": "Drumstick leaves",
+    "aliases": [
+      "moringa leaves",
+      "sahjan ke patte",
+      "murungai keerai"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori leaves, 50 g",
+    "gramsPerServing": 50,
+    "proteinPerServingG": 3.2,
+    "proteinPer100g": 6.41,
+    "ifctCode": "C019",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "duck-egg",
+    "name": "Duck egg",
+    "aliases": [
+      "batakh ka anda"
+    ],
+    "dietType": "egg",
+    "servingLabel": "1 duck egg, 65 g",
+    "gramsPerServing": 65,
+    "proteinPerServingG": 9.5,
+    "proteinPer100g": 14.6,
+    "ifctCode": "M012",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "duck-egg-omelette",
+    "name": "Duck egg omelette",
+    "aliases": [],
+    "dietType": "egg",
+    "servingLabel": "1-egg omelette, 65 g",
+    "gramsPerServing": 65,
+    "proteinPerServingG": 9.8,
+    "proteinPer100g": 15.1,
+    "ifctCode": "M013",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "egg",
+    "name": "Egg",
+    "aliases": [
+      "anda",
+      "whole egg",
+      "hen egg"
+    ],
+    "dietType": "egg",
+    "servingLabel": "1 egg, 50 g",
+    "gramsPerServing": 50,
+    "proteinPerServingG": 6.6,
+    "proteinPer100g": 13.28,
+    "ifctCode": "M001",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "egg-white",
+    "name": "Egg white",
+    "aliases": [
+      "anda safedi",
+      "egg whites"
+    ],
+    "dietType": "egg",
+    "servingLabel": "1 egg white, 33 g",
+    "gramsPerServing": 33,
+    "proteinPerServingG": 3.6,
+    "proteinPer100g": 10.84,
+    "ifctCode": "M002",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "egg-yolk",
+    "name": "Egg yolk",
+    "aliases": [
+      "anda zardi"
+    ],
+    "dietType": "egg",
+    "servingLabel": "1 egg yolk, 17 g",
+    "gramsPerServing": 17,
+    "proteinPerServingG": 2.7,
+    "proteinPer100g": 15.74,
+    "ifctCode": "M003",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "flaxseed",
+    "name": "Flaxseed",
+    "aliases": [
+      "alsi",
+      "linseed"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 tbsp, 10 g",
+    "gramsPerServing": 10,
+    "proteinPerServingG": 1.9,
+    "proteinPer100g": 18.55,
+    "ifctCode": "H014",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "garden-cress-seeds",
+    "name": "Garden cress seeds",
+    "aliases": [
+      "halim",
+      "aliv"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 tsp, 5 g",
+    "gramsPerServing": 5,
+    "proteinPerServingG": 1.2,
+    "proteinPer100g": 23.36,
+    "ifctCode": "H008",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "green-peas",
+    "name": "Green peas",
+    "aliases": [
+      "matar",
+      "hara matar"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori shelled peas, 80 g",
+    "gramsPerServing": 80,
+    "proteinPerServingG": 5.8,
+    "proteinPer100g": 7.25,
+    "ifctCode": "D061",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "hilsa",
+    "name": "Hilsa",
+    "aliases": [
+      "ilish",
+      "palla",
+      "pulasa"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 medium piece, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 16.4,
+    "proteinPer100g": 21.8,
+    "ifctCode": "P017",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "indian-mackerel",
+    "name": "Indian mackerel",
+    "aliases": [
+      "bangda",
+      "ayala",
+      "bangude"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 whole fish, 75 g raw edible",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 16.1,
+    "proteinPer100g": 21.51,
+    "ifctCode": "P034",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "indian-oil-sardine",
+    "name": "Indian oil sardine",
+    "aliases": [
+      "mathi",
+      "tarli",
+      "chaala"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "2 whole fish, 75 g raw edible",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 13.4,
+    "proteinPer100g": 17.91,
+    "ifctCode": "P071",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "indian-salmon",
+    "name": "Indian salmon",
+    "aliases": [
+      "rawas",
+      "threadfin"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 medium piece, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 15.1,
+    "proteinPer100g": 20.11,
+    "ifctCode": "P033",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "jowar",
+    "name": "Jowar",
+    "aliases": [
+      "sorghum",
+      "jonna",
+      "cholam"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 jowar bhakri, 40 g flour",
+    "gramsPerServing": 40,
+    "proteinPerServingG": 4.0,
+    "proteinPer100g": 9.97,
+    "ifctCode": "A005",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "kala-chana",
+    "name": "Kala chana",
+    "aliases": [
+      "bengal gram whole",
+      "desi chana",
+      "black chickpea"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked kala chana, 35 g dry",
+    "gramsPerServing": 35,
+    "proteinPerServingG": 6.6,
+    "proteinPer100g": 18.77,
+    "ifctCode": "B002",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "kala-chana-sprouts",
+    "name": "Kala chana sprouts",
+    "aliases": [
+      "sprouted chana",
+      "ankurit chana"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori sprouts, 35 g dry chana",
+    "gramsPerServing": 35,
+    "proteinPerServingG": 6.6,
+    "proteinPer100g": 18.77,
+    "ifctCode": "B002",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "khoa",
+    "name": "Khoa",
+    "aliases": [
+      "khoya",
+      "mawa"
+    ],
+    "dietType": "veg",
+    "servingLabel": "2 tbsp, 30 g",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 4.9,
+    "proteinPer100g": 16.34,
+    "ifctCode": "L004",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "kulthi",
+    "name": "Kulthi",
+    "aliases": [
+      "horse gram",
+      "hurali",
+      "ulavalu",
+      "kollu"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked kulthi, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 6.5,
+    "proteinPer100g": 21.73,
+    "ifctCode": "B012",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "lobia",
+    "name": "Lobia",
+    "aliases": [
+      "cowpea",
+      "chawli",
+      "black-eyed beans",
+      "karamani"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked lobia, 35 g dry",
+    "gramsPerServing": 35,
+    "proteinPerServingG": 7.1,
+    "proteinPer100g": 20.36,
+    "ifctCode": "B005",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "maida",
+    "name": "Maida",
+    "aliases": [
+      "refined flour"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 naan, 60 g maida",
+    "gramsPerServing": 60,
+    "proteinPerServingG": 6.2,
+    "proteinPer100g": 10.36,
+    "ifctCode": "A018",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "makki-atta",
+    "name": "Makki atta",
+    "aliases": [
+      "maize flour",
+      "corn flour"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 makki roti, 40 g flour",
+    "gramsPerServing": 40,
+    "proteinPerServingG": 3.5,
+    "proteinPer100g": 8.8,
+    "ifctCode": "A006",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "masoor-dal",
+    "name": "Masoor dal",
+    "aliases": [
+      "red lentil",
+      "lentil dal"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked dal, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 7.3,
+    "proteinPer100g": 24.35,
+    "ifctCode": "B013",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "matki",
+    "name": "Matki",
+    "aliases": [
+      "moth beans",
+      "math",
+      "mat"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked matki, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 5.9,
+    "proteinPer100g": 19.75,
+    "ifctCode": "B016",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "methi-leaves",
+    "name": "Methi leaves",
+    "aliases": [
+      "fenugreek leaves"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori leaves, 50 g",
+    "gramsPerServing": 50,
+    "proteinPerServingG": 1.8,
+    "proteinPer100g": 3.68,
+    "ifctCode": "C020",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "moong-dal",
+    "name": "Moong dal",
+    "aliases": [
+      "green gram dal",
+      "dhuli moong",
+      "yellow moong",
+      "pesara pappu"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked dal, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 7.2,
+    "proteinPer100g": 23.88,
+    "ifctCode": "B010",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "moong-dal-chilla",
+    "name": "Moong dal chilla",
+    "aliases": [
+      "moong chilla",
+      "pesarattu"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 chilla, 30 g dry moong dal",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 7.2,
+    "proteinPer100g": 23.88,
+    "ifctCode": "B010",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "moong-sprouts",
+    "name": "Moong sprouts",
+    "aliases": [
+      "sprouted moong",
+      "ankurit moong"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori sprouts, 35 g dry moong",
+    "gramsPerServing": 35,
+    "proteinPerServingG": 7.9,
+    "proteinPer100g": 22.53,
+    "ifctCode": "B011",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "mrigal",
+    "name": "Mrigal",
+    "aliases": [
+      "mirka",
+      "naini"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 medium piece, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 13.5,
+    "proteinPer100g": 17.94,
+    "ifctCode": "S002",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "murmura",
+    "name": "Murmura",
+    "aliases": [
+      "puffed rice",
+      "mamra",
+      "pori"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori murmura, 15 g",
+    "gramsPerServing": 15,
+    "proteinPerServingG": 1.1,
+    "proteinPer100g": 7.47,
+    "ifctCode": "A012",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "mussels",
+    "name": "Mussels",
+    "aliases": [
+      "kallumakkaya",
+      "tisrya"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 katori cooked, 75 g raw shelled",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 9.1,
+    "proteinPer100g": 12.14,
+    "ifctCode": "R001",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "mutton-brain",
+    "name": "Mutton brain",
+    "aliases": [
+      "bheja",
+      "goat brain"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 katori cooked, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 10.4,
+    "proteinPer100g": 13.82,
+    "ifctCode": "O004",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "mutton-chops",
+    "name": "Mutton chops",
+    "aliases": [
+      "goat chops"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "2 chops, 80 g raw meat",
+    "gramsPerServing": 80,
+    "proteinPerServingG": 16.3,
+    "proteinPer100g": 20.39,
+    "ifctCode": "O002",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "mutton-keema",
+    "name": "Mutton keema",
+    "aliases": [
+      "kheema",
+      "minced mutton"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 katori keema, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 15.2,
+    "proteinPer100g": 20.33,
+    "ifctCode": "O001",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "mutton-kidney",
+    "name": "Mutton kidney",
+    "aliases": [
+      "gurda",
+      "goat kidney"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 katori cooked, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 11.7,
+    "proteinPer100g": 15.6,
+    "ifctCode": "O011",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "mutton-leg",
+    "name": "Mutton leg",
+    "aliases": [
+      "raan",
+      "goat leg"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "100 g raw, about 1 katori cooked",
+    "gramsPerServing": 100,
+    "proteinPerServingG": 22.1,
+    "proteinPer100g": 22.07,
+    "ifctCode": "O003",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "mutton-liver",
+    "name": "Mutton liver",
+    "aliases": [
+      "goat liver",
+      "kaleji"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 katori cooked, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 15.2,
+    "proteinPer100g": 20.32,
+    "ifctCode": "O008",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "mutton-shoulder",
+    "name": "Mutton shoulder",
+    "aliases": [
+      "goat meat",
+      "bakre ka gosht",
+      "mutton curry cut"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "100 g raw, about 1 katori cooked",
+    "gramsPerServing": 100,
+    "proteinPerServingG": 20.3,
+    "proteinPer100g": 20.33,
+    "ifctCode": "O001",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "omelette",
+    "name": "Omelette",
+    "aliases": [
+      "amlet"
+    ],
+    "dietType": "egg",
+    "servingLabel": "1-egg omelette, 50 g",
+    "gramsPerServing": 50,
+    "proteinPerServingG": 8.3,
+    "proteinPer100g": 16.53,
+    "ifctCode": "M007",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "paneer",
+    "name": "Paneer",
+    "aliases": [
+      "cottage cheese"
+    ],
+    "dietType": "veg",
+    "servingLabel": "5 cubes, 50 g",
+    "gramsPerServing": 50,
+    "proteinPerServingG": 9.4,
+    "proteinPer100g": 18.86,
+    "ifctCode": "L003",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "paratha",
+    "name": "Paratha",
+    "aliases": [
+      "plain paratha"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 plain paratha, 45 g atta",
+    "gramsPerServing": 45,
+    "proteinPerServingG": 4.8,
+    "proteinPer100g": 10.57,
+    "ifctCode": "A019",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "parboiled-rice",
+    "name": "Parboiled rice",
+    "aliases": [
+      "ukda chawal",
+      "sela rice",
+      "boiled rice"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked rice, 50 g raw",
+    "gramsPerServing": 50,
+    "proteinPerServingG": 3.9,
+    "proteinPer100g": 7.81,
+    "ifctCode": "A014",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "peanuts",
+    "name": "Peanuts",
+    "aliases": [
+      "groundnut",
+      "moongphali",
+      "shengdana",
+      "kadalai"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 handful, 30 g",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 7.1,
+    "proteinPer100g": 23.65,
+    "ifctCode": "H012",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "pistachios",
+    "name": "Pistachios",
+    "aliases": [
+      "pista"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 handful, 20 g",
+    "gramsPerServing": 20,
+    "proteinPerServingG": 4.7,
+    "proteinPer100g": 23.35,
+    "ifctCode": "H018",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "poha",
+    "name": "Poha",
+    "aliases": [
+      "rice flakes",
+      "aval",
+      "chivda"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 plate poha, 50 g dry flakes",
+    "gramsPerServing": 50,
+    "proteinPerServingG": 3.7,
+    "proteinPer100g": 7.44,
+    "ifctCode": "A011",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "potato",
+    "name": "Potato",
+    "aliases": [
+      "aloo",
+      "batata"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 medium potato, 100 g",
+    "gramsPerServing": 100,
+    "proteinPerServingG": 1.5,
+    "proteinPer100g": 1.54,
+    "ifctCode": "F006",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "prawns",
+    "name": "Prawns",
+    "aliases": [
+      "jhinga",
+      "kolambi",
+      "shrimp",
+      "chemmeen"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 katori cooked, 75 g raw shelled",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 10.7,
+    "proteinPer100g": 14.25,
+    "ifctCode": "Q008",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "quail-egg",
+    "name": "Quail egg",
+    "aliases": [
+      "bater ka anda",
+      "kaadai muttai"
+    ],
+    "dietType": "egg",
+    "servingLabel": "5 quail eggs, 50 g",
+    "gramsPerServing": 50,
+    "proteinPerServingG": 6.2,
+    "proteinPer100g": 12.39,
+    "ifctCode": "M014",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "quinoa",
+    "name": "Quinoa",
+    "aliases": [],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked quinoa, 40 g dry",
+    "gramsPerServing": 40,
+    "proteinPerServingG": 5.2,
+    "proteinPer100g": 13.11,
+    "ifctCode": "A009",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "ragi",
+    "name": "Ragi",
+    "aliases": [
+      "finger millet",
+      "nachni",
+      "mandua"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 ragi roti, 40 g flour",
+    "gramsPerServing": 40,
+    "proteinPerServingG": 2.9,
+    "proteinPer100g": 7.16,
+    "ifctCode": "A010",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "rajgira",
+    "name": "Rajgira",
+    "aliases": [
+      "amaranth seed",
+      "ramdana"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori rajgira, 30 g",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 4.0,
+    "proteinPer100g": 13.27,
+    "ifctCode": "A002",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "rajma",
+    "name": "Rajma",
+    "aliases": [
+      "red kidney beans"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori rajma curry, 35 g dry",
+    "gramsPerServing": 35,
+    "proteinPerServingG": 7.0,
+    "proteinPer100g": 19.91,
+    "ifctCode": "B020",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "rice",
+    "name": "Rice",
+    "aliases": [
+      "chawal",
+      "white rice"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked rice, 50 g raw",
+    "gramsPerServing": 50,
+    "proteinPerServingG": 4.0,
+    "proteinPer100g": 7.94,
+    "ifctCode": "A015",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "rohu",
+    "name": "Rohu",
+    "aliases": [
+      "rui",
+      "rohu machh"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 medium piece, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 14.8,
+    "proteinPer100g": 19.71,
+    "ifctCode": "S006",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "roti",
+    "name": "Roti",
+    "aliases": [
+      "chapati",
+      "phulka",
+      "atta"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 roti, 30 g atta",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 3.2,
+    "proteinPer100g": 10.57,
+    "ifctCode": "A019",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "sabut-masoor",
+    "name": "Sabut masoor",
+    "aliases": [
+      "whole lentil",
+      "brown lentil"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked dal, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 6.7,
+    "proteinPer100g": 22.49,
+    "ifctCode": "B014",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "sabut-moong",
+    "name": "Sabut moong",
+    "aliases": [
+      "green gram whole",
+      "hari moong"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked moong, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 6.8,
+    "proteinPer100g": 22.53,
+    "ifctCode": "B011",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "sabut-toor",
+    "name": "Sabut toor",
+    "aliases": [
+      "whole pigeon pea",
+      "whole arhar"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked toor, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 6.1,
+    "proteinPer100g": 20.47,
+    "ifctCode": "B022",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "sabut-urad",
+    "name": "Sabut urad",
+    "aliases": [
+      "black gram whole",
+      "kali dal",
+      "maa ki dal"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked dal, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 6.6,
+    "proteinPer100g": 21.97,
+    "ifctCode": "B004",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "safed-lobia",
+    "name": "Safed lobia",
+    "aliases": [
+      "white cowpea",
+      "white chawli"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked lobia, 35 g dry",
+    "gramsPerServing": 35,
+    "proteinPerServingG": 7.4,
+    "proteinPer100g": 21.25,
+    "ifctCode": "B006",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "sambar",
+    "name": "Sambar",
+    "aliases": [
+      "sambhar"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori sambar, 20 g dry toor dal",
+    "gramsPerServing": 20,
+    "proteinPerServingG": 4.3,
+    "proteinPer100g": 21.7,
+    "ifctCode": "B021",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "seer-fish",
+    "name": "Seer fish",
+    "aliases": [
+      "surmai",
+      "vanjaram",
+      "king mackerel"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 medium piece, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 16.7,
+    "proteinPer100g": 22.28,
+    "ifctCode": "P087",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "sesame-seeds",
+    "name": "Sesame seeds",
+    "aliases": [
+      "til",
+      "gingelly",
+      "ellu"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 tbsp, 9 g",
+    "gramsPerServing": 9,
+    "proteinPerServingG": 2.0,
+    "proteinPer100g": 21.7,
+    "ifctCode": "H011",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "seviyan",
+    "name": "Seviyan",
+    "aliases": [
+      "vermicelli",
+      "semiya"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked seviyan, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 2.9,
+    "proteinPer100g": 9.7,
+    "ifctCode": "A023",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "soya-bean",
+    "name": "Soya bean",
+    "aliases": [
+      "soybean",
+      "bhatmas"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked soya bean, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 10.7,
+    "proteinPer100g": 35.58,
+    "ifctCode": "B024",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "spinach",
+    "name": "Spinach",
+    "aliases": [
+      "palak"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked palak, 100 g raw",
+    "gramsPerServing": 100,
+    "proteinPerServingG": 2.1,
+    "proteinPer100g": 2.14,
+    "ifctCode": "C033",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "squid",
+    "name": "Squid",
+    "aliases": [
+      "kanava",
+      "calamari"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 katori cooked, 75 g raw shelled",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 12.2,
+    "proteinPer100g": 16.25,
+    "ifctCode": "R006",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "suji",
+    "name": "Suji",
+    "aliases": [
+      "rava",
+      "semolina",
+      "upma"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 plate upma, 50 g dry rava",
+    "gramsPerServing": 50,
+    "proteinPerServingG": 5.7,
+    "proteinPer100g": 11.38,
+    "ifctCode": "A022",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "sunflower-seeds",
+    "name": "Sunflower seeds",
+    "aliases": [],
+    "dietType": "veg",
+    "servingLabel": "1 tbsp, 10 g",
+    "gramsPerServing": 10,
+    "proteinPerServingG": 2.4,
+    "proteinPer100g": 23.53,
+    "ifctCode": "H020",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "sweet-corn",
+    "name": "Sweet corn",
+    "aliases": [
+      "bhutta",
+      "corn kernels"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori kernels, 80 g",
+    "gramsPerServing": 80,
+    "proteinPerServingG": 3.3,
+    "proteinPer100g": 4.16,
+    "ifctCode": "A008",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "tilapia",
+    "name": "Tilapia",
+    "aliases": [],
+    "dietType": "nonVeg",
+    "servingLabel": "1 medium piece, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 13.9,
+    "proteinPer100g": 18.48,
+    "ifctCode": "P083",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "toor-dal",
+    "name": "Toor dal",
+    "aliases": [
+      "arhar dal",
+      "tuvar dal",
+      "pigeon pea dal",
+      "kandi pappu"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked dal, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 6.5,
+    "proteinPer100g": 21.7,
+    "ifctCode": "B021",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "tuna",
+    "name": "Tuna",
+    "aliases": [
+      "choora"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 medium piece, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 18.4,
+    "proteinPer100g": 24.5,
+    "ifctCode": "P084",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "urad-dal",
+    "name": "Urad dal",
+    "aliases": [
+      "black gram dal",
+      "dhuli urad",
+      "uddina bele"
+    ],
+    "dietType": "veg",
+    "servingLabel": "1 katori cooked dal, 30 g dry",
+    "gramsPerServing": 30,
+    "proteinPerServingG": 6.9,
+    "proteinPer100g": 23.06,
+    "ifctCode": "B003",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "walnuts",
+    "name": "Walnuts",
+    "aliases": [
+      "akhrot"
+    ],
+    "dietType": "veg",
+    "servingLabel": "5 walnut halves, 15 g",
+    "gramsPerServing": 15,
+    "proteinPerServingG": 2.2,
+    "proteinPer100g": 14.92,
+    "ifctCode": "H021",
+    "reviewedBy": "pending-owner-review"
+  },
+  {
+    "id": "white-pomfret",
+    "name": "White pomfret",
+    "aliases": [
+      "paplet",
+      "silver pomfret",
+      "vavval"
+    ],
+    "dietType": "nonVeg",
+    "servingLabel": "1 medium piece, 75 g raw",
+    "gramsPerServing": 75,
+    "proteinPerServingG": 14.3,
+    "proteinPer100g": 19.02,
+    "ifctCode": "P057",
+    "reviewedBy": "pending-owner-review"
+  }
+]

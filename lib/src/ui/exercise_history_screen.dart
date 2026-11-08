@@ -8,6 +8,7 @@ import '../data/personal_best.dart';
 import '../data/session_store.dart';
 import '../data/set_format.dart';
 import '../theme/app_palette.dart';
+import '../theme/app_typography.dart';
 import 'app_screen.dart';
 import 'session_summary_screen.dart';
 
@@ -67,7 +68,7 @@ class _ExerciseHistoryScreenState
             // broken where one line reads as a state.
             const Text(
               'You haven’t logged this yet.',
-              style: TextStyle(fontSize: 13.5, color: AppPalette.textMuted),
+              style: TextStyle(fontSize: 13, color: AppPalette.textMuted),
             )
           else ...<Widget>[
             _SummaryStrip(sessions: sessions, exerciseId: widget.exerciseId),
@@ -167,7 +168,7 @@ class _SessionBlock extends StatelessWidget {
         // else they did that day.
         onTap: () => pushSessionSummary(context, session.id),
         child: Container(
-          margin: const EdgeInsets.only(bottom: 9),
+          margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: AppPalette.surface,
@@ -182,7 +183,7 @@ class _SessionBlock extends StatelessWidget {
                   Text(
                     _shortDate(session.performedOn),
                     style: const TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppPalette.textPrimary,
                     ),
@@ -198,35 +199,22 @@ class _SessionBlock extends StatelessWidget {
                   if (isRecord)
                     Text(
                       exercise.loadType?.name == 'assisted'
-                          ? '★ PB · lightest assist'
-                          : '★ PB',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppPalette.accentStrong,
-                      ),
+                          ? 'PB · lightest assist'
+                          : 'PB',
+                      style: kPbMarkStyle,
                     ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
+              // A muted line of sets, not a pill per set: they are a record
+              // to read, not controls to tap.
               Wrap(
-                spacing: 6,
-                runSpacing: 6,
+                runSpacing: 4,
                 children: <Widget>[
-                  for (final set in exercise.completedSets)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppPalette.mutedSurface,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        formatSet(exercise.loadType, set),
-                        style: const TextStyle(
-                            fontSize: 12, color: AppPalette.textSecondary),
-                      ),
-                    ),
+                  for (final (i, set) in exercise.completedSets.indexed) ...[
+                    if (i > 0) const Text(' · ', style: _setStyle),
+                    Text(formatSet(exercise.loadType, set), style: _setStyle),
+                  ],
                 ],
               ),
             ],
@@ -254,9 +242,24 @@ class _SeeMore extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(minHeight: 48),
             alignment: Alignment.center,
-            child: const Text(
-              'See more ›',
-              style: TextStyle(fontSize: 14, color: AppPalette.textSecondary),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  'See more',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppPalette.textPrimary,
+                  ),
+                ),
+                SizedBox(width: 2),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: AppPalette.textSecondary,
+                ),
+              ],
             ),
           ),
         ),
@@ -289,3 +292,10 @@ Future<void> pushExerciseHistory(BuildContext context, String exerciseId) =>
         builder: (_) => ExerciseHistoryScreen(exerciseId: exerciseId),
       ),
     );
+
+/// One logged set in the history line.
+const TextStyle _setStyle = TextStyle(
+  fontSize: 13,
+  color: AppPalette.textSecondary,
+  fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+);

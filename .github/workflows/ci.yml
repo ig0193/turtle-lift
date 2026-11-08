@@ -30,6 +30,16 @@ jobs:
         working-directory: assets/exercises
         run: python3 validate_exercise_library.py ../body-diagrams .
 
+      # Never passes --update-ledger: a new food id must arrive with its
+      # ledger row committed, and a removed id fails here.
+      - name: Food list
+        working-directory: assets/foods
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest -q test_validate_food_catalogue
+          python3 validate_food_catalogue.py
+
       - name: Fail if any generated file drifted
         run: git diff --exit-code
 

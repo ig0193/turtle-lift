@@ -13,6 +13,7 @@ import '../theme/app_palette.dart';
 import 'app_screen.dart';
 import 'destructive_confirmation.dart';
 import 'divider_row.dart';
+import 'ghost_button.dart';
 import 'session_actions.dart';
 import 'session_body_map.dart';
 import 'session_date_control.dart';
@@ -136,7 +137,7 @@ class _ReadyBlock extends ConsumerWidget {
                 : '$exerciseCount exercise${exerciseCount == 1 ? '' : 's'} planned',
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 12.5,
+              fontSize: 13,
               color: AppPalette.textSecondary,
             ),
           ),
@@ -182,12 +183,13 @@ class LiveStrip extends StatelessWidget {
           children: <Widget>[
             const _PulseDot(),
             const SizedBox(width: 8),
+            // The dot carries the amber; the words do not need to repeat it.
             const Text(
               'Workout in progress',
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppPalette.accentStrong,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppPalette.textSecondary,
               ),
             ),
             const Spacer(),
@@ -294,7 +296,7 @@ class _SessionClockState extends ConsumerState<SessionClock> {
         formatClock(elapsed),
         key: SessionClock.clockKey,
         style: const TextStyle(
-          fontSize: 12.5,
+          fontSize: 13,
           fontWeight: FontWeight.w600,
           color: AppPalette.textPrimary,
           fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
@@ -316,8 +318,8 @@ class SessionExerciseRow extends ConsumerWidget {
   final SessionExercise exercise;
   final String name;
 
-  /// Whether this is the exercise to do next. It is tagged and outlined, so the
-  /// one row that matters between sets is the one the eye lands on.
+  /// Whether this is the exercise to do next. It is tagged, so the one row
+  /// that matters between sets is the one the eye lands on.
   final bool isNext;
 
   @override
@@ -348,11 +350,12 @@ class SessionExerciseRow extends ConsumerWidget {
           decoration: BoxDecoration(
             color: AppPalette.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isNext ? AppPalette.accentStrong : AppPalette.border,
-            ),
+            // A hairline even on Up next: the amber label already marks it,
+            // and an amber border as well put the accent on screen twice for
+            // one fact.
+            border: Border.all(color: AppPalette.border),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 13),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: DividerRow(
             key: sessionExerciseRowKey(exercise.exerciseId),
             semanticsLabel:
@@ -368,7 +371,7 @@ class SessionExerciseRow extends ConsumerWidget {
                     'Up next',
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       color: AppPalette.accentStrong,
                     ),
                   ),
@@ -381,7 +384,7 @@ class SessionExerciseRow extends ConsumerWidget {
                       name,
                       style: TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                         color: progress == ExerciseProgress.done
                             ? AppPalette.textSecondary
                             : AppPalette.textPrimary,
@@ -392,12 +395,13 @@ class SessionExerciseRow extends ConsumerWidget {
                 ],
               ),
               if (sets.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   sets,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     color: AppPalette.textMuted,
+                    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
                   ),
                 ),
               ],
@@ -424,6 +428,11 @@ class SessionExerciseRow extends ConsumerWidget {
 Key sessionExerciseRowKey(String exerciseId) =>
     ValueKey<String>('session-row-$exerciseId');
 
+/// Where an exercise is up to, as a quiet word -- not a pill.
+///
+/// Six identical "To do" pills down a list were the loudest thing on the live
+/// screen while saying the least. Done takes the amber ("worked"); the other
+/// two stay grey. The word is always there, so status is never colour alone.
 class _ProgressTag extends StatelessWidget {
   const _ProgressTag({required this.progress});
 
@@ -431,30 +440,22 @@ class _ProgressTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (Color background, Color foreground) = switch (progress) {
-      ExerciseProgress.done => (AppPalette.accentStrong, AppPalette.onAccent),
-      ExerciseProgress.inProgress => (
-          AppPalette.mutedSurface,
-          AppPalette.accentLight
-        ),
-      ExerciseProgress.notStarted => (
-          AppPalette.mutedSurface,
-          AppPalette.textMuted
-        ),
+    final colour = switch (progress) {
+      ExerciseProgress.done => AppPalette.accentStrong,
+      ExerciseProgress.inProgress => AppPalette.textSecondary,
+      ExerciseProgress.notStarted => AppPalette.textMuted,
     };
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
       child: Text(
         progress.label,
         style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: foreground,
+          fontSize: 13,
+          fontWeight: progress == ExerciseProgress.done
+              ? FontWeight.w600
+              : FontWeight.w400,
+          color: colour,
         ),
       ),
     );
@@ -467,27 +468,10 @@ class _AddExerciseButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
+  Widget build(BuildContext context) => GhostButton(
+        buttonKey: SessionOverviewBody.addExerciseKey,
         label: 'Add exercise',
-        excludeSemantics: true,
-        child: GestureDetector(
-          key: SessionOverviewBody.addExerciseKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppPalette.mutedSurface,
-              border: Border.all(color: AppPalette.border),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Text(
-              '+ Add exercise',
-              style: TextStyle(fontSize: 14, color: AppPalette.textSecondary),
-            ),
-          ),
-        ),
+        leadingIcon: Icons.add_rounded,
+        onTap: onTap,
       );
 }

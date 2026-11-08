@@ -78,7 +78,7 @@ void main() {
       await pumpRow(tester,
           loadType: LoadType.assisted, value: entry(assistKg: 20, reps: 8));
 
-      expect(find.text('assist'), findsOneWidget);
+      expect(find.text('kg assist'), findsOneWidget);
       expect(find.text('reps'), findsOneWidget);
     });
 
@@ -87,7 +87,7 @@ void main() {
       await pumpRow(tester, loadType: LoadType.bodyweight, value: entry(reps: 12));
 
       expect(find.text('reps'), findsOneWidget);
-      expect(find.text('+ weight'), findsOneWidget);
+      expect(find.text('weight'), findsOneWidget);
       expect(find.text('kg'), findsNothing);
     });
 
@@ -97,7 +97,7 @@ void main() {
           loadType: LoadType.timed, value: entry(durationSec: 45));
 
       expect(find.text('0:45'), findsOneWidget);
-      expect(find.text('+ weight'), findsOneWidget);
+      expect(find.text('weight'), findsOneWidget);
     });
   });
 
@@ -105,10 +105,10 @@ void main() {
     testWidgets('expands on tap, on bodyweight', (tester) async {
       await pumpRow(tester, loadType: LoadType.bodyweight, value: entry(reps: 12));
 
-      await tester.tap(find.text('+ weight'));
+      await tester.tap(find.text('weight'));
       await tester.pump();
 
-      expect(find.text('+ weight'), findsNothing);
+      expect(find.text('weight'), findsNothing);
       expect(find.text('kg'), findsOneWidget);
     });
 
@@ -117,7 +117,7 @@ void main() {
       await pumpRow(tester,
           loadType: LoadType.bodyweight, value: entry(reps: 8, addedKg: 10));
 
-      expect(find.text('+ weight'), findsNothing);
+      expect(find.text('weight'), findsNothing);
       expect(find.text('10'), findsOneWidget);
     });
   });

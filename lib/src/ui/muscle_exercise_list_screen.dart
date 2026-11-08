@@ -95,7 +95,7 @@ Widget exerciseListScreen(
               style: kLandingSectionLabelStyle,
             ),
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 8),
           for (final exercise in exercises)
             ExerciseRow(
               key: exerciseRowKey(exercise.id),
@@ -158,9 +158,10 @@ String exerciseEquipmentLabel(String equipment) => equipment.isEmpty
 /// opaque gesture box, the 48pt floor, the trailing chevron. Not a `ListTile`,
 /// which would bring its own density, ripple and text theme.
 ///
-/// **The equipment is a chip rather than a sentence.** It is the one thing that
-/// decides whether a row is usable right now — a bench is taken, a kettlebell
-/// is not — so it reads as a tag the eye can filter on rather than as prose.
+/// **The equipment is a short muted line under the name.** It is the one thing
+/// that decides whether a row is usable right now — a bench is taken, a
+/// kettlebell is not — so it sits where the eye lands after the name. It used
+/// to be a pill; a pill on every row of a twenty-row list is twenty pills.
 class ExerciseRow extends StatelessWidget {
   const ExerciseRow({
     required this.name,
@@ -170,8 +171,8 @@ class ExerciseRow extends StatelessWidget {
     super.key,
   });
 
-  /// An extra line under the chip — what this session already logged, on the
-  /// swap screen. Absent on the browsing lists.
+  /// An extra fact after the equipment — the last set logged, on the picker.
+  /// Absent on the browsing lists.
   final String? subtitle;
 
   final String name;
@@ -193,21 +194,39 @@ class ExerciseRow extends StatelessWidget {
       children: <Widget>[
         Text(name, style: kExerciseRowNameStyle),
         const SizedBox(height: 4),
-        RowTagChip(label: exerciseEquipmentLabel(equipment)),
-        if (subtitle != null) ...<Widget>[
-          const SizedBox(height: 4),
-          Text(
-            subtitle!,
-            style: const TextStyle(fontSize: 12, color: AppPalette.textMuted),
-          ),
-        ],
+        // Equipment and the last set share one muted line, so a row that has
+        // history is the same height as its neighbours that do not.
+        Row(
+          children: <Widget>[
+            RowTagChip(label: exerciseEquipmentLabel(equipment)),
+            if (subtitle != null) ...<Widget>[
+              const Text(' · ', style: kExerciseEquipmentChipStyle),
+              Flexible(
+                child: Text(
+                  subtitle!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: kExerciseEquipmentChipStyle.copyWith(
+                    fontFeatures: const <FontFeature>[
+                      FontFeature.tabularFigures(),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ],
     );
   }
 }
 
-/// The prototype's `.eqchip`: a small muted pill carrying one fact about the
-/// row it sits on.
+/// One fact about the row it sits on, as quiet muted text.
+///
+/// **Text, not a pill.** It began as the prototype's `.eqchip` pill, but it is
+/// neither a button nor a chip -- nothing about it can be tapped -- and the
+/// repo's capsule shape is for those. On a list of twenty rows the pills were
+/// the loudest thing on the screen while carrying the least.
 ///
 /// **One chip, two callers.** An exercise row labels it with the equipment and
 /// a search result labels it with which vocabulary the hit came from; they had
@@ -225,15 +244,7 @@ class RowTagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppPalette.mutedSurface,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppPalette.border),
-      ),
-      child: Text(label, style: kExerciseEquipmentChipStyle),
-    );
+    return Text(label, style: kExerciseEquipmentChipStyle);
   }
 }
 
@@ -241,10 +252,9 @@ class RowTagChip extends StatelessWidget {
 /// prototype's `.row`, and two constants carrying the same numbers drift.
 const TextStyle kExerciseRowNameStyle = kSubGroupRowLabelStyle;
 
-/// `.eqchip` type: small, tracked out, quiet enough to sit under the name
+/// The row fact's type: small and muted, quiet enough to sit under the name
 /// without competing with it.
 const TextStyle kExerciseEquipmentChipStyle = TextStyle(
-  fontSize: 12,
-  fontWeight: FontWeight.w600,
+  fontSize: 13,
   color: AppPalette.textMuted,
 );

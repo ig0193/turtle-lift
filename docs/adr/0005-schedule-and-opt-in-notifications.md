@@ -6,7 +6,9 @@ Date: 2026-10-24
 
 Accepted. **Amends the "no notifications" rule** in `CLAUDE.md`, `docs/00` §13 and
 `docs/01` §Out of scope, for this feature only. Notifications are decided and
-will be built **after** the Schedule screen ships.
+will be built **after** the Schedule screen ships. **Extended by
+[ADR 0007](0007-diet-in-profile.md)** (proposed) to diet reminders (a morning
+summary and one per meal slot), under the same five rules below, unchanged.
 
 ## Context
 

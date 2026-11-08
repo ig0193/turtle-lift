@@ -206,8 +206,33 @@ void main() {
       await pump(tester, id);
 
       expect(find.byKey(SessionSummaryScreen.pbPillKey), findsOneWidget);
-      expect(find.text('1 personal best'), findsOneWidget);
-      expect(find.text('★ PB'), findsOneWidget);
+      // The count is a figure on the card, in the PB colour.
+      expect(
+        find.descendant(
+          of: find.byKey(SessionSummaryScreen.pbPillKey),
+          matching: find.text('1'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<Text>(find.descendant(
+              of: find.byKey(SessionSummaryScreen.pbPillKey),
+              matching: find.text('1'),
+            ))
+            .style!
+            .color,
+        AppPalette.accentStrong,
+      );
+      // And the exercise that set it is marked in the log.
+      expect(
+        find.descendant(
+          of: find.byKey(SessionSummaryScreen.pbPillKey),
+          matching: find.text('PB'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('PB'), findsNWidgets(2));
     });
 
     testWidgets('an assisted record says what kind of record it is',
@@ -225,7 +250,7 @@ void main() {
       await pump(tester, id);
 
       expect(
-        find.text('★ PB · lightest assist'),
+        find.text('PB · lightest assist'),
         findsOneWidget,
         reason: 'a badge beside a smaller number would otherwise read as a bug '
             'weeks later, and the logging screen\'s banner is not on this page',

@@ -86,7 +86,7 @@ class ExerciseDetailScreen extends ConsumerWidget {
             header: true,
             child: Text(kExerciseMusclesLabel, style: kLandingSectionLabelStyle),
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 8),
           _MuscleChips(exercise: exercise),
           const SizedBox(height: 6),
           _ExerciseDiagrams(exercise: exercise),
@@ -106,7 +106,7 @@ class ExerciseDetailScreen extends ConsumerWidget {
               emphasised: field == leadField,
             ),
           if (substitutes.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 22),
+            const SizedBox(height: 24),
             Semantics(
               header: true,
               child: Text(
@@ -114,7 +114,7 @@ class ExerciseDetailScreen extends ConsumerWidget {
                 style: kLandingSectionLabelStyle,
               ),
             ),
-            const SizedBox(height: 9),
+            const SizedBox(height: 8),
             _SubstituteRail(substitutes: substitutes),
           ],
         ],
@@ -545,20 +545,32 @@ class _MuscleChip extends StatelessWidget {
       // one.
       label: isPrimary ? 'Primary muscle: $label' : 'Also works: $label',
       excludeSemantics: true,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isPrimary ? AppPalette.accentStrong : AppPalette.mutedSurface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: isPrimary ? AppPalette.accentStrong : AppPalette.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: isPrimary
-              ? kMuscleChipPrimaryStyle
-              : kMuscleChipSecondaryStyle,
+      // A legend entry, not a chip: a dot in the map's own fill and the name
+      // beside it. A filled amber chip read as a selected control, and nothing
+      // here can be tapped.
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isPrimary
+                    ? AppPalette.accentStrong
+                    : AppPalette.accentLight,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: isPrimary
+                  ? kMuscleChipPrimaryStyle
+                  : kMuscleChipSecondaryStyle,
+            ),
+          ],
         ),
       ),
     );
@@ -630,7 +642,7 @@ class _SubstituteRail extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             for (final exercise in substitutes) ...<Widget>[
-              if (exercise != substitutes.first) const SizedBox(width: 9),
+              if (exercise != substitutes.first) const SizedBox(width: 8),
               _SubstituteCard(exercise: exercise),
             ],
           ],
@@ -665,7 +677,7 @@ class _SubstituteCard extends StatelessWidget {
         onTap: () => pushExerciseDetail(context, exercise),
         child: Container(
           width: kSubstituteCardWidth,
-          padding: const EdgeInsets.all(11),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: AppPalette.surface,
             borderRadius: BorderRadius.circular(16),
@@ -683,7 +695,7 @@ class _SubstituteCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 4),
               Text(
                 exerciseEquipmentLabel(exercise.equipment),
                 style: kExerciseEquipmentChipStyle,
@@ -703,21 +715,20 @@ const double kSubstituteCardWidth = 132;
 /// Past the 48pt floor several times over — the card is the tap target.
 const double kSubstituteCardHeight = 92;
 
-/// A primary muscle: the diagram's own fill, so the chip and the polygon read
-/// as the same statement.
+/// A primary muscle's name in the legend. Its dot carries the diagram's fill,
+/// so the entry and the polygon read as the same statement.
 const TextStyle kMuscleChipPrimaryStyle = TextStyle(
-  fontSize: 12,
-  fontWeight: FontWeight.w600,
-  color: AppPalette.onAccent,
+  fontSize: 13,
+  fontWeight: FontWeight.w500,
+  color: AppPalette.textPrimary,
 );
 
-/// A secondary muscle. **Not [AppPalette.accentLight]**, even though that is
-/// what its segment is filled with: §12 allows that colour for the muscle
-/// fill, and a chip is not a fill. The prototype draws these as quiet muted
-/// chips, and the ordering — primaries first — is what pairs them with the
-/// body.
+/// A secondary muscle's name. The text stays grey: only the legend dot takes
+/// the secondary-muscle colour, because §12 allows that colour for the muscle
+/// mark and nothing else. The ordering — primaries first — is what pairs the
+/// legend with the body.
 const TextStyle kMuscleChipSecondaryStyle = TextStyle(
-  fontSize: 12,
+  fontSize: 13,
   color: AppPalette.textSecondary,
 );
 

@@ -99,10 +99,10 @@ class _SetLoggingScreenState extends ConsumerState<SetLoggingScreen> {
           if (loadType == LoadType.assisted) const _AssistedBanner(),
           const SizedBox(height: 4),
           ..._setRows(sessionExercise, loadType, saved),
-          const SizedBox(height: 4),
           GhostButton(
             buttonKey: SetLoggingScreen.addSetKey,
-            label: '+ Add set',
+            label: 'Add set',
+            leadingIcon: Icons.add_rounded,
             onTap: () => setState(() => _addedRows++),
           ),
           const SizedBox(height: 8),
@@ -270,19 +270,22 @@ class _SetLoggingScreenState extends ConsumerState<SetLoggingScreen> {
 
     final recent = history.take(2);
     return <Widget>[
-      const SizedBox(height: 18),
+      const SizedBox(height: 24),
       const Text('Recent', style: kLandingSectionLabelStyle),
       const SizedBox(height: 8),
       for (final session in recent)
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
               Text(
                 _shortDate(session),
                 style: const TextStyle(
-                    fontSize: 12.5, color: AppPalette.textMuted),
+                  fontSize: 13,
+                  color: AppPalette.textMuted,
+                  fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                ),
               ),
               Flexible(
                 child: Text(
@@ -290,7 +293,7 @@ class _SetLoggingScreenState extends ConsumerState<SetLoggingScreen> {
                       .firstWhere((e) => e.exerciseId == exerciseId)),
                   textAlign: TextAlign.right,
                   style: const TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13,
                     color: AppPalette.textSecondary,
                     fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
                   ),
@@ -299,11 +302,12 @@ class _SetLoggingScreenState extends ConsumerState<SetLoggingScreen> {
             ],
           ),
         ),
-      const SizedBox(height: 6),
+      const SizedBox(height: 4),
       GhostButton(
         buttonKey: SetLoggingScreen.seeAllKey,
         label: 'See all ${history.length} '
-            '${history.length == 1 ? 'session' : 'sessions'} ›',
+            '${history.length == 1 ? 'session' : 'sessions'}',
+        trailingIcon: Icons.chevron_right_rounded,
         onTap: () => pushExerciseHistory(context, exerciseId),
       ),
     ];
@@ -328,11 +332,11 @@ class _FactsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 6, bottom: 10),
+        padding: const EdgeInsets.only(top: 4, bottom: 12),
         child: Wrap(
-          spacing: 6,
           children: <Widget>[
             RowTagChip(label: exerciseEquipmentLabel(exercise.equipment)),
+            const RowTagChip(label: ' · '),
             RowTagChip(label: _shape),
           ],
         ),
@@ -352,8 +356,8 @@ class _AssistedBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: AppPalette.mutedSurface,
           border: Border.all(color: AppPalette.border),
@@ -362,7 +366,7 @@ class _AssistedBanner extends StatelessWidget {
         child: const Text(
           'Less assistance is better. Your record is the lightest assist '
           'you’ve used.',
-          style: TextStyle(fontSize: 12.5, color: AppPalette.textSecondary),
+          style: TextStyle(fontSize: 13, color: AppPalette.textSecondary),
         ),
       );
 }
@@ -390,7 +394,7 @@ class _InfoButton extends StatelessWidget {
             width: 48,
             height: 48,
             child: Icon(Icons.info_outline,
-                size: 19, color: AppPalette.textSecondary),
+                size: 20, color: AppPalette.textSecondary),
           ),
         ),
       );

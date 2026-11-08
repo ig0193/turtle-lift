@@ -138,6 +138,6 @@ class MuscleSearchField extends StatelessWidget {
 /// What the user types, and what the placeholder is measured against. The
 /// prototype's `.search input` is 13.5px.
 const TextStyle kMuscleSearchTextStyle = TextStyle(
-  fontSize: 13.5,
+  fontSize: 13,
   color: AppPalette.textPrimary,
 );

@@ -131,14 +131,14 @@ class _DisclosureRowState extends State<DisclosureRow> {
 /// heading for something rather than content in its own right.
 const TextStyle kDisclosureLabelStyle = TextStyle(
   fontSize: 12,
-  fontWeight: FontWeight.w700,
+  fontWeight: FontWeight.w600,
   color: AppPalette.textMuted,
 );
 
 /// The same line, a step brighter — see [DisclosureRow.emphasised].
 const TextStyle kDisclosureLabelEmphasisedStyle = TextStyle(
   fontSize: 12,
-  fontWeight: FontWeight.w700,
+  fontWeight: FontWeight.w600,
   color: AppPalette.textSecondary,
 );
 

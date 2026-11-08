@@ -175,7 +175,7 @@ void main() {
 
       await pump(tester, 'bench');
 
-      expect(find.text('★ PB'), findsOneWidget);
+      expect(find.text('PB'), findsOneWidget);
     });
 
     testWidgets('an assisted record names what kind of record it is',
@@ -194,7 +194,7 @@ void main() {
       await pump(tester, 'assisted-pull-up');
 
       expect(
-        find.text('★ PB · lightest assist'),
+        find.text('PB · lightest assist'),
         findsOneWidget,
         reason: 'without it, a badge beside 22.5 next to a row showing 30 '
             'reads as a bug',

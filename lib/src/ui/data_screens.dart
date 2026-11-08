@@ -10,8 +10,12 @@ import '../data/body_gender.dart';
 import '../data/custom_templates.dart';
 import '../data/data_export.dart';
 import '../data/data_reset.dart';
+import '../data/diet_derived.dart' show versionInEffectOn;
+import '../data/diet_plan.dart';
 import '../data/exercise_index.dart';
+import '../data/food_index.dart';
 import '../data/personal_details_store.dart';
+import '../data/reminder_scheduler.dart' show reminderSchedulerProvider;
 import '../data/settings_store.dart' show appDatabaseProvider;
 import '../data/training_plan.dart';
 import '../theme/app_palette.dart';
@@ -32,16 +36,26 @@ class _DataCounts {
     required this.sets,
     required this.weighIns,
     required this.templates,
+    required this.foodsPlanned,
+    required this.hasDiet,
   });
 
   factory _DataCounts.read(WidgetRef ref) {
     final sessions =
         ref.watch(savedSessionsProvider).where((s) => !s.isOpen).toList();
+    final dietPlan = ref.watch(dietPlanLogProvider);
     return _DataCounts(
       workouts: sessions.length,
       sets: sessions.fold(0, (n, s) => n + s.completedSets.length),
       weighIns: ref.watch(bodyweightLogProvider).length,
       templates: ref.watch(customTemplatesProvider).length,
+      // The plan the user is looking at: this week's version in effect.
+      foodsPlanned: versionInEffectOn(dietPlan, ref.watch(planTodayProvider))
+              ?.items
+              .length ??
+          0,
+      hasDiet:
+          dietPlan.isNotEmpty || ref.watch(proteinTargetProvider) != null,
     );
   }
 
@@ -50,7 +64,14 @@ class _DataCounts {
   final int weighIns;
   final int templates;
 
-  bool get isEmpty => workouts == 0 && weighIns == 0 && templates == 0;
+  /// Items in this week's plan, every day and slot.
+  final int foodsPlanned;
+
+  /// Any plan version or a target exists, even if this week is empty.
+  final bool hasDiet;
+
+  bool get isEmpty =>
+      workouts == 0 && weighIns == 0 && templates == 0 && !hasDiet;
 
   /// Label and count. The label already names the unit, so the count stands
   /// alone ("Workouts 12", not "Workouts 12 workouts").
@@ -59,6 +80,7 @@ class _DataCounts {
         ('Completed sets', '$sets'),
         ('Bodyweight entries', '$weighIns'),
         ('Your templates', '$templates'),
+        ('Foods planned', '$foodsPlanned'),
       ];
 }
 
@@ -79,14 +101,14 @@ class _CountsCard extends StatelessWidget {
           children: <Widget>[
             for (final (label, value) in counts.rows)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 9),
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(
                   children: <Widget>[
                     Expanded(
                       child: Text(
                         label,
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 15,
                           color: AppPalette.textSecondary,
                         ),
                       ),
@@ -94,7 +116,7 @@ class _CountsCard extends StatelessWidget {
                     Text(
                       value,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: AppPalette.textPrimary,
                         fontFeatures: <FontFeature>[
@@ -111,7 +133,7 @@ class _CountsCard extends StatelessWidget {
 }
 
 const TextStyle _bodyStyle = TextStyle(
-  fontSize: 14,
+  fontSize: 15,
   height: 1.5,
   color: AppPalette.textSecondary,
 );
@@ -145,6 +167,10 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
         trainingPlan: ref.read(trainingPlanLogProvider),
         gender: ref.read(bodyGenderProvider),
         index: ref.read(exerciseIndexProvider),
+        dietPlan: ref.read(dietPlanLogProvider),
+        mealTicks: ref.read(mealTicksProvider),
+        proteinTargetG: ref.read(proteinTargetProvider),
+        foods: ref.read(foodIndexProvider),
         exportedAt: now,
       );
       final dir = await getTemporaryDirectory();
@@ -190,9 +216,9 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
         children: <Widget>[
           const SizedBox(height: 8),
           const Text(
-            'Saves every finished workout, set, bodyweight entry, template '
-            'and your schedule as one JSON file. Choose where it goes: Files, '
-            'Mail, or another app.',
+            'Saves every finished workout, set, bodyweight entry, template, '
+            'your schedule and your diet plan as one JSON file. Choose where '
+            'it goes: Files, Mail, or another app.',
             style: _bodyStyle,
           ),
           const SizedBox(height: 16),
@@ -252,14 +278,16 @@ class _DeleteAllDataScreenState extends ConsumerState<DeleteAllDataScreen> {
     final confirmed = await confirmDestructive(
       context,
       title: 'Delete all data?',
-      message: 'Every workout, set, bodyweight entry, template and your '
-          'schedule will be removed from this phone. This cannot be undone.',
+      message: 'Every workout, set, bodyweight entry, template, your '
+          'schedule and your diet plan will be removed from this phone. This '
+          'cannot be undone.',
       confirmLabel: 'Delete all',
     );
     if (!confirmed || !mounted) return;
     setState(() => _busy = true);
     final restart = ref.read(appRestartProvider);
-    await wipeAllData(ref.read(appDatabaseProvider));
+    await wipeAllData(ref.read(appDatabaseProvider),
+        reminders: ref.read(reminderSchedulerProvider));
     // Reboots onto the empty database; this screen and its route go with the
     // old tree, so nothing after this line touches widget state.
     await restart();
