@@ -198,6 +198,7 @@ List<Widget> _logBlocks(
           return _ExerciseBlock(
             key: HistorySessionDetailScreen.exerciseKey(name),
             name: name,
+            note: exercise.note,
             sets: <String>[
               for (final set in completed) formatSet(exercise.loadType, set),
             ],
@@ -438,12 +439,16 @@ class _Figure extends StatelessWidget {
 class _ExerciseBlock extends StatelessWidget {
   const _ExerciseBlock({
     required this.name,
+    this.note,
     required this.sets,
     required this.recordIndex,
     super.key,
   });
 
   final String name;
+
+  /// The user's note for this exercise in this workout, or null.
+  final String? note;
 
   /// Every completed set, already written for display.
   final List<String> sets;
@@ -482,6 +487,17 @@ class _ExerciseBlock extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           _SetLine(sets: sets, recordIndex: recordIndex),
+          if (note != null) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              note!,
+              style: const TextStyle(
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+                color: AppPalette.textSecondary,
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -29,7 +29,6 @@ tags: [templates]
     commands:
       - tapOn: "Discard"
 - assertVisible: "Start workout.*"
-- assertNotVisible: "My templates"
 
 # --- Save a finished workout as a template.
 - runFlow: ../subflows/log_bench_workout.yaml

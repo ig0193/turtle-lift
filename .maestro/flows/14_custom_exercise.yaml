@@ -1,0 +1,89 @@
+# User story (ADR 0009): create my own exercise from the picker mid-workout,
+# log it (no first-time form page, it has none), finish; it shows in History,
+# its page says there is no form guide, it goes into a new template, and
+# Export counts it.
+appId: dev.indresh.turtleLift
+name: 14 Custom exercise - create, log, history, page, template, export
+tags: [templates, data]
+---
+- launchApp:
+    clearState: true
+
+# --- Create from the picker, prefilled from the search.
+- tapOn: "Start workout.*"
+- tapOn: "Start logging"
+- tapOn: "Search exercises, muscles, equipment"
+- inputText: "Ring dip station"
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
+- tapOn: "Create “Ring dip station”"
+- assertVisible: "New exercise"
+- tapOn: "Bodyweight reps"
+- scrollUntilVisible:
+    element: "Main muscle: Triceps"
+    centerElement: true
+- tapOn: "Main muscle: Triceps"
+- tapOn: "Save exercise"
+
+# --- Straight to logging: a custom exercise has no form guide to show first.
+- assertVisible: "Add set"
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-reps", VALUE: "8" }
+- tapOn:
+    id: "set-0-check"
+- tapOn: "Mark exercise done"
+- runFlow: ../subflows/finish_workout.yaml
+- assertVisible: ".*Ring dip station.*"
+- tapOn: "Back"
+
+# --- History names it.
+- tapOn: "History"
+- assertVisible: "Ring dip station, quick log, Today · 1 exercise · 1 set"
+
+# --- Its page: the user's fields and a plain note, no reviewed content.
+- tapOn: "Workout"
+- scrollUntilVisible:
+    element: "Manage templates.*"
+    centerElement: true
+- tapOn: "Manage templates.*"
+- scrollUntilVisible:
+    element: "My exercises.*"
+    centerElement: true
+- tapOn: "My exercises.*"
+- tapOn: "Ring dip station.*"
+- assertVisible: "You made this exercise, so it has no form guide.*"
+- assertNotVisible: "Common mistakes.*"
+- tapOn: "Back"
+- tapOn: "Back"
+
+# --- Into a new template from the library (at the top: Yours leads).
+- scrollUntilVisible:
+    element: "New template"
+    direction: UP
+    centerElement: true
+- tapOn: "New template"
+- tapOn:
+    id: "template-name"
+- inputText: "QA dips"
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
+- tapOn: "Add exercises"
+- tapOn: "Ring dip station\\. .*"
+- tapOn: "Add 1 exercise"
+- assertVisible: "1\\. Ring dip station\\. .*Yours"
+- tapOn: "Save template"
+- assertVisible: "Edit QA dips\\..*"
+- tapOn: "Back"
+
+# --- Export counts it.
+- tapOn: "Profile"
+- tapOn: "Export everything"
+- assertVisible: ".*Your exercises.*1.*"
+- tapOn: "Back"

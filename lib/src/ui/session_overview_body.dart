@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/active_session.dart';
 import '../data/derived.dart';
 import '../data/exercise_index.dart';
+import '../data/load_type.dart';
 import '../data/session_progress.dart';
 import '../data/session_store.dart';
 import '../data/set_format.dart';
@@ -13,12 +14,14 @@ import '../theme/app_palette.dart';
 import 'app_screen.dart';
 import 'destructive_confirmation.dart';
 import 'divider_row.dart';
+import 'exercise_picker_sheet.dart' show showExercisePicker;
 import 'ghost_button.dart';
 import 'motion.dart';
 import 'session_actions.dart';
 import 'session_body_map.dart';
 import 'session_date_control.dart';
 import 'session_entry.dart';
+import 'template_editor_screen.dart' show RowIconAction;
 import 'template_row.dart' show kLandingSectionLabelStyle;
 
 /// The workout in progress: the map, and the exercises still to log.
@@ -39,7 +42,7 @@ import 'template_row.dart' show kLandingSectionLabelStyle;
 /// **The map is the hero and the list sits under it.** Which exercise is next is
 /// the first thing under the map, so the one action a user wants between sets is
 /// where their thumb already is.
-class SessionOverviewBody extends ConsumerWidget {
+class SessionOverviewBody extends ConsumerStatefulWidget {
   const SessionOverviewBody({required this.onFinished, super.key});
 
   final void Function(String sessionId) onFinished;
@@ -57,8 +60,21 @@ class SessionOverviewBody extends ConsumerWidget {
   @visibleForTesting
   static const String keepLoggingLabel = 'Keep logging';
 
+  /// The toggle that turns the list into its reorder / remove mode.
+  static const Key editListKey = ValueKey<String>('session-edit-list');
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SessionOverviewBody> createState() =>
+      _SessionOverviewBodyState();
+}
+
+class _SessionOverviewBodyState extends ConsumerState<SessionOverviewBody> {
+  /// Whether the list shows move and remove controls. In memory only.
+  bool _editing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final onFinished = widget.onFinished;
     final session = ref.watch(activeSessionProvider);
     final started = ref.watch(loggingStartedProvider);
     final index = ref.watch(exerciseIndexProvider);
@@ -93,19 +109,67 @@ class SessionOverviewBody extends ConsumerWidget {
         ),
         const SizedBox(height: 6),
         if (!isStarted)
-          _ReadyBlock(exerciseCount: session.exercises.length)
+          _ReadyBlock(
+            exerciseCount: session.exercises.length,
+            // Run from this state, not from the ready block: on a planned
+            // workout the block is gone the moment logging starts (the list
+            // replaces it), and a pick handed back to its dead context and
+            // ref was silently dropped (workout-gaps audit).
+            onStartLogging: () {
+              ref.read(loggingStartedProvider.notifier).start(session.id);
+              pickAndOpenExercise(
+                context,
+                ref,
+                title: 'What are you starting with?',
+              );
+            },
+          )
         else ...<Widget>[
-          Semantics(
-            header: true,
-            child: const Text(keepLoggingLabel, style: kLandingSectionLabelStyle),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: const Text(
+                    SessionOverviewBody.keepLoggingLabel,
+                    style: kLandingSectionLabelStyle,
+                  ),
+                ),
+              ),
+              // Reorder and remove, in one mode with arrows and a remove
+              // button per row: a swipe or a long-press was the only way to
+              // remove, invisible and unreachable for VoiceOver, and there
+              // was no way to reorder at all (workout-gaps audit).
+              if (session.exercises.length > 1 || _editing)
+                TextButton(
+                  key: SessionOverviewBody.editListKey,
+                  onPressed: () => setState(() => _editing = !_editing),
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(44, 44),
+                    foregroundColor: AppPalette.textSecondary,
+                  ),
+                  child: Text(_editing ? 'Done' : 'Edit list'),
+                ),
+            ],
           ),
           const SizedBox(height: 4),
           for (final (i, exercise) in session.exercises.indexed)
-            SessionExerciseRow(
-              exercise: exercise,
-              name: index.byId(exercise.exerciseId)?.name ?? 'Unknown exercise',
-              isNext: i == _nextIndex(session),
-            ),
+            if (_editing)
+              _EditableSessionRow(
+                key: ValueKey<String>('session-edit-${exercise.id}'),
+                exercise: exercise,
+                name:
+                    index.byId(exercise.exerciseId)?.name ?? 'Unknown exercise',
+                index: i,
+                count: session.exercises.length,
+              )
+            else
+              SessionExerciseRow(
+                exercise: exercise,
+                name:
+                    index.byId(exercise.exerciseId)?.name ?? 'Unknown exercise',
+                isNext: i == _nextIndex(session),
+              ),
           const SizedBox(height: 12),
           _AddExerciseButton(
             onTap: () => pickAndOpenExercise(
@@ -121,16 +185,24 @@ class SessionOverviewBody extends ConsumerWidget {
     );
   }
 
-  /// The first exercise that is not done: the one to do next.
-  static int _nextIndex(WorkoutSession session) =>
-      session.exercises.indexWhere((e) => progressOf(e) != ExerciseProgress.done);
 }
+
+/// The first exercise that is not done: the one to do next.
+int _nextIndex(WorkoutSession session) =>
+    session.exercises.indexWhere((e) => progressOf(e) != ExerciseProgress.done);
 
 /// What the screen says before logging has begun.
 class _ReadyBlock extends ConsumerWidget {
-  const _ReadyBlock({required this.exerciseCount});
+  const _ReadyBlock({
+    required this.exerciseCount,
+    required this.onStartLogging,
+  });
 
   final int exerciseCount;
+
+  /// Records that logging started and opens the picker. Owned by the screen's
+  /// state, which outlives this block.
+  final VoidCallback onStartLogging;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -160,19 +232,7 @@ class _ReadyBlock extends ConsumerWidget {
           _PlannedList(session: session),
         FilledButton(
           key: SessionOverviewBody.startLoggingKey,
-          onPressed: session == null
-              ? null
-              : () {
-                  // Recorded before the sheet opens, so dismissing it leaves
-                  // the user on the list they asked for, not back on a button
-                  // they have already pressed.
-                  ref.read(loggingStartedProvider.notifier).start(session.id);
-                  pickAndOpenExercise(
-                    context,
-                    ref,
-                    title: 'What are you starting with?',
-                  );
-                },
+          onPressed: session == null ? null : onStartLogging,
           child: const Text('Start logging'),
         ),
       ],
@@ -521,6 +581,151 @@ class SessionExerciseRow extends ConsumerWidget {
 /// The row for [exerciseId], so a test can reach one by name.
 Key sessionExerciseRowKey(String exerciseId) =>
     ValueKey<String>('session-row-$exerciseId');
+
+/// A row in the list's edit mode: move up, move down, remove.
+class _EditableSessionRow extends ConsumerWidget {
+  const _EditableSessionRow({
+    required this.exercise,
+    required this.name,
+    required this.index,
+    required this.count,
+    super.key,
+  });
+
+  final SessionExercise exercise;
+  final String name;
+  final int index;
+  final int count;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(activeSessionProvider.notifier);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(left: 16, right: 4),
+      constraints: const BoxConstraints(minHeight: 56),
+      decoration: BoxDecoration(
+        color: AppPalette.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppPalette.border),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              name,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: AppPalette.textPrimary,
+              ),
+            ),
+          ),
+          RowIconAction(
+            key: sessionMoveUpKey(exercise.exerciseId),
+            icon: Icons.arrow_upward_rounded,
+            semanticsLabel: 'Move $name up',
+            onTap: index == 0
+                ? null
+                : () => notifier.moveExercise(index, index - 1),
+          ),
+          RowIconAction(
+            key: sessionMoveDownKey(exercise.exerciseId),
+            icon: Icons.arrow_downward_rounded,
+            semanticsLabel: 'Move $name down',
+            onTap: index == count - 1
+                ? null
+                : () => notifier.moveExercise(index, index + 1),
+          ),
+          RowIconAction(
+            key: sessionSwapKey(exercise.exerciseId),
+            icon: Icons.swap_horiz_rounded,
+            semanticsLabel: 'Swap $name for another exercise',
+            onTap: () => _swap(context, ref),
+          ),
+          RowIconAction(
+            key: sessionRemoveKey(exercise.exerciseId),
+            icon: Icons.close_rounded,
+            semanticsLabel: 'Remove $name',
+            destructive: true,
+            onTap: () async {
+              if (exercise.completedSets.isNotEmpty) {
+                final confirmed = await confirmDestructive(
+                  context,
+                  title: 'Remove $name?',
+                  message: 'This drops the sets you have logged for it.',
+                  confirmLabel: 'Remove',
+                );
+                if (!confirmed) return;
+              }
+              await notifier.removeExercise(exercise.id);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Swap in place (`docs/adr/0011-combined-build-decisions.md`): same
+  /// position, another exercise. **Only before any set is completed** — a
+  /// completed set is a record of this lift, and relabelling it would put its
+  /// numbers in another exercise's history. Then the honest offer is Add.
+  Future<void> _swap(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (exercise.completedSets.isNotEmpty) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+        content: const Text(kSwapRefusedMessage),
+        // A reason, not a question: it times out rather than sitting over
+        // Discard workout until dismissed (an action snackbar persists by
+        // default).
+        persist: false,
+        action: SnackBarAction(
+          label: 'Add instead',
+          // Inverse (light) surface: amber would fail contrast here.
+          textColor: AppPalette.pageBackground,
+          onPressed: () {
+            if (context.mounted) {
+              pickAndOpenExercise(context, ref, title: 'Add an exercise');
+            }
+          },
+        ),
+      ));
+      return;
+    }
+    final chosen =
+        await showExercisePicker(context, title: 'Swap $name for');
+    if (chosen == null || !context.mounted) return;
+    final loadType = LoadType.fromName(chosen.loadType);
+    if (loadType == null) return;
+    final result =
+        await ref.read(activeSessionProvider.notifier).swapExercise(
+              sessionExerciseId: exercise.id,
+              exerciseId: chosen.id,
+              loadType: loadType,
+            );
+    final message = switch (result) {
+      SwapResult.alreadyInWorkout => '${chosen.name} is already in this workout.',
+      SwapResult.hasCompletedSets => kSwapRefusedMessage,
+      SwapResult.swapped || SwapResult.notFound => null,
+    };
+    if (message != null) messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+/// Why an exercise with logged sets cannot be swapped, in one line.
+const String kSwapRefusedMessage =
+    'It has logged sets, so it stays. Add the other exercise instead.';
+
+Key sessionSwapKey(String exerciseId) =>
+    ValueKey<String>('session-swap-$exerciseId');
+Key sessionMoveUpKey(String exerciseId) =>
+    ValueKey<String>('session-up-$exerciseId');
+Key sessionMoveDownKey(String exerciseId) =>
+    ValueKey<String>('session-down-$exerciseId');
+Key sessionRemoveKey(String exerciseId) =>
+    ValueKey<String>('session-remove-$exerciseId');
 
 /// Where an exercise is up to, as a quiet word -- not a pill.
 ///

@@ -148,11 +148,14 @@ void main() {
   });
 
   group('the user\'s own templates', () {
-    testWidgets('are absent entirely when there are none', (tester) async {
+    testWidgets('with none, the heading stands over New template only',
+        (tester) async {
       await pumpRoot(tester);
 
-      expect(find.text(WorkoutLandingBody.customGroupLabel), findsNothing,
-          reason: 'a heading standing over nothing reads as broken');
+      // Never a heading over nothing: with no templates of their own the
+      // group is the way to make one (ADR 0009).
+      expect(find.text(WorkoutLandingBody.customGroupLabel), findsOneWidget);
+      expect(find.byKey(WorkoutLandingBody.newTemplateKey), findsOneWidget);
     });
 
     testWidgets('appear above the ready-made ones when there are some',

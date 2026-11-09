@@ -79,6 +79,10 @@ passed.
 | 10 | Home and kill mid-workout keep the session |
 | 11 | Upgrade from the last published build (schema 5): every record survives, the open workout resumes, v6/v7 migrations run, Diet starts empty, export counts the old workouts. Scripted: `.maestro/scripts/11_upgrade_from_v5.sh` copies `test/fixtures/schema_v5_from_5fcae5f.sqlite` into the installed app's Documents first |
 | 12 | Workout tab (ADR 0008): week strip and last-workout line on the landing, Recent in the picker, last time in each set row (tap to copy), pinned Mark exercise done, live PB mark, PB in the kcal slot, Share card, Do again from History |
+| 13 | Template from scratch (ADR 0009): New template tile, multi-pick, arrows, save, Edit template from the preview, start, Edit list (move, remove) |
+| 14 | Custom exercise (ADR 0009): create from the picker, straight to logging, History, its no-form-guide page, into a template, Export counts it |
+| 15 | Swap in place (ADR 0011): Edit list swaps an untouched exercise at its position; one with a logged set is refused with a one-line reason and Add instead |
+| 16 | Exercise note (ADR 0011): note in set logging, shown in History detail, `Last time: …` hint next workout |
 
 **The v5 fixture** was written by commit 5fcae5f's own stores (a throwaway
 worktree at that commit), so it is exactly what a user's device holds. The

@@ -1,0 +1,66 @@
+# User story (ADR 0011): I note my leg press seat height, it shows in History,
+# and next time set logging reminds me of it.
+appId: dev.indresh.turtleLift
+name: 16 Exercise note - write, History, last-time hint
+tags: [workout, history]
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Start workout.*"
+- tapOn: "Start logging"
+- runFlow:
+    file: ../subflows/add_exercise.yaml
+    env: { QUERY: "leg press", ROW: "Leg press\\. Machine" }
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-weight", VALUE: "100" }
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-reps", VALUE: "10" }
+- tapOn:
+    id: "set-0-check"
+
+# --- The note: typed under Add set, saved when the keyboard goes.
+- scrollUntilVisible:
+    element:
+      id: "exercise-note"
+    centerElement: true
+- tapOn:
+    id: "exercise-note"
+- inputText: "Seat 4"
+- pressKey: Enter
+- tapOn: "Mark exercise done"
+- runFlow: ../subflows/finish_workout.yaml
+- tapOn: "Back"
+
+# --- History detail shows it under the exercise.
+- tapOn: "History"
+- tapOn: ".*Today · 1 exercise · 1 set"
+- scrollUntilVisible:
+    element: ".*Seat 4.*"
+    centerElement: true
+- assertVisible: ".*Seat 4.*"
+- tapOn: "Back"
+
+# --- Next workout: last time's note is the hint.
+- tapOn: "Workout"
+- tapOn: "Start workout.*"
+- tapOn: "Start logging"
+- runFlow:
+    file: ../subflows/add_exercise.yaml
+    env: { QUERY: "leg press", ROW: "Leg press\\. Machine" }
+- scrollUntilVisible:
+    element: ".*Last time: Seat 4.*"
+    centerElement: true
+- assertVisible: ".*Last time: Seat 4.*"
+- tapOn: "Back"
+- scrollUntilVisible:
+    element: "Discard workout"
+    centerElement: true
+- tapOn: "Discard workout"
+- runFlow:
+    when:
+      visible: "Discard"
+    commands:
+      - tapOn: "Discard"

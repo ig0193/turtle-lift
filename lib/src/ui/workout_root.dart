@@ -16,6 +16,7 @@ import 'session_entry.dart';
 import 'session_overview_body.dart';
 import 'session_summary_screen.dart';
 import 'template_library_screen.dart';
+import 'template_editor_screen.dart' show showTemplateEditor;
 import 'template_preview_sheet.dart';
 import 'template_row.dart';
 import 'week_strip.dart';
@@ -90,6 +91,10 @@ class WorkoutLandingBody extends ConsumerStatefulWidget {
   /// The heading over the templates that ship with the app.
   @visibleForTesting
   static const String predefinedGroupLabel = 'Ready-made';
+
+  /// The rail's last tile, which opens an empty template editor.
+  @visibleForTesting
+  static const Key newTemplateKey = ValueKey<String>('landing-new-template');
 
   /// The pinned bar's button.
   @visibleForTesting
@@ -186,31 +191,45 @@ class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
     final returning =
         custom.isNotEmpty || ref.watch(savedSessionsProvider).length >= 3;
     return <Widget>[
-        if (custom.isNotEmpty) ...<Widget>[
-          const _GroupLabel(WorkoutLandingBody.customGroupLabel),
-          SizedBox(
-            height: _kTileHeight,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
-              children: <Widget>[
-                for (final template in custom)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: SizedBox(
-                      width: 150,
-                      child: _TemplateTile(
-                        key: WorkoutLandingBody.templateKey(template.id),
-                        template: template,
-                        subtitle: templateSubtitle(template, index),
-                        onTap: () => _openTemplate(context, template),
-                      ),
+        // Always shown now, with New template at the end of the rail: making
+        // a template from scratch is the first thing a user who wants their
+        // own routine looks for (workout-gaps audit).
+        const _GroupLabel(WorkoutLandingBody.customGroupLabel),
+        // A Row in a scroll view, not a lazy horizontal ListView: the lazy
+        // rail's tiles never reached the iOS accessibility tree, so VoiceOver
+        // and Maestro could not open the user's own templates (audit). The
+        // rail is the user's handful of templates, so there is nothing to
+        // recycle.
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              for (final template in custom)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: SizedBox(
+                    width: 150,
+                    height: _kTileHeight,
+                    child: _TemplateTile(
+                      key: WorkoutLandingBody.templateKey(template.id),
+                      template: template,
+                      subtitle: templateSubtitle(template, index),
+                      onTap: () => _openTemplate(context, template),
                     ),
                   ),
-              ],
-            ),
+                ),
+              SizedBox(
+                width: custom.isEmpty ? 180 : 150,
+                height: _kTileHeight,
+                child: _NewTemplateTile(
+                  onTap: () => showTemplateEditor(context),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
         if (returning)
           _ReadyMadeToggle(
             open: _readyMadeOpen,
@@ -248,7 +267,7 @@ class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
         TemplateRow(
           key: WorkoutRoot.manageTemplatesKey,
           title: 'Manage templates',
-          subtitle: 'Duplicate, rename or delete your own',
+          subtitle: 'Edit your templates and exercises',
           background: AppPalette.mutedSurface,
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
@@ -324,8 +343,13 @@ class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
     BuildContext context,
     WorkoutTemplate template,
   ) async {
-    if (!await showTemplatePreview(context, template)) return;
+    final choice = await showTemplatePreviewChoice(context, template);
     if (!context.mounted) return;
+    if (choice == TemplatePreviewChoice.edit) {
+      await showTemplateEditor(context, existing: template);
+      return;
+    }
+    if (choice != TemplatePreviewChoice.start) return;
     if (!await _closeOpenWorkout(context)) return;
     await ref.read(activeSessionProvider.notifier).startFromTemplate(
           templateId: template.id,
@@ -483,6 +507,61 @@ class _TemplateTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The rail's last tile: build a template from scratch.
+class _NewTemplateTile extends StatelessWidget {
+  const _NewTemplateTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        container: true,
+        button: true,
+        label: 'New template. Pick exercises and their order',
+        onTap: onTap,
+        excludeSemantics: true,
+        child: GestureDetector(
+          key: WorkoutLandingBody.newTemplateKey,
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppPalette.border),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(Icons.add_rounded, size: 22, color: AppPalette.textPrimary),
+                SizedBox(height: 6),
+                Text(
+                  'New template',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppPalette.textPrimary,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Expanded(
+                  child: Text(
+                    'Pick exercises and their order',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppPalette.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
 }
 
 /// The pinned Start workout bar.

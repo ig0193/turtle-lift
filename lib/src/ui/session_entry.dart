@@ -55,7 +55,9 @@ Future<void> openExerciseForLogging(
   final existing =
       session.exercises.where((e) => e.exerciseId == exercise.id).firstOrNull;
   final hasWrittenSets = existing != null && existing.sets.isNotEmpty;
-  final neverDone =
+  // A custom exercise has no form guide to read first, so it never takes
+  // the detour (ADR 0009).
+  final neverDone = !exercise.isCustom &&
       timesPerformed(exercise.id, ref.read(savedSessionsProvider)) == 0;
 
   if (neverDone && !hasWrittenSets) {

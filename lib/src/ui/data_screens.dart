@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../data/active_session.dart';
 import '../data/body_gender.dart';
+import '../data/custom_exercises.dart';
 import '../data/custom_templates.dart';
 import '../data/data_export.dart';
 import '../data/data_reset.dart';
@@ -36,6 +37,7 @@ class _DataCounts {
     required this.sets,
     required this.weighIns,
     required this.templates,
+    required this.exercises,
     required this.foodsPlanned,
     required this.hasDiet,
   });
@@ -49,6 +51,7 @@ class _DataCounts {
       sets: sessions.fold(0, (n, s) => n + s.completedSets.length),
       weighIns: ref.watch(bodyweightLogProvider).length,
       templates: ref.watch(customTemplatesProvider).length,
+      exercises: ref.watch(customExerciseListProvider).length,
       // The plan the user is looking at: this week's version in effect.
       foodsPlanned: versionInEffectOn(dietPlan, ref.watch(planTodayProvider))
               ?.items
@@ -64,6 +67,9 @@ class _DataCounts {
   final int weighIns;
   final int templates;
 
+  /// Exercises the user created (ADR 0009).
+  final int exercises;
+
   /// Items in this week's plan, every day and slot.
   final int foodsPlanned;
 
@@ -71,7 +77,11 @@ class _DataCounts {
   final bool hasDiet;
 
   bool get isEmpty =>
-      workouts == 0 && weighIns == 0 && templates == 0 && !hasDiet;
+      workouts == 0 &&
+      weighIns == 0 &&
+      templates == 0 &&
+      exercises == 0 &&
+      !hasDiet;
 
   /// Label and count. The label already names the unit, so the count stands
   /// alone ("Workouts 12", not "Workouts 12 workouts").
@@ -80,6 +90,7 @@ class _DataCounts {
         ('Completed sets', '$sets'),
         ('Bodyweight entries', '$weighIns'),
         ('Your templates', '$templates'),
+        if (exercises > 0) ('Your exercises', '$exercises'),
         ('Foods planned', '$foodsPlanned'),
       ];
 }
@@ -164,6 +175,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
         sessions: ref.read(savedSessionsProvider),
         bodyweight: ref.read(bodyweightLogProvider),
         customTemplates: ref.read(customTemplatesProvider),
+        customExercises: ref.read(customExerciseListProvider),
         trainingPlan: ref.read(trainingPlanLogProvider),
         gender: ref.read(bodyGenderProvider),
         index: ref.read(exerciseIndexProvider),

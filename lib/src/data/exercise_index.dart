@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'custom_exercises.dart';
 import 'exercise.dart';
 
 /// The 260 shipped exercises, arranged for the three lookups the Muscles tab
@@ -113,8 +114,8 @@ class ExerciseIndex {
   }
 }
 
-/// The exercise library, indexed and available **synchronously on the first
-/// frame**.
+/// The shipped exercise library, indexed and available **synchronously on the
+/// first frame**. Read [exerciseIndexProvider], which adds the user's own.
 ///
 /// **This exists to be overridden, and `main()` is what overrides it** — the
 /// same boot seam as `initialTemplateFilterProvider`, for the same reason: no
@@ -136,13 +137,30 @@ class ExerciseIndex {
 /// that gap is `test/boot_test.dart`, which boots the real entrypoint and looks
 /// for the Muscles root — so dropping the boot wiring now fails in CI rather
 /// than on a device.
-final exerciseIndexProvider = Provider<ExerciseIndex>(
+final libraryIndexProvider = Provider<ExerciseIndex>(
   (ref) => throw UnimplementedError(
-    'exerciseIndexProvider must be overridden. main() builds the index from '
+    'libraryIndexProvider must be overridden. main() builds the index from '
     'exerciseLibraryProvider before runApp; a test wanting the real library '
-    'does the same, or overrides this with an index of its own fixtures.',
+    'does the same, or overrides exerciseIndexProvider with an index of its '
+    'own fixtures.',
   ),
 );
+
+/// Every exercise the app knows: the shipped library **plus the user's own**
+/// (`docs/adr/0009-custom-exercises-and-template-editing.md`), as one index.
+///
+/// **One index, so a custom exercise needs no special case anywhere it is
+/// looked up by id** — the picker, a template, the session, set logging,
+/// history, records and export all read this. It rebuilds when the user adds,
+/// edits or deletes one of theirs; the library half is the boot-time
+/// [libraryIndexProvider]. A widget test may still override this provider with
+/// a fixture index directly, which simply leaves custom exercises out.
+final exerciseIndexProvider = Provider<ExerciseIndex>((ref) {
+  final library = ref.watch(libraryIndexProvider);
+  final custom = ref.watch(customExerciseListProvider);
+  if (custom.isEmpty) return library;
+  return ExerciseIndex(<Exercise>[...library.all, ...custom]);
+});
 
 /// [text] lower-cased, apostrophes and full stops dropped, hyphens read as
 /// spaces, and runs of whitespace collapsed: the punctuation a person types

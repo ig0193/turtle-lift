@@ -22,7 +22,7 @@
 | This-week strip | Plan day markers, `N of M this week` and what is left; `Pick training days` with no plan. Taps to Profile › Schedule. Tab root only (ADR 0008). |
 | Last workout | `Yesterday · Push day · 14 sets`, opening that workout's History detail. Absent with no history. |
 | Search field | Filters by name, across **templates and exercises**. See below. |
-| `MY TEMPLATES` | The user's own templates, as a horizontal rail of tiles. **Absent entirely when they have none** — not a heading over nothing. |
+| `MY TEMPLATES` | The user's own templates, as a horizontal rail of tiles, **always shown** and ending in a `New template` tile — with none yet, the tile alone shows a new user how to make one (ADR 0009, confirmed in ADR 0011). |
 | `READY-MADE` | The eleven predefined templates, as a two-column grid of tiles, in a fixed order. Folded behind a `Ready-made · 11` row once the user has a template of their own or three saved workouts. |
 | `Manage templates` | A quiet row below the grid: the visible route to the template library on the Profile tab. Navigation, not authoring. |
 | **Start workout** bar | **Pinned above the tab bar**, not scrolled with the list: `Start workout` over `Add exercises as you go`. |
@@ -54,7 +54,7 @@ Starts an **empty** workout, in place, on the ready view (Step 2). It creates th
 
 ### Custom templates
 
-Created by **Save as template** on a finished workout's summary (Step 6). **Renaming, duplicating and deleting happen on the Profile tab**, never here. A custom template is the same kind of thing as a predefined one, so its tile is identical: only the `MY TEMPLATES` label sets it apart.
+Created by **Save as template** on a finished workout's summary (Step 6), or **from scratch** with the `New template` tile at the end of the `MY TEMPLATES` rail (always shown now, so a new user sees how to make one): name, pick exercises (several at once, library or your own), order them with arrows, save. A custom template's preview sheet has `Edit template`. Renaming, duplicating and deleting also live in the template library (ADR 0009). A custom template is the same kind of thing as a predefined one, so its tile is identical: only the `MY TEMPLATES` label sets it apart.
 
 ### What this screen deliberately does not have
 
@@ -122,7 +122,8 @@ There is one way to choose an exercise from a list, and every list ends there (`
   - **One exception: if the user has never logged this exercise (`timesPerformed == 0`), land on exercise detail first**, whether it is on the list already or is being added. They cannot know a lift they have never done. A primary action there starts logging. On a fresh install every exercise in a template is new, so the first session takes this extra tap per exercise: the rule working as designed. **An exercise that already has sets written never goes back through it.**
 - An exercise already in the workout **opens rather than being added twice**, which would split its sets across two prefill chains.
 - **Adding is never restricted by muscle.** A template is a starting list, not a contract: the user can add any exercise to a template session, which removes the old "finish Push day with curls" workaround of two history entries for one gym visit.
-- **Swap and reorder** (replace an exercise with one that trains the same muscle when a machine is taken; drag to reorder) are not built yet. The exercise's page already offers substitutes.
+- **Reorder and remove**: `Edit list` beside `KEEP LOGGING` turns each row into move up / move down / remove (ADR 0009), plus **swap**: the picker's choice takes the row's position (ADR 0011). A row with a completed set is never swapped — the app says why in one line and offers *Add instead*. The template editor has the same swap.
+- **Your own exercises**: the picker's first row is `Create an exercise` (`Create "…"` with the search text). A custom exercise has name, equipment, load type and muscles, no form guide, and skips the first-time detail page. The picker search matches names, muscles and equipment.
 - **Add to current workout** on an exercise's page (reached from the Muscles tab) works in **any** open session.
 
 ## Step 4 — Log sets
@@ -188,7 +189,8 @@ Note: duplicating, renaming and deleting a custom template is a separate flow th
 - **No rest timer**, so no rest-timer countdown or ring.
 - **No stored workout duration.** The live clock above is display-only.
 - Keep the workout-saved celebration small and brief — no confetti, badges, sound effects, or full-screen takeovers.
-- **Not built yet:** reorder and swap on a session row; an "Add weight" chip for bodyweight and timed exercises; quick-fill duration chips.
+- **Notes** (ADR 0011): one optional note per exercise per workout ("seat 4"), typed in set logging under Add set, with last time's note shown beneath it as `Last time: …` (derived). Shown under the exercise in History detail; in export.
+- **Not built yet:** an "Add weight" chip for bodyweight and timed exercises; quick-fill duration chips.
 
 ---
 

@@ -20,8 +20,20 @@ import 'muscle_exercise_list_screen.dart' show exerciseEquipmentLabel;
 Future<bool> showTemplatePreview(
   BuildContext context,
   WorkoutTemplate template,
+) async =>
+    await showTemplatePreviewChoice(context, template) ==
+    TemplatePreviewChoice.start;
+
+/// What the user chose on the preview sheet.
+enum TemplatePreviewChoice { start, edit, cancel }
+
+/// The preview sheet, with an **Edit template** action on the user's own
+/// templates (a predefined one is immutable and gets none).
+Future<TemplatePreviewChoice> showTemplatePreviewChoice(
+  BuildContext context,
+  WorkoutTemplate template,
 ) async {
-  final started = await showModalBottomSheet<bool>(
+  final choice = await showModalBottomSheet<TemplatePreviewChoice>(
     context: context,
     backgroundColor: AppPalette.surface,
     elevation: 0,
@@ -35,7 +47,7 @@ Future<bool> showTemplatePreview(
     ),
     builder: (_) => TemplatePreviewSheet(template: template),
   );
-  return started ?? false;
+  return choice ?? TemplatePreviewChoice.cancel;
 }
 
 /// The sheet's contents.
@@ -46,6 +58,9 @@ class TemplatePreviewSheet extends ConsumerWidget {
 
   /// The key a test taps to start the template.
   static const Key startKey = ValueKey<String>('template-preview-start');
+
+  /// Edit template, on the user's own templates only.
+  static const Key editKey = ValueKey<String>('template-preview-edit');
 
   /// The row for the exercise at [position], zero-based.
   static Key rowKey(int position) =>
@@ -87,7 +102,7 @@ class TemplatePreviewSheet extends ConsumerWidget {
                       padding: EdgeInsets.symmetric(vertical: 14),
                       child: Text(
                         'No exercises yet. Add them once the workout is '
-                        'running.',
+                        'running, or edit the template.',
                         style: TextStyle(
                           fontSize: 13,
                           color: AppPalette.textSecondary,
@@ -110,12 +125,25 @@ class TemplatePreviewSheet extends ConsumerWidget {
             const SizedBox(height: 14),
             FilledButton(
               key: startKey,
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () =>
+                  Navigator.of(context).pop(TemplatePreviewChoice.start),
               child: const Text('Start workout'),
             ),
             const SizedBox(height: 4),
+            if (!template.isPredefined)
+              TextButton(
+                key: editKey,
+                onPressed: () =>
+                    Navigator.of(context).pop(TemplatePreviewChoice.edit),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size.fromHeight(44),
+                  foregroundColor: AppPalette.textSecondary,
+                ),
+                child: const Text('Edit template'),
+              ),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () =>
+                  Navigator.of(context).pop(TemplatePreviewChoice.cancel),
               style: TextButton.styleFrom(
                 minimumSize: const Size.fromHeight(44),
                 foregroundColor: AppPalette.textSecondary,

@@ -16,7 +16,8 @@ part 'app_database.g.dart';
 /// units, sex and bodyweight). If you find yourself adding a column that could
 /// be recomputed from session rows, that is the rule catching you.
 ///
-/// Schema version 7 (step 7 is the reminder preferences, see
+/// Schema version 8 (step 8 is the user's own exercises, see
+/// `docs/adr/0009-custom-exercises-and-template-editing.md`; step 7 is the reminder preferences, see
 /// `docs/adr/0005-schedule-and-opt-in-notifications.md` and ADR 0007; step 6
 /// is the Diet plan, meal ticks and protein target,
 /// see `docs/adr/0007-diet-in-profile.md`; step 5 gives a custom template its
@@ -53,6 +54,7 @@ part 'app_database.g.dart';
     DietPlanItems,
     MealTicks,
     ReminderPrefs,
+    CustomExercises,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -70,7 +72,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 9;
 
   /// **The first migration in the app's history.** There was no
   /// [MigrationStrategy] before this one, so the shape here is the precedent:
@@ -166,8 +168,41 @@ class AppDatabase extends _$AppDatabase {
             // one-transaction, idempotent rule above holds.
             await m.createTable(reminderPrefs);
           }
+          if (from < 8) {
+            // The user's own exercises (`docs/adr/0009-custom-exercises-and-template-editing.md`).
+            // Pure table creation, so the one-transaction, idempotent rule
+            // above holds; no existing row is read or rewritten.
+            await m.createTable(customExercises);
+          }
+          if (from < 9) {
+            // Hide from picker and per-exercise notes
+            // (`docs/adr/0011-combined-build-decisions.md`). Both are
+            // `addColumn` with a default or nullable, so every existing row
+            // reads as "shown" and "no note"; nothing is rewritten.
+            //
+            // **Added only where the table exists without the column.** A step
+            // that has just created a table from today's definition already
+            // has it, and a development install that skipped the reserved
+            // session step (see `a database already at the current version`
+            // in the migration test) has no `session_exercises` at all.
+            await _addColumnIfMissing(m, customExercises, customExercises.hidden);
+            await _addColumnIfMissing(m, sessionExercises, sessionExercises.note);
+          }
         },
       );
+
+  Future<void> _addColumnIfMissing(
+    Migrator m,
+    TableInfo<Table, Object?> table,
+    GeneratedColumn<Object> column,
+  ) async {
+    final columns = await customSelect(
+      'PRAGMA table_info("${table.actualTableName}")',
+    ).get();
+    if (columns.isEmpty) return;
+    if (columns.any((c) => c.read<String>('name') == column.name)) return;
+    await m.addColumn(table, column);
+  }
 }
 
 /// The app's settings, as exactly one row.
@@ -443,6 +478,14 @@ class SessionExercises extends Table {
   /// wrong, which is exactly what `docs/01` §Derived values exists to prevent.
   BoolColumn get markedDone => boolean().withDefault(const Constant(false))();
 
+  /// The user's one free-text note for this exercise in this session ("seat
+  /// 4"), schema step 9. `null` when there is none; never an empty string —
+  /// the store trims and writes `null` for a blank note.
+  ///
+  /// Entered data, not derived: the "last time" hint in set logging is read
+  /// from the most recent earlier row that has one.
+  TextColumn get note => text().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 
@@ -682,3 +725,53 @@ const int kReminderPrefsRowId = 1;
 /// The Schedule reminder's default time, 18:30: the time the Schedule pane's
 /// Remind me row has shown since it shipped inert.
 const int kDefaultScheduleReminderMinute = 18 * 60 + 30;
+
+/// An exercise the user created (`docs/adr/0009-custom-exercises-and-template-editing.md`), schema
+/// step 8.
+///
+/// **The same shape as a library exercise minus the four reviewed content
+/// fields**, which a custom exercise does not have and the app never writes.
+/// Muscles are sub-muscle-group ids from the taxonomy, comma-joined in the
+/// order the user picked them, exactly as a template stores its exercise ids.
+///
+/// **The id always starts with `custom-`**, enforced here, so it can never
+/// collide with a shipped library id (none of which carries that prefix;
+/// `test/custom_exercises_test.dart` pins that).
+///
+/// Nothing derived lives here: how often it was logged, its records and its
+/// last set are all read from the session tables like any library exercise.
+@DataClassName('CustomExerciseRow')
+class CustomExercises extends Table {
+  TextColumn get id => text()();
+
+  TextColumn get name => text()();
+
+  /// One of the library's equipment values (`barbell`, `dumbbell`, ...).
+  TextColumn get equipment => text()();
+
+  /// One of `weighted`, `bodyweight`, `assisted`, `timed`, by name.
+  TextColumn get loadType => text()();
+
+  /// Primary sub-muscle-group ids, comma-joined. Never empty.
+  TextColumn get primaryIds => text()();
+
+  /// Secondary sub-muscle-group ids, comma-joined. May be empty.
+  TextColumn get secondaryIds => text().withDefault(const Constant(''))();
+
+  /// Hidden from the exercise picker (schema step 9). A logged custom
+  /// exercise cannot be deleted — history must never show "Unknown exercise"
+  /// — so hiding is how the user retires one. It stays in History, records,
+  /// the Muscles tab's lists of what was trained, and export.
+  BoolColumn get hidden => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+
+  @override
+  List<String> get customConstraints => <String>[
+        "CHECK (id LIKE 'custom-%')",
+        "CHECK (length(trim(name)) > 0)",
+        "CHECK (primary_ids <> '')",
+        "CHECK (load_type IN ('weighted', 'bodyweight', 'assisted', 'timed'))",
+      ];
+}

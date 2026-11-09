@@ -126,7 +126,10 @@ void main() {
     await tester.pump();
   }
 
-  Finder field(int i) => find.byType(TextField).at(i);
+  // The set row's number fields; the note field below Add set is not one.
+  Finder numberFields() => find.byWidgetPredicate(
+      (w) => w is TextField && w.key != SetLoggingScreen.noteKey);
+  Finder field(int i) => numberFields().at(i);
 
   Future<SetEntry> onlySet(WidgetTester tester) async {
     final open = await tester.runAsync(() => store.readOpenSession());
@@ -167,7 +170,7 @@ void main() {
       await pumpLogging(tester, exerciseId: 'push-up');
 
       expect(
-        find.byType(TextField),
+        numberFields(),
         findsOneWidget,
         reason: 'reps only until the weight chip is opened',
       );

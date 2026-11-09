@@ -250,6 +250,52 @@ class ActiveSession extends Notifier<WorkoutSession?> {
     await _refresh();
   }
 
+  /// Moves the exercise at [from] to [to] in the open workout's list
+  /// (indexes as the list shows them, `to` after removal). The order is the
+  /// user's: it is stored as each row's position, and nothing is derived from
+  /// it except which row is Up next.
+  Future<void> moveExercise(int from, int to) async {
+    final session = state;
+    if (session == null) return;
+    final ids = session.exercises.map((e) => e.id).toList();
+    if (from < 0 || from >= ids.length) return;
+    final target = to.clamp(0, ids.length - 1);
+    if (target == from) return;
+    final moved = ids.removeAt(from);
+    ids.insert(target, moved);
+    await _store.reorderExercises(session.id, ids);
+    await _refresh();
+  }
+
+  /// Swaps the open workout's exercise [sessionExerciseId] for [exerciseId]
+  /// in place. See [SessionStore.swapExercise] for when it is refused.
+  Future<SwapResult> swapExercise({
+    required String sessionExerciseId,
+    required String exerciseId,
+    required LoadType loadType,
+  }) async {
+    final result = await _store.swapExercise(
+      sessionExerciseId: sessionExerciseId,
+      exerciseId: exerciseId,
+      loadType: loadType,
+    );
+    await _refresh();
+    return result;
+  }
+
+  /// Writes the note on one of the open workout's exercises.
+  Future<void> setNote(String sessionExerciseId, String? note) async {
+    await _store.setNote(sessionExerciseId, note);
+    await _refresh();
+  }
+
+  /// Writes the note on an exercise of a saved workout, from the same set
+  /// logging screen that corrects its sets.
+  Future<void> setSavedNote(String sessionExerciseId, String? note) async {
+    await _store.setNote(sessionExerciseId, note);
+    await _refreshSaved();
+  }
+
   Future<void> markExerciseDone(String sessionExerciseId, bool done) async {
     await _store.setMarkedDone(sessionExerciseId, done);
     await _refresh();

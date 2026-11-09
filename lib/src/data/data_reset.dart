@@ -35,6 +35,7 @@ Future<void> wipeAllData(
     await db.delete(db.sessionExercises).go();
     await db.delete(db.sessions).go();
     await db.delete(db.customTemplates).go();
+    await db.delete(db.customExercises).go();
     await db.delete(db.trainingPlanEntries).go();
     await db.delete(db.bodyweightEntries).go();
     await db.delete(db.settings).go();

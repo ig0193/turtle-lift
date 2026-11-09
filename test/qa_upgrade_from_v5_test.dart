@@ -42,9 +42,9 @@ void main() {
     await dir.delete(recursive: true);
   });
 
-  test('reaches schema 7', () async {
+  test('reaches schema 9', () async {
     final row = await db.customSelect('PRAGMA user_version').getSingle();
-    expect(row.data.values.single, 7);
+    expect(row.data.values.single, 9);
   });
 
   test('every saved workout survives with its numbers in the right columns',

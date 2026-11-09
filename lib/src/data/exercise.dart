@@ -26,6 +26,10 @@ class Exercise {
     required this.posture,
     required this.execution,
     required this.commonMistakes,
+    this.isCustom = false,
+    this.hidden = false,
+    this.animation,
+    this.animationGear,
   });
 
   /// Reads one record of the shipped array.
@@ -47,6 +51,12 @@ class Exercise {
         posture: json['posture']! as String,
         execution: json['execution']! as String,
         commonMistakes: json['commonMistakes']! as String,
+        // Optional on the type, required of the shipped file: the validator
+        // proves all 260 carry both, and `test/exercise_demo_test.dart` proves
+        // the app can draw every one. A record without them — a user's own
+        // exercise, later — simply has no demonstration.
+        animation: json['animation'] as String?,
+        animationGear: json['animationGear'] as String?,
       );
 
   /// Stable across renames of [name]; this is what a screen route and, later, a
@@ -96,4 +106,26 @@ class Exercise {
 
   /// Reviewed copy — see [setup].
   final String commonMistakes;
+
+  /// True for an exercise the user created (`docs/adr/0009-custom-exercises-and-template-editing.md`).
+  ///
+  /// **A custom exercise has no reviewed content.** Its four content fields are
+  /// empty strings and must never be filled in by the app: nothing is
+  /// generated, summarised or borrowed from a library exercise. Its page says
+  /// so plainly instead (`CustomExerciseScreen`).
+  final bool isCustom;
+
+  /// A custom exercise the user hid from the picker (schema step 9). Always
+  /// false for a library exercise. It is still found by id everywhere else —
+  /// History, records, export — because a logged exercise cannot be deleted.
+  final bool hidden;
+
+  /// The movement pattern the detail page demonstrates, an id in
+  /// `lib/src/demo/demo_catalogue.dart`. Generated from
+  /// `assets/exercises/animation_map.py`; `null` means no demonstration.
+  final String? animation;
+
+  /// What the demonstration figure holds: `barbell`, `dumbbell`, `cable`,
+  /// `none`, … (`GEARS` in `animation_map.py`).
+  final String? animationGear;
 }

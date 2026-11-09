@@ -1,0 +1,57 @@
+# User story (ADR 0011): the plank station is taken, so I swap Plank for Side
+# plank in place. Push-up already has a logged set, so the app will not swap
+# it: it says why and offers Add instead.
+appId: dev.indresh.turtleLift
+name: 15 Swap exercise in place - swap, refused with logged sets
+tags: [workout]
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Start workout.*"
+- tapOn: "Start logging"
+- runFlow:
+    file: ../subflows/add_exercise.yaml
+    env: { QUERY: "push-up", ROW: "Push-up\\. Bodyweight" }
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-reps", VALUE: "10" }
+- tapOn:
+    id: "set-0-check"
+- tapOn: "Back"
+- runFlow:
+    file: ../subflows/add_exercise.yaml
+    env: { QUERY: "plank", ROW: "Plank\\. Bodyweight" }
+- tapOn: "Back"
+
+# --- Swap the untouched one: same position, new exercise.
+- tapOn: "Edit list"
+- tapOn: "Swap Plank for another exercise"
+- assertVisible: "Swap Plank for"
+- tapOn: "Search exercises, muscles, equipment"
+- inputText: "side plank"
+- tapOn: "Side plank\\. Bodyweight"
+- assertVisible: "Side plank"
+- assertNotVisible: "Plank"
+
+# --- The one with a logged set stays; the reason is one line.
+- tapOn: "Swap Push-up for another exercise"
+- assertVisible: "It has logged sets, so it stays.*"
+- assertVisible: "Add instead"
+- assertNotVisible: "Swap Push-up for"
+- tapOn: "Done"
+# The reason times out on its own (it does not sit over Discard workout).
+- extendedWaitUntil:
+    notVisible: "It has logged sets.*"
+    timeout: 10000
+
+- scrollUntilVisible:
+    element: "Discard workout"
+    centerElement: true
+- tapOn: "Discard workout"
+- runFlow:
+    when:
+      visible: "Discard"
+    commands:
+      - tapOn: "Discard"
+- assertVisible: "Start workout.*"

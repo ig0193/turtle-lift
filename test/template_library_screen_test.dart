@@ -106,16 +106,20 @@ void main() {
       }
     });
 
-    testWidgets('offers no way to create a template from scratch',
+    testWidgets('offers New template, above the ready-made group',
         (tester) async {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
-      // KD4 defers the muscle-group builder. If someone adds it later this
-      // fails, which is the prompt to update docs/04 in the same change rather
-      // than leaving the docs claiming less than the app does.
-      expect(find.textContaining('Create'), findsNothing);
-      expect(find.textContaining('New template'), findsNothing);
+      // Building from scratch shipped with ADR 0009 (it was deferred under
+      // KD4, and docs/04 now says so). The user's own group leads.
+      expect(find.byKey(TemplateLibraryScreen.newTemplateKey), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(TemplateLibraryScreen.newTemplateKey)).dy,
+        lessThan(tester
+            .getTopLeft(find.text(TemplateLibraryScreen.predefinedGroupLabel))
+            .dy),
+      );
     });
 
     testWidgets('says what the empty custom group is for', (tester) async {

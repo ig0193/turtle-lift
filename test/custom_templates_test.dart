@@ -386,15 +386,13 @@ void main() {
       );
     }
 
-    testWidgets('the custom group stays hidden while the table is empty',
+    testWidgets('with the table empty the group holds only New template',
         (tester) async {
       await tester.pumpWidget(host());
 
-      expect(
-        find.text(WorkoutLandingBody.customGroupLabel),
-        findsNothing,
-        reason: 'a heading standing over nothing reads as broken',
-      );
+      // Never a heading over nothing: the group is the way to make one.
+      expect(find.byKey(WorkoutLandingBody.newTemplateKey), findsOneWidget);
+      expect(find.text(WorkoutLandingBody.customGroupLabel), findsOneWidget);
     });
 
     testWidgets('the custom group appears once a template is saved',

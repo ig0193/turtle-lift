@@ -22,7 +22,7 @@ screen looks, follow the prototype. Where they differ on a rule, follow the docs
 | `assets/body-diagrams/*.svg` | 4 traced body diagrams (male/female × front/back) |
 | `assets/body-diagrams/muscle_taxonomy.dart` | 12 parent groups, 19 sub-muscle groups, segment mapping |
 | `assets/body-diagrams/body_paths.dart` | The 4 diagrams as point lists — 42 segments, ready to render and hit-test |
-| `assets/exercises/exercises.json` | 260 exercises with content |
+| `assets/exercises/exercises.json` | 260 exercises with content, plus each one's demonstration pattern and gear (`animation_map.py`) |
 | `assets/foods/foods.json` | Protein food list for Diet, IFCT 2017 values — reviewed nutrition copy (`docs/adr/0007-diet-in-profile.md`) |
 
 Each has a generator and validator alongside it. If a muscle id, exercise or food
@@ -137,7 +137,16 @@ are reviewed copy.
 - **The live clock is display-only.** `sessionClockElapsed` derives it from
   `loggedAt`; it is never stored and is shown nowhere but the live screen, and
   only for a session dated the day it started and under six hours old.
-- **Schema is at version 7.** Step 6 adds the diet tables (`DietPlanVersions`,
+- **Schema is at version 9.** Step 9 adds `custom_exercises.hidden` (Hide from
+  picker, for a logged custom exercise that cannot be deleted) and
+  `session_exercises.note` (one note per exercise per workout; the "Last time"
+  hint is derived) — `docs/adr/0011-combined-build-decisions.md`, which also
+  records swap in place and the deferred kg/lb, warm-up sets and supersets.
+  Step 8 is `custom_exercises`, the user's own
+  exercises (`docs/adr/0009-custom-exercises-and-template-editing.md`): ids always
+  `custom-…`, no content fields ever, one merged index (`exerciseIndexProvider`;
+  the boot override is `libraryIndexProvider`).
+  Previously: schema version 7. Step 6 adds the diet tables (`DietPlanVersions`,
   `DietPlanItems`, `MealTicks`, `Settings.proteinTargetG`); step 7 adds
   `ReminderPrefs` (ADR 0007). Step 5 gives a custom template its `exercise_ids`;
   the old `group_ids` columns on `custom_templates` and `sessions` stay, unwritten
@@ -196,6 +205,12 @@ are reviewed copy.
   cold start and after Delete all data; a diet reminder tap selects Diet; a
   training reminder tap opens the Workout tab (ADR 0008).
 
+- **Exercise demonstrations are drawn by the app** (`docs/adr/0010-exercise-demonstrations-are-drawn-not-bundled.md`),
+  reversing the old "no per-exercise illustrations" scope line at the user's request. An original keyframed
+  figure (`lib/src/demo/`) for all 260 exercises, mapped in `assets/exercises/animation_map.py`. **Never bundle
+  third-party exercise GIFs/videos** (openGym's are licensed Gym Visual stock; ExerciseDB forbids storage).
+  Review the figures with `DEMO_SHEET_DIR=… flutter test tool/demo_sheet_test.dart`.
+
 ## Still undecided — ask, don't guess
 - Typeface. The prototypes use Inter; the app currently uses the platform default.
   If Inter is chosen it must be **bundled as an asset** — the app is offline and
@@ -205,7 +220,7 @@ are reviewed copy.
 
 No login · no cloud sync · no soft delete · no rest timer · no stored workout duration (the live clock is display-only) ·
 no notifications (except the opt-in reminders in ADR 0005, built after Schedule, and diet reminders under the same rules, ADR 0007) · no wearables · no AI features · no premium tier · no ads ·
-no multi-day splits · no per-exercise illustrations ·
+no multi-day splits ·
 no achievements, badges or level-ups ·
 no calorie, macro or food-diary tracking (no calories, carbs or fat, no free-form food logging, no custom foods).
 

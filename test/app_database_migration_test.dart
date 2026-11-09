@@ -105,16 +105,16 @@ void main() {
       );
     });
 
-    test('reaches schema version 7', () async {
+    test('reaches schema version 9', () async {
       await createVersion1Database();
       final database = openUpgraded();
       await database.select(database.settings).get();
 
-      expect(database.schemaVersion, 7);
+      expect(database.schemaVersion, 9);
       expect(
         (await database.customSelect('PRAGMA user_version').getSingle())
             .read<int>('user_version'),
-        7,
+        9,
       );
     });
 
@@ -1177,6 +1177,214 @@ void main() {
           );
       expect(
           (await database.select(database.reminderPrefs).getSingle()).dietOn,
+          isTrue);
+    });
+  });
+
+  /// Writes the version-7 schema: version 6, then the reminder step's DDL
+  /// transcribed from a fresh version-7 build, with one preference row.
+  Future<void> createVersion7Database() async {
+    await createVersion6Database();
+    final legacy = NativeDatabase(dbFile);
+    await legacy.ensureOpen(_NoopUser());
+    for (final statement in <String>[
+      'CREATE TABLE "reminder_prefs" ("id" INTEGER NOT NULL, "schedule_on" '
+          'INTEGER NOT NULL DEFAULT 0 CHECK ("schedule_on" IN (0, 1)), '
+          '"schedule_minute" INTEGER NOT NULL DEFAULT 1110, "diet_on" INTEGER '
+          'NOT NULL DEFAULT 0 CHECK ("diet_on" IN (0, 1)), "summary_on" '
+          'INTEGER NOT NULL DEFAULT 0 CHECK ("summary_on" IN (0, 1)), '
+          '"summary_minute" INTEGER NOT NULL DEFAULT 450, "breakfast_on" '
+          'INTEGER NOT NULL DEFAULT 0 CHECK ("breakfast_on" IN (0, 1)), '
+          '"breakfast_minute" INTEGER NOT NULL DEFAULT 480, "lunch_on" INTEGER '
+          'NOT NULL DEFAULT 0 CHECK ("lunch_on" IN (0, 1)), "lunch_minute" '
+          'INTEGER NOT NULL DEFAULT 780, "snack_on" INTEGER NOT NULL DEFAULT 0 '
+          'CHECK ("snack_on" IN (0, 1)), "snack_minute" INTEGER NOT NULL '
+          'DEFAULT 1020, "dinner_on" INTEGER NOT NULL DEFAULT 0 CHECK '
+          '("dinner_on" IN (0, 1)), "dinner_minute" INTEGER NOT NULL DEFAULT '
+          '1230, PRIMARY KEY ("id"), CHECK (schedule_minute BETWEEN 0 AND '
+          '1439), CHECK (summary_minute BETWEEN 0 AND 1439), CHECK '
+          '(breakfast_minute BETWEEN 0 AND 1439), CHECK (lunch_minute BETWEEN '
+          '0 AND 1439), CHECK (snack_minute BETWEEN 0 AND 1439), CHECK '
+          '(dinner_minute BETWEEN 0 AND 1439))',
+      'INSERT INTO reminder_prefs (id, diet_on) VALUES (1, 1)',
+      'PRAGMA user_version = 7',
+    ]) {
+      await legacy.runCustom(statement, const <Object?>[]);
+    }
+    await legacy.close();
+  }
+
+  group('the custom-exercise step (7 -> 8)', () {
+    test('keeps every earlier row', () async {
+      await createVersion7Database();
+      final database = openUpgraded();
+
+      expect(
+          (await database.select(database.reminderPrefs).getSingle()).dietOn,
+          isTrue);
+      expect((await database.select(database.setEntries).getSingle()).reps, 8);
+      expect((await database.select(database.settings).getSingle())
+          .proteinTargetG, 140);
+    });
+
+    test('creates custom_exercises, empty and usable', () async {
+      await createVersion7Database();
+      final database = openUpgraded();
+
+      expect(await database.select(database.customExercises).get(), isEmpty);
+      await database.into(database.customExercises).insert(
+            CustomExercisesCompanion.insert(
+              id: 'custom-1',
+              name: 'Hack squat',
+              equipment: 'machine',
+              loadType: 'weighted',
+              primaryIds: 'quads/quads',
+            ),
+          );
+      final row = await database.select(database.customExercises).getSingle();
+      expect(row.secondaryIds, '');
+    });
+
+    test('an upgrade from 1 reaches 8 with a usable custom_exercises',
+        () async {
+      await createVersion1Database(storedFilter: 'single');
+      final database = openUpgraded();
+      await database.into(database.customExercises).insert(
+            CustomExercisesCompanion.insert(
+              id: 'custom-2',
+              name: 'Ring row',
+              equipment: 'other',
+              loadType: 'bodyweight',
+              primaryIds: 'back/upper',
+            ),
+          );
+      expect(await database.select(database.customExercises).get(),
+          hasLength(1));
+    });
+
+    for (final (label, row) in <(String, CustomExercisesCompanion)>[
+      (
+        'an id without the custom prefix',
+        CustomExercisesCompanion.insert(
+          id: 'barbell-bench-press',
+          name: 'Clash',
+          equipment: 'barbell',
+          loadType: 'weighted',
+          primaryIds: 'chest/mid',
+        ),
+      ),
+      (
+        'a blank name',
+        CustomExercisesCompanion.insert(
+          id: 'custom-3',
+          name: '  ',
+          equipment: 'barbell',
+          loadType: 'weighted',
+          primaryIds: 'chest/mid',
+        ),
+      ),
+      (
+        'no primary muscle',
+        CustomExercisesCompanion.insert(
+          id: 'custom-4',
+          name: 'X',
+          equipment: 'barbell',
+          loadType: 'weighted',
+          primaryIds: '',
+        ),
+      ),
+      (
+        'an unknown load type',
+        CustomExercisesCompanion.insert(
+          id: 'custom-5',
+          name: 'X',
+          equipment: 'barbell',
+          loadType: 'negative',
+          primaryIds: 'chest/mid',
+        ),
+      ),
+    ]) {
+      test('refuses $label', () async {
+        await createVersion7Database();
+        final database = openUpgraded();
+        await expectLater(
+          database.into(database.customExercises).insert(row),
+          throwsA(isA<Exception>()),
+        );
+      });
+    }
+  });
+
+  /// Writes the version-8 schema: version 7, then the custom-exercise step's
+  /// DDL transcribed from a fresh version-8 build, with one custom exercise.
+  Future<void> createVersion8Database() async {
+    await createVersion7Database();
+    final legacy = NativeDatabase(dbFile);
+    await legacy.ensureOpen(_NoopUser());
+    for (final statement in <String>[
+      'CREATE TABLE "custom_exercises" ("id" TEXT NOT NULL, "name" TEXT NOT '
+          'NULL, "equipment" TEXT NOT NULL, "load_type" TEXT NOT NULL, '
+          '"primary_ids" TEXT NOT NULL, "secondary_ids" TEXT NOT NULL '
+          "DEFAULT '', PRIMARY KEY (\"id\"), CHECK (id LIKE 'custom-%'), "
+          'CHECK (length(trim(name)) > 0), CHECK (primary_ids <> \'\'), '
+          "CHECK (load_type IN ('weighted', 'bodyweight', 'assisted', "
+          "'timed')))",
+      'INSERT INTO custom_exercises (id, name, equipment, load_type, '
+          "primary_ids) VALUES ('custom-a', 'Hack squat', 'machine', "
+          "'weighted', 'legs/quads')",
+      'PRAGMA user_version = 8',
+    ]) {
+      await legacy.runCustom(statement, const <Object?>[]);
+    }
+    await legacy.close();
+  }
+
+  group('the hide-and-note step (8 -> 9)', () {
+    test('keeps the custom exercise and every logged row', () async {
+      await createVersion8Database();
+      final database = openUpgraded();
+
+      final custom =
+          await database.select(database.customExercises).getSingle();
+      expect(custom.name, 'Hack squat');
+      expect(custom.hidden, isFalse,
+          reason: 'an existing exercise stays in the picker');
+      final row = await database.select(database.sessionExercises).getSingle();
+      expect(row.note, isNull, reason: 'no note was ever written');
+      expect((await database.select(database.setEntries).getSingle()).reps, 8);
+    });
+
+    test('the new columns are writable', () async {
+      await createVersion8Database();
+      final database = openUpgraded();
+
+      await database.update(database.customExercises).write(
+          const CustomExercisesCompanion(hidden: Value<bool>(true)));
+      await database.update(database.sessionExercises).write(
+          const SessionExercisesCompanion(note: Value<String?>('Seat 4')));
+      expect(
+          (await database.select(database.customExercises).getSingle()).hidden,
+          isTrue);
+      expect(
+          (await database.select(database.sessionExercises).getSingle()).note,
+          'Seat 4');
+    });
+
+    test('an upgrade from 1 reaches 9 with both columns', () async {
+      await createVersion1Database(storedFilter: 'single');
+      final database = openUpgraded();
+      await database.into(database.customExercises).insert(
+            CustomExercisesCompanion.insert(
+              id: 'custom-z',
+              name: 'Ring row',
+              equipment: 'other',
+              loadType: 'bodyweight',
+              primaryIds: 'back/upper',
+              hidden: const Value<bool>(true),
+            ),
+          );
+      expect(
+          (await database.select(database.customExercises).getSingle()).hidden,
           isTrue);
     });
   });

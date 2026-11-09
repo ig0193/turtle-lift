@@ -239,11 +239,12 @@ void main() {
         await tester.pump();
         expect(tester.testTextInput.isVisible, isTrue);
 
-        // Empty space under Add set. (Mark exercise done is pinned to the
-        // bottom edge now, so "below it" is off screen.)
+        // Empty space just under Add set, above the note field. (Mark
+        // exercise done is pinned to the bottom edge now, so "below it" is
+        // off screen.)
         await tester.tapAt(tester
             .getBottomLeft(find.byKey(SetLoggingScreen.addSetKey))
-            .translate(10, 40));
+            .translate(10, 6));
         await tester.pump();
         final field = tester.widget<TextField>(find.byType(TextField).first);
         expect(field.focusNode!.hasFocus, isFalse);

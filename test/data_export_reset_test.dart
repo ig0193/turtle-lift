@@ -335,6 +335,15 @@ void main() {
         exerciseIds: 'barbell-bench-press',
       );
       await TrainingPlanStore(database).replaceFromWeek('2026-11-02', 0x15);
+      await database.into(database.customExercises).insert(
+            CustomExercisesCompanion.insert(
+              id: 'custom-mine',
+              name: 'Mine',
+              equipment: 'machine',
+              loadType: 'weighted',
+              primaryIds: 'quads/quads',
+            ),
+          );
       await DietPlanStore(database).addFood(
         weekdays: <int>{0, 3},
         slot: MealSlot.breakfast,

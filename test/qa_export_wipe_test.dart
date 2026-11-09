@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/ui/week_strip.dart';
 import 'package:turtle_lift/main.dart' as app;
 import 'package:turtle_lift/src/data/active_session.dart';
+import 'package:turtle_lift/src/data/custom_templates.dart';
+import 'package:turtle_lift/src/data/custom_exercises.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/body_gender.dart';
 import 'package:turtle_lift/src/data/data_export.dart';
@@ -271,9 +273,11 @@ void main() {
       });
       await tester.pumpAndSettle();
 
-      // Workout: the landing, with no "My templates" rail and no session.
+      // Workout: the landing, with no template of the user's own (the rail
+      // holds only New template) and no session.
       expect(find.byKey(WorkoutLandingBody.startWorkoutKey), findsOneWidget);
-      expect(find.text(WorkoutLandingBody.customGroupLabel), findsNothing);
+      expect(shellContainer(tester).read(customTemplatesProvider), isEmpty);
+      expect(shellContainer(tester).read(customExerciseListProvider), isEmpty);
       expect(shellContainer(tester).read(activeSessionProvider), isNull);
       // No training days in force, and no last workout to point at (ADR 0008).
       expect(find.text(WeekStrip.pickDaysLabel), findsOneWidget);

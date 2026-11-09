@@ -15,7 +15,9 @@ import '../theme/app_typography.dart';
 import 'app_screen.dart';
 import 'set_logging_screen.dart';
 import 'body_diagram.dart';
+import 'custom_exercise_screens.dart' show CustomExerciseScreen;
 import 'disclosure_row.dart';
+import 'exercise_demo.dart';
 import 'muscle_exercise_list_screen.dart';
 
 /// One exercise, as reference: what it needs, what it trains, how to do it,
@@ -67,6 +69,7 @@ class ExerciseDetailScreen extends ConsumerWidget {
     // rather than by re-typing a field name the compiler would not check.
     final fields = exerciseContentFields(exercise);
     final leadField = fields.first;
+    final demo = ExerciseDemo.forExercise(exercise);
 
     return AppScreen.pushed(
       title: exercise.name,
@@ -82,6 +85,9 @@ class ExerciseDetailScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
+          // The demonstration leads: how the movement looks is the first
+          // question on a reference page (docs/adr/0010).
+          if (demo != null) ...<Widget>[demo, const SizedBox(height: 20)],
           Semantics(
             header: true,
             child: Text(kExerciseMusclesLabel, style: kLandingSectionLabelStyle),
@@ -248,7 +254,11 @@ Future<void> pushExerciseDetail(
 }) =>
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ExerciseDetailScreen(exercise: exercise, entry: entry),
+        // A custom exercise has no reviewed content, so it has its own page
+        // that says so instead of four empty blocks (ADR 0009).
+        builder: (_) => exercise.isCustom
+            ? CustomExerciseScreen(exerciseId: exercise.id, entry: entry)
+            : ExerciseDetailScreen(exercise: exercise, entry: entry),
       ),
     );
 

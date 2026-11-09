@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'src/data/active_session.dart';
 import 'src/data/app_database.dart';
 import 'src/data/body_gender.dart';
+import 'src/data/custom_exercises.dart';
 import 'src/data/custom_templates.dart';
 import 'src/data/data_reset.dart';
 import 'src/data/diet_plan.dart';
@@ -45,7 +46,7 @@ import 'src/ui/session_summary_screen.dart' show kAppDisplayName;
 /// rows before it can draw one of them, and no tab root in this app renders an
 /// `AsyncValue`. The two awaits run concurrently because neither needs the
 /// other — the asset read does not touch the database — so the boot cost is the
-/// slower of the pair rather than their sum. See [exerciseIndexProvider], which
+/// slower of the pair rather than their sum. See [libraryIndexProvider], which
 /// throws rather than defaulting if this wiring is ever dropped — and
 /// `test/boot_test.dart`, which runs this function so that dropping it fails
 /// there rather than on a device.
@@ -152,6 +153,8 @@ Future<void> _bootFrom(
   // Started before the record below and awaited after it, so it runs
   // alongside the rest: the record `.wait` stops at nine fields.
   final reminderPrefs = ReminderPrefsStore(database).read();
+  final customExercises =
+      readStoredCustomExercises(CustomExerciseStore(database));
   final (
     exercises,
     initialGender,
@@ -174,6 +177,7 @@ Future<void> _bootFrom(
     readStoredDiet(database),
   ).wait;
   final initialReminderPrefs = await reminderPrefs;
+  final initialCustomExercises = await customExercises;
   boot.dispose();
 
   runApp(
@@ -191,9 +195,11 @@ Future<void> _bootFrom(
         initialSavedSessionsProvider.overrideWithValue(initialSavedSessions),
         initialCustomTemplatesProvider
             .overrideWithValue(initialCustomTemplates),
-        exerciseIndexProvider.overrideWithValue(
+        libraryIndexProvider.overrideWithValue(
           ExerciseIndex.fromJson(exercises),
         ),
+        initialCustomExercisesProvider
+            .overrideWithValue(initialCustomExercises),
         foodIndexProvider.overrideWithValue(foods),
         initialDietPlanProvider.overrideWithValue(initialDiet.versions),
         initialMealTicksProvider.overrideWithValue(initialDiet.ticks),
@@ -213,7 +219,7 @@ Future<void> _bootFrom(
 /// test.** [AppDatabase]'s own constructor reaches `path_provider`, which has
 /// no platform channel under `flutter test`, so a test that called this
 /// entrypoint as written would die on its first line — which is why no test
-/// called it at all, and why deleting the `exerciseIndexProvider` override
+/// called it at all, and why deleting the `libraryIndexProvider` override
 /// below would have killed the Muscles tab on the first frame with the whole
 /// suite still green. `test/boot_test.dart` swaps this one function for an
 /// in-memory database and runs the real `main()`: the awaits, the override

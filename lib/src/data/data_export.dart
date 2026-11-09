@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'body_gender.dart';
 import 'diet_plan_store.dart';
+import 'exercise.dart';
 import 'exercise_index.dart';
 import 'food_index.dart';
 import 'meal_ticks.dart';
@@ -44,6 +45,7 @@ String buildExportJson({
   required int? proteinTargetG,
   required FoodIndex foods,
   required DateTime exportedAt,
+  List<Exercise> customExercises = const <Exercise>[],
 }) {
   final ticks = mealTicks.toList()
     ..sort((a, b) {
@@ -72,6 +74,7 @@ String buildExportJson({
                   'name': index.byId(exercise.exerciseId)?.name,
                   if (exercise.loadType != null)
                     'loadType': exercise.loadType!.name,
+                  if (exercise.note != null) 'note': exercise.note,
                   'sets': <Object?>[
                     for (final set in exercise.completedSets)
                       <String, Object?>{
@@ -99,6 +102,20 @@ String buildExportJson({
         <String, Object?>{
           'name': template.name,
           'exerciseIds': template.exerciseIds,
+        },
+    ],
+    // The user's own exercises (ADR 0009): what they typed, nothing more.
+    // There is no content to export because a custom exercise has none.
+    'exercises': <Object?>[
+      for (final exercise in customExercises)
+        <String, Object?>{
+          'id': exercise.id,
+          'name': exercise.name,
+          'equipment': exercise.equipment,
+          'loadType': exercise.loadType,
+          'primary': exercise.primary,
+          'secondary': exercise.secondary,
+          if (exercise.hidden) 'hiddenFromPicker': true,
         },
     ],
     'schedule': <Object?>[

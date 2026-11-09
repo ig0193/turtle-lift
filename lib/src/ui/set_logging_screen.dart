@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/active_session.dart';
+import '../data/exercise_notes.dart';
 import '../data/derived.dart';
 import '../data/exercise.dart';
 import '../data/exercise_index.dart';
@@ -61,6 +62,12 @@ class SetLoggingScreen extends ConsumerStatefulWidget {
   /// The pinned bar that holds [markDoneKey].
   static const Key markDoneBarKey = ValueKey<String>('mark-done-bar');
 
+  /// The note field (`docs/adr/0011-combined-build-decisions.md`).
+  static const Key noteKey = ValueKey<String>('exercise-note');
+
+  /// The "Last time: …" line under the note field.
+  static const Key lastNoteKey = ValueKey<String>('exercise-last-note');
+
   /// The key a test taps to open the full history.
   static const Key seeAllKey = ValueKey<String>('see-all-sessions');
 
@@ -119,6 +126,18 @@ class _SetLoggingScreenState extends ConsumerState<SetLoggingScreen> {
                   label: 'Add set',
                   leadingIcon: Icons.add_rounded,
                   onTap: () => setState(() => _addedRows++),
+                ),
+                const SizedBox(height: 12),
+                _NoteField(
+                  key: ValueKey<String>('note-${sessionExercise.id}'),
+                  sessionExerciseId: sessionExercise.id,
+                  initial: sessionExercise.note,
+                  editingSaved: widget.isEditingSaved,
+                  lastNote: lastNoteFor(
+                    saved,
+                    sessionExercise.exerciseId,
+                    current: session,
+                  ),
                 ),
                 ..._recentBlock(sessionExercise.exerciseId, saved),
               ],
@@ -517,3 +536,121 @@ class _MarkDoneBar extends StatelessWidget {
   }
 }
 
+
+/// One optional note for this exercise in this workout ("seat 4"), with the
+/// last note written for it shown underneath as a hint
+/// (`docs/adr/0011-combined-build-decisions.md`).
+///
+/// **Saved when the field lets go** — Done, a tap outside, or leaving the
+/// screen — rather than on every keystroke, so typing does not rebuild the
+/// workout once per letter. The hint is derived from saved sessions on read.
+class _NoteField extends ConsumerStatefulWidget {
+  const _NoteField({
+    required this.sessionExerciseId,
+    required this.initial,
+    required this.editingSaved,
+    required this.lastNote,
+    super.key,
+  });
+
+  final String sessionExerciseId;
+  final String? initial;
+  final bool editingSaved;
+  final String? lastNote;
+
+  @override
+  ConsumerState<_NoteField> createState() => _NoteFieldState();
+}
+
+class _NoteFieldState extends ConsumerState<_NoteField> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initial ?? '');
+  final FocusNode _focus = FocusNode();
+  late final ActiveSession _notifier = ref.read(activeSessionProvider.notifier);
+  late String? _written = widget.initial;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() {
+      if (!_focus.hasFocus) _save();
+    });
+  }
+
+  @override
+  void dispose() {
+    _save();
+    _focus.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final next = normaliseNote(_controller.text);
+    if (next == _written) return;
+    _written = next;
+    if (widget.editingSaved) {
+      _notifier.setSavedNote(widget.sessionExerciseId, next);
+    } else {
+      _notifier.setNote(widget.sessionExerciseId, next);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final last = widget.lastNote;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Semantics(
+          identifier: 'exercise-note',
+          child: TextField(
+            key: SetLoggingScreen.noteKey,
+            controller: _controller,
+            focusNode: _focus,
+            maxLength: kExerciseNoteMax,
+            maxLines: null,
+            onSubmitted: (_) => _save(),
+            onTapOutside: (_) => _focus.unfocus(),
+            textInputAction: TextInputAction.done,
+            textCapitalization: TextCapitalization.sentences,
+            style: const TextStyle(fontSize: 15, color: AppPalette.textPrimary),
+            cursorColor: AppPalette.accentStrong,
+            decoration: InputDecoration(
+              hintText: 'Note, e.g. seat height',
+              hintStyle:
+                  const TextStyle(fontSize: 15, color: AppPalette.textMuted),
+              counterText: '',
+              filled: true,
+              fillColor: AppPalette.surface,
+              isDense: true,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: AppPalette.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: AppPalette.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: AppPalette.accentStrong),
+              ),
+            ),
+          ),
+        ),
+        if (last != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 4),
+            child: Text(
+              'Last time: $last',
+              key: SetLoggingScreen.lastNoteKey,
+              style: const TextStyle(fontSize: 13, color: AppPalette.textMuted),
+            ),
+          ),
+      ],
+    );
+  }
+}
