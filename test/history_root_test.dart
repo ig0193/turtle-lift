@@ -286,6 +286,24 @@ void main() {
       expect(find.text('See all 1 session'), findsOneWidget);
     });
 
+    // QA (Maestro): a workout edited down to one set read "1 sets" on its row.
+    testWidgets('a row with one set reads "1 set", not "1 sets"',
+        (tester) async {
+      growViewport(tester);
+      await tester.pumpWidget(host(<HistorySession>[
+        session('a', 0, title: 'Bench', exercises: const <HistoryExercise>[
+          HistoryExercise(
+            name: 'Bench',
+            primaryGroupIds: <String>['chest'],
+            setScores: <double>[60],
+          ),
+        ]),
+      ]));
+
+      expect(find.textContaining('1 exercise · 1 set'), findsOneWidget);
+      expect(find.textContaining('1 sets'), findsNothing);
+    });
+
     testWidgets('"See all" opens the full chronological list', (tester) async {
       growViewport(tester);
       await tester.pumpWidget(host(<HistorySession>[

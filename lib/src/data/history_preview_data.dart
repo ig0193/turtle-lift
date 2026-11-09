@@ -21,6 +21,7 @@ import 'active_session.dart';
 import 'derived.dart';
 import 'exercise_index.dart';
 import 'generated/muscle_taxonomy.dart';
+import 'local_date.dart';
 import 'personal_best.dart';
 import 'session_store.dart';
 
@@ -250,8 +251,21 @@ final historyProjectionProvider = Provider<Map<String, HistoryRowFigures>>(
 /// it was typed in — so a backdated session slots into its real place rather
 /// than jumping to the top.
 final historySessionsNewestFirstProvider = Provider<List<HistorySession>>(
-  (ref) => <HistorySession>[...ref.watch(historySessionsProvider)]
-    ..sort((a, b) => b.performedOn.compareTo(a.performedOn)),
+  (ref) {
+    // Sorted with the incoming position as the tiebreak, because Dart's
+    // `List.sort` is only stable up to 32 elements. Saved sessions arrive
+    // newest first by performedOn and then loggedAt (docs/00 §11); without
+    // the tiebreak, two workouts on one day swapped order once the history
+    // grew past 32 rows.
+    final sessions = ref.watch(historySessionsProvider);
+    final order = <int>[for (var i = 0; i < sessions.length; i++) i]
+      ..sort((a, b) {
+        final byDate =
+            sessions[b].performedOn.compareTo(sessions[a].performedOn);
+        return byDate != 0 ? byDate : a.compareTo(b);
+      });
+    return <HistorySession>[for (final i in order) sessions[i]];
+  },
 );
 
 /// "September 2026" for the date a session happened on.
@@ -501,21 +515,32 @@ final List<HistorySession> kPreviewSessions = <HistorySession>[
 /// rather than assuming today: a card revisited months later stays historically
 /// accurate instead of showing a number from a different week. It also means a
 /// backdated session recalculates every card that follows it, for free.
+///
+/// **Only a session with at least one completed set counts** (`docs/00` §7).
+/// A History row keeps only exercises with completed sets, so a saved workout
+/// edited down to nothing is a row with no exercises, and it must not keep a
+/// chain alive. Gaps are counted in calendar days ([LocalDate.daysAfter]), not
+/// `Duration.inDays`, which reads a four-day gap across a spring-forward
+/// weekend as three.
 int streakAsOf(List<HistorySession> sessions, DateTime asOf) {
-  final days = <DateTime>{
-    for (final session in sessions)
-      if (!session.performedOn.isAfter(asOf)) session.performedOn,
-  }.toList()
-    ..sort((a, b) => b.compareTo(a));
-
+  final date = LocalDate.fromDateTime(asOf);
+  final days = <int, LocalDate>{};
+  for (final session in sessions) {
+    if (session.exercises.isEmpty) continue;
+    final day = LocalDate.fromDateTime(session.performedOn);
+    if (day.isAfter(date)) continue;
+    days[day.epochDay] = day;
+  }
   if (days.isEmpty) return 0;
+  final ordered = days.values.toList()..sort((a, b) => b.compareTo(a));
+
   // Decays against the reference date: a streak you have already let lapse is
   // zero when you look at it, not the number it stopped at.
-  if (asOf.difference(days.first).inDays > 3) return 0;
+  if (date.daysAfter(ordered.first) > 3) return 0;
 
   var count = 1;
-  for (var i = 1; i < days.length; i++) {
-    if (days[i - 1].difference(days[i]).inDays > 3) break;
+  for (var i = 1; i < ordered.length; i++) {
+    if (ordered[i - 1].daysAfter(ordered[i]) > 3) break;
     count++;
   }
   return count;

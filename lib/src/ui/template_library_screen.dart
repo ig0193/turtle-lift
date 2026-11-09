@@ -270,8 +270,12 @@ class _RowAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      // Its own node with its own tap: without these the label merged into
+      // the row and VoiceOver could not reach the action (QA, Maestro).
+      container: true,
       button: true,
       label: semanticsLabel,
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -483,8 +487,10 @@ class _DialogButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       label: label,
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

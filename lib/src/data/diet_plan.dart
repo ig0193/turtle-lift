@@ -6,6 +6,7 @@ import 'local_date.dart';
 import 'meal_slot.dart';
 import 'meal_ticks.dart';
 import 'settings_store.dart';
+import 'training_plan.dart' show planTodayProvider;
 
 /// The Diet state the user has entered -- the plan series, the eaten ticks and
 /// the daily target -- as notifiers seeded once at boot.
@@ -62,7 +63,16 @@ class DietPlanLog extends Notifier<List<DietPlanVersion>> {
 
   DietPlanStore get _store => ref.read(dietPlanStoreProvider);
 
-  Future<void> _reload() async => state = await _store.readVersions();
+  /// Re-reads the series, and re-reads "today" with it.
+  ///
+  /// The store stamps an edit with the wall clock's Monday, while the pane's
+  /// today is cached until the next resume (`planTodayProvider`). An app left
+  /// open from Sunday night into Monday would otherwise write the edit into
+  /// the new week and keep showing the old one, so the edit vanished.
+  Future<void> _reload() async {
+    state = await _store.readVersions();
+    ref.invalidate(planTodayProvider);
+  }
 
   /// See [DietPlanStore.addFood].
   Future<void> addFood({
@@ -117,9 +127,20 @@ class MealTicksLog extends Notifier<Set<MealTick>> {
 
   /// Ticks or unticks [slot] on [date] and returns whether it is ticked now.
   /// The store rejects a date outside this week up to today.
+  ///
+  /// A date the store refuses is one the pane only offered because its cached
+  /// today is stale (the app was left open from Sunday into Monday, so Sunday
+  /// is last week now). That changes nothing, re-reads today so the pane moves
+  /// to the real week, and is not an error the tap surfaces.
   Future<bool> toggle(LocalDate date, MealSlot slot) async {
-    final ticked = await ref.read(mealTickStoreProvider).toggle(date, slot);
     final tick = MealTick(date: date, slot: slot);
+    final bool ticked;
+    try {
+      ticked = await ref.read(mealTickStoreProvider).toggle(date, slot);
+    } on ArgumentError {
+      ref.invalidate(planTodayProvider);
+      return state.contains(tick);
+    }
     state = Set<MealTick>.unmodifiable(<MealTick>{
       ...state.where((t) => t != tick),
       if (ticked) tick,

@@ -664,9 +664,11 @@ class _SubstituteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       label: '${exercise.name}. '
           '${exerciseEquipmentLabel(exercise.equipment)}',
+      onTap: () => pushExerciseDetail(context, exercise),
       excludeSemantics: true,
       child: GestureDetector(
         key: substituteCardKey(exercise.id),

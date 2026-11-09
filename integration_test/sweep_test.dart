@@ -158,7 +158,15 @@ void main() {
       // A second set, and the optional weight chip.
       await tester.tap(find.byKey(SetLoggingScreen.addSetKey));
       await settle(tester);
-      await tapText(tester, '+ weight');
+      // The chip reads "weight" beside a plus icon (its semantics label is
+      // "Add weight"); the old '+ weight' matched nothing, so tapText quietly
+      // skipped the optional-weight path.
+      final chips = find.text('weight').evaluate().length;
+      expect(chips, greaterThan(0), reason: 'every timed row offers the chip');
+      await tester.tap(find.text('weight').last);
+      await settle(tester);
+      expect(find.text('weight').evaluate().length, chips - 1,
+          reason: 'the chip expands into the optional weight field');
       await tester.tap(find.byKey(SetLoggingScreen.markDoneKey));
       await settle(tester);
     }

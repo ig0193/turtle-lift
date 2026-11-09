@@ -186,6 +186,7 @@ class DietEatenTick extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       checked: ticked,
       label: labelFor(slot, ticked: ticked),
       excludeSemantics: true,
@@ -237,6 +238,7 @@ class _FoodRow extends StatelessWidget {
     final serving = food == null ? null : servingPhrase(food, row.servings);
     final grams = '${formatGramsShort(row.proteinG)} g';
     return Semantics(
+      container: true,
       button: true,
       label: <String>[row.name, ?serving, grams].join(', '),
       excludeSemantics: true,
@@ -298,6 +300,7 @@ class _AddFoodRow extends StatelessWidget {
   Widget build(BuildContext context) {
     void open() => pushFoodPicker(context, weekday: weekday, slot: slot);
     return Semantics(
+      container: true,
       button: true,
       label: 'Add food to ${slot.label}',
       excludeSemantics: true,

@@ -69,9 +69,25 @@ class SessionStore {
             (s) => OrderingTerm.desc(s.loggedAt),
           ]))
         .get();
-    return <WorkoutSession>[
-      for (final row in rows) await _hydrate(row),
-    ];
+    if (rows.isEmpty) return const <WorkoutSession>[];
+    // **Three queries, whatever the history's size** (QA second pass): one
+    // per session and one per exercise was about 2,100 queries for two years
+    // of training, on every refresh. Every saved session is read, so the
+    // exercise and set tables are read whole and grouped here; the open
+    // session's few rows come along and are simply not looked up.
+    return _assemble(
+      rows,
+      await (_db.select(_db.sessionExercises)
+            ..orderBy(<OrderClauseGenerator<$SessionExercisesTable>>[
+              (e) => OrderingTerm.asc(e.position),
+            ]))
+          .get(),
+      await (_db.select(_db.setEntries)
+            ..orderBy(<OrderClauseGenerator<$SetEntriesTable>>[
+              (s) => OrderingTerm.asc(s.position),
+            ]))
+          .get(),
+    );
   }
 
   Future<WorkoutSession> _hydrate(SessionRow row) async {
@@ -81,51 +97,68 @@ class SessionStore {
             (e) => OrderingTerm.asc(e.position),
           ]))
         .get();
+    final setRows = exerciseRows.isEmpty
+        ? const <SetEntryRow>[]
+        : await (_db.select(_db.setEntries)
+              ..where((s) => s.sessionExerciseId
+                  .isIn(exerciseRows.map((e) => e.id)))
+              ..orderBy(<OrderClauseGenerator<$SetEntriesTable>>[
+                (s) => OrderingTerm.asc(s.position),
+              ]))
+            .get();
+    return _assemble(<SessionRow>[row], exerciseRows, setRows).single;
+  }
 
-    final exercises = <SessionExercise>[];
-    for (final exerciseRow in exerciseRows) {
-      final setRows = await (_db.select(_db.setEntries)
-            ..where((s) => s.sessionExerciseId.equals(exerciseRow.id))
-            ..orderBy(<OrderClauseGenerator<$SetEntriesTable>>[
-              (s) => OrderingTerm.asc(s.position),
-            ]))
-          .get();
-      exercises.add(
-        SessionExercise(
-          id: exerciseRow.id,
-          exerciseId: exerciseRow.exerciseId,
-          position: exerciseRow.position,
-          // A row whose stored load type this build does not recognise still
-          // renders its sets; it just cannot claim a type it does not know.
-          loadType: LoadType.fromName(exerciseRow.loadType),
-          markedDone: exerciseRow.markedDone,
-          sets: <SetEntry>[
-            for (final s in setRows)
-              SetEntry(
-                id: s.id,
-                position: s.position,
-                completed: s.completed,
-                weightKg: s.weightKg,
-                reps: s.reps,
-                addedKg: s.addedKg,
-                assistKg: s.assistKg,
-                durationSec: s.durationSec,
-              ),
-          ],
+  /// Builds sessions from their rows. [exerciseRows] and [setRows] arrive in
+  /// position order and may hold rows of other sessions, which are ignored.
+  List<WorkoutSession> _assemble(
+    List<SessionRow> sessionRows,
+    List<SessionExerciseRow> exerciseRows,
+    List<SetEntryRow> setRows,
+  ) {
+    final setsByExercise = <String, List<SetEntry>>{};
+    for (final s in setRows) {
+      (setsByExercise[s.sessionExerciseId] ??= <SetEntry>[]).add(
+        SetEntry(
+          id: s.id,
+          position: s.position,
+          completed: s.completed,
+          weightKg: s.weightKg,
+          reps: s.reps,
+          addedKg: s.addedKg,
+          assistKg: s.assistKg,
+          durationSec: s.durationSec,
         ),
       );
     }
-
-    return WorkoutSession(
-      id: row.id,
-      title: row.title,
-      performedOn: row.performedOn,
-      loggedAt: row.loggedAt,
-      templateId: row.templateId,
-      templateName: row.templateName,
-      isOpen: row.openMarker != null,
-      exercises: exercises,
-    );
+    final exercisesBySession = <String, List<SessionExercise>>{};
+    for (final e in exerciseRows) {
+      (exercisesBySession[e.sessionId] ??= <SessionExercise>[]).add(
+        SessionExercise(
+          id: e.id,
+          exerciseId: e.exerciseId,
+          position: e.position,
+          // A row whose stored load type this build does not recognise still
+          // renders its sets; it just cannot claim a type it does not know.
+          loadType: LoadType.fromName(e.loadType),
+          markedDone: e.markedDone,
+          sets: setsByExercise[e.id] ?? const <SetEntry>[],
+        ),
+      );
+    }
+    return <WorkoutSession>[
+      for (final row in sessionRows)
+        WorkoutSession(
+          id: row.id,
+          title: row.title,
+          performedOn: row.performedOn,
+          loggedAt: row.loggedAt,
+          templateId: row.templateId,
+          templateName: row.templateName,
+          isOpen: row.openMarker != null,
+          exercises: exercisesBySession[row.id] ?? const <SessionExercise>[],
+        ),
+    ];
   }
 
   /// Starts a session and returns it.

@@ -228,8 +228,9 @@ void main() {
 
       expect(
         tester.widget<TextField>(find.byType(TextField).first).controller!.text,
-        '5',
-        reason: 'there is no minus key anywhere in this app',
+        '',
+        reason: 'there is no minus key anywhere in this app, and a pasted '
+            '"-5" is refused whole rather than turned into 5',
       );
     });
 
@@ -251,7 +252,9 @@ void main() {
 
       expect(
         tester.widget<TextField>(find.byType(TextField).first).controller!.text,
-        '85',
+        '',
+        reason: 'refused whole: filtering the point out turned 8.5 into 85 '
+            '(QA second pass)',
       );
     });
   });

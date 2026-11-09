@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_palette.dart';
+import 'glass_tab_bar.dart' show GlassTabBar;
 
 /// The moment between finishing and the card.
 ///
@@ -45,7 +46,9 @@ class _FinishCelebrationState extends State<FinishCelebration>
 
   @override
   Widget build(BuildContext context) {
-    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    // Both platforms' flags: iOS reports Reduce Motion as `reduceMotion` and
+    // leaves MediaQuery's `disableAnimations` false (QA second pass).
+    final reduceMotion = GlassTabBar.prefersReducedMotion(context);
     return Positioned.fill(
       child: IgnorePointer(
         child: ColoredBox(

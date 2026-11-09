@@ -64,6 +64,9 @@ class _SetRowState extends State<SetRow> {
   final FocusNode _requiredFieldFocus = FocusNode();
   late bool _weightExpanded = _hasOptionalWeight;
 
+  /// Swipe-deletes seen by this slot; part of the Dismissible's key.
+  int _dismissals = 0;
+
   bool get _hasOptionalWeight =>
       (widget.entry.addedKg ?? 0) > 0 || (widget.entry.weightKg ?? 0) > 0;
 
@@ -124,9 +127,17 @@ class _SetRowState extends State<SetRow> {
   @override
   Widget build(BuildContext context) {
     return Dismissible(
-      key: ValueKey<String>('dismiss-${widget.entry.id}'),
+      // **Not keyed on the entry id.** A prefilled row's id is `ghost-N` until
+      // its first keystroke saves it; a key that changed then rebuilt the
+      // fields mid-typing, dropping focus, so "60" was stored as 6. The key
+      // changes only after a swipe, so the next row that slides into this
+      // slot gets a fresh, undismissed Dismissible.
+      key: ValueKey<String>('dismiss-${widget.index}-$_dismissals'),
       direction: DismissDirection.endToStart,
-      onDismissed: (_) => widget.onDelete(),
+      onDismissed: (_) {
+        setState(() => _dismissals++);
+        widget.onDelete();
+      },
       background: const ColoredBox(color: AppPalette.danger),
       child: GestureDetector(
         // The second way to delete, so removing a set never depends on a swipe
@@ -173,6 +184,7 @@ class _SetRowState extends State<SetRow> {
             decimals: 1,
             isPrefill: widget.isPrefill,
             semanticsLabel: 'Weight in kilograms',
+            semanticsIdentifier: 'set-${widget.index}-weight',
             unit: 'kg',
               onChanged: (v) => _emit(_copy(weightKg: v)),
             ),
@@ -184,6 +196,7 @@ class _SetRowState extends State<SetRow> {
             step: 1,
             isPrefill: widget.isPrefill,
             semanticsLabel: 'Repetitions',
+            semanticsIdentifier: 'set-${widget.index}-reps',
             unit: 'reps',
               onChanged: (v) => _emit(_copy(reps: v?.round())),
             ),
@@ -198,6 +211,7 @@ class _SetRowState extends State<SetRow> {
             decimals: 1,
             isPrefill: widget.isPrefill,
             semanticsLabel: 'Assistance in kilograms',
+            semanticsIdentifier: 'set-${widget.index}-assist',
             unit: 'kg assist',
               onChanged: (v) => _emit(_copy(assistKg: v)),
             ),
@@ -209,6 +223,7 @@ class _SetRowState extends State<SetRow> {
             step: 1,
             isPrefill: widget.isPrefill,
             semanticsLabel: 'Repetitions',
+            semanticsIdentifier: 'set-${widget.index}-reps',
             unit: 'reps',
               onChanged: (v) => _emit(_copy(reps: v?.round())),
             ),
@@ -223,6 +238,7 @@ class _SetRowState extends State<SetRow> {
             step: 1,
             isPrefill: widget.isPrefill,
             semanticsLabel: 'Repetitions',
+            semanticsIdentifier: 'set-${widget.index}-reps',
             unit: 'reps',
               onChanged: (v) => _emit(_copy(reps: v?.round())),
             ),
@@ -241,6 +257,7 @@ class _SetRowState extends State<SetRow> {
             step: 5,
             isPrefill: widget.isPrefill,
             semanticsLabel: 'Duration in seconds',
+            semanticsIdentifier: 'set-${widget.index}-duration',
             // "sec" until there is a value, then the value as m:ss -- "0:00"
             // under an empty field reads as a reading, not a prompt.
             unit: widget.entry.durationSec == null
@@ -265,8 +282,11 @@ class _SetRowState extends State<SetRow> {
   }) {
     if (!_weightExpanded) {
       return Semantics(
+        container: true,
         button: true,
         label: 'Add weight',
+        identifier: 'set-${widget.index}-add-weight',
+        onTap: () => setState(() => _weightExpanded = true),
         excludeSemantics: true,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -307,6 +327,7 @@ class _SetRowState extends State<SetRow> {
               decimals: 1,
               isPrefill: widget.isPrefill,
               semanticsLabel: 'Added weight in kilograms',
+              semanticsIdentifier: 'set-${widget.index}-added',
               unit: 'kg',
               onChanged: onChanged,
             ),
@@ -331,9 +352,12 @@ class _CheckButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       checked: completed,
       label: 'Complete set ${index + 1}',
+      identifier: 'set-$index-check',
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         key: SetRow.checkKey(index),

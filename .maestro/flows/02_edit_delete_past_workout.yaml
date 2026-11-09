@@ -1,0 +1,57 @@
+# User story: open a finished workout from History, edit a set and remove a
+# set, see every derived figure follow, then delete the workout.
+appId: dev.indresh.turtleLift
+name: 02 Edit and delete a past workout from History
+tags: [history]
+---
+- launchApp:
+    clearState: true
+- runFlow: ../subflows/log_bench_workout.yaml
+- tapOn: "Back"
+- tapOn: "History"
+- assertVisible: "Barbell bench press, quick log, Today · 1 exercise · 2 sets"
+- tapOn: ".*Today · 1 exercise · 2 sets"
+- assertVisible: "Barbell bench press\n60kg × 8 · 60kg × 8"
+
+# --- Edit: the session detail is the live card (docs/00 §11)
+- scrollUntilVisible:
+    element: "Edit workout"
+    centerElement: true
+- tapOn: "Edit workout"
+- tapOn: "Barbell bench press\n.*"
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-weight", VALUE: "70" }
+# Remove the second set. Long-press is the one-handed delete (set_row.dart);
+# the swipe is covered by the widget tests, since a Maestro swipe needs
+# device-specific coordinates to clear the Dismissible threshold.
+- longPressOn: { id: "set-1-check" }
+- assertNotVisible: { id: "set-1-check" }
+- tapOn: "Back"
+- assertVisible: "Barbell bench press\n70kg × 8"
+- assertVisible: ".*1\nSets\n1\nExercises.*"
+- tapOn: "Back"
+# The History card re-derives from the edited rows.
+- assertVisible: "Barbell bench press\n70kg × 8"
+- assertVisible: ".*1\nSets\n1\nExercises.*"
+- tapOn: "Back"
+- assertVisible: ".*Today · 1 exercise · 1 set"
+
+# --- Delete: confirm dialog, hard delete
+- tapOn: ".*Today · 1 exercise · 1 set"
+- scrollUntilVisible:
+    element: "Edit workout"
+    centerElement: true
+- tapOn: "Edit workout"
+- scrollUntilVisible:
+    element: "Delete workout"
+    centerElement: true
+- tapOn: "Delete workout"
+# Cancel first: nothing changes.
+- tapOn: "Cancel"
+- assertVisible: "Delete workout"
+- tapOn: "Delete workout"
+- tapOn: "Delete"
+- waitForAnimationToEnd
+- tapOn: "History"
+- assertVisible: "No workouts yet.*"

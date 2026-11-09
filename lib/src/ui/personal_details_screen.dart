@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/body_gender.dart';
@@ -6,6 +7,7 @@ import '../data/personal_details_store.dart';
 import '../data/set_format.dart';
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
+import 'number_input.dart';
 import 'template_row.dart';
 
 /// The two things the app collects about the user, and the log of one of them.
@@ -183,9 +185,11 @@ class _GenderChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       selected: selected,
       label: label,
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -234,10 +238,21 @@ class _WeightField extends StatelessWidget {
     return Row(
       children: <Widget>[
         Expanded(
-          child: TextField(
+          // Stable id for UI automation (Maestro); never read aloud.
+          child: Semantics(
+            identifier: 'bodyweight-field',
+            child: TextField(
             key: PersonalDetailsScreen.weightFieldKey,
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            // A comma decimal ("77,5") is accepted, and nothing that is not a
+            // weight can be typed or pasted.
+            inputFormatters: <TextInputFormatter>[
+              UnsignedNumberFormatter(decimals: 1, maxIntegerDigits: 3),
+            ],
+            // The iOS number pad has no return key: a tap off the field
+            // is how it is put away.
+            onTapOutside: (_) => FocusScope.of(context).unfocus(),
             style: kTemplateRowTitleStyle,
             cursorColor: AppPalette.accentStrong,
             onSubmitted: (_) => onRecord(),
@@ -253,11 +268,15 @@ class _WeightField extends StatelessWidget {
                   EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),
+          ),
         ),
         const SizedBox(width: 8),
         Semantics(
+          container: true,
           button: true,
           label: 'Record weight',
+          identifier: 'record-weight',
+          onTap: onRecord,
           excludeSemantics: true,
           child: GestureDetector(
             key: PersonalDetailsScreen.recordKey,

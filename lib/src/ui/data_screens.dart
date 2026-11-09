@@ -312,9 +312,11 @@ class _DeleteAllDataScreenState extends ConsumerState<DeleteAllDataScreen> {
           _CountsCard(counts: counts),
           const SizedBox(height: 20),
           Semantics(
+            container: true,
             button: true,
             enabled: !_busy,
             label: 'Delete all data',
+            onTap: _busy ? null : _delete,
             excludeSemantics: true,
             child: GestureDetector(
               key: DeleteAllDataScreen.deleteKey,

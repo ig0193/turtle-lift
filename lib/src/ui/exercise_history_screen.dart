@@ -157,10 +157,12 @@ class _SessionBlock extends StatelessWidget {
         session.exercises.firstWhere((e) => e.exerciseId == exerciseId);
 
     return Semantics(
+      container: true,
       button: true,
       label: '${_shortDate(session.performedOn)}, '
           '${formatSetList(exercise)}'
           '${isRecord ? ', personal best' : ''}',
+      onTap: () => pushSessionSummary(context, session.id),
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -232,8 +234,10 @@ class _SeeMore extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
+        container: true,
         button: true,
         label: 'See more',
+        onTap: onTap,
         excludeSemantics: true,
         child: GestureDetector(
           key: ExerciseHistoryScreen.seeMoreKey,

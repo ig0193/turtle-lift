@@ -405,9 +405,11 @@ class _TemplateTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final count = template.exerciseIds.length;
     return Semantics(
+      container: true,
       button: true,
       label: '${template.name}. $subtitle. $count '
           'exercise${count == 1 ? '' : 's'}',
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

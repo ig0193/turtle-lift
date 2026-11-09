@@ -56,8 +56,10 @@ class SessionActions extends ConsumerWidget {
           const SizedBox(height: 8),
         ],
         Semantics(
+          container: true,
           button: true,
           label: 'Discard workout',
+          onTap: () => _discard(context, ref),
           excludeSemantics: true,
           child: GestureDetector(
             key: discardKey,

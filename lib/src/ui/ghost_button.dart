@@ -50,8 +50,14 @@ class GhostButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
+        // Its own node: without this the label and the tap merged into the
+        // nearest ancestor with the text around it, and VoiceOver offered no
+        // separate button (QA, Diet first-time state).
+        container: true,
         button: true,
         label: label,
+        // Named here because excludeSemantics hides the GestureDetector's own.
+        onTap: onTap,
         excludeSemantics: true,
         child: GestureDetector(
           key: buttonKey,

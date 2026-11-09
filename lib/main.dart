@@ -94,13 +94,20 @@ Future<void> main() async {
   // builds entirely. See `sample_history_seed.dart` for removal notes.
   // The sample diet (a target, a planned week, one tick today) rides along
   // for the Diet pane's on-device review, and no-ops once any diet exists.
-  if (kDebugMode) {
+  //
+  // `--dart-define=TURTLE_NO_SEED=true` skips it, so the Maestro flows
+  // (`.maestro/`) can start a debug build from a truly empty install.
+  if (kDebugMode && !kSkipSampleSeed) {
     await seedSampleHistoryIfEmpty(database);
     await seedSampleDietIfEmpty(database);
   }
 
   await _bootFrom(database, launchTarget: launchTarget);
 }
+
+/// True when the build was made with `--dart-define=TURTLE_NO_SEED=true`: the
+/// debug sample seed is skipped. Release builds never seed either way.
+const bool kSkipSampleSeed = bool.fromEnvironment('TURTLE_NO_SEED');
 
 /// Runs [prepareReminders], and lets nothing it throws stop the app booting.
 ///

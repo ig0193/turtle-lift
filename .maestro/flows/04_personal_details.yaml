@@ -1,0 +1,50 @@
+# User story: Profile -> Personal details: choose the body diagram gender and
+# record a bodyweight; the calorie estimate appears for workouts logged after
+# it; both survive a kill and relaunch.
+appId: dev.indresh.turtleLift
+name: 04 Personal details - gender and bodyweight
+tags: [profile]
+---
+- launchApp:
+    clearState: true
+- tapOn: "Profile"
+# Profile opens on Personal (ADR 0007 §2).
+- assertVisible:
+    text: "Personal"
+    selected: true
+- tapOn: "Personal details.*"
+- assertVisible:
+    text: "Male"
+    selected: true
+- tapOn: "Female"
+- assertVisible:
+    text: "Female"
+    selected: true
+- assertVisible: "Add your weight to see calorie estimates.*"
+- tapOn: { id: "bodyweight-field" }
+- inputText: "72.5"
+- tapOn: { id: "record-weight" }
+- assertVisible: ".*72\\.5.*"
+- takeScreenshot: 04-personal-details
+
+# The number pad must go away with a tap off the field (it has no return key).
+- tapOn: { id: "bodyweight-field" }
+- tapOn: "Body diagram"
+- assertNotVisible: { id: "inputView" }
+
+# --- persists
+- stopApp
+- launchApp
+- tapOn: "Profile"
+- tapOn: "Personal details.*"
+- assertVisible:
+    text: "Female"
+    selected: true
+- assertVisible: ".*72\\.5.*"
+- tapOn: "Back"
+
+# --- the calorie estimate now shows on a new workout's summary
+- tapOn: "Workout"
+- runFlow: ../subflows/log_bench_workout.yaml
+- assertVisible: ".*kcal.*"
+- assertNotVisible: ".*Add your bodyweight in Profile to see kcal.*"

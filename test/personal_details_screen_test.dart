@@ -275,4 +275,18 @@ void main() {
       );
     });
   });
+
+  // QA (Maestro): the iOS decimal pad has no return key; a tap off the field
+  // must put it away.
+  testWidgets('a tap outside the weight field puts the keypad away',
+      (tester) async {
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+    await tester.showKeyboard(find.byKey(PersonalDetailsScreen.weightFieldKey));
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isTrue);
+    await tester.tapAt(const Offset(400, 590));
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isFalse);
+  });
 }

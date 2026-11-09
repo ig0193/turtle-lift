@@ -210,9 +210,11 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
+        container: true,
         button: true,
         enabled: enabled,
         label: label,
+        onTap: enabled ? onTap : null,
         excludeSemantics: true,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -409,14 +411,24 @@ class _DayCell extends StatelessWidget {
       ),
     );
 
+    // Each day its own element, so VoiceOver steps through the month a day at
+    // a time rather than reading the whole grid as one string (QA second
+    // pass).
     if (!hasData) {
-      return Semantics(label: '$day, no workout logged', child: content);
+      return Semantics(
+        container: true,
+        label: '$day, no workout logged',
+        excludeSemantics: true,
+        child: content,
+      );
     }
 
     return Semantics(
+      container: true,
       button: true,
       label: '$day, ${sessionCount == 1 ? '1 workout' : '$sessionCount workouts'}'
           '${isExpanded ? ', open' : ''}',
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

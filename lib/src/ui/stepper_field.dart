@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../data/set_format.dart';
 import '../theme/app_palette.dart';
+import 'number_input.dart';
 
 /// A number the user can step or type.
 ///
@@ -28,6 +29,7 @@ class StepperField extends StatefulWidget {
     this.isPrefill = false,
     this.decimals = 0,
     this.semanticsLabel,
+    this.semanticsIdentifier,
     this.unit,
     this.focusNode,
     this.min,
@@ -58,6 +60,10 @@ class StepperField extends StatefulWidget {
   final int decimals;
 
   final String? semanticsLabel;
+
+  /// A stable accessibility id for UI automation (Maestro), e.g.
+  /// `set-0-reps`. Never read aloud.
+  final String? semanticsIdentifier;
 
   /// Owned by the caller when it needs to focus this field — the set row does,
   /// because tapping the checkmark on an empty required field focuses it rather
@@ -183,6 +189,7 @@ class _StepperFieldState extends State<StepperField> {
 
     return Semantics(
       label: widget.semanticsLabel,
+      identifier: widget.semanticsIdentifier,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -248,10 +255,8 @@ class _StepperFieldState extends State<StepperField> {
                               signed: false,
                             ),
                             inputFormatters: <TextInputFormatter>[
-                              FilteringTextInputFormatter.allow(
-                                widget.decimals > 0
-                                    ? RegExp(r'[0-9.]')
-                                    : RegExp(r'[0-9]'),
+                              UnsignedNumberFormatter(
+                                decimals: widget.decimals,
                               ),
                             ],
                             decoration: InputDecoration(
@@ -278,6 +283,11 @@ class _StepperFieldState extends State<StepperField> {
                                     .withValues(alpha: 0.45),
                               ),
                             ),
+                            // The iOS number pad has no return key, so a tap
+                            // anywhere off the field is the way to put it
+                            // away; without this it covered the rest of the
+                            // screen until the user navigated off it.
+                            onTapOutside: (_) => _focusNode.unfocus(),
                             onChanged: (text) => widget.onChanged(
                                 text.isEmpty ? null : double.tryParse(text)),
                           );
@@ -332,6 +342,7 @@ class _StepButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       enabled: onTap != null,
       label: semanticsLabel,

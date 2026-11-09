@@ -120,8 +120,10 @@ class MuscleSearchField extends StatelessWidget {
     // box, and with the text field's own semantics excluded so a screen reader
     // does not offer to type into something that cannot be typed into.
     return Semantics(
+      container: true,
       button: true,
       label: kMuscleSearchHint,
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

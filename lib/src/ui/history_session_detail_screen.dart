@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/active_session.dart' show savedSessionsProvider;
 import '../data/body_gender.dart';
 import '../data/bodyweight_resolution.dart';
 import '../data/generated/muscle_taxonomy.dart';
 import '../data/history_preview_data.dart';
+import '../data/exercise_index.dart';
+import '../data/personal_best.dart';
 import '../data/personal_details_store.dart';
 import '../data/set_format.dart';
 import '../theme/app_palette.dart';
@@ -35,6 +38,10 @@ class HistorySessionDetailScreen extends ConsumerWidget {
   /// Finds one exercise block in the log.
   @visibleForTesting
   static Key exerciseKey(String name) => ValueKey<String>('log-$name');
+
+  /// The route name a History row pushes this screen under, so a delete of
+  /// [sessionId] can pop it too (`SessionSummaryScreen`).
+  static String routeNameFor(String sessionId) => 'history-session/$sessionId';
 
   /// The button that opens the editable summary: title, date, sets, delete.
   static const Key editKey = ValueKey<String>('session-edit');
@@ -110,14 +117,7 @@ class HistorySessionDetailScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 4),
-          for (final exercise in session.exercises)
-            _ExerciseBlock(
-              key: exerciseKey(exercise.name),
-              exercise: exercise,
-              // Which set set the record, so the log can point at it rather
-              // than just saying the session had one.
-              recordScore: _recordScoreFor(sessions, session, exercise),
-            ),
+          ..._logBlocks(ref, sessions, session),
           const SizedBox(height: 24),
           GhostButton(
             buttonKey: HistorySessionDetailScreen.editKey,
@@ -128,6 +128,68 @@ class HistorySessionDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// The log under the hero card, one block per exercise.
+///
+/// **Read from the saved workout itself whenever it exists**, so each set is
+/// written by [formatSet] and each PB mark comes from [isPersonalBest] -- the
+/// same two functions the summary card uses. The reduced [HistoryExercise]
+/// keeps only each set's personal-best score, which is addedKg for a push-up,
+/// minus the assistance for an assisted lift and the added weight for a
+/// plank; printed with a "kg" suffix it read "0kg" and "-25kg" (QA, Maestro).
+/// The fixture path below is what the widget tests that hand History a plain
+/// list still render.
+List<Widget> _logBlocks(
+  WidgetRef ref,
+  List<HistorySession> sessions,
+  HistorySession session,
+) {
+  final saved = ref.watch(savedSessionsProvider);
+  final workout = saved.where((s) => s.id == session.id).firstOrNull;
+  if (workout == null) {
+    return <Widget>[
+      for (final exercise in session.exercises)
+        () {
+          final record = _recordScoreFor(sessions, session, exercise);
+          return _ExerciseBlock(
+            key: HistorySessionDetailScreen.exerciseKey(exercise.name),
+            name: exercise.name,
+            sets: <String>[
+              for (final score in exercise.setScores) '${formatWeight(score)}kg',
+            ],
+            recordIndex:
+                record == null ? null : exercise.setScores.indexOf(record),
+          );
+        }(),
+    ];
+  }
+
+  final index = ref.watch(exerciseIndexProvider);
+  return <Widget>[
+    for (final exercise in workout.exercises)
+      if (exercise.completedSets.isNotEmpty)
+        () {
+          final name =
+              index.byId(exercise.exerciseId)?.name ?? 'Unknown exercise';
+          final completed = exercise.completedSets.toList();
+          int? recordIndex;
+          if (isPersonalBest(exercise, workout, saved)) {
+            final best = bestOf(exercise);
+            final i = completed.indexWhere(
+                (set) => metricFor(exercise.loadType, set) == best);
+            recordIndex = i < 0 ? null : i;
+          }
+          return _ExerciseBlock(
+            key: HistorySessionDetailScreen.exerciseKey(name),
+            name: name,
+            sets: <String>[
+              for (final set in completed) formatSet(exercise.loadType, set),
+            ],
+            recordIndex: recordIndex,
+          );
+        }(),
+  ];
 }
 
 /// The best score this exercise had ever reached *before* [session], or null
@@ -360,16 +422,20 @@ class _Figure extends StatelessWidget {
 /// One exercise and every set performed, with the record-setting set marked.
 class _ExerciseBlock extends StatelessWidget {
   const _ExerciseBlock({
-    required this.exercise,
-    required this.recordScore,
+    required this.name,
+    required this.sets,
+    required this.recordIndex,
     super.key,
   });
 
-  final HistoryExercise exercise;
+  final String name;
 
-  /// The score that beat the previous best, or null when this exercise set no
+  /// Every completed set, already written for display.
+  final List<String> sets;
+
+  /// Which set beat the previous best, or null when this exercise set no
   /// record in this session.
-  final double? recordScore;
+  final int? recordIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -385,7 +451,7 @@ class _ExerciseBlock extends StatelessWidget {
             children: <Widget>[
               Flexible(
                 child: Text(
-                  exercise.name,
+                  name,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
@@ -393,31 +459,31 @@ class _ExerciseBlock extends StatelessWidget {
                   ),
                 ),
               ),
-              if (recordScore != null) ...<Widget>[
+              if (recordIndex != null) ...<Widget>[
                 const SizedBox(width: 8),
                 const Text('PB', style: kPbMarkStyle),
               ],
             ],
           ),
           const SizedBox(height: 4),
-          _SetLine(scores: exercise.setScores, recordScore: recordScore),
+          _SetLine(sets: sets, recordIndex: recordIndex),
         ],
       ),
     );
   }
 }
 
-/// Every set as one muted line, `77.5kg · 77.5kg · 75kg`, with the
+/// Every set as one muted line, `77.5kg × 8 · 75kg × 8`, with the
 /// record-setting set the only thing in the log painted amber.
 ///
 /// **A line, not a pill per set.** The sets are a record to read, not controls;
 /// pills made them look tappable and made the log the loudest part of the
 /// screen.
 class _SetLine extends StatelessWidget {
-  const _SetLine({required this.scores, required this.recordScore});
+  const _SetLine({required this.sets, required this.recordIndex});
 
-  final List<double> scores;
-  final double? recordScore;
+  final List<String> sets;
+  final int? recordIndex;
 
   static const _style = TextStyle(
     fontSize: 13,
@@ -428,11 +494,11 @@ class _SetLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spans = <InlineSpan>[];
-    for (var i = 0; i < scores.length; i++) {
+    for (var i = 0; i < sets.length; i++) {
       if (i > 0) spans.add(const TextSpan(text: ' · '));
-      final isRecord = scores[i] == recordScore;
+      final isRecord = i == recordIndex;
       spans.add(TextSpan(
-        text: '${formatWeight(scores[i])}kg',
+        text: sets[i],
         style: isRecord
             ? const TextStyle(
                 fontWeight: FontWeight.w600,

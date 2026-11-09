@@ -265,9 +265,11 @@ class _GroupChip extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(right: 6),
         child: Semantics(
+          container: true,
           button: true,
           selected: selected,
           label: label,
+          onTap: onTap,
           excludeSemantics: true,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,

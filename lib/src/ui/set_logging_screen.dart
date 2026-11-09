@@ -376,20 +376,24 @@ class _InfoButton extends StatelessWidget {
 
   final Exercise exercise;
 
+  // From here the page offers nothing: the user is already logging it.
+  void _open(BuildContext context) => pushExerciseDetail(context, exercise,
+      entry: ExerciseDetailEntry.fromLogging);
+
   /// The key a test taps to open the exercise's page.
   static const Key infoKey = ValueKey<String>('exercise-info');
 
   @override
   Widget build(BuildContext context) => Semantics(
+        container: true,
         button: true,
         label: 'How to do it',
+        onTap: () => _open(context),
         excludeSemantics: true,
         child: GestureDetector(
           key: infoKey,
           behavior: HitTestBehavior.opaque,
-          // From here the page offers nothing: the user is already logging it.
-          onTap: () => pushExerciseDetail(context, exercise,
-              entry: ExerciseDetailEntry.fromLogging),
+          onTap: () => _open(context),
           child: const SizedBox(
             width: 48,
             height: 48,
@@ -417,9 +421,13 @@ class _MarkDoneButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
+        container: true,
         button: true,
         enabled: enabled,
-        label: 'Mark exercise done',
+        // The label the button shows, so VoiceOver does not say "Mark
+        // exercise done" over a button reading "Done".
+        label: markedDone ? 'Done' : 'Mark exercise done',
+        onTap: enabled ? onTap : null,
         excludeSemantics: true,
         child: FilledButton(
           key: SetLoggingScreen.markDoneKey,

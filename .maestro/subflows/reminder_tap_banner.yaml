@@ -1,0 +1,22 @@
+# Asks .maestro/scripts/push_server.py for a "Lunch" diet reminder, taps the
+# banner where iOS draws it (the banner is not in the accessibility tree), and
+# checks the app opened on Profile -> Diet with today selected.
+appId: dev.indresh.turtleLift
+---
+- evalScript: "${http.post('http://127.0.0.1:8765/push', { body: '' }).status}"
+# Let the banner slide in (Maestro has no sleep; this spins 1.2 s in JS).
+- evalScript: "${(function () { var t = Date.now(); while (Date.now() - t < 1200) {} return 1; })()}"
+- tapOn:
+    point: "50%, 9%"
+- extendedWaitUntil:
+    visible: "Diet"
+    timeout: 20000
+- assertVisible:
+    text: "Diet"
+    selected: true
+- assertVisible:
+    text: "Profile"
+    selected: true
+# The pushed Personal details screen was popped (KTD17).
+- assertNotVisible: "Body diagram"
+- assertVisible: "Plan your week's protein.*"

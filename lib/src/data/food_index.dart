@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'exercise_index.dart' show searchFold;
 import 'food.dart';
 
 /// Where the generated food list ships.
@@ -53,8 +54,11 @@ class FoodIndex {
         _searchKeys = <String, List<String>>{
           for (final food in all)
             food.id: <String>[
-              _fold(food.name),
-              for (final alias in food.aliases) _fold(alias),
+              for (final name in <String>[food.name, ...food.aliases]) ...<String>[
+                _fold(name),
+                // Written solid too: "hardboiled" finds "hard-boiled egg".
+                _fold(name.replaceAll('-', '')),
+              ],
             ],
         };
 
@@ -105,7 +109,9 @@ class FoodIndex {
   /// libraries have no NFD; the table covers IAST and the common Western
   /// accents, which is every diacritic a food name here can plausibly carry.
   static String _fold(String text) {
-    final lower = text.toLowerCase();
+    // Hyphens read as spaces and apostrophes dropped, so "hard boiled" finds
+    // "hard-boiled egg" (QA second pass); see [searchFold].
+    final lower = searchFold(text);
     final out = StringBuffer();
     for (final rune in lower.runes) {
       final char = String.fromCharCode(rune);

@@ -29,10 +29,24 @@ class HistorySessionRow extends StatelessWidget {
     final title = resolvedTitle(session, figures);
     final exercises =
         '${figures.exerciseCount} exercise${figures.exerciseCount == 1 ? '' : 's'}';
-    final meta =
-        '${_dateLabel(session.performedOn)} · $exercises · ${figures.setCount} sets';
+    final sets = '${figures.setCount} set${figures.setCount == 1 ? '' : 's'}';
+    final meta = '${historyDateLabel(session.performedOn)} · $exercises · $sets';
+    // Opaque, like every push in this app: it is the only route kind that
+    // covers the floating tab bar (see `L0Shell`).
+    void open() => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            // Named for its session, so a delete further up the stack can
+            // close it rather than leave a screen for a workout that is gone.
+            settings: RouteSettings(
+              name: HistorySessionDetailScreen.routeNameFor(session.id),
+            ),
+            builder: (_) =>
+                HistorySessionDetailScreen(sessionId: session.id),
+          ),
+        );
 
     return Semantics(
+      container: true,
       button: true,
       label: <String>[
         title,
@@ -41,17 +55,11 @@ class HistorySessionRow extends StatelessWidget {
         if (session.isQuickLog) 'quick log',
         meta,
       ].join(', '),
+      onTap: open,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        // Opaque, like every push in this app: it is the only route kind that
-        // covers the floating tab bar (see `L0Shell`).
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) =>
-                HistorySessionDetailScreen(sessionId: session.id),
-          ),
-        ),
+        onTap: open,
         child: Container(
           constraints: const BoxConstraints(minHeight: 56),
           padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
@@ -117,10 +125,16 @@ class HistorySessionRow extends StatelessWidget {
 /// Relative wording only for the two days a user thinks of relatively; beyond
 /// that an absolute date is what someone scanning for a particular session
 /// actually wants.
-String _dateLabel(DateTime performedOn) {
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final days = today.difference(performedOn).inDays;
+@visibleForTesting
+String historyDateLabel(DateTime performedOn, {DateTime? now}) {
+  final clock = now ?? DateTime.now();
+  // Counted on UTC midnights: a local day across a daylight-saving change is
+  // 23 or 25 hours, and `inDays` on local midnights called Sunday "Today" on
+  // the Monday after the clocks went forward (QA second pass).
+  final days = DateTime.utc(clock.year, clock.month, clock.day)
+      .difference(DateTime.utc(
+          performedOn.year, performedOn.month, performedOn.day))
+      .inDays;
   if (days == 0) return 'Today';
   if (days == 1) return 'Yesterday';
   const abbr = <String>[

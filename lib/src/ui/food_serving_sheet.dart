@@ -352,6 +352,7 @@ class _DangerTextButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       label: label,
       excludeSemantics: true,

@@ -19,6 +19,9 @@ import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/body_diagram.dart';
 import 'package:turtle_lift/src/ui/destructive_confirmation.dart';
+import 'package:turtle_lift/src/ui/history_root.dart';
+import 'package:turtle_lift/src/ui/history_session_detail_screen.dart';
+import 'package:turtle_lift/src/ui/history_session_row.dart';
 import 'package:turtle_lift/src/ui/session_summary_screen.dart';
 import 'package:turtle_lift/src/ui/set_logging_screen.dart';
 
@@ -461,6 +464,55 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(await tester.runAsync(() => store.readSavedSessions()), isEmpty);
+    });
+
+    // QA (Maestro flow 02): History -> workout -> Edit workout -> Delete
+    // popped only the summary, leaving the user on a dead-end "This workout is
+    // no longer in your history" screen titled "Workout".
+    testWidgets('from History, a delete lands back on History, not on a '
+        'screen for the deleted workout', (tester) async {
+      final id = await saveWorkout(tester,
+          exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 60);
+      tester.view.physicalSize = const Size(1200, 3400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final saved = await tester.runAsync(() => store.readSavedSessions());
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(database),
+            exerciseIndexProvider.overrideWithValue(index),
+            initialSavedSessionsProvider.overrideWithValue(saved!),
+            initialBodyweightLogProvider
+                .overrideWithValue(const <BodyweightEntry>[]),
+          ],
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            home: const Scaffold(body: HistoryRoot()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(HistorySessionRow));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(HistorySessionDetailScreen.editKey));
+      await tester.pumpAndSettle();
+      expect(find.byType(SessionSummaryScreen), findsOneWidget);
+      expect(id, isNotEmpty);
+
+      await tester.tap(find.byKey(SessionSummaryScreen.deleteKey));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(confirmDestructiveKey));
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HistorySessionDetailScreen), findsNothing,
+          reason: 'the detail screen of a deleted workout is a dead end');
+      expect(find.byType(SessionSummaryScreen), findsNothing);
+      expect(find.text('No workouts yet'), findsOneWidget);
     });
 
     testWidgets('the delete label is painted in the destructive colour',

@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -198,6 +199,54 @@ void main() {
       expect(open!.exercises.single.sets, hasLength(1));
       expect(open.exercises.single.sets.single.weightKg, 60);
       expect(open.exercises.single.sets.single.completed, isFalse);
+    });
+
+    // QA (Maestro): typing "60" into the first, unsaved row stored 6. The first
+    // keystroke wrote the row, its id moved from `ghost-0` to the stored id,
+    // and the Dismissible keyed on that id rebuilt the fields: the focus and
+    // the keyboard's target were lost, so the "0" went nowhere.
+    testWidgets('typing digit by digit into a fresh row keeps every digit',
+        (tester) async {
+      await pumpLogging(
+          tester, exerciseId: 'bench', loadType: LoadType.weighted);
+
+      final weight = find.byType(TextField).first;
+      await tester.showKeyboard(weight);
+      await act(tester, () async => tester.testTextInput.enterText('6'));
+      await tester.pump();
+
+      final field = tester.widget<TextField>(find.byType(TextField).first);
+      expect(field.focusNode!.hasFocus, isTrue,
+          reason: 'the field being typed in must keep focus after the first '
+              'keystroke saves the row');
+
+      await act(tester, () async => tester.testTextInput.enterText('60'));
+      final open = await tester.runAsync(() => store.readOpenSession());
+      expect(open!.exercises.single.sets.single.weightKg, 60);
+    });
+
+    // QA (Maestro, iPhone 17e): the iOS number pad has no return key, and a
+    // tap anywhere off the field left it up, covering Recent and See all.
+    testWidgets('a tap outside the field puts the number pad away',
+        (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        await pumpLogging(
+            tester, exerciseId: 'bench', loadType: LoadType.weighted);
+        await tester.showKeyboard(find.byType(TextField).first);
+        await tester.pump();
+        expect(tester.testTextInput.isVisible, isTrue);
+
+        await tester.tapAt(tester
+            .getBottomLeft(find.byKey(SetLoggingScreen.markDoneKey))
+            .translate(10, 40));
+        await tester.pump();
+        final field = tester.widget<TextField>(find.byType(TextField).first);
+        expect(field.focusNode!.hasFocus, isFalse);
+        expect(tester.testTextInput.isVisible, isFalse);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
 
     testWidgets('ticking a filled row completes the set', (tester) async {

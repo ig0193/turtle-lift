@@ -198,10 +198,12 @@ class _BodyViewButton extends StatelessWidget {
     final label = selected ? AppPalette.textPrimary : AppPalette.textSecondary;
 
     return Semantics(
+      container: true,
       button: true,
       inMutuallyExclusiveGroup: true,
       selected: selected,
       label: bodyViewLabel(view),
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         key: bodyViewButtonKey(view),

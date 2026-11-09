@@ -1,0 +1,15 @@
+# Opens Notification Center and taps the "Lunch" reminder that
+# .maestro/scripts/07_reminder_deep_link.sh pushed with `xcrun simctl push`.
+# (The banner itself is gone before a fresh Maestro run attaches.)
+appId: dev.indresh.turtleLift
+---
+- swipe:
+    start: "15%, 0%"
+    end: "15%, 70%"
+    duration: 500
+- waitForAnimationToEnd
+- tapOn:
+    id: "NotificationTitle"
+    text: "Lunch"
+    index: 0
+- waitForAnimationToEnd

@@ -212,6 +212,9 @@ class _TargetField extends StatelessWidget {
                 key: ProteinTargetScreen.fieldKey,
                 controller: controller,
                 keyboardType: TextInputType.number,
+                // The iOS number pad has no return key: a tap off the field
+                // is how it is put away.
+                onTapOutside: (_) => FocusScope.of(context).unfocus(),
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(3),
@@ -257,6 +260,7 @@ class _SuggestionRow extends StatelessWidget {
     final title = ProteinTargetScreen.suggestedLine(grams);
     final working = ProteinTargetScreen.workingLine(kg);
     return Semantics(
+      container: true,
       button: true,
       label: '$title. $working Fills the field.',
       excludeSemantics: true,
@@ -330,6 +334,7 @@ class DietTextLink extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       label: label,
       excludeSemantics: true,

@@ -1,0 +1,102 @@
+# User story: log a full workout with every load type, finish it, read the
+# summary, and find it in History (and its body map on the session card).
+# Clean state, no sample seed (tool/maestro_run.sh builds with TURTLE_NO_SEED).
+appId: dev.indresh.turtleLift
+name: 01 Log a full workout (all four load types)
+tags: [workout]
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Start workout.*"
+- tapOn: "Start workout.*"
+- assertVisible: "Nothing logged yet|.*Start logging.*"
+- tapOn: "Start logging"
+- assertVisible: "What are you starting with\\?"
+
+# --- weighted: 60 kg x 8, then a prefilled second set
+- runFlow:
+    file: ../subflows/add_exercise.yaml
+    env: { QUERY: "barbell bench", ROW: "Barbell bench press. Barbell" }
+- assertVisible: "Barbell.*Weight × reps"
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-weight", VALUE: "60" }
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-reps", VALUE: "8" }
+# Regression: the first keystroke used to drop focus, storing 6 for "60".
+- assertVisible: "60"
+- tapOn: { id: "set-0-check" }
+- tapOn: "Add set"
+- tapOn: { id: "set-1-check" }
+- tapOn: "Mark exercise done"
+- assertVisible: "Barbell bench press. Done"
+
+# --- bodyweight: 15 reps, no added weight
+- runFlow:
+    file: ../subflows/add_exercise.yaml
+    env: { QUERY: "push-up", ROW: "Push-up. Bodyweight" }
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-reps", VALUE: "15" }
+- tapOn: { id: "set-0-check" }
+- tapOn: "Mark exercise done"
+
+# --- assisted: 25 kg assist x 8, with the inverted-record banner
+- runFlow:
+    file: ../subflows/add_exercise.yaml
+    env: { QUERY: "assisted", ROW: "Assisted pull-up machine. Machine" }
+- assertVisible: "Less assistance is better.*"
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-assist", VALUE: "25" }
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-reps", VALUE: "8" }
+- tapOn: { id: "set-0-check" }
+- tapOn: "Mark exercise done"
+
+# --- timed: 45 s
+- runFlow:
+    file: ../subflows/add_exercise.yaml
+    env: { QUERY: "plank", ROW: "Plank. Bodyweight" }
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-duration", VALUE: "45" }
+- tapOn: { id: "set-0-check" }
+- tapOn: "Mark exercise done"
+
+- assertVisible: ".*4 of 4 done"
+- takeScreenshot: 01-live-map
+- runFlow: ../subflows/finish_workout.yaml
+
+# --- summary: derived numbers
+- assertVisible: ".*5\nSets\n4\nExercises\n1\nDay streak.*"
+- assertVisible: "Barbell bench press\n60kg × 8 · 60kg × 8"
+- assertVisible: "Push-up\n15 reps"
+- assertVisible: "Assisted pull-up machine\n25kg assist × 8"
+- assertVisible: "Plank\n0:45"
+- takeScreenshot: 01-summary
+- tapOn: "Back"
+
+# --- History: the row, then its card and log
+- tapOn: "History"
+- assertVisible: "Chest, back, abs, Today · 4 exercises · 5 sets"
+- tapOn: "Chest, back, abs, Today.*"
+- assertVisible: ".*5\nSets\n4\nExercises\n1\nStreak.*"
+# Regression: the log printed PB scores as "0kg" / "-25kg".
+- assertVisible: "Push-up\n15 reps"
+- assertVisible: "Assisted pull-up machine\n25kg assist × 8"
+- assertVisible: "Plank\n0:45"
+- assertNotVisible: ".*-25kg.*"
+- takeScreenshot: 01-history-card
+- tapOn: "Back"
+
+# --- Muscles tab is pure reference (docs/00 §10): it renders, reads no history.
+- tapOn: "Muscles"
+- assertVisible: "Front"
+- scrollUntilVisible:
+    element: "Mid chest.*"
+    centerElement: true
+- tapOn: "Workout"
+- assertVisible: "Start workout.*"

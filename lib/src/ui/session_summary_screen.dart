@@ -19,6 +19,7 @@ import 'body_diagram.dart';
 import 'destructive_confirmation.dart';
 import 'exercise_detail_screen.dart' show MuscleFill;
 import 'finish_celebration.dart';
+import 'history_session_detail_screen.dart' show HistorySessionDetailScreen;
 import 'session_date_control.dart';
 import 'set_logging_screen.dart';
 import 'template_library_screen.dart' show promptForTemplateName;
@@ -234,7 +235,14 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
     );
     if (!confirmed) return;
     await ref.read(activeSessionProvider.notifier).deleteSaved(widget.sessionId);
-    if (context.mounted) Navigator.of(context).maybePop();
+    if (!context.mounted) return;
+    // This screen, then the History detail screen for the same workout if
+    // that is what opened it: left open, it is a dead end that can only say
+    // the workout is gone (QA, Maestro flow 02).
+    final navigator = Navigator.of(context);
+    final detail = HistorySessionDetailScreen.routeNameFor(widget.sessionId);
+    navigator.pop();
+    navigator.popUntil((route) => route.settings.name != detail);
   }
 }
 
@@ -450,8 +458,10 @@ class _CalorieStat extends StatelessWidget {
               const SizedBox(width: 4),
               Builder(
                 builder: (context) => Semantics(
+                  container: true,
                   button: true,
                   label: 'How the calorie estimate works',
+                  onTap: () => _explain(context),
                   excludeSemantics: true,
                   child: GestureDetector(
                     key: SessionSummaryScreen.calorieInfoKey,
@@ -582,8 +592,10 @@ class _SaveAsTemplateButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
+        container: true,
         button: true,
         label: 'Save as template',
+        onTap: onTap,
         excludeSemantics: true,
         child: GestureDetector(
           key: SessionSummaryScreen.saveAsTemplateKey,
@@ -613,8 +625,10 @@ class _DeleteButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
+        container: true,
         button: true,
         label: 'Delete workout',
+        onTap: onTap,
         excludeSemantics: true,
         child: GestureDetector(
           key: SessionSummaryScreen.deleteKey,

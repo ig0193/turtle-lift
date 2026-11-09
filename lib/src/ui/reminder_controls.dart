@@ -55,6 +55,7 @@ class SwitchRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     return Semantics(
+      container: true,
       key: switchKey,
       toggled: value,
       enabled: enabled,
@@ -153,6 +154,7 @@ class TimeRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     return Semantics(
+      container: true,
       button: true,
       enabled: enabled,
       label: '$label. $time',

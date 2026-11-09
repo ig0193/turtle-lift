@@ -1,0 +1,27 @@
+# From the Workout landing: logs one barbell bench press session of two sets
+# (WEIGHT kg x REPS) and finishes it, landing on the summary.
+appId: dev.indresh.turtleLift
+env:
+  WEIGHT: "60"
+  REPS: "8"
+---
+- tapOn: "Start workout.*"
+- tapOn: "Start logging"
+- runFlow:
+    file: add_exercise.yaml
+    env:
+      QUERY: "barbell bench"
+      ROW: "Barbell bench press. Barbell"
+- runFlow:
+    file: type_into.yaml
+    env: { FIELD: "set-0-weight", VALUE: "${WEIGHT}" }
+- runFlow:
+    file: type_into.yaml
+    env: { FIELD: "set-0-reps", VALUE: "${REPS}" }
+- tapOn:
+    id: "set-0-check"
+- tapOn: "Add set"
+- tapOn:
+    id: "set-1-check"
+- tapOn: "Mark exercise done"
+- runFlow: finish_workout.yaml

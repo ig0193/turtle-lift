@@ -1,0 +1,60 @@
+# User story: a user on the last published build (5fcae5f, schema 5) updates
+# the app and keeps everything. Driven by .maestro/scripts/11_upgrade_from_v5.sh,
+# which puts test/fixtures/schema_v5_from_5fcae5f.sqlite (written by that
+# build's own code) in the app's Documents before this flow launches it.
+# The v6 (Diet) and v7 (reminders) migrations run on this launch.
+appId: dev.indresh.turtleLift
+name: 11 Upgrade from schema 5 keeps every record
+tags: [data]
+---
+- launchApp:
+    stopApp: true
+# The workout open at upgrade time is still open, in place of the landing.
+- assertVisible: "Workout in progress.*"
+- assertVisible: "Workout date, Tue 20 Oct.*"
+- assertVisible: "Barbell back squat\\. In progress\\. Up next"
+
+# Saved workouts, with the assisted record read the right way round (20kg
+# assistance beats 25kg) and the timed and bodyweight sets intact.
+- tapOn: "History"
+- assertVisible: "Pull day, 1 personal best, 12 Oct · 2 exercises · 3 sets"
+- assertVisible: ".*7 Oct · 2 exercises · 4 sets"
+- assertVisible: "Push day, 5 Oct · 2 exercises · 4 sets"
+- tapOn: ".*7 Oct · 2 exercises · 4 sets"
+- assertVisible: ".*30kg assist × 8.*"
+- assertVisible: ".*10kg × 0:45.*"
+- tapOn: "Back"
+
+# Templates, weigh-ins, body diagram.
+- tapOn: "Profile"
+- assertVisible: "My workout templates\\. 11 predefined · 2 custom"
+- tapOn: "My workout templates.*"
+- scrollUntilVisible:
+    element: "Rename Push day \\(mine\\)"
+    centerElement: true
+- assertVisible: "Rename Arms 💪 and core"
+- tapOn: "Back"
+- tapOn: "Personal details.*"
+- assertVisible:
+    text: "Female"
+    selected: true
+- assertVisible: ".*63kg.*"
+- assertVisible: ".*64\\.5kg.*"
+- tapOn: "Back"
+
+# The training plan (Mon, Wed, Fri from 28 Sep).
+- tapOn: "Schedule"
+- takeScreenshot: 11-schedule
+- assertVisible:
+    text: "Mon.*"
+    selected: true
+
+# Diet is new: first-time state, and it works.
+- tapOn: "Diet"
+- assertVisible: "Set a daily target"
+
+# Export carries the old workouts.
+- tapOn: "Personal"
+- tapOn: "Export everything"
+- assertNotVisible: "Nothing to export yet.*"
+- assertVisible: ".*Workouts.*3.*"

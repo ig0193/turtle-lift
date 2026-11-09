@@ -1,0 +1,105 @@
+# User story: Profile -> Diet, from the first-time state: set a target from
+# the bodyweight suggestion, add a food through the picker and its filters,
+# pick servings and Repeat on in the serving sheet, tick a slot eaten,
+# remove and undo, move between days, open meal reminders, and find all of
+# it intact after a kill and relaunch.
+# Date-independent: the extra Repeat-on day is computed from today.
+appId: dev.indresh.turtleLift
+name: 06 Diet - target, picker, serving sheet, ticks, undo, persistence
+tags: [diet]
+---
+- launchApp:
+    clearState: true
+- evalScript: "${output.other = (new Date().getDay() == 1) ? 'Tuesday' : 'Monday'}"
+
+# --- bodyweight first, so the target screen can suggest
+- tapOn: "Profile"
+- tapOn: "Personal details.*"
+- tapOn: { id: "bodyweight-field" }
+- inputText: "72"
+- tapOn: { id: "record-weight" }
+- tapOn: "Back"
+
+# --- first-time state
+- tapOn: "Diet"
+- assertVisible: "Plan your week's protein.*"
+- assertVisible: "Plan Monday"
+- assertVisible: "Set a daily target"
+
+# --- target from the suggestion (AE5: 1.6 x 72 = 115.2 -> 115)
+- tapOn: "Set a daily target"
+- assertVisible: "Suggested 115 g\\..*"
+- assertVisible: "A guide, not medical advice.*"
+- tapOn: "Suggested 115 g\\..*"
+- tapOn: "Save"
+- assertVisible: "0 of 115 g planned.*"
+
+# --- picker, filters, serving sheet, Repeat on
+- tapOn: "Add food to Lunch"
+- assertVisible: "Protein per serving, highest first"
+- tapOn: "Non-veg"
+- assertVisible: "Chicken breast\\..*"
+- tapOn: "Egg"
+- tapOn: "Veg"
+- assertNotVisible: "Chicken breast\\..*"
+- tapOn: "Search foods"
+- inputText: "zzzz"
+- assertNotVisible: "Paneer\\. Veg.*"
+- eraseText: 10
+- inputText: "paneer"
+- tapOn: "Paneer\\. Veg.*"
+- assertVisible: "Repeat on"
+- tapOn: "Increase"
+- assertVisible: "1\\.5 × 5 cubes, 14\\.1 g"
+- tapOn: ${output.other}
+- tapOn: "Add to Lunch"
+- assertVisible: "14 of 115 g planned\n101 g to go.*"
+- assertVisible: "Paneer, 1\\.5 × 5 cubes, 14\\.1 g"
+
+# --- eaten tick (today is always tickable)
+- tapOn: "Lunch not eaten"
+- assertVisible: ".*14 g eaten.*"
+
+# --- the Repeat-on day got the same food
+- tapOn: "${output.other} .*"
+- assertVisible: "Paneer, 1\\.5 × 5 cubes, 14\\.1 g"
+- tapOn: ".*, today"
+
+# --- edit servings through the sheet; totals follow
+- tapOn: "Paneer, 1\\.5.*"
+- tapOn: "Decrease"
+- tapOn: "Save"
+- assertVisible: "9 of 115 g planned.*"
+
+# --- remove, then undo
+- tapOn: "Paneer, 5 cubes.*"
+- tapOn: "Remove from Lunch"
+- tapOn: "Undo"
+- assertVisible: "Paneer, 5 cubes, 9\\.4 g"
+- takeScreenshot: 06-diet-day
+
+# --- meal reminders screen
+- scrollUntilVisible:
+    element: "Reminders.*"
+    centerElement: true
+- tapOn: "Reminders.*"
+- assertVisible: "Meal reminders"
+- assertVisible: "Remind me.*"
+- assertVisible: ".*Turn on reminders to set times.*"
+- tapOn: "Back"
+
+# --- persists across a kill (and Profile comes back on Personal)
+- stopApp
+- launchApp
+- tapOn: "Profile"
+- assertVisible:
+    text: "Personal"
+    selected: true
+- tapOn: "Diet"
+- assertVisible: "9 of 115 g planned.*"
+- assertVisible: "Paneer, 5 cubes, 9\\.4 g"
+- assertVisible:
+    text: "Lunch eaten"
+    checked: true
+- tapOn: "${output.other} .*"
+- assertVisible: "Paneer, 1\\.5 × 5 cubes, 14\\.1 g"

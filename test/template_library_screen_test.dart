@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
@@ -379,5 +380,24 @@ void main() {
         'Push day (mine) 2',
       );
     });
+  });
+
+  // QA (Maestro flow 03): the Duplicate / Rename / Delete glyphs merged into
+  // their row's label ("Push day, Chest, shoulders, triceps, Duplicate Push
+  // day"), so VoiceOver had no separate control to activate.
+  testWidgets('each row action is its own button with a tap action',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+
+    final first = kPredefinedTemplates.first;
+    expect(find.bySemanticsLabel(RegExp('^Duplicate ${first.name}\$')),
+        findsOneWidget);
+    final node = tester.getSemantics(
+        find.byKey(TemplateLibraryScreen.duplicateKey(first.id)));
+    expect(node.label, 'Duplicate ${first.name}');
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    handle.dispose();
   });
 }

@@ -243,9 +243,11 @@ class _FilterChip extends StatelessWidget {
     final type = _filterType(filter);
     final color = selected ? AppPalette.accentStrong : AppPalette.textSecondary;
     return Semantics(
+      container: true,
       button: true,
       selected: selected,
       label: label,
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

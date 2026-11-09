@@ -319,6 +319,19 @@ void main() {
       await back(tester);
     }
   });
+
+  // QA (Maestro): the iOS number pad has no return key; a tap off the field
+  // must put it away, or it sits over the screen's lower half.
+  testWidgets('a tap outside the field puts the number pad away',
+      (tester) async {
+    await open(tester, target: 120);
+    await tester.showKeyboard(find.byKey(ProteinTargetScreen.fieldKey));
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isTrue);
+    await tester.tapAt(const Offset(195, 830));
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isFalse);
+  });
 }
 
 /// R17's verdict words, and the dashes the taste pass bans.

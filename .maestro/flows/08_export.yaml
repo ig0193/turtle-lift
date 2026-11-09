@@ -1,0 +1,47 @@
+# User story: Export everything. With nothing entered the button is disabled
+# and says why; after a workout the counts show, the iOS share sheet opens,
+# and dismissing it leaves a status line saying nothing was sent.
+appId: dev.indresh.turtleLift
+name: 08 Export everything - empty, share sheet, dismissed
+tags: [data]
+---
+- launchApp:
+    clearState: true
+- tapOn: "Profile"
+- tapOn: "Export everything"
+- assertVisible: "Nothing to export yet\\. Log a workout first\\."
+- assertVisible:
+    text: "Export"
+    enabled: false
+- tapOn: "Back"
+
+- tapOn: "Workout"
+- runFlow: ../subflows/log_bench_workout.yaml
+- tapOn: "Back"
+- tapOn: "Profile"
+- tapOn: "Export everything"
+- assertNotVisible: "Nothing to export yet.*"
+- assertVisible: ".*Workouts.*1.*"
+- assertVisible: ".*Completed sets.*2.*"
+- tapOn: "Export"
+# The iOS share sheet (a system UI, found by its Close button / title).
+- extendedWaitUntil:
+    visible: "Close|.*turtlelift.*\\.json.*|AirDrop|Save to Files"
+    timeout: 15000
+- takeScreenshot: 08-share-sheet
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn: "Close"
+- runFlow:
+    when:
+      notVisible: "Export cancelled.*|Exported .*"
+    commands:
+      - swipe:
+          start: "50%, 45%"
+          end: "50%, 98%"
+          duration: 300
+- extendedWaitUntil:
+    visible: "Export cancelled\\. Nothing was sent\\.|Exported .*"
+    timeout: 10000

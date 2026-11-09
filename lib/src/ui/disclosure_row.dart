@@ -75,9 +75,11 @@ class _DisclosureRowState extends State<DisclosureRow> {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Semantics(
+            container: true,
             button: true,
             expanded: _expanded,
             label: widget.label,
+            onTap: () => setState(() => _expanded = !_expanded),
             excludeSemantics: true,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,

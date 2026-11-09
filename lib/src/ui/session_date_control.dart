@@ -33,8 +33,10 @@ class SessionDateControl extends ConsumerWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Semantics(
+        container: true,
         button: true,
         label: 'Workout date, ${isToday ? 'today' : longDateLabel(date)}',
+        onTap: () => _pick(context, ref, date),
         excludeSemantics: true,
         child: GestureDetector(
           key: chipKey,

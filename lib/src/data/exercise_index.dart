@@ -83,12 +83,16 @@ class ExerciseIndex {
   /// is one field over three vocabularies (R11); returning all 260 for an empty
   /// box would bury the muscle and equipment matches under the whole library
   /// before the user has typed anything.
+  ///
+  /// **Hyphens and apostrophes are forgiven** ([searchFold]), so "pull up"
+  /// and "pushup" find "Pull-up" and "Push-up", and the curly apostrophe the
+  /// iOS keyboard types finds "Farmer's carry" (QA second pass).
   List<Exercise> searchByName(String query) {
-    final needle = query.trim().toLowerCase();
+    final needle = searchFold(query);
     if (needle.isEmpty) return const <Exercise>[];
     return <Exercise>[
       for (final exercise in all)
-        if (exercise.name.toLowerCase().contains(needle)) exercise,
+        if (searchMatches(exercise.name, needle)) exercise,
     ];
   }
 
@@ -139,3 +143,25 @@ final exerciseIndexProvider = Provider<ExerciseIndex>(
     'does the same, or overrides this with an index of its own fixtures.',
   ),
 );
+
+/// [text] lower-cased, apostrophes and full stops dropped, hyphens read as
+/// spaces, and runs of whitespace collapsed: the punctuation a person types
+/// differently from how a name is spelled.
+String searchFold(String text) => text
+    .toLowerCase()
+    .replaceAll(_apostrophes, '')
+    .replaceAll(_hyphens, ' ')
+    .replaceAll(_spaces, ' ')
+    .trim();
+
+/// Whether [name] holds [needle], already folded by [searchFold]. A
+/// hyphenated word also matches written solid, so "pushup" finds "push-up";
+/// words that were never joined are not run together, so a short query does
+/// not match across a space.
+bool searchMatches(String name, String needle) =>
+    searchFold(name).contains(needle) ||
+    searchFold(name.replaceAll(_hyphens, '')).contains(needle);
+
+final RegExp _apostrophes = RegExp("['\u2018\u2019.]");
+final RegExp _hyphens = RegExp('[\\-\u2010-\u2015]');
+final RegExp _spaces = RegExp(r'\s+');
