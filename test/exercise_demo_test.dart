@@ -133,6 +133,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(painter(tester).still, isTrue);
       expect(find.byTooltip('Play demonstration'), findsOneWidget);
+      // B7: finished is not paused.
+      expect(find.bySemanticsLabel(RegExp('paused')), findsNothing);
+      expect(
+        find.bySemanticsLabel('Demonstration of Dumbbell curl, finished'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Reduce Motion shows the still and does not start',

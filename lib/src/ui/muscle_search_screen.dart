@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/exercise.dart';
 import '../data/exercise_index.dart';
 import '../data/generated/muscle_taxonomy.dart';
+import '../data/muscle_synonyms.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'app_screen.dart';
@@ -87,29 +88,53 @@ class MuscleSearchResult {
       };
 }
 
-/// Everything [query] matches, across all three vocabularies (R11).
+/// What a search returned, and the corrected query when it had to guess.
+@immutable
+class MuscleSearchOutcome {
+  const MuscleSearchOutcome(this.results, {this.didYouMean});
+
+  final List<MuscleSearchResult> results;
+
+  /// The query the results are for when the typed one matched nothing and a
+  /// one-letter fix did ("bech press" → "bench press"); null otherwise.
+  final String? didYouMean;
+}
+
+/// Everything [query] matches, across all three vocabularies (R11), with a
+/// "Did you mean …" correction when it matched nothing as typed (audit B1).
+MuscleSearchOutcome muscleSearch(ExerciseIndex index, String query) {
+  final results = muscleSearchResults(index, query);
+  if (results.isNotEmpty) return MuscleSearchOutcome(results);
+  final needle = searchFold(query);
+  if (needle.isEmpty) return const MuscleSearchOutcome(<MuscleSearchResult>[]);
+  final corrected = index.spelling.correct(needle);
+  if (corrected == null) {
+    return const MuscleSearchOutcome(<MuscleSearchResult>[]);
+  }
+  final fixed = muscleSearchResults(index, corrected);
+  if (fixed.isEmpty) return const MuscleSearchOutcome(<MuscleSearchResult>[]);
+  return MuscleSearchOutcome(fixed, didYouMean: corrected);
+}
+
+/// Everything [query] matches as typed, across all three vocabularies (R11).
 ///
-/// **Categories first, exercises last.** A query like "kettlebell" matches one
-/// equipment value and twelve exercise names; reading the library first would
-/// push the route to *all* kettlebell work — including the six lifts not named
-/// after it — below the fold, which is the one result the user could not have
-/// found any other way.
+/// **Order is relevance, in four bands.** An exercise whose name *is* the
+/// query comes first ("push-up" → Push-up). Then categories — muscles in body
+/// order, then equipment — because a query like "kettlebell" matches one
+/// equipment value and twelve exercise names, and the equipment row is the one
+/// route to *all* kettlebell work. Then the remaining exercises, best match
+/// first ([ExerciseIndex.searchByWords]).
 ///
-/// **Sub-group *labels*, not ids** (R11). The ids are internal keys and a user
-/// never sees one: matching them would make "back" return three rows, for
-/// `back/lats`, `back/upper` and `back/lower`, while the visible label of one
-/// of them does not contain the word at all.
+/// **Muscles match on their label, their parent group or a synonym**
+/// (`muscle_synonyms.dart`), so "shoulders", "pecs" and "legs" find their
+/// sub-groups even though no label contains those words. Never on the ids,
+/// which a user never sees.
 ///
-/// **Uncapped.** The prototype slices exercise hits to 30; a cap silently
-/// hides a match from someone who typed enough letters to find it, and the
-/// results are rendered by a lazy `ListView` that never builds the rows nobody
-/// scrolled to.
+/// **Words in any order.** Every word of the query must appear; "press bench"
+/// finds "Barbell bench press".
 ///
-/// **Unranked, and deliberately so.** The prototype sorts the hits the user
-/// has logged to the top. There is no session table in this slice, so that
-/// ordering could only be invented — and `CLAUDE.md` puts the personal layer
-/// after this tab. Each vocabulary keeps its own order instead: the taxonomy's
-/// body order, the sorted equipment values, and the library's own order.
+/// **Uncapped.** A cap silently hides a match from someone who typed enough
+/// letters to find it, and the results are rendered by a lazy `ListView`.
 ///
 /// A blank query matches nothing, which is what puts the screen on its
 /// fallback rather than on a list of all 260 names.
@@ -117,23 +142,35 @@ List<MuscleSearchResult> muscleSearchResults(
   ExerciseIndex index,
   String query,
 ) {
-  final needle = query.trim().toLowerCase();
+  final needle = searchFold(query);
   if (needle.isEmpty) return const <MuscleSearchResult>[];
+  final words = needle.split(' ');
+  final synonymIds = kMuscleSynonyms[needle] ?? const <String>[];
 
-  return <MuscleSearchResult>[
-    for (final group in kSubMuscleGroups.values)
-      if (group.label.toLowerCase().contains(needle))
-        muscleResult(index, group.id),
-    for (final value in index.equipmentValues)
-      if (value.contains(needle)) equipmentResult(index, value),
-    for (final exercise in index.searchByName(needle))
-      MuscleSearchResult(
+  final exercises = index.searchByWords(needle);
+  final exact = <Exercise>[
+    for (final exercise in exercises)
+      if (searchFold(exercise.name) == needle) exercise,
+  ];
+
+  MuscleSearchResult exerciseResult(Exercise exercise) => MuscleSearchResult(
         kind: SearchResultKind.exercise,
         id: exercise.id,
         label: exercise.name,
         subtitle: exerciseEquipmentLabel(exercise.equipment),
         exercise: exercise,
-      ),
+      );
+
+  return <MuscleSearchResult>[
+    for (final exercise in exact) exerciseResult(exercise),
+    for (final group in kSubMuscleGroups.values)
+      if (synonymIds.contains(group.id) ||
+          words.every((word) => searchFold(group.label).contains(word)))
+        muscleResult(index, group.id),
+    for (final value in index.equipmentValues)
+      if (value.contains(needle)) equipmentResult(index, value),
+    for (final exercise in exercises)
+      if (!exact.contains(exercise)) exerciseResult(exercise),
   ];
 }
 
@@ -208,7 +245,8 @@ class _MuscleSearchScreenState extends ConsumerState<MuscleSearchScreen> {
   @override
   Widget build(BuildContext context) {
     final index = ref.watch(exerciseIndexProvider);
-    final results = muscleSearchResults(index, _query);
+    final outcome = muscleSearch(index, _query);
+    final results = outcome.results;
 
     return AppScreen.pushed(
       title: 'Search',
@@ -221,6 +259,13 @@ class _MuscleSearchScreenState extends ConsumerState<MuscleSearchScreen> {
             onChanged: (value) => setState(() => _query = value),
           ),
           const SizedBox(height: 14),
+          if (outcome.didYouMean != null) ...<Widget>[
+            Text(
+              didYouMeanNote(outcome.didYouMean!),
+              style: kNoSearchMatchStyle,
+            ),
+            const SizedBox(height: 8),
+          ],
           if (results.isNotEmpty)
             for (final result in results)
               SearchResultRow(
@@ -253,6 +298,10 @@ const String kSearchEquipmentHeading = 'Equipment';
 /// for what was typed, and a user who mistyped "kettlebel" would conclude the
 /// app thinks that is a muscle.
 String noSearchMatchNote(String query) => 'Nothing matches “${query.trim()}”.';
+
+/// Said above results found for a corrected query, so the user knows the
+/// list is for a word they did not type.
+String didYouMeanNote(String corrected) => 'Did you mean “$corrected”?';
 
 /// What a query with no matches falls through to, and what an untouched field
 /// opens on (R14).

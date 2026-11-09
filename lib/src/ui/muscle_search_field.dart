@@ -11,6 +11,10 @@ import '../theme/app_palette.dart';
 /// different search boxes.
 const String kMuscleSearchHint = 'Search exercises, muscles, equipment';
 
+/// The editable field's spoken name once it holds text: the placeholder's own
+/// words, so the name does not change between empty and typed.
+const String kMuscleSearchSpokenName = kMuscleSearchHint;
+
 /// The Muscles tab's search box, in its two states.
 ///
 /// **[MuscleSearchField.tappable] is not an input at all.** On the landing the
@@ -113,7 +117,23 @@ class MuscleSearchField extends StatelessWidget {
       ),
     );
 
-    if (!_isButton) return field;
+    // The placeholder is the field's only name, and iOS stops announcing a
+    // placeholder once there is text: VoiceOver read "bench" with no hint of
+    // what the box is (audit B8). An explicit label survives typing. Only
+    // while there is text: empty, the placeholder already names it, and a
+    // second copy would read the name twice.
+    if (!_isButton) {
+      final owned = controller;
+      if (owned == null) return field;
+      return ValueListenableBuilder<TextEditingValue>(
+        valueListenable: owned,
+        child: field,
+        builder: (context, value, child) => Semantics(
+          label: value.text.isEmpty ? null : hint,
+          child: child,
+        ),
+      );
+    }
 
     // The row pattern from `template_row.dart`, applied to a control that
     // happens to look like a field: announced as a button, hit as one opaque

@@ -481,14 +481,19 @@ void main() {
     });
 
     test('matches sub-group labels rather than their ids', () {
-      // "back/lats", "back/upper" and "back/lower" all carry "back" in the id;
-      // only two of the 19 labels do. Matching ids would return a third row
-      // for a user who typed a word they can see on screen.
+      // Ids are internal keys a user never sees. "back" now also finds Lats,
+      // but through the parent group (muscle_synonyms.dart), not the id; an
+      // id typed verbatim matches no muscle at all.
       final labels = muscleSearchResults(index, 'back')
           .where((result) => result.kind == SearchResultKind.muscle)
           .map((result) => result.label)
           .toList();
-      expect(labels, <String>['Upper back & traps', 'Lower back']);
+      expect(labels, <String>['Upper back & traps', 'Lats', 'Lower back']);
+      expect(
+        muscleSearchResults(index, 'chest/upper')
+            .where((result) => result.kind == SearchResultKind.muscle),
+        isEmpty,
+      );
     });
 
     test('every exercise whose name contains the query is returned, uncapped',

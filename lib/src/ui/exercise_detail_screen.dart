@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/body_gender.dart';
 import '../data/exercise.dart';
 import '../data/active_session.dart';
+import '../data/derived.dart' show lastSetLine, timesLogged;
 import '../data/session_progress.dart';
 import '../data/exercise_index.dart';
 import '../data/load_type.dart';
@@ -17,6 +18,7 @@ import 'set_logging_screen.dart';
 import 'body_diagram.dart';
 import 'custom_exercise_screens.dart' show CustomExerciseScreen;
 import 'disclosure_row.dart';
+import 'exercise_history_screen.dart' show pushExerciseHistory;
 import 'exercise_demo.dart';
 import 'muscle_exercise_list_screen.dart';
 
@@ -60,6 +62,15 @@ class ExerciseDetailScreen extends ConsumerWidget {
   /// The key a test taps to add this exercise to an ad-hoc session.
   static const Key addToWorkoutKey = ValueKey<String>('add-to-workout');
 
+  /// The outlined state once the exercise is already in the open workout.
+  static const Key alreadyInWorkoutKey = ValueKey<String>('already-in-workout');
+
+  /// "Start workout with this", offered when no workout is open (ADR 0012).
+  static const Key startWorkoutKey = ValueKey<String>('start-workout-with-this');
+
+  /// The "Last … · N times · See history" line (ADR 0012).
+  static const Key historyLineKey = ValueKey<String>('exercise-history-line');
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(exerciseIndexProvider);
@@ -84,6 +95,7 @@ class ExerciseDetailScreen extends ConsumerWidget {
               style: kLandingSectionLabelStyle,
             ),
           ),
+          _HistoryLine(exerciseId: exercise.id),
           const SizedBox(height: 16),
           // The demonstration leads: how the movement looks is the first
           // question on a reference page (docs/adr/0010).
@@ -158,28 +170,93 @@ class ExerciseDetailScreen extends ConsumerWidget {
         // nothing to add to. A template session no longer locks the workout to
         // its muscles, so it takes an addition like any other
         // (`docs/adr/0006-workout-tab-is-exercise-first.md`).
-        if (session == null) return const <Widget>[];
-        return <Widget>[
-          const SizedBox(height: 16),
-          _DetailAction(
-            actionKey: addToWorkoutKey,
-            label: 'Add to current workout',
-            onTap: () async {
-              final loadType = LoadType.fromName(exercise.loadType);
-              if (loadType == null) return;
-              await ref.read(activeSessionProvider.notifier).addExercise(
-                    exerciseId: exercise.id,
-                    loadType: loadType,
-                  );
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${exercise.name} added')),
-              );
-            },
-          ),
-        ];
+        return referenceDetailActions(context, ref, exercise, session);
     }
   }
+}
+
+/// What a reference visit to an exercise's page offers (the Muscles route),
+/// shared by the shipped and the custom exercise pages so the two cannot
+/// disagree.
+List<Widget> referenceDetailActions(
+  BuildContext context,
+  WidgetRef ref,
+  Exercise exercise,
+  WorkoutSession? session,
+) {
+  if (session == null) {
+    // ADR 0012: "I found it, now do it" no longer ends here.
+    return <Widget>[
+      const SizedBox(height: 16),
+      _DetailAction(
+        actionKey: ExerciseDetailScreen.startWorkoutKey,
+        label: kStartWorkoutWithThisLabel,
+        onTap: () => startWorkoutWithExercise(context, ref, exercise),
+      ),
+    ];
+  }
+  final alreadyIn = session.exercises.any((e) => e.exerciseId == exercise.id);
+  if (alreadyIn) {
+    // B4: say it is there rather than "added" a second time.
+    return <Widget>[
+      const SizedBox(height: 16),
+      OutlinedButton(
+        key: ExerciseDetailScreen.alreadyInWorkoutKey,
+        onPressed: () => showAppSnackBar(context, kAlreadyInWorkoutMessage),
+        child: const Text(kInYourWorkoutLabel),
+      ),
+    ];
+  }
+  return <Widget>[
+    const SizedBox(height: 16),
+    _DetailAction(
+      actionKey: ExerciseDetailScreen.addToWorkoutKey,
+      label: 'Add to current workout',
+      onTap: () async {
+        final loadType = LoadType.fromName(exercise.loadType);
+        if (loadType == null) return;
+        await ref.read(activeSessionProvider.notifier).addExercise(
+              exerciseId: exercise.id,
+              loadType: loadType,
+            );
+        if (!context.mounted) return;
+        showAppSnackBar(context, '${exercise.name} added');
+      },
+    ),
+  ];
+}
+
+/// The detail action with no workout open.
+const String kStartWorkoutWithThisLabel = 'Start workout with this';
+
+/// Opens a new workout holding [exercise] and goes straight to logging it.
+Future<void> startWorkoutWithExercise(
+  BuildContext context,
+  WidgetRef ref,
+  Exercise exercise,
+) async {
+  final notifier = ref.read(activeSessionProvider.notifier);
+  if (ref.read(activeSessionProvider) == null) await notifier.startAdHoc();
+  if (!context.mounted) return;
+  await startLoggingFromDetail(context, ref, exercise);
+}
+
+/// The detail action once the exercise is already in the open workout.
+const String kInYourWorkoutLabel = 'In your workout';
+
+/// Said when that button is tapped.
+const String kAlreadyInWorkoutMessage = 'Already in your workout';
+
+/// A short confirmation in the app's style: floating, on the card radius, so
+/// it does not span the page and cover the reviewed copy's first header.
+void showAppSnackBar(BuildContext context, String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(
+      content: Text(message),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ));
 }
 
 /// How the user reached the exercise's page, which decides what it offers.
@@ -220,6 +297,58 @@ Future<void> startLoggingFromDetail(
       builder: (_) => SetLoggingScreen(sessionExerciseId: rowId),
     ),
   );
+}
+
+/// "Last 62.5kg × 6 · 14 times · See history" under the facts line, when the
+/// exercise has been logged; nothing otherwise (ADR 0012). The figures come
+/// from the same helpers as the picker rows, so they agree.
+class _HistoryLine extends ConsumerWidget {
+  const _HistoryLine({required this.exerciseId});
+
+  final String exerciseId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final saved = ref.watch(savedSessionsProvider);
+    final last = lastSetLine(exerciseId, saved);
+    if (last == null) return const SizedBox.shrink();
+    final times = timesLogged(exerciseId, saved);
+    final facts = '$last · $times ${times == 1 ? 'time' : 'times'}';
+    return Semantics(
+      container: true,
+      button: true,
+      label: '$facts. See history',
+      excludeSemantics: true,
+      onTap: () => pushExerciseHistory(context, exerciseId),
+      child: GestureDetector(
+        key: ExerciseDetailScreen.historyLineKey,
+        behavior: HitTestBehavior.opaque,
+        onTap: () => pushExerciseHistory(context, exerciseId),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  '$facts · See history',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppPalette.textSecondary,
+                    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: AppPalette.textMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The page's one contextual action.

@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/exercise_index.dart';
 import '../data/generated/muscle_taxonomy.dart';
+import '../data/muscle_training.dart';
+import '../data/training_plan.dart' show planTodayProvider;
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'muscle_exercise_list_screen.dart';
@@ -28,7 +32,10 @@ Future<void> openTappedBodySegment(
   final ordered = orderedSubMuscleGroups(subMuscleGroupIds);
   if (ordered.isEmpty) return;
   if (ordered.length == 1) {
-    return pushMuscleExerciseList(context, ordered.single);
+    // Not awaited: the returned future is how long the map keeps the muscle
+    // lit, and that should be the sheet, never the whole pushed screen.
+    unawaited(pushMuscleExerciseList(context, ordered.single));
+    return;
   }
 
   final chosen = await showMuscleSegmentSheet(context, subGroupIds: ordered);
@@ -36,7 +43,7 @@ Future<void> openTappedBodySegment(
   // nothing. A tap on a 40pt polygon lands on the wrong one often enough that
   // backing out has to be free.
   if (chosen == null || !context.mounted) return;
-  return pushMuscleExerciseList(context, chosen);
+  unawaited(pushMuscleExerciseList(context, chosen));
 }
 
 /// [ids] in the taxonomy's own order.
@@ -107,6 +114,8 @@ class MuscleSegmentSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(exerciseIndexProvider);
+    final training = ref.watch(muscleTrainingProvider);
+    final today = ref.watch(planTodayProvider);
 
     return SafeArea(
       // The sheet is pinned to the bottom edge, so only that inset applies;
@@ -121,7 +130,7 @@ class MuscleSegmentSheet extends ConsumerWidget {
             Semantics(
               header: true,
               child: Text(
-                muscleSegmentSheetTitle(subGroupIds.length),
+                muscleSegmentSheetTitle(subGroupIds),
                 style: kLandingSectionLabelStyle,
               ),
             ),
@@ -136,6 +145,10 @@ class MuscleSegmentSheet extends ConsumerWidget {
                 key: muscleSegmentOptionKey(id),
                 label: kSubMuscleGroups[id]?.label ?? id,
                 exerciseCount: index.withPrimary(id).length,
+                note: muscleTrainingLine(
+                  training[id] ?? MuscleTraining.none,
+                  today,
+                ),
                 onTap: () => Navigator.of(context).pop(id),
               ),
           ],
@@ -151,8 +164,20 @@ class MuscleSegmentSheet extends ConsumerWidget {
 /// sub-group today; a regenerated taxonomy that made a three-way segment would
 /// otherwise leave a heading that lies about the list beneath it — the same
 /// rule `MusclesRoot.listLabel` follows.
-String muscleSegmentSheetTitle(int count) =>
-    'THIS SEGMENT CARRIES $count MUSCLES';
+String muscleSegmentSheetTitle(List<String> subGroupIds) {
+  // Sentence case and the user's words (audit B3): "segment" is how the
+  // artwork is built, not how a person thinks of their shoulder.
+  final groups = <String>{
+    for (final id in subGroupIds) kSubMuscleGroups[id]?.group ?? id,
+  };
+  if (groups.length == 1 && groups.single == 'shoulders') {
+    return 'Which shoulder muscle?';
+  }
+  if (groups.length == 1) {
+    return 'Which ${(kMuscleGroupLabels[groups.single] ?? 'muscle').toLowerCase()} muscle?';
+  }
+  return 'Which muscle?';
+}
 
 /// The option for [subGroupId], so a test can answer the question by name
 /// rather than by position — and so it never collides with the landing's own

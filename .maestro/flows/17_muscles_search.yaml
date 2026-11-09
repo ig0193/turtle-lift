@@ -1,0 +1,32 @@
+# User story (Muscles audit B1): I search the way I talk. "shoulders" finds the
+# three delts, "press bench" finds the bench press in any word order, and a
+# typo ("bech press") is corrected with "Did you mean".
+appId: dev.indresh.turtleLift
+name: 17 Muscles search - synonyms, word order, typos
+tags: [muscles]
+---
+- launchApp:
+    clearState: true
+- tapOn: "Muscles"
+- tapOn: "Search exercises, muscles, equipment"
+
+- inputText: "shoulders"
+- assertVisible: "Front delt\\. Muscle\\..*"
+- assertVisible: "Side delt\\. Muscle\\..*"
+- assertVisible: "Rear delt\\. Muscle\\..*"
+- assertNotVisible: "Nothing matches.*"
+
+- eraseText: 20
+- inputText: "legs"
+- assertVisible: "Quads\\. Muscle\\..*"
+- assertVisible: "Calves\\. Muscle\\..*"
+
+- eraseText: 20
+- inputText: "press bench"
+- assertVisible: "Barbell bench press\\. Exercise\\..*"
+
+- eraseText: 20
+- inputText: "bech press"
+- assertVisible: "Did you mean “bench press”\\?"
+- assertVisible: "Barbell bench press\\. Exercise\\..*"
+- takeScreenshot: 17-search-typo

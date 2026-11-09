@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'custom_exercises.dart';
 import 'exercise.dart';
+import 'generated/muscle_taxonomy.dart';
+import 'muscle_synonyms.dart';
+import 'search_spelling.dart';
 
 /// The 260 shipped exercises, arranged for the three lookups the Muscles tab
 /// makes: by id, by primary sub-muscle group, and by equipment.
@@ -88,6 +91,46 @@ class ExerciseIndex {
   /// **Hyphens and apostrophes are forgiven** ([searchFold]), so "pull up"
   /// and "pushup" find "Pull-up" and "Push-up", and the curly apostrophe the
   /// iOS keyboard types finds "Farmer's carry" (QA second pass).
+  /// Every word search can match — exercise names, muscle labels and their
+  /// synonyms, equipment values — for the "Did you mean …" correction.
+  ///
+  /// Built on first use rather than in the constructor: it is only needed when
+  /// a query has already matched nothing.
+  late final SearchSpelling spelling = SearchSpelling(<String>[
+    for (final exercise in all) ...searchFold(exercise.name).split(' '),
+    for (final exercise in all)
+      ...searchFold(exercise.name.replaceAll(_hyphens, '')).split(' '),
+    for (final group in kSubMuscleGroups.values)
+      ...searchFold(group.label).split(' '),
+    for (final key in kMuscleSynonyms.keys) ...key.split(' '),
+    ...equipmentValues,
+  ]);
+
+  /// The exercises whose name holds every word of [query], in any order —
+  /// "press bench" finds "Barbell bench press" (audit B1).
+  ///
+  /// Ordered by relevance: an exact name, then names starting with the whole
+  /// query, then names containing it, then names that only hold its words.
+  List<Exercise> searchByWords(String query) {
+    final needle = searchFold(query);
+    if (needle.isEmpty) return const <Exercise>[];
+    final words = needle.split(' ');
+    final tiers = List<List<Exercise>>.generate(4, (_) => <Exercise>[]);
+    for (final exercise in all) {
+      final name = searchFold(exercise.name);
+      if (name == needle) {
+        tiers[0].add(exercise);
+      } else if (name.startsWith(needle)) {
+        tiers[1].add(exercise);
+      } else if (searchMatches(exercise.name, needle)) {
+        tiers[2].add(exercise);
+      } else if (words.every((word) => searchMatches(exercise.name, word))) {
+        tiers[3].add(exercise);
+      }
+    }
+    return <Exercise>[for (final tier in tiers) ...tier];
+  }
+
   List<Exercise> searchByName(String query) {
     final needle = searchFold(query);
     if (needle.isEmpty) return const <Exercise>[];

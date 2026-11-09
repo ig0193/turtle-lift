@@ -23,6 +23,7 @@ import 'exercise_detail_screen.dart'
         kExerciseDiagramHeight,
         kMuscleChipPrimaryStyle,
         kMuscleChipSecondaryStyle,
+        referenceDetailActions,
         startLoggingFromDetail;
 import 'ghost_button.dart';
 import 'muscle_exercise_list_screen.dart'
@@ -528,26 +529,7 @@ class CustomExerciseScreen extends ConsumerWidget {
           ),
         ];
       case ExerciseDetailEntry.reference:
-        if (session == null) return const <Widget>[];
-        return <Widget>[
-          const SizedBox(height: 16),
-          FilledButton(
-            key: addToWorkoutKey,
-            onPressed: () async {
-              final loadType = LoadType.fromName(exercise.loadType);
-              if (loadType == null) return;
-              await ref.read(activeSessionProvider.notifier).addExercise(
-                    exerciseId: exercise.id,
-                    loadType: loadType,
-                  );
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${exercise.name} added')),
-              );
-            },
-            child: const Text('Add to current workout'),
-          ),
-        ];
+        return referenceDetailActions(context, ref, exercise, session);
     }
   }
 

@@ -1,0 +1,22 @@
+# User story (ADR 0012): the barbells are taken, so on Glutes I filter to
+# machines. The filter is forgotten when I leave.
+appId: dev.indresh.turtleLift
+name: 20 Muscles equipment filter chips
+tags: [muscles]
+---
+- launchApp:
+    clearState: true
+- tapOn: "Muscles"
+- scrollUntilVisible:
+    element: "Glutes.*"
+    centerElement: true
+- tapOn: "Glutes.*"
+- assertVisible: "26 exercises"
+- tapOn: "Machine"
+- assertVisible: "4 exercises"
+- assertVisible: "Machine hip thrust\\. Machine"
+- assertNotVisible: "Barbell hip thrust\\. Barbell"
+- takeScreenshot: 20-filter-machine
+- tapOn: "Back"
+- tapOn: "Glutes.*"
+- assertVisible: "26 exercises"

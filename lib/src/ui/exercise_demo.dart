@@ -94,8 +94,14 @@ class _ExerciseDemoState extends State<ExerciseDemo>
     // At rest — never started, or finished its reps — it shows the still.
     final resting = !_playing &&
         (_controller.value == 0 || _controller.isCompleted);
-    final label = 'Demonstration of ${widget.exercise.name}'
-        '${_playing ? '' : ', paused'}';
+    // Finished is not paused (audit B7): ", paused" only when the user stopped
+    // it mid-movement, ", finished" once its reps are done.
+    final state = _playing || _controller.value == 0
+        ? ''
+        : _controller.isCompleted
+            ? ', finished'
+            : ', paused';
+    final label = 'Demonstration of ${widget.exercise.name}$state';
 
     return LayoutBuilder(
       builder: (context, constraints) {

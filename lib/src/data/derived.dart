@@ -314,6 +314,30 @@ LastTimeSet? lastTimeSetAt(
   return LastTimeSet(exercise.loadType, completed[index]);
 }
 
+/// "Last 62.5kg × 6": the last completed set of the last saved session that
+/// logged [exerciseId], in its load type's own format, or null when never.
+///
+/// Used by the picker rows, the Muscles exercise lists and exercise detail,
+/// so all three say the same thing about the same lift.
+String? lastSetLine(String exerciseId, List<WorkoutSession> savedSessions) {
+  final last = lastSessionOf(exerciseId, savedSessions);
+  if (last == null) return null;
+  final logged = last.exercises.firstWhere((e) => e.exerciseId == exerciseId);
+  final completed = logged.sets
+      .where((s) => isSetComplete(logged.loadType, s))
+      .toList(growable: false);
+  if (completed.isEmpty) return null;
+  return 'Last ${formatSet(logged.loadType, completed.last)}';
+}
+
+/// How many saved sessions logged at least one completed set of [exerciseId].
+int timesLogged(String exerciseId, List<WorkoutSession> savedSessions) =>
+    savedSessions
+        .where((session) => session.exercises.any((e) =>
+            e.exerciseId == exerciseId &&
+            e.sets.any((s) => isSetComplete(e.loadType, s))))
+        .length;
+
 /// The exercises logged most recently, newest first, each once, at most
 /// [limit]: the picker's Recent group.
 ///

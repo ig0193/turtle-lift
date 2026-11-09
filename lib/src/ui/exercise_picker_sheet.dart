@@ -7,7 +7,6 @@ import '../data/exercise.dart';
 import '../data/exercise_index.dart';
 import '../data/generated/muscle_taxonomy.dart';
 import '../data/session_store.dart';
-import '../data/set_format.dart';
 import '../theme/app_palette.dart';
 import 'custom_exercise_screens.dart' show showCustomExerciseEditor;
 import 'muscle_exercise_list_screen.dart'
@@ -412,15 +411,8 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
   ///
   /// The weight they used last time is what decides which of several
   /// alternatives to reach for, so it sits on the row rather than a tap away.
-  String? _lastSetLine(Exercise exercise, List<WorkoutSession> saved) {
-    final last = lastSessionOf(exercise.id, saved);
-    if (last == null) return null;
-    final logged =
-        last.exercises.firstWhere((e) => e.exerciseId == exercise.id);
-    final completed = logged.completedSets.toList();
-    if (completed.isEmpty) return null;
-    return 'Last ${formatSet(logged.loadType, completed.last)}';
-  }
+  String? _lastSetLine(Exercise exercise, List<WorkoutSession> saved) =>
+      lastSetLine(exercise.id, saved);
 }
 
 class _SectionLabel extends StatelessWidget {

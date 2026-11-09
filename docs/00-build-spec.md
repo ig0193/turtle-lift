@@ -137,7 +137,7 @@ Load from `muscle_taxonomy.dart`. **12 parents, 19 sub-groups, 1 mapping excepti
 - **No body figure other than the four traced diagrams.** Workout Summary and Session Detail use the same anatomical diagram as everywhere else — no zone-lit human figure exists and none should be built.
 - **Mascot is a turtle** (`mascot-brief.md`). It is a decorative companion, not a body diagram, and never replaces a muscle map. Four states: resting, lifting, pleased, hidden. Appears on workout overview (52px corner tile), celebration, empty states, app icon. **Not on the share card.** **Never reacts to inactivity** — no decay, no guilt, no notifications, no achievement on the tap easter egg. Not a blocker; build last.
 - **Share card view rule:** show only the view(s) containing trained muscles, side by side when both apply. Same conditional already used on Exercise Detail. Never render an empty second diagram.
-- Label the front shoulder segment **"Shoulder (front)"**, not "Front delt".
+- Label the front shoulder segment **"Front delt"** (user decision 2026-11-09, ADR 0012; matches the taxonomy and the UI).
 
 ---
 
@@ -226,27 +226,28 @@ streakAsOf(date) -> int
 
 ## 10. Muscle Groups tab
 
-**Pure reference. No logging anywhere in this tab, and nothing in it reads session history.** Every personal figure is **deferred to a later plan** — see `03` §What ships, and what is deferred, which keeps those rules written down. Do not build any of them here.
+**No logging anywhere in this tab.** It reads session history on read, never stored (`docs/adr/0012-muscles-tab-shows-your-training.md`, which lifts the old "pure reference" deferral): this week's training on the map, a per-muscle line, a history line on detail. No recovery % or readiness model.
 
 **Landing** — search field, front/back view control, the full-body map, then **all 19 sub-group rows** as one flat list ordered by parent group, each showing how many exercises name it as a *primary* muscle.
-- **Every segment on the map renders muted.** No fill stands for training. The diagram takes its per-segment fill as a caller-supplied parameter, so the deferred trained/untrained colour is added by the caller, not by reopening the widget.
+- **The map fills this week's training** (Mon–Sun, the Workout week strip's week): accent-strong where a muscle had a completed set as a primary, accent-light where only as a secondary, muted otherwise; a legend under it, or "Nothing trained this week yet. Muscles fill as you log sets." Its height is capped so the figure and hint sit above the tab bar. Taps forgive a 12pt near miss; each segment is a labelled screen-reader button.
+- A muscle's exercise list and the shoulder sheet say "N sets this week · Last trained …" (`muscleTrainingLine`).
 - `shoulders/side-delt` has no artwork; the list is its only route, and its row says so.
 
 **Browse is one tap.** A segment tap and a row tap both open that sub-muscle group's exercise list — **no muscle-group selection screen and no sub-muscle-group selection screen exist.** They were **deleted, not deferred**: of 42 segments exactly one (`shoulders/front-delt`, which also carries `shoulders/side-delt`) is ambiguous, so a picker for all 42 earned nothing.
 - **That one segment opens a two-option bottom sheet** — Front delt / Side delt — and pushes the chosen one. Dismissing opens nothing. Read the ambiguity from the taxonomy; never hard-code the pair.
 
-**Search** — one field over **three vocabularies**: 260 exercise names, 19 sub-group labels, 8 equipment values. Every result is labelled with its kind. Exercise → detail; muscle → that sub-group's exercise list; equipment → **the equipment-filtered list, which is a search destination only — nothing browses to it**. A query matching no exercise name still renders the full muscle list and the full equipment list, each headed. Never an empty result screen.
+**Search** — one field over **three vocabularies**: 260 exercise names, 19 sub-group labels (plus parent groups and synonyms, `lib/src/data/muscle_synonyms.dart`), 8 equipment values. Words match in any order; a query matching nothing tries a one-letter correction and says "Did you mean …". Every result is labelled with its kind. Exercise → detail; muscle → that sub-group's exercise list; equipment → **the equipment-filtered list, which is a search destination only — nothing browses to it**. A query matching no exercise name still renders the full muscle list and the full equipment list, each headed. Never an empty result screen.
 
-**Exercise list** (per sub-muscle group) — vertical list of compact cards: name and equipment chip. Primary involvement only. Not a horizontal carousel: this is a comparison decision ("which of these can I do right now") and it needs every option visible at once. No `alternatives` field — this list is the alternatives. **The derived `Last: 22kg × 8` line is deferred.**
+**Exercise list** (per sub-muscle group) — vertical list of compact cards: name and equipment chip. Primary involvement only. Not a horizontal carousel: this is a comparison decision ("which of these can I do right now") and it needs every option visible at once. No `alternatives` field — this list is the alternatives. Outlined equipment filter chips derived from the list (memory only), and a derived `Last 22kg × 8` hint on rows with history (ADR 0012).
 
 **Exercise detail** — one screen, in this order: equipment + load type, primary/secondary muscle chips, diagram(s), the four reviewed content fields, substitutes.
 - Diagram(s): **full body, read-only**. Both front and back side by side **only** when the relevant muscles span both views — primaries *and* secondaries decide that. Otherwise one, centred.
 - **The four content fields are collapsible rows: Common mistakes first and expanded, then Setup, Posture, Execution, collapsed.** Rendered verbatim — reviewed copy, never rewritten, summarised, truncated or reflowed.
 - **Substitutes rail** — exercises sharing **any** of this one's primary sub-groups, different equipment first, capped at 8. Titled after the muscle only when there is exactly one primary; neutral otherwise.
-- **No history block of any kind** — no Best/Last/Times tiles, no recent log, no PB badge, no `assisted` banner, and **no "You haven't logged this yet" line**. Deferred, all of it.
-- **"Add to current workout" appears whenever a workout is open** (any session — there is no template lock). With none open it is absent.
+- **One history line when logged** — "Last 62.5kg × 6 · 14 times · See history" into Exercise history; nothing when never logged. Still no Best/Last/Times tiles, recent log or PB badge on detail.
+- **"Add to current workout" appears whenever a workout is open** (any session — there is no template lock), and reads "In your workout" once added. With none open, **"Start workout with this"** (ADR 0012).
 
-**Deferred screen:** Exercise history. Unreachable until sessions exist.
+**Exercise history** is built, reached from set logging and from the detail history line.
 
 → `03`.
 

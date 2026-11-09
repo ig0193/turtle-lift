@@ -1,0 +1,34 @@
+# User story (ADR 0012): before I log anything the map says nothing is trained
+# this week. After a bench press workout the map fills, Mid chest says its
+# sets this week, and the exercise page links to my history.
+appId: dev.indresh.turtleLift
+name: 18 Muscles map training - empty, after a workout, history line
+tags: [muscles]
+---
+- launchApp:
+    clearState: true
+- tapOn: "Muscles"
+- assertVisible: "Nothing trained this week yet.*"
+- assertVisible: "Body map, front view"
+- tapOn: "Workout"
+
+- runFlow: ../subflows/log_bench_workout.yaml
+- tapOn: "Back"
+
+- tapOn: "Muscles"
+- assertVisible: ".*Worked this week.*"
+- assertNotVisible: "Nothing trained this week yet.*"
+- takeScreenshot: 18-map-trained
+- scrollUntilVisible:
+    element: "Mid chest.*"
+    centerElement: true
+- tapOn: "Mid chest.*"
+- assertVisible: "2 sets this week · Last trained today"
+- tapOn: "Barbell bench press\\. Barbell"
+- assertVisible: "Last 60kg × 8 · 1 time.*See history"
+- assertVisible: "Start workout with this"
+- tapOn: "Last 60kg × 8 · 1 time.*See history"
+- assertVisible: "1 session.*"
+- tapOn: "Back"
+- tapOn: "Back"
+- tapOn: "Back"

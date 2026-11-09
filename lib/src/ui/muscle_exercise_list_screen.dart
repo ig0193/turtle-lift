@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/active_session.dart';
+import '../data/derived.dart' show lastSetLine;
 import '../data/exercise.dart';
 import '../data/exercise_index.dart';
 import '../data/generated/muscle_taxonomy.dart';
+import '../data/session_store.dart';
+import '../data/muscle_training.dart';
+import '../data/training_plan.dart' show planTodayProvider;
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'app_screen.dart';
@@ -60,10 +65,14 @@ class MuscleExerciseListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final exercises = ref.watch(exerciseIndexProvider).withPrimary(subGroupId);
+    final training =
+        ref.watch(muscleTrainingProvider)[subGroupId] ?? MuscleTraining.none;
     return exerciseListScreen(
       context,
       title: titleFor(subGroupId),
       exercises: exercises,
+      trainingLine:
+          muscleTrainingLine(training, ref.watch(planTodayProvider)),
     );
   }
 }
@@ -81,46 +90,176 @@ Widget exerciseListScreen(
   BuildContext context, {
   required String title,
   required List<Exercise> exercises,
+  String? trainingLine,
 }) =>
     AppScreen.pushed(
       title: title,
-      body: ListView(
-        padding: screenScrollPadding(context),
-        children: <Widget>[
-          const SizedBox(height: 14),
-          Semantics(
-            header: true,
-            child: Text(
-              MuscleExerciseListScreen.countLabel(exercises.length),
-              style: kLandingSectionLabelStyle,
-            ),
-          ),
-          const SizedBox(height: 8),
-          for (final exercise in exercises)
-            ExerciseRow(
-              key: exerciseRowKey(exercise.id),
-              name: exercise.name,
-              // Still shown on the equipment list, even though every row there
-              // carries the same value: the row is the tab's one exercise row,
-              // and a screen that quietly drops half of it teaches the reader
-              // that the chip means something different there.
-              equipment: exercise.equipment,
-              onTap: () => pushExerciseDetail(context, exercise),
-            ),
-        ],
+      body: _ExerciseListBody(
+        exercises: exercises,
+        trainingLine: trainingLine,
       ),
     );
 
-/// Pushes [subGroupId]'s exercise list.
+/// The list itself: optional training line, equipment chips, count, rows.
 ///
-/// **One function, because there are two call sites and they must not drift**
-/// — the landing's map and the landing's list (and, on the search screen, the
-/// same 19 rows again). R8 is precisely the requirement that they arrive at the
-/// same screen.
-///
-/// **Opaque, like every push in this app (KTD9).** It is the only kind of route
-/// that covers the floating tab bar; a sheet or a transparent route leaves
-/// "Workout" painted over the exercises and one stray tap away.
+/// **The chosen equipment lives in this widget's state and nowhere else**
+/// (ADR 0012): leaving the screen forgets it, so a filter set last week never
+/// silently hides exercises today.
+class _ExerciseListBody extends ConsumerStatefulWidget {
+  const _ExerciseListBody({required this.exercises, this.trainingLine});
+
+  final List<Exercise> exercises;
+  final String? trainingLine;
+
+  @override
+  ConsumerState<_ExerciseListBody> createState() => _ExerciseListBodyState();
+}
+
+class _ExerciseListBodyState extends ConsumerState<_ExerciseListBody> {
+  String? _equipment;
+
+  @override
+  Widget build(BuildContext context) {
+    final saved = ref.watch(savedSessionsProvider);
+    // Derived from the list, sorted: a chip for gear this muscle has no
+    // exercise for would be a button that empties the list.
+    final values = <String>{for (final e in widget.exercises) e.equipment}
+        .toList()
+      ..sort();
+    final chosen = values.contains(_equipment) ? _equipment : null;
+    final shown = chosen == null
+        ? widget.exercises
+        : widget.exercises.where((e) => e.equipment == chosen).toList();
+
+    return ListView(
+      padding: screenScrollPadding(context),
+      children: <Widget>[
+        const SizedBox(height: 14),
+        if (widget.trainingLine != null) ...<Widget>[
+          // ADR 0012: what the log says about this muscle, above what to
+          // train it with.
+          Text(widget.trainingLine!, style: kSubGroupRowCountStyle),
+          const SizedBox(height: 12),
+        ],
+        if (values.length > 1) ...<Widget>[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              EquipmentChip(
+                key: equipmentChipKey(null),
+                label: 'All',
+                selected: chosen == null,
+                onTap: () => setState(() => _equipment = null),
+              ),
+              for (final value in values)
+                EquipmentChip(
+                  key: equipmentChipKey(value),
+                  label: exerciseEquipmentLabel(value),
+                  selected: chosen == value,
+                  // A second tap on the chosen chip clears it.
+                  onTap: () => setState(
+                    () => _equipment = chosen == value ? null : value,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+        ],
+        Semantics(
+          header: true,
+          child: Text(
+            MuscleExerciseListScreen.countLabel(shown.length),
+            style: kLandingSectionLabelStyle,
+          ),
+        ),
+        const SizedBox(height: 8),
+        for (final exercise in shown)
+          ExerciseRow(
+            key: exerciseRowKey(exercise.id),
+            name: exercise.name,
+            // Still shown on the equipment list, even though every row there
+            // carries the same value: the row is the tab's one exercise row.
+            equipment: exercise.equipment,
+            subtitle: _rowNote(exercise, saved),
+            onTap: () => pushExerciseDetail(context, exercise),
+          ),
+      ],
+    );
+  }
+
+  /// "Last 80kg × 10" when logged, "Yours" on a custom exercise — the same
+  /// words the picker uses (ADR 0012 decision 7).
+  static String? _rowNote(Exercise exercise, List<WorkoutSession> saved) {
+    final last = lastSetLine(exercise.id, saved);
+    if (!exercise.isCustom) return last;
+    return last == null ? 'Yours' : 'Yours · $last';
+  }
+}
+
+/// The chip for [equipment], or the All chip when null.
+@visibleForTesting
+Key equipmentChipKey(String? equipment) =>
+    ValueKey<String>('equipment-chip-${equipment ?? 'all'}');
+
+/// An outlined selection chip: capsule, a hairline that turns accent-strong
+/// when selected (the Front/Back control's treatment). Never filled — only the
+/// primary action is filled.
+class EquipmentChip extends StatelessWidget {
+  const EquipmentChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      button: true,
+      selected: selected,
+      label: label,
+      onTap: onTap,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 36, minWidth: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          // widthFactor 1: centred vertically but only as wide as its label.
+          // A bare `alignment` would stretch every chip to the full row.
+          decoration: BoxDecoration(
+            color: AppPalette.surface,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? AppPalette.accentStrong : AppPalette.border,
+            ),
+          ),
+          child: Align(
+            widthFactor: 1,
+            child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: selected
+                  ? AppPalette.textPrimary
+                  : AppPalette.textSecondary,
+            ),
+          ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 Future<void> pushMuscleExerciseList(BuildContext context, String subGroupId) =>
     Navigator.of(context).push(
       MaterialPageRoute<void>(

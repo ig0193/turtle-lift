@@ -307,8 +307,8 @@ void main() {
     // workout open still offers nothing, which is what this pins. The three
     // routes that do offer something are covered in
     // `test/exercise_detail_entry_test.dart`.
-    testWidgets('R18: browsing with no workout open adds nothing',
-        (tester) async {
+    testWidgets('R18, amended by ADR 0012: with no workout open the one '
+        'action is Start workout with this', (tester) async {
       useTallScreen(tester);
 
       for (final id in const <String>[
@@ -323,14 +323,12 @@ void main() {
           'Add to workout',
           'Add exercise',
           'Log set',
-          'Start',
         ]) {
-          expect(find.textContaining(call, findRichText: true), findsNothing,
-              reason: 'R18: this page is reference, not a way into a session');
+          expect(find.textContaining(call, findRichText: true), findsNothing);
         }
+        expect(find.text(kStartWorkoutWithThisLabel), findsOneWidget);
+        expect(find.byType(FilledButton), findsOneWidget);
         expect(find.byType(ElevatedButton), findsNothing);
-        expect(find.byType(FilledButton), findsNothing);
-        expect(find.byType(TextButton), findsNothing);
       }
     });
   });
