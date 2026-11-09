@@ -7,7 +7,7 @@
 
 **Purpose:** a single place to see everything the app remembers on the user's behalf — history and stats, with no manual tracking required.
 
-**Entry point:** the Profile tab in the L0 bar. **Workout history is now its own tab**, so the history list below belongs to the History tab; derived figures stay on History (one exception, the Schedule week summary).
+**Entry point:** the Profile tab in the L0 bar. **Workout history is now its own tab**, so the history list below belongs to the History tab; derived figures stay on History (the current week moved to the Workout landing, `docs/adr/0008-the-week-lives-on-the-workout-landing.md`).
 
 ---
 
@@ -57,7 +57,7 @@
 
 ### Schedule (segment of the Profile tab)
 
-Top to bottom: **week summary** (this week as a compact hero — count, a dot per plan day, one line of what is left — plus a one-row "last week"), **training-day chips** (Mon–Sun, weekly pattern), **Remind me** switch and one **time**. Prototype: `prototypes/schedule-options.html`. Rules and rationale: `docs/adr/0005-schedule-and-opt-in-notifications.md`.
+Top to bottom: **training-day chips** (Mon–Sun, weekly pattern), **Remind me** switch and one **time**. The week summary that used to head this pane is on the Workout landing now (ADR 0008), so this pane is authored data only; a training reminder opens the Workout tab. Prototype: `prototypes/schedule-options.html`. Rules and rationale: `docs/adr/0005-schedule-and-opt-in-notifications.md`.
 
 - No plan chosen → the summary becomes one line prompting for days. Never "0 of 0".
 - Copy states counts, never verdicts: "2 of 3 this week · 1 more to go — next is Friday"; after the week, "2 of 3 plan days". No "missed".

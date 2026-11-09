@@ -51,10 +51,30 @@ void main() {
     await settle(tester);
   }
 
+  /// A returning user (the debug seed has plenty of workouts) sees the
+  /// ready-made grid folded behind one row (research item 11). Unfolds it.
+  Future<void> unfoldReadyMade(WidgetTester tester) async {
+    final toggle = find.byKey(WorkoutLandingBody.readyMadeToggleKey);
+    if (toggle.evaluate().isEmpty) return;
+    if (find.byKey(WorkoutLandingBody.templateKey('push')).evaluate().isNotEmpty) {
+      return;
+    }
+    await tester.scrollUntilVisible(
+      toggle,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -150));
+    await settle(tester);
+    await tester.tap(toggle);
+    await settle(tester);
+  }
+
   /// Scrolls the landing until [id]'s tile is clear of the pinned Start bar and
   /// the tab bar, then taps it. Tiles lower in the grid start off screen or
   /// behind the bars, where a tap lands on the wrong thing.
   Future<void> tapTemplate(WidgetTester tester, String id) async {
+    await unfoldReadyMade(tester);
     final tile = find.byKey(WorkoutLandingBody.templateKey(id));
     await tester.scrollUntilVisible(
       tile,
@@ -110,6 +130,7 @@ void main() {
 
     expect(find.byKey(WorkoutLandingBody.startWorkoutKey), findsOneWidget,
         reason: 'the pinned Start workout bar is on the landing');
+    await unfoldReadyMade(tester);
     expect(find.byKey(WorkoutLandingBody.templateKey('chest-triceps')),
         findsOneWidget);
 
@@ -185,7 +206,13 @@ void main() {
 
     // Back at the list, with the work recorded and the live strip showing.
     expect(find.byType(SessionOverviewBody), findsOneWidget);
-    expect(find.text('Barbell curl'), findsOneWidget);
+    // In the list, not the header: the header now shows the resolved title,
+    // which for a one-exercise workout is that exercise's name (ADR 0008).
+    expect(
+        find.descendant(
+            of: find.byType(SessionOverviewBody),
+            matching: find.text('Barbell curl')),
+        findsOneWidget);
     expect(find.text('30kg × 10'), findsOneWidget,
         reason: 'the set renders through the one shared formatter');
     expect(find.text('Done'), findsOneWidget);
@@ -281,7 +308,13 @@ void main() {
     await settle(tester);
     expect(find.byType(SessionOverviewBody), findsOneWidget,
         reason: 'the open workout still owns the Workout tab');
-    expect(find.text('Barbell curl'), findsOneWidget);
+    // In the list, not the header: the header now shows the resolved title,
+    // which for a one-exercise workout is that exercise's name (ADR 0008).
+    expect(
+        find.descendant(
+            of: find.byType(SessionOverviewBody),
+            matching: find.text('Barbell curl')),
+        findsOneWidget);
     expect(find.text('30kg × 10'), findsOneWidget,
         reason: 'the completed set survived the trip to Diet');
 

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../data/set_format.dart';
 import '../theme/app_palette.dart';
+import 'haptics.dart';
+import 'motion.dart';
 import 'number_input.dart';
 
 /// A number the user can step or type.
@@ -34,8 +36,14 @@ class StepperField extends StatefulWidget {
     this.focusNode,
     this.min,
     this.max,
+    this.settled = false,
     super.key,
   });
+
+  /// Whether the value is done with: a completed set. The steppers fade back so
+  /// a done row reads as done at a glance, but they stay live -- a set ticked
+  /// with a typo can still be fixed without unticking it first.
+  final bool settled;
 
   /// The unit, drawn small under the number inside the field ("kg", "reps").
   ///
@@ -176,8 +184,17 @@ class _StepperFieldState extends State<StepperField> {
         ? next.roundToDouble()
         : (next * 10).roundToDouble() / 10;
     _controller.text = _format(rounded);
+    AppHaptics.step();
     widget.onChanged(rounded);
   }
+
+  /// A stepper button, faded back once the set is [StepperField.settled].
+  Widget _fade(Widget button) => AnimatedOpacity(
+        opacity: widget.settled ? 0.35 : 1,
+        duration: motionDuration(context, const Duration(milliseconds: 150)),
+        curve: Curves.easeOut,
+        child: button,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -193,11 +210,11 @@ class _StepperFieldState extends State<StepperField> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _StepButton(
+          _fade(_StepButton(
             icon: Icons.remove_rounded,
             semanticsLabel: 'Decrease',
             onTap: atMin ? null : () => _step(-widget.step),
-          ),
+          )),
           // **Flexible, not a fixed width.** A weighted row carries two of
           // these plus their units, a set number and a checkmark, and at a
           // real phone's width the fixed version overflowed by 24 points —
@@ -312,11 +329,11 @@ class _StepperFieldState extends State<StepperField> {
               ),
             ),
           ),
-          _StepButton(
+          _fade(_StepButton(
             icon: Icons.add_rounded,
             semanticsLabel: 'Increase',
             onTap: atMax ? null : () => _step(widget.step),
-          ),
+          )),
         ],
       ),
     );

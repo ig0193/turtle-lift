@@ -73,11 +73,12 @@ passed.
 | 04 | Personal details: gender, bodyweight, keypad dismiss, persistence, kcal appears |
 | 05 | Schedule: training days, Remind me, explain-first sheet, iOS prompt, persistence after kill |
 | 06 | Diet: first-time state, target from suggestion, picker filters and search, serving sheet, Repeat on, eaten tick, edit servings, remove and undo, meal reminders screen, persistence after kill |
-| 07 | Reminder tap deep link, warm (pops a pushed screen) and cold. Scripted: `.maestro/scripts/07_reminder_deep_link.sh` |
+| 07 | Reminder tap deep link: a diet reminder, warm (pops a pushed screen) and cold, opens Profile › Diet; a training reminder opens the Workout tab (ADR 0008). Scripted: `.maestro/scripts/07_reminder_deep_link.sh` |
 | 08 | Export: disabled with reason when empty; share sheet; dismissed status line |
 | 09 | Delete all data: Cancel, then confirm; every tab empty; no re-seed on relaunch |
 | 10 | Home and kill mid-workout keep the session |
 | 11 | Upgrade from the last published build (schema 5): every record survives, the open workout resumes, v6/v7 migrations run, Diet starts empty, export counts the old workouts. Scripted: `.maestro/scripts/11_upgrade_from_v5.sh` copies `test/fixtures/schema_v5_from_5fcae5f.sqlite` into the installed app's Documents first |
+| 12 | Workout tab (ADR 0008): week strip and last-workout line on the landing, Recent in the picker, last time in each set row (tap to copy), pinned Mark exercise done, live PB mark, PB in the kcal slot, Share card, Do again from History |
 
 **The v5 fixture** was written by commit 5fcae5f's own stores (a throwaway
 worktree at that commit), so it is exactly what a user's device holds. The
@@ -159,4 +160,4 @@ Drive the app by hand on both simulators for what scripts do not assert:
    cause, fix, regression test file. Separate bugs fixed from bugs left for the
    user (product calls, or anything needing a spec change).
 5. What was not testable and why (section 5).
-6. Test counts: `flutter test` total, integration tests, Maestro flows (11 flows, 12 cases per device: 07 has warm and cold).
+6. Test counts: `flutter test` total, integration tests, Maestro flows (12 flows, 14 cases per device: 07 has warm, cold and training).

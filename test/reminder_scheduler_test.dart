@@ -65,7 +65,9 @@ void main() {
   group('the tap payload (KTD17)', () {
     test('diet/today and schedule round-trip, never a tab index', () {
       expect(ReminderTarget.dietToday.payload, 'diet/today');
-      expect(ReminderTarget.schedule.payload, 'schedule');
+      // Unchanged since ADR 0005, so a training reminder the OS already holds
+      // still routes after the target moved from Profile to Workout.
+      expect(ReminderTarget.workout.payload, 'schedule');
       for (final target in ReminderTarget.values) {
         expect(ReminderTarget.fromPayload(target.payload), target);
       }
@@ -234,7 +236,7 @@ void main() {
       final sub = scheduler.taps.listen(first.add);
       addTearDown(sub.cancel);
       await pumpEventQueue();
-      expect(first, [ReminderTarget.schedule]);
+      expect(first, [ReminderTarget.workout]);
 
       final second = <ReminderTarget>[];
       final again = scheduler.taps.listen(second.add);

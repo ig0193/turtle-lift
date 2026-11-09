@@ -1,0 +1,75 @@
+# User story (ADR 0008, research items 2-5, 9, 10): the Workout landing says
+# where you are (the week, the last workout); the picker leads with Recent;
+# set logging keeps last time in each row (tap to copy) and pins Mark exercise
+# done in thumb reach; the summary card can be shared; a past workout can be
+# done again.
+appId: dev.indresh.turtleLift
+name: 12 Workout tab - week strip, last time in the row, pinned done, share, do again
+tags: [workout]
+---
+- launchApp:
+    clearState: true
+# --- the landing before any history
+- assertVisible: "Pick training days"
+- assertNotVisible: "Last workout.*"
+
+# --- a first workout: bench 60 x 8, twice
+- runFlow: ../subflows/log_bench_workout.yaml
+- assertVisible: "Share card"
+- tapOn: "Back"
+
+# --- the landing now points at it
+- assertVisible: "Last workout: Today · Barbell bench press · 2 sets"
+
+# --- the second workout: last time sits in each row
+- tapOn: "Start workout.*"
+- tapOn: "Start logging"
+# Recent leads the picker for a returning lifter.
+- assertVisible: "Recent"
+- tapOn: "Barbell bench press. Barbell.*"
+- assertVisible: "Last 60kg × 8. Use for set 1"
+- assertVisible: "Last 60kg × 8. Use for set 2"
+# Pinned: on screen with no scrolling, however the list grows.
+- assertVisible: "Mark exercise done"
+- takeScreenshot: 12-set-logging
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-weight", VALUE: "62.5" }
+- tapOn: { id: "set-0-check" }
+# No PB mark: the first workout is also today, and a record needs an earlier
+# day (docs/00 §11). The live mark, assisted inversion included, is proven by
+# test/set_logging_test.dart and test/personal_best_test.dart.
+- assertNotVisible: "Personal best"
+# Tap last time's value to copy it into set 2, then tick it.
+- tapOn: "Last 60kg × 8. Use for set 2"
+- tapOn: { id: "set-1-check" }
+- tapOn: "Mark exercise done"
+- runFlow: ../subflows/finish_workout.yaml
+- assertVisible: "Barbell bench press\n62.5kg × 8 · 60kg × 8"
+- tapOn: "Back"
+
+# --- Do again from History
+- tapOn: "History"
+- tapOn:
+    text: "Barbell bench press, quick log, Today · 1 exercise · 2 sets"
+    index: 0
+- scrollUntilVisible:
+    element: "Do again"
+    centerElement: true
+- tapOn: "Do again"
+- assertVisible:
+    text: "Workout"
+    selected: true
+- assertVisible: "1 exercise planned"
+- assertVisible: "Start logging"
+- takeScreenshot: 12-do-again-ready
+- scrollUntilVisible:
+    element: "Discard workout"
+    centerElement: true
+- tapOn: "Discard workout"
+- runFlow:
+    when:
+      visible: "Discard"
+    commands:
+      - tapOn: "Discard"
+- assertVisible: "Start workout.*"

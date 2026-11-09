@@ -6,6 +6,7 @@ import '../data/derived.dart';
 import '../data/exercise.dart';
 import '../data/exercise_index.dart';
 import '../data/load_type.dart';
+import '../data/personal_best.dart';
 import '../data/session_store.dart';
 import '../data/set_format.dart';
 import '../theme/app_palette.dart';
@@ -14,6 +15,7 @@ import 'app_screen.dart';
 import 'exercise_detail_screen.dart';
 import 'exercise_history_screen.dart';
 import 'ghost_button.dart';
+import 'haptics.dart';
 import 'muscle_exercise_list_screen.dart'
     show RowTagChip, exerciseEquipmentLabel;
 import 'set_row.dart';
@@ -56,6 +58,9 @@ class SetLoggingScreen extends ConsumerStatefulWidget {
   /// The key a test taps to mark the exercise done.
   static const Key markDoneKey = ValueKey<String>('mark-exercise-done');
 
+  /// The pinned bar that holds [markDoneKey].
+  static const Key markDoneBarKey = ValueKey<String>('mark-done-bar');
+
   /// The key a test taps to open the full history.
   static const Key seeAllKey = ValueKey<String>('see-all-sessions');
 
@@ -92,35 +97,50 @@ class _SetLoggingScreenState extends ConsumerState<SetLoggingScreen> {
       actions: <Widget>[
         if (library != null) _InfoButton(exercise: library),
       ],
-      body: ListView(
-        padding: screenScrollPadding(context),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          if (library != null) _FactsRow(exercise: library, loadType: loadType),
-          if (loadType == LoadType.assisted) const _AssistedBanner(),
-          const SizedBox(height: 4),
-          ..._setRows(sessionExercise, loadType, saved),
-          GhostButton(
-            buttonKey: SetLoggingScreen.addSetKey,
-            label: 'Add set',
-            leadingIcon: Icons.add_rounded,
-            onTap: () => setState(() => _addedRows++),
-          ),
-          const SizedBox(height: 8),
-          if (!widget.isEditingSaved)
-            _MarkDoneButton(
-              enabled: sessionExercise.sets
-                  .any((s) => isSetComplete(loadType, s)),
-              markedDone: sessionExercise.markedDone,
-              onTap: () async {
-                await ref
-                    .read(activeSessionProvider.notifier)
-                    .markExerciseDone(widget.sessionExerciseId, true);
-                if (context.mounted) {
-                  Navigator.of(context).popUntil((r) => r.isFirst);
-                }
-              },
+          Expanded(
+            child: ListView(
+              // With the pinned bar below, the bar owns the bottom inset and
+              // the list only needs its own air.
+              padding: widget.isEditingSaved
+                  ? screenScrollPadding(context)
+                  : screenScrollPadding(context)
+                      .copyWith(bottom: kScreenGutter),
+              children: <Widget>[
+                if (library != null)
+                  _FactsRow(exercise: library, loadType: loadType),
+                if (loadType == LoadType.assisted) const _AssistedBanner(),
+                const SizedBox(height: 4),
+                ..._setRows(session, sessionExercise, loadType, saved),
+                GhostButton(
+                  buttonKey: SetLoggingScreen.addSetKey,
+                  label: 'Add set',
+                  leadingIcon: Icons.add_rounded,
+                  onTap: () => setState(() => _addedRows++),
+                ),
+                ..._recentBlock(sessionExercise.exerciseId, saved),
+              ],
             ),
-          ..._recentBlock(sessionExercise.exerciseId, saved),
+          ),
+          if (!widget.isEditingSaved)
+            _MarkDoneBar(
+              child: _MarkDoneButton(
+                enabled: sessionExercise.sets
+                    .any((s) => isSetComplete(loadType, s)),
+                markedDone: sessionExercise.markedDone,
+                onTap: () async {
+                  await ref
+                      .read(activeSessionProvider.notifier)
+                      .markExerciseDone(widget.sessionExerciseId, true);
+                  AppHaptics.success();
+                  if (context.mounted) {
+                    Navigator.of(context).popUntil((r) => r.isFirst);
+                  }
+                },
+              ),
+            ),
         ],
       ),
     );
@@ -133,11 +153,17 @@ class _SetLoggingScreenState extends ConsumerState<SetLoggingScreen> {
   /// guess.** That is the whole of the touched rule — a separate flag would be
   /// lost on navigating away and on restart.
   List<Widget> _setRows(
+    WorkoutSession session,
     SessionExercise exercise,
     LoadType loadType,
     List<WorkoutSession> saved,
   ) {
     final stored = exercise.sets;
+    // Both derived on every build from history, never stored (research items
+    // 3 and 5). Correcting a saved workout compares it with what came before
+    // it, never with itself.
+    final pbIndex = personalBestSetIndex(exercise, session.performedOn, saved);
+    final before = widget.isEditingSaved ? session.performedOn : null;
     final suggested = openingRowCount(exercise.exerciseId, saved);
     final total = <int>[stored.length, suggested].reduce((a, b) => a > b ? a : b) +
         _addedRows;
@@ -150,7 +176,30 @@ class _SetLoggingScreenState extends ConsumerState<SetLoggingScreen> {
             final entry = isStored
                 ? stored[i]
                 : _ghostFor(exercise.exerciseId, i, loadType, saved, stored);
+            final last =
+                lastTimeSetAt(exercise.exerciseId, i, saved, before: before);
             return SetRow(
+              lastTime: last?.label,
+              // Copied only when it was logged under the same load type, so
+              // an assistance figure can never land in a weight field.
+              onUseLast: last == null || last.loadType != loadType
+                  ? null
+                  : () => _write(
+                        exercise,
+                        i,
+                        SetEntry(
+                          id: entry.id,
+                          position: entry.position,
+                          completed: entry.completed,
+                          weightKg: last.set.weightKg,
+                          reps: last.set.reps,
+                          addedKg: last.set.addedKg,
+                          assistKg: last.set.assistKg,
+                          durationSec: last.set.durationSec,
+                        ),
+                        isStored,
+                      ),
+              isPersonalBest: isStored && pbIndex == i,
               key: ValueKey<String>('row-${exercise.id}-$i'),
               index: i,
               loadType: loadType,
@@ -436,3 +485,35 @@ class _MarkDoneButton extends StatelessWidget {
         ),
       );
 }
+
+/// The bottom bar Mark exercise done is pinned in.
+///
+/// **In thumb reach, always.** Between sets the phone is in one hand and the
+/// thumb lives at the bottom; in the scroll the button sat at about 43% of a
+/// Pro Max and drifted lower with every set. A pushed screen covers the tab
+/// bar, so nothing hides behind this, and it clears the home indicator itself.
+class _MarkDoneBar extends StatelessWidget {
+  const _MarkDoneBar({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final inset = MediaQuery.paddingOf(context);
+    return Container(
+      key: SetLoggingScreen.markDoneBarKey,
+      padding: EdgeInsets.fromLTRB(
+        kScreenGutter + inset.left,
+        8,
+        kScreenGutter + inset.right,
+        8 + inset.bottom,
+      ),
+      decoration: const BoxDecoration(
+        color: AppPalette.pageBackground,
+        border: Border(top: BorderSide(color: AppPalette.border)),
+      ),
+      child: child,
+    );
+  }
+}
+

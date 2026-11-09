@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:turtle_lift/src/ui/week_strip.dart';
 import 'package:turtle_lift/main.dart' as app;
 import 'package:turtle_lift/src/data/active_session.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
@@ -274,6 +275,9 @@ void main() {
       expect(find.byKey(WorkoutLandingBody.startWorkoutKey), findsOneWidget);
       expect(find.text(WorkoutLandingBody.customGroupLabel), findsNothing);
       expect(shellContainer(tester).read(activeSessionProvider), isNull);
+      // No training days in force, and no last workout to point at (ADR 0008).
+      expect(find.text(WeekStrip.pickDaysLabel), findsOneWidget);
+      expect(find.byKey(LastWorkoutLine.lineKey), findsNothing);
 
       // Muscles: pure reference, renders the same with or without data.
       await tapTab(tester, 1);
@@ -295,8 +299,11 @@ void main() {
         find.byKey(ProfileRoot.segmentKey(ProfileSegment.schedule)),
       );
       await tester.pumpAndSettle();
-      expect(find.text(SchedulePane.emptySummary), findsOneWidget);
-      expect(find.byKey(SchedulePane.heroKey), findsNothing);
+      expect(
+        shellContainer(tester).read(todayPlanWeekdaysProvider),
+        isEmpty,
+      );
+      expect(find.byKey(SchedulePane.dayChipKey(0)), findsOneWidget);
 
       // Diet: the first-time state.
       await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.diet)));

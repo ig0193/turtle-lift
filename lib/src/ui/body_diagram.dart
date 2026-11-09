@@ -448,15 +448,18 @@ class BodyDiagramPainter extends CustomPainter {
 
   /// The line that marks a muscle a workout plans to train.
   ///
-  /// **Drawn over the separator, in the accent, and thicker.** A planned muscle
-  /// has no fill to say so — the fill is the record of what has been *worked*,
-  /// and planning must not look like having done it. The accent at partial
-  /// opacity reads as "this is coming" next to the full-strength fill that means
-  /// "this is done", without introducing a colour outside the palette.
+  /// **Drawn over the separator, neutral, and thicker.** A planned muscle has
+  /// no fill to say so -- the fill is the record of what has been *worked*, and
+  /// planning must not look like having done it. So the outline is not the
+  /// accent either: amber means "worked" wherever it appears, and an amber
+  /// outline before the first set read as partly done. Steel is the secondary
+  /// muscle and nothing else. Secondary text grey is the one neutral that reads
+  /// against the muted fill without claiming anything
+  /// (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`).
   Paint buildPlannedPaint() => Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = kBodyPlannedOutlineWidth
-    ..color = AppPalette.accentStrong.withValues(alpha: 0.75)
+    ..color = AppPalette.textSecondary
     ..isAntiAlias = true
     ..strokeJoin = StrokeJoin.round;
 

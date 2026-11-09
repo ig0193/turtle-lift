@@ -17,7 +17,13 @@ import UserNotifications
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
+  /// The Live Activity and home-screen widget bridge (ADR 0008).
+  static var glance: GlanceChannel?
+
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "GlanceChannel") {
+      AppDelegate.glance = GlanceChannel(messenger: registrar.messenger())
+    }
   }
 }

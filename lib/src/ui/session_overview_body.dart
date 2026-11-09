@@ -14,6 +14,7 @@ import 'app_screen.dart';
 import 'destructive_confirmation.dart';
 import 'divider_row.dart';
 import 'ghost_button.dart';
+import 'motion.dart';
 import 'session_actions.dart';
 import 'session_body_map.dart';
 import 'session_date_control.dart';
@@ -49,6 +50,9 @@ class SessionOverviewBody extends ConsumerWidget {
   /// The key a test taps to begin logging from the ready view.
   static const Key startLoggingKey = ValueKey<String>('start-logging');
 
+  /// The ready view's list of planned exercises.
+  static const Key plannedListKey = ValueKey<String>('planned-list');
+
   /// The label over the list.
   @visibleForTesting
   static const String keepLoggingLabel = 'Keep logging';
@@ -81,7 +85,12 @@ class SessionOverviewBody extends ConsumerWidget {
               ),
           ],
         ),
-        SessionBodyMap(height: isStarted ? null : kReadyDiagramHeight),
+        // Keyed, so the strip appearing above it on the first logged set does
+        // not rebuild the map from scratch and lose the ease into its fill.
+        SessionBodyMap(
+          key: const ValueKey<String>('session-body-map'),
+          height: isStarted ? null : kReadyDiagramHeight,
+        ),
         const SizedBox(height: 6),
         if (!isStarted)
           _ReadyBlock(exerciseCount: session.exercises.length)
@@ -131,7 +140,11 @@ class _ReadyBlock extends ConsumerWidget {
       children: <Widget>[
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Text(
+          // Its own node: without the boundary, assistive tech (and Maestro)
+          // read the count and every planned name as one run-on label.
+          child: Semantics(
+            container: true,
+            child: Text(
             exerciseCount == 0
                 ? 'Nothing logged yet'
                 : '$exerciseCount exercise${exerciseCount == 1 ? '' : 's'} planned',
@@ -141,7 +154,10 @@ class _ReadyBlock extends ConsumerWidget {
               color: AppPalette.textSecondary,
             ),
           ),
+          ),
         ),
+        if (session != null && session.exercises.isNotEmpty)
+          _PlannedList(session: session),
         FilledButton(
           key: SessionOverviewBody.startLoggingKey,
           onPressed: session == null
@@ -160,6 +176,71 @@ class _ReadyBlock extends ConsumerWidget {
           child: const Text('Start logging'),
         ),
       ],
+    );
+  }
+}
+
+/// The exercises the workout starts with, by name, in order.
+///
+/// **The plan is what makes the start concrete** (research item 8): "6
+/// exercises planned" with no names left the lower half of the screen empty
+/// and the workout abstract. Up to six names, then a count of the rest; a
+/// longer list belongs to the live screen.
+class _PlannedList extends ConsumerWidget {
+  const _PlannedList({required this.session});
+
+  final WorkoutSession session;
+
+  static const int _shown = 6;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final index = ref.watch(exerciseIndexProvider);
+    final names = <String>[
+      for (final e in session.exercises)
+        index.byId(e.exerciseId)?.name ?? 'Unknown exercise',
+    ];
+    final rest = names.length - _shown;
+    return Padding(
+      key: SessionOverviewBody.plannedListKey,
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Semantics(
+        container: true,
+        child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          for (final (i, name) in names.take(_shown).indexed)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                border: i == 0
+                    ? null
+                    : const Border(top: BorderSide(color: AppPalette.border)),
+              ),
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: AppPalette.textPrimary,
+                ),
+              ),
+            ),
+          if (rest > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '+$rest more',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppPalette.textMuted,
+                ),
+              ),
+            ),
+        ],
+      ),
+      ),
     );
   }
 }
@@ -205,15 +286,28 @@ class LiveStrip extends StatelessWidget {
 /// scheduler go idle, which makes every widget test that waits for the screen to
 /// settle wait forever — and a dot that pulses for the whole workout is chrome
 /// the user stops seeing in a minute anyway. The single pulse is what says
-/// "this just started".
+/// "this just started". With reduced motion asked for, the dot is simply there.
 class _PulseDot extends StatelessWidget {
   const _PulseDot();
+
+  static const Widget _dot = SizedBox(
+    width: 8,
+    height: 8,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppPalette.accentStrong,
+        shape: BoxShape.circle,
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => SizedBox(
         width: 18,
         height: 18,
-        child: TweenAnimationBuilder<double>(
+        child: prefersReducedMotion(context)
+            ? const Center(child: _dot)
+            : TweenAnimationBuilder<double>(
           tween: Tween<double>(begin: 0, end: 1),
           duration: const Duration(milliseconds: 900),
           curve: Curves.easeOut,

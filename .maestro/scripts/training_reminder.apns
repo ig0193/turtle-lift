@@ -1,0 +1,17 @@
+{
+  "Simulator Target Bundle": "dev.indresh.turtleLift",
+  "aps": {
+    "alert": {
+      "title": "Training day",
+      "body": "Your plan has today as a training day."
+    },
+    "sound": "default"
+  },
+  "NotificationId": 100,
+  "presentAlert": true,
+  "presentSound": true,
+  "presentBadge": true,
+  "presentBanner": true,
+  "presentList": true,
+  "payload": "schedule"
+}

@@ -40,7 +40,7 @@ void main() {
       for (final r in reminders) {
         expect(r.id, trainingReminderId(r.weekday));
         expect(r.minute, 7 * 60 + 15);
-        expect(r.target, ReminderTarget.schedule);
+        expect(r.target, ReminderTarget.workout);
         expect(r.title, kTrainingReminderTitle);
         expect(r.body, kTrainingReminderBody);
       }
@@ -80,7 +80,7 @@ void main() {
           minute: 0,
           title: 'old',
           body: 'old',
-          target: ReminderTarget.schedule,
+          target: ReminderTarget.workout,
         )
         ..pending[200] = (
           id: 200,
@@ -114,7 +114,7 @@ void main() {
               minute: 0,
               title: 't',
               body: 'b',
-              target: ReminderTarget.schedule,
+              target: ReminderTarget.workout,
             ),
           ],
         ),

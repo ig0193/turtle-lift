@@ -77,6 +77,25 @@ void main() {
     await settle(tester);
   }
 
+  /// A returning user (the debug seed has plenty of workouts) sees the
+  /// ready-made grid folded behind one row (research item 11). Unfolds it.
+  Future<void> unfoldReadyMade(WidgetTester tester) async {
+    final toggle = find.byKey(WorkoutLandingBody.readyMadeToggleKey);
+    if (toggle.evaluate().isEmpty) return;
+    if (find.byKey(WorkoutLandingBody.templateKey('push')).evaluate().isNotEmpty) {
+      return;
+    }
+    await tester.scrollUntilVisible(
+      toggle,
+      200,
+      scrollable: scrollable(),
+    );
+    await tester.drag(scrollable(), const Offset(0, -150));
+    await settle(tester);
+    await tester.tap(toggle);
+    await settle(tester);
+  }
+
   /// Pops every pushed route and closes any sheet, back to a tab root.
   Future<void> home(WidgetTester tester) async {
     for (var i = 0; i < 6; i++) {
@@ -132,6 +151,7 @@ void main() {
     });
 
     await section(tester, 'template', () async {
+      await unfoldReadyMade(tester);
       await scrollToAndTap(
           tester, find.byKey(WorkoutLandingBody.templateKey('push')));
       await snap(tester, 'template-preview');

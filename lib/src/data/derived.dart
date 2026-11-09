@@ -1,6 +1,7 @@
 import 'bodyweight_resolution.dart';
 import 'exercise_index.dart';
 import 'generated/muscle_taxonomy.dart';
+import 'load_type.dart';
 import 'local_date.dart';
 import 'personal_details_store.dart' show BodyweightEntry;
 import 'session_store.dart';
@@ -267,6 +268,78 @@ SetEntry? prefillFor(
   if (completed.isEmpty) return null;
   if (index < completed.length) return completed[index];
   return completed.last;
+}
+
+/// One set from the last time an exercise was logged, for the line inside a
+/// set row: "Last 62.5kg × 6".
+class LastTimeSet {
+  const LastTimeSet(this.loadType, this.set);
+
+  /// The load type it was logged under, which is how it must be read back:
+  /// an assisted set stays assistance.
+  final LoadType? loadType;
+  final SetEntry set;
+
+  /// The line, through the one formatter every screen uses ([formatSet]).
+  String get label => 'Last ${formatSet(loadType, set)}';
+}
+
+/// Set [index] of the most recent saved session of [exerciseId], or null.
+///
+/// **The same index, and nothing past it.** Prefill repeats the last set for
+/// extra rows because a guess has to be something; a comparison does not, and
+/// "last 60kg × 8" under a fourth set nobody did last time would be invented.
+///
+/// [before], when given, keeps only sessions on an earlier day: correcting a
+/// saved session compares it with what came before it, never with itself.
+/// Derived on read like everything else here, so editing that older session
+/// moves the line.
+LastTimeSet? lastTimeSetAt(
+  String exerciseId,
+  int index,
+  List<WorkoutSession> savedSessions, {
+  LocalDate? before,
+}) {
+  final pool = before == null
+      ? savedSessions
+      : savedSessions.where((s) => s.performedOn.isBefore(before)).toList();
+  final last = lastSessionOf(exerciseId, pool);
+  if (last == null) return null;
+  final exercise =
+      last.exercises.firstWhere((e) => e.exerciseId == exerciseId);
+  final completed = exercise.sets
+      .where((s) => isSetComplete(exercise.loadType, s))
+      .toList(growable: false);
+  if (index >= completed.length) return null;
+  return LastTimeSet(exercise.loadType, completed[index]);
+}
+
+/// The exercises logged most recently, newest first, each once, at most
+/// [limit]: the picker's Recent group.
+///
+/// Retrieval beats search for a lifter who does the same ten lifts. Derived
+/// from saved sessions on read, so deleting a workout drops its exercises from
+/// the group with nothing to clean up.
+List<String> recentExerciseIds(
+  List<WorkoutSession> savedSessions, {
+  int limit = 6,
+}) {
+  final ordered = <WorkoutSession>[...savedSessions]..sort((a, b) {
+      final byDay = b.performedOn.compareTo(a.performedOn);
+      return byDay != 0 ? byDay : b.loggedAt.compareTo(a.loggedAt);
+    });
+  final ids = <String>[];
+  for (final session in ordered) {
+    for (final exercise in session.exercises) {
+      if (ids.length >= limit) return ids;
+      if (ids.contains(exercise.exerciseId)) continue;
+      if (!exercise.sets.any((s) => isSetComplete(exercise.loadType, s))) {
+        continue;
+      }
+      ids.add(exercise.exerciseId);
+    }
+  }
+  return ids;
 }
 
 /// How many set rows an exercise opens with: as many as its last saved session

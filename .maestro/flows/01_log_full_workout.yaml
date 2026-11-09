@@ -74,6 +74,10 @@ tags: [workout]
 - assertVisible: ".*5\nSets\n4\nExercises\n1\nDay streak.*"
 - assertVisible: "Barbell bench press\n60kg × 8 · 60kg × 8"
 - assertVisible: "Push-up\n15 reps"
+# Share card sits under the card now (ADR 0008), so the log scrolls.
+- scrollUntilVisible:
+    element: "Plank\n0:45"
+    centerElement: true
 - assertVisible: "Assisted pull-up machine\n25kg assist × 8"
 - assertVisible: "Plank\n0:45"
 - takeScreenshot: 01-summary

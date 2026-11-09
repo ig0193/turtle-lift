@@ -22,6 +22,8 @@ import 'package:turtle_lift/src/ui/session_body_map.dart';
 import 'package:turtle_lift/src/ui/session_date_control.dart';
 import 'package:turtle_lift/src/ui/session_header.dart';
 
+import 'support/haptic_log.dart';
+
 /// Proves the furniture both overview paths share.
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -108,13 +110,46 @@ void main() {
       expect(find.text('Push day'), findsOneWidget);
     });
 
-    testWidgets('shows a placeholder for an unnamed ad-hoc workout',
+    // Research item 7: the header shows the derived title, not grey
+    // placeholder copy, and stays editable.
+    testWidgets('an unnamed ad-hoc workout shows its derived title',
         (tester) async {
+      var session = await openSession(tester);
+      await tester.runAsync(() async {
+        final row = await store.addExercise(
+          sessionId: session.id,
+          exerciseId: 'incline-press',
+          loadType: LoadType.weighted,
+        );
+        await store.writeSet(
+            sessionExerciseId: row,
+            position: 0,
+            weightKg: 24,
+            reps: 10,
+            completed: true);
+        session = (await store.readOpenSession())!;
+      });
+
+      await pump(tester, const SessionTitleField(), session: session);
+
+      expect(find.text('Incline dumbbell press'), findsOneWidget,
+          reason: 'the resolved title chain: a single exercise names it');
+      expect(find.text('Name this workout'), findsNothing);
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.controller!.text, isEmpty,
+          reason: 'shown, never stored: the title stays derived');
+      expect(field.decoration!.hintStyle!.color, AppPalette.textPrimary,
+          reason: 'a name, not a placeholder');
+    });
+
+    testWidgets('an empty ad-hoc workout reads "Workout", with a pencil to '
+        'say it can be renamed', (tester) async {
       final session = await openSession(tester);
 
       await pump(tester, const SessionTitleField(), session: session);
 
-      expect(find.text(SessionTitleField.placeholder), findsOneWidget);
+      expect(find.text('Workout'), findsOneWidget);
+      expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
     });
 
     testWidgets('accepts 40 characters and refuses the 41st', (tester) async {
@@ -342,6 +377,41 @@ void main() {
       expect(await tester.runAsync(() => store.readSavedSessions()),
           hasLength(1));
       expect(finished, hasLength(1));
+    });
+
+    testWidgets('a saved finish is one success haptic; a dropped one is silent',
+        (tester) async {
+      final haptics = recordHaptics(tester);
+      var session = await openSession(tester, templateName: 'Push day');
+      await tester.runAsync(() async {
+        final row = await store.addExercise(
+          sessionId: session.id,
+          exerciseId: 'incline-press',
+          loadType: LoadType.weighted,
+        );
+        await store.writeSet(
+            sessionExerciseId: row,
+            position: 0,
+            weightKg: 24,
+            reps: 10,
+            completed: true);
+        session = (await store.readOpenSession())!;
+      });
+
+      await pump(tester, SessionActions(onFinished: (_) {}), session: session);
+      await act(tester, () => tester.tap(find.byKey(SessionActions.finishKey)));
+
+      expect(haptics, <String>[kHapticSuccess]);
+    });
+
+    testWidgets('dropping an untouched workout plays nothing', (tester) async {
+      final haptics = recordHaptics(tester);
+      final session = await openSession(tester);
+
+      await pump(tester, SessionActions(onFinished: (_) {}), session: session);
+      await act(tester, () => tester.tap(find.byKey(SessionActions.finishKey)));
+
+      expect(haptics, isEmpty, reason: 'nothing was saved, so no success');
     });
 
     testWidgets('drops an untouched workout silently', (tester) async {

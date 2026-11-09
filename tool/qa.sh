@@ -85,6 +85,16 @@ maestro_all() {
 }
 
 taste() {
+  # Maestro's XCTest driver leaves the simulator's accessibility on, so iOS
+  # keeps Flutter's semantics enabled and the next integration test fails on
+  # "A SemanticsHandle was active at the end of the test". A reboot clears it.
+  local u
+  for name in "${names[@]}"; do
+    u=$(udid_of "$name")
+    xcrun simctl shutdown "$u" 2>/dev/null || true
+    xcrun simctl boot "$u" 2>/dev/null || true
+    xcrun simctl bootstatus "$u" >/dev/null
+  done
   tool/taste_shots.sh "${names[@]}" || return 1
   # The largest system text size on the first device; the app clamps at 1.3x.
   local udid; udid=$(udid_of "${names[0]}")

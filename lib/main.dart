@@ -21,6 +21,7 @@ import 'src/data/settings_store.dart' show appDatabaseProvider;
 import 'src/data/training_plan.dart';
 import 'src/data/training_reminders.dart';
 import 'src/theme/app_theme.dart';
+import 'src/ui/glance_sync.dart';
 import 'src/ui/l0_shell.dart';
 import 'src/ui/reminder_tap_listener.dart';
 import 'src/ui/session_summary_screen.dart' show kAppDisplayName;
@@ -265,11 +266,15 @@ class TurtleLiftApp extends StatelessWidget {
       builder: (context, child) {
         final media = MediaQuery.of(context);
         return RefreshTodayOnResume(
-          child: MediaQuery(
+          // The Live Activity and the home-screen widget follow the app's
+          // derived state from boot (ADR 0008).
+          child: GlanceSync(
+            child: MediaQuery(
             data: media.copyWith(
               textScaler: media.textScaler.clamp(maxScaleFactor: 1.3),
             ),
             child: child!,
+          ),
           ),
         );
       },

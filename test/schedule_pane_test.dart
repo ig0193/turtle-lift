@@ -82,86 +82,22 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  group('the week summary', () {
-    testWidgets('no plan: a prompt, not "0 of 0"', (tester) async {
-      await openSchedule(tester, host());
-
-      expect(find.text(SchedulePane.emptySummary), findsOneWidget);
-      expect(find.byKey(SchedulePane.heroKey), findsNothing);
-      expect(find.textContaining('0 of 0'), findsNothing);
-    });
-
-    testWidgets('mid-week it states the count and what is left',
-        (tester) async {
+  group('the week (ADR 0008)', () {
+    testWidgets('is not on Profile any more: the pane holds only what the '
+        'user types', (tester) async {
       await openSchedule(
         tester,
         host(
           plan: <TrainingPlanEntry>[monWedFri],
-          sessions: <HistorySession>[
-            session('a', 19),
-            session('b', 12),
-            session('c', 16),
-          ],
+          sessions: <HistorySession>[session('a', 19), session('b', 12)],
         ),
       );
 
-      expect(find.byKey(SchedulePane.heroKey), findsOneWidget);
-      expect(
-        find.descendant(
-          of: find.byKey(SchedulePane.heroKey),
-          matching: find.textContaining('1 of 3', findRichText: true),
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('2 more to go. Next is Wednesday'), findsOneWidget);
-      expect(find.byKey(SchedulePane.lastWeekKey), findsOneWidget);
-      expect(
-        find.descendant(
-          of: find.byKey(SchedulePane.lastWeekKey),
-          matching: find.text('2 of 3'),
-        ),
-        findsOneWidget,
-        reason: 'last week: Monday and Friday were hit, Wednesday was not',
-      );
-    });
-
-    testWidgets('the hero is announced as one sentence', (tester) async {
-      final handle = tester.ensureSemantics();
-      await openSchedule(
-        tester,
-        host(
-          plan: <TrainingPlanEntry>[monWedFri],
-          sessions: <HistorySession>[session('a', 19)],
-        ),
-      );
-
-      expect(
-        find.bySemanticsLabel(
-          'This week: 1 of 3 plan days. 2 more to go. Next is Wednesday',
-        ),
-        findsOneWidget,
-      );
-      handle.dispose();
-    });
-
-    testWidgets('a plan with no day left this week says when it starts',
-        (tester) async {
-      // Saved on Wednesday for Mondays only: nothing left in this week.
-      await openSchedule(
-        tester,
-        host(
-          plan: <TrainingPlanEntry>[
-            TrainingPlanEntry(
-              effectiveFrom: LocalDate(2026, 10, 21),
-              weekdays: const <int>{0},
-            ),
-          ],
-        ),
-      );
-
-      expect(find.text('Your first plan day is Monday.'), findsOneWidget);
-      expect(find.text(SchedulePane.emptySummary), findsNothing,
-          reason: 'they just picked days, so do not ask them to pick');
+      expect(find.textContaining('of 3'), findsNothing,
+          reason: 'the derived week lives on the Workout landing now');
+      expect(find.text('Last week'), findsNothing);
+      expect(find.text(SchedulePane.daysLabel), findsOneWidget);
+      expect(find.text(SchedulePane.daysNote), findsOneWidget);
     });
   });
 
@@ -197,16 +133,19 @@ void main() {
       expect((box.border! as Border).top.color, AppPalette.accentStrong);
     });
 
-    testWidgets('tapping one saves a dated plan and the summary appears',
+    testWidgets('tapping one saves a dated plan and selects the chip',
         (tester) async {
+      final handle = tester.ensureSemantics();
       await openSchedule(tester, host());
-      expect(find.byKey(SchedulePane.heroKey), findsNothing);
 
       await tester.tap(find.byKey(SchedulePane.dayChipKey(4))); // Friday
       await tester.pumpAndSettle();
 
-      expect(find.byKey(SchedulePane.heroKey), findsOneWidget);
-      expect(find.text('1 more to go. Next is Friday'), findsOneWidget);
+      expect(
+        tester.getSemantics(find.byKey(SchedulePane.dayChipKey(4))),
+        isSemantics(isButton: true, isSelected: true),
+      );
+      handle.dispose();
 
       final stored = await readStoredTrainingPlan(TrainingPlanStore(database));
       expect(stored, <TrainingPlanEntry>[
@@ -234,7 +173,6 @@ void main() {
       await tester.tap(find.byKey(SchedulePane.dayChipKey(4)));
       await tester.pumpAndSettle();
 
-      expect(find.text(SchedulePane.emptySummary), findsOneWidget);
       final stored = await readStoredTrainingPlan(TrainingPlanStore(database));
       expect(stored.single.weekdays, isEmpty);
     });
@@ -305,7 +243,7 @@ void main() {
       for (final r in reminders.pending.values) {
         expect(r.id, trainingReminderId(r.weekday));
         expect(r.minute, kDefaultScheduleReminderMinute);
-        expect(r.target, ReminderTarget.schedule);
+        expect(r.target, ReminderTarget.workout);
         expect(r.title, kTrainingReminderTitle);
         expect(r.body, kTrainingReminderBody);
       }
@@ -330,17 +268,12 @@ void main() {
       expect((await ReminderPrefsStore(database).read()).scheduleOn, isFalse);
       expect(reminders.pending, isEmpty);
 
-      expect(find.byKey(SchedulePane.heroKey), findsOneWidget);
       await tester.tap(find.byKey(SchedulePane.dayChipKey(3)));
       await tester.pumpAndSettle();
-      expect(
-        find.descendant(
-          of: find.byKey(SchedulePane.heroKey),
-          matching: find.textContaining('of 4', findRichText: true),
-        ),
-        findsOneWidget,
-        reason: 'training days drive the summary with or without permission',
-      );
+      final container = ProviderScope.containerOf(
+          tester.element(find.byType(SchedulePane)));
+      expect(container.read(thisWeekSummaryProvider)!.planned, 4,
+          reason: 'training days drive the week with or without permission');
       expect(reminders.pending, isEmpty);
       handle.dispose();
     });
@@ -472,7 +405,7 @@ void main() {
       expect(find.byKey(SchedulePane.remindSwitchKey), findsNothing);
       expect(find.byKey(SchedulePane.timeRowKey), findsNothing);
       expect(find.text(SchedulePane.remindersLabel), findsNothing);
-      expect(find.byKey(SchedulePane.heroKey), findsOneWidget);
+      expect(find.byKey(SchedulePane.dayChipKey(0)), findsOneWidget);
     });
   });
 }

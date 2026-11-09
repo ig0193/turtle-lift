@@ -49,6 +49,8 @@ Future<Exercise?> showExercisePicker(
 /// exercises already added, which a user adding another wants out of the way
 /// but still visible.
 ///
+/// **Then what was logged lately** (Recent), then the rest of the library.
+///
 /// **The muscle filter is a filter, not a way through.** Muscles narrow the list
 /// to what the user is looking for; they are never a level to navigate down, and
 /// the Muscles tab remains where the app explains which exercise trains what.
@@ -107,9 +109,19 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
         if (index.byId(e.exerciseId) case final exercise?)
           if (results.contains(exercise)) exercise,
     ];
+    // Recent: what the user logged lately, derived from saved sessions on
+    // read. It follows the search and the filter like every other group, and
+    // never repeats an exercise shown elsewhere in the sheet.
+    final recent = <Exercise>[
+      for (final id in recentExerciseIds(saved))
+        if (!inWorkout.contains(id))
+          if (index.byId(id) case final exercise?)
+            if (results.contains(exercise)) exercise,
+    ];
     final others = <Exercise>[
       for (final exercise in results)
-        if (!inWorkout.contains(exercise.id)) exercise,
+        if (!inWorkout.contains(exercise.id) && !recent.contains(exercise))
+          exercise,
     ];
 
     return Padding(
@@ -181,11 +193,19 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
                     const _SectionLabel('In this workout'),
                     for (final exercise in planned) _row(exercise, saved),
                   ],
+                  if (recent.isNotEmpty) ...<Widget>[
+                    const _SectionLabel('Recent'),
+                    for (final exercise in recent) _row(exercise, saved),
+                  ],
                   if (others.isNotEmpty) ...<Widget>[
-                    _SectionLabel(planned.isEmpty ? 'Exercises' : 'Add another'),
+                    _SectionLabel(planned.isEmpty && recent.isEmpty
+                        ? 'Exercises'
+                        : planned.isEmpty
+                            ? 'All exercises'
+                            : 'Add another'),
                     for (final exercise in others) _row(exercise, saved),
                   ],
-                  if (planned.isEmpty && others.isEmpty)
+                  if (planned.isEmpty && recent.isEmpty && others.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24),
                       child: Text(

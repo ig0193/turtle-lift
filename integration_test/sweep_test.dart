@@ -57,10 +57,30 @@ void main() {
     await settle(tester);
   }
 
+  /// A returning user (the debug seed has plenty of workouts) sees the
+  /// ready-made grid folded behind one row (research item 11). Unfolds it.
+  Future<void> unfoldReadyMade(WidgetTester tester) async {
+    final toggle = find.byKey(WorkoutLandingBody.readyMadeToggleKey);
+    if (toggle.evaluate().isEmpty) return;
+    if (find.byKey(WorkoutLandingBody.templateKey('push')).evaluate().isNotEmpty) {
+      return;
+    }
+    await tester.scrollUntilVisible(
+      toggle,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -150));
+    await settle(tester);
+    await tester.tap(toggle);
+    await settle(tester);
+  }
+
   /// Scrolls the landing until [id]'s tile is clear of the pinned Start bar and
   /// the tab bar, then taps it. Tiles lower in the grid start off screen or
   /// behind the bars, where a tap lands on the wrong thing.
   Future<void> tapTemplate(WidgetTester tester, String id) async {
+    await unfoldReadyMade(tester);
     final tile = find.byKey(WorkoutLandingBody.templateKey(id));
     await tester.scrollUntilVisible(
       tile,

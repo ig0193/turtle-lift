@@ -19,8 +19,14 @@ enum ReminderTarget {
   /// Profile, Diet segment, today (`docs/adr/0007-diet-in-profile.md`).
   dietToday('diet/today'),
 
-  /// Profile, Schedule segment (ADR 0005).
-  schedule('schedule');
+  /// A training-day reminder: the Workout tab, where training starts
+  /// (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`).
+  ///
+  /// **The payload still says `schedule`.** It was written when this target
+  /// opened Profile › Schedule (ADR 0005), and the OS keeps pending
+  /// notifications for weeks: renaming the string would orphan every one
+  /// already scheduled. The place moved; the name on the envelope did not.
+  workout('schedule');
 
   const ReminderTarget(this.payload);
 

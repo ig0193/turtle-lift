@@ -10,7 +10,7 @@ import 'package:turtle_lift/src/data/history_preview_data.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
 import 'package:turtle_lift/src/data/training_plan.dart';
-import 'package:turtle_lift/src/ui/schedule_pane.dart' show weekCaption;
+import 'package:turtle_lift/src/ui/week_strip.dart' show weekCaption;
 
 /// The dated training plan and the week summary derived from it.
 ///

@@ -9,9 +9,16 @@ tags: [profile, notifications]
 ---
 - launchApp:
     clearState: true
-- tapOn: "Profile"
-- tapOn: "Schedule"
-- assertVisible: "Pick your training days below.*"
+# The week lives on the Workout landing (ADR 0008): with no plan, one quiet
+# line that opens Profile -> Schedule.
+- assertVisible: "Pick training days"
+- tapOn: "Pick training days"
+- assertVisible:
+    text: "Schedule"
+    selected: true
+- assertVisible:
+    text: "Monday"
+    selected: false
 - assertVisible:
     text: "Remind me\\. Notification on training days"
     checked: false
@@ -21,7 +28,14 @@ tags: [profile, notifications]
 - assertVisible:
     text: "Monday"
     selected: true
-- assertVisible: "This week: 0 of 3 plan days.*|This week: [0-3] of 3 plan days.*"
+# The pane holds only the plan; the week now reads on the Workout landing.
+- assertNotVisible: ".*of 3 plan days.*"
+- tapOn: "Workout"
+- assertVisible: "This week: [0-3] of 3 plan days.*Edit training days"
+- tapOn: "This week: .*"
+- assertVisible:
+    text: "Schedule"
+    selected: true
 
 # --- Opt in: explain first, then the OS prompt.
 - tapOn: "Remind me.*"

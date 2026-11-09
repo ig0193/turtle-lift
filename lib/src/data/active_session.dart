@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'exercise_index.dart';
 import 'load_type.dart';
 import 'local_date.dart';
+import 'set_format.dart';
 import 'session_store.dart';
 
 /// The session the app was launched with, resolved **before the first frame**.
@@ -109,6 +110,33 @@ class ActiveSession extends Notifier<WorkoutSession?> {
     await _store.createSession(
       templateId: templateId,
       templateName: templateName,
+      exercises: exercises,
+    );
+    await _refresh();
+  }
+
+  /// Starts a new workout from a past one's exercise list ("Do again").
+  ///
+  /// **The exercises, never the numbers.** Only the exercises [source]
+  /// actually logged, in its order, each under the load type it has now. No set
+  /// is copied: last time's values reach each row as its "last" line and its
+  /// prefill, both derived from history, so nothing here can go stale. It keeps
+  /// the template it came from, if any, so the title resolves the same way;
+  /// the user's own name for that day is not carried over. Dated today.
+  Future<void> startAgain(WorkoutSession source) async {
+    final index = ref.read(exerciseIndexProvider);
+    final exercises = <({String exerciseId, LoadType loadType})>[];
+    for (final e in source.exercises) {
+      if (!e.sets.any((s) => isSetComplete(e.loadType, s))) continue;
+      final loadType =
+          LoadType.fromName(index.byId(e.exerciseId)?.loadType) ?? e.loadType;
+      if (loadType == null) continue;
+      if (exercises.any((x) => x.exerciseId == e.exerciseId)) continue;
+      exercises.add((exerciseId: e.exerciseId, loadType: loadType));
+    }
+    await _store.createSession(
+      templateId: source.templateId,
+      templateName: source.templateName,
       exercises: exercises,
     );
     await _refresh();

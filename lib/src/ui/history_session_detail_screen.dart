@@ -16,6 +16,7 @@ import 'app_screen.dart';
 import 'body_diagram.dart';
 import 'ghost_button.dart';
 import 'session_summary_screen.dart';
+import 'session_entry.dart' show doAgain;
 
 /// One logged session, opened from a History row.
 ///
@@ -45,6 +46,9 @@ class HistorySessionDetailScreen extends ConsumerWidget {
 
   /// The button that opens the editable summary: title, date, sets, delete.
   static const Key editKey = ValueKey<String>('session-edit');
+
+  /// The button that starts a new workout with this one's exercises.
+  static const Key doAgainKey = ValueKey<String>('session-do-again');
 
   /// Finds the calorie figure, or the prompt standing in for it.
   @visibleForTesting
@@ -119,6 +123,17 @@ class HistorySessionDetailScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           ..._logBlocks(ref, sessions, session),
           const SizedBox(height: 24),
+          if (ref
+                  .watch(savedSessionsProvider)
+                  .where((s) => s.id == sessionId)
+                  .firstOrNull
+              case final workout?)
+            GhostButton(
+              buttonKey: HistorySessionDetailScreen.doAgainKey,
+              label: 'Do again',
+              leadingIcon: Icons.replay_rounded,
+              onTap: () => doAgain(context, ref, workout),
+            ),
           GhostButton(
             buttonKey: HistorySessionDetailScreen.editKey,
             label: 'Edit workout',

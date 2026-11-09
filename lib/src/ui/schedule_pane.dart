@@ -10,16 +10,16 @@ import '../theme/app_typography.dart';
 import 'reminder_controls.dart';
 import 'week_day_chip.dart';
 
-/// The Schedule pane of the Profile tab: this week against the plan, the
-/// training-day chips, and the reminder row.
+/// The Schedule pane of the Profile tab: the training-day chips and the
+/// reminder row -- the plan the user types, and nothing derived.
 ///
 /// Rules and reasons: `docs/adr/0005-schedule-and-opt-in-notifications.md`;
 /// layout: `prototypes/schedule-options.html` (P1, compact).
 ///
-/// **The week summary is derived on read** from saved sessions and the dated
-/// plan, so editing or deleting a session moves it with no refresh path.
-/// It is the one computed figure that lives on Profile -- a named exception
-/// recorded in ADR 0004 -- and it must not also appear on History.
+/// **The week itself is not here.** How this week is going against the plan
+/// is derived, so it lives on the Workout landing beside Start (`WeekStrip`,
+/// `docs/adr/0008-the-week-lives-on-the-workout-landing.md`), which leaves
+/// Profile holding only what the user typed.
 ///
 /// **The reminder row is real** (U16, ADR 0005 §3). The switch and time are
 /// stored in `ReminderPrefs` (`reminderPrefsProvider`); turning it on shows
@@ -32,18 +32,12 @@ import 'week_day_chip.dart';
 class SchedulePane extends ConsumerStatefulWidget {
   const SchedulePane({super.key});
 
-  static const String weekLabel = 'Your week';
   static const String daysLabel = 'Training days';
   static const String remindersLabel = 'Reminders';
 
-  /// Shown instead of the summary when no training days are in force.
-  static const String emptySummary =
-      'Pick your training days below and this space will show how each week '
-      'is going.';
-
   static const String daysNote =
       'Days you aim for. You can train on any day. These just set what the '
-      'summary compares against.';
+      'week on the Workout tab compares against.';
 
   static const String explainTitle = 'Remind you on training days?';
 
@@ -71,12 +65,6 @@ class SchedulePane extends ConsumerStatefulWidget {
   @visibleForTesting
   static const Key notNowKey = ValueKey<String>('schedule-not-now');
 
-  @visibleForTesting
-  static const Key heroKey = ValueKey<String>('schedule-week-hero');
-
-  @visibleForTesting
-  static const Key lastWeekKey = ValueKey<String>('schedule-last-week');
-
   @override
   ConsumerState<SchedulePane> createState() => _SchedulePaneState();
 }
@@ -90,25 +78,6 @@ const List<String> _dayShort = <String>[
   'Sat',
   'Sun',
 ];
-const List<String> _dayLong = kWeekdayLong;
-
-/// The line under the this-week count.
-///
-/// **States a count, never a verdict.** No "missed", no "behind". "N more to
-/// go" appears only while plan days remain, and today counts as remaining until
-/// it has a session. After the week is over it reads as a plain count.
-String weekCaption(WeekSummary week) {
-  final extra = week.extra == 0 ? '' : ' · +${week.extra} extra';
-  final days = week.planned == 1 ? 'day' : 'days';
-  if (week.hit == week.planned) {
-    return 'All ${week.planned} plan $days done$extra';
-  }
-  final left = week.remaining;
-  if (left.isEmpty) return '${week.hit} of ${week.planned} plan $days$extra';
-  return '${left.length} more to go. Next is ${_dayLong[left.first.weekday]}'
-      '$extra';
-}
-
 class _SchedulePaneState extends ConsumerState<SchedulePane> {
   /// What the OS last said about permission; null until first read. Re-read
   /// on resume, so a switch turned off in system Settings shows here.
@@ -207,8 +176,6 @@ class _SchedulePaneState extends ConsumerState<SchedulePane> {
 
   @override
   Widget build(BuildContext context) {
-    final week = ref.watch(thisWeekSummaryProvider);
-    final lastWeek = ref.watch(lastWeekSummaryProvider);
     final days = ref.watch(todayPlanWeekdaysProvider);
     final supported = ref.watch(reminderSchedulerProvider).isSupported;
     final prefs = ref.watch(reminderPrefsProvider);
@@ -218,24 +185,6 @@ class _SchedulePaneState extends ConsumerState<SchedulePane> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const _Label(SchedulePane.weekLabel),
-        if (week == null)
-          _Card(
-            child: Text(
-              days.isEmpty
-                  ? SchedulePane.emptySummary
-                  : _planStartsLater(ref),
-              style: const TextStyle(
-                fontSize: 13,
-                height: 1.5,
-                color: AppPalette.textSecondary,
-              ),
-            ),
-          )
-        else ...<Widget>[
-          _WeekHero(week: week),
-          if (lastWeek != null) _LastWeekRow(week: lastWeek),
-        ],
         const _Label(SchedulePane.daysLabel),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -283,21 +232,6 @@ class _SchedulePaneState extends ConsumerState<SchedulePane> {
   }
 }
 
-/// Shown when a plan exists but has no day left in this week -- saved on a
-/// Saturday for Mondays, say. Saying "pick your training days" there would be
-/// wrong: they just did.
-String _planStartsLater(WidgetRef ref) {
-  final today = ref.read(planTodayProvider);
-  final plan = ref.read(trainingPlanLogProvider);
-  for (var i = 1; i <= kWeekdayCount; i++) {
-    final date = today.addDays(i);
-    if (weekdaysInEffectOn(plan, date).contains(date.weekday - 1)) {
-      return 'Your first plan day is ${_dayLong[date.weekday - 1]}.';
-    }
-  }
-  return SchedulePane.emptySummary;
-}
-
 class _Label extends StatelessWidget {
   const _Label(this.text);
 
@@ -314,174 +248,3 @@ class _Label extends StatelessWidget {
     );
   }
 }
-
-class _Card extends StatelessWidget {
-  const _Card({
-    required this.child,
-    this.padding = const EdgeInsets.all(12),
-    super.key,
-  });
-
-  final Widget child;
-  final EdgeInsets padding;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: AppPalette.surface,
-        border: Border.all(color: AppPalette.border),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: child,
-    );
-  }
-}
-
-/// This week as the hero: the count and a dot per plan day on one row, with
-/// one line saying what is left.
-class _WeekHero extends StatelessWidget {
-  const _WeekHero({required this.week});
-
-  final WeekSummary week;
-
-  @override
-  Widget build(BuildContext context) {
-    final caption = weekCaption(week);
-    return Semantics(
-      container: true,
-      label: 'This week: ${week.hit} of ${week.planned} plan '
-          '${week.planned == 1 ? 'day' : 'days'}. $caption',
-      excludeSemantics: true,
-      child: _Card(
-        key: SchedulePane.heroKey,
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                Text.rich(
-                  TextSpan(
-                    children: <InlineSpan>[
-                      TextSpan(
-                        text: '${week.hit} of ${week.planned}',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.4,
-                          color: AppPalette.textPrimary,
-                          fontFeatures: <FontFeature>[
-                            FontFeature.tabularFigures(),
-                          ],
-                        ),
-                      ),
-                      const TextSpan(
-                        text: '  this week',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppPalette.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    for (final day in week.days)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            PlanDot(state: day.state, size: 15),
-                            const SizedBox(height: 4),
-                            Text(
-                              _dayShort[day.weekday],
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppPalette.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-            Container(
-              margin: const EdgeInsets.only(top: 8),
-              padding: const EdgeInsets.only(top: 8),
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: AppPalette.border)),
-              ),
-              child: Text(
-                caption,
-                style: const TextStyle(
-                  fontSize: 12,
-                  height: 1.4,
-                  color: AppPalette.textSecondary,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LastWeekRow extends StatelessWidget {
-  const _LastWeekRow({required this.week});
-
-  final WeekSummary week;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      label: 'Last week: ${week.hit} of ${week.planned} plan days',
-      excludeSemantics: true,
-      child: Container(
-        key: SchedulePane.lastWeekKey,
-        margin: const EdgeInsets.only(top: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppPalette.surface,
-          border: Border.all(color: AppPalette.border),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: <Widget>[
-            const Text(
-              'Last week',
-              style: TextStyle(fontSize: 13, color: AppPalette.textSecondary),
-            ),
-            const Spacer(),
-            for (final day in week.days)
-              Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: PlanDot(state: day.state, size: 9),
-              ),
-            const SizedBox(width: 4),
-            Text(
-              '${week.hit} of ${week.planned}',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppPalette.textPrimary,
-                fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-

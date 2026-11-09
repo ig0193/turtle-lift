@@ -67,6 +67,8 @@ tags: [data]
 - tapOn: "Workout"
 - assertVisible: "Start workout.*"
 - assertNotVisible: "My templates"
+- assertVisible: "Pick training days"
+- assertNotVisible: "Last workout.*"
 - tapOn: "History"
 - assertVisible: "No workouts yet.*"
 - tapOn: "Profile"
@@ -79,7 +81,9 @@ tags: [data]
 - assertVisible: "Add your weight to see calorie estimates.*"
 - tapOn: "Back"
 - tapOn: "Schedule"
-- assertVisible: "Pick your training days below.*"
+- assertVisible:
+    text: "Monday"
+    selected: false
 - tapOn: "Diet"
 - assertVisible: "Plan your week's protein.*"
 - tapOn: "Personal"

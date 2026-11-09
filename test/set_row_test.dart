@@ -4,6 +4,7 @@ import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
+import 'package:turtle_lift/src/theme/app_typography.dart';
 import 'package:turtle_lift/src/ui/set_row.dart';
 import 'package:turtle_lift/src/ui/stepper_field.dart';
 
@@ -34,6 +35,8 @@ void main() {
     required LoadType loadType,
     required SetEntry value,
     bool isPrefill = false,
+    String? lastTime,
+    bool isPersonalBest = false,
   }) async {
     final changes = <SetEntry>[];
     final events = <String>[];
@@ -55,6 +58,9 @@ void main() {
               },
               onToggleComplete: () => events.add('complete'),
               onDelete: () => events.add('delete'),
+              lastTime: lastTime,
+              onUseLast: lastTime == null ? null : () => events.add('use-last'),
+              isPersonalBest: isPersonalBest,
             ),
           ),
         ),
@@ -428,6 +434,84 @@ void main() {
       // Reaching the supplied node after the widget is gone would throw if the
       // widget had disposed something it does not own.
       expect(supplied.hasFocus, isFalse);
+    });
+  });
+
+  // Research items 3 and 5: last time's value in the row, a done set that
+  // looks done, and the PB mark the moment it happens.
+  group('last time, done, and PB', () {
+    testWidgets('shows last time\'s value under the row; a tap uses it',
+        (tester) async {
+      final result = await pumpRow(tester,
+          loadType: LoadType.weighted,
+          value: entry(weightKg: 60, reps: 8),
+          lastTime: 'Last 62.5kg × 6');
+
+      expect(find.text('Last 62.5kg × 6'), findsOneWidget);
+      await tester.tap(find.byKey(SetRow.lastKey(0)));
+      expect(result.events, <String>['use-last']);
+    });
+
+    testWidgets('the last-time line is a full 48pt target', (tester) async {
+      await pumpRow(tester,
+          loadType: LoadType.weighted,
+          value: entry(weightKg: 60, reps: 8),
+          lastTime: 'Last 62.5kg × 6');
+      expect(tester.getSize(find.byKey(SetRow.lastKey(0))).height,
+          greaterThanOrEqualTo(48));
+    });
+
+    testWidgets('no history, no line', (tester) async {
+      await pumpRow(tester,
+          loadType: LoadType.weighted, value: entry(weightKg: 60, reps: 8));
+      expect(find.byKey(SetRow.lastKey(0)), findsNothing);
+      expect(find.textContaining('Last'), findsNothing);
+    });
+
+    testWidgets('a PB set says so, in the one PB mark', (tester) async {
+      await pumpRow(tester,
+          loadType: LoadType.weighted,
+          value: entry(weightKg: 70, reps: 5, completed: true),
+          lastTime: 'Last 62.5kg × 6',
+          isPersonalBest: true);
+
+      final pb = tester.widget<Text>(find.text('PB'));
+      expect(pb.style, kPbMarkStyle);
+    });
+
+    testWidgets('no PB mark otherwise', (tester) async {
+      await pumpRow(tester,
+          loadType: LoadType.weighted,
+          value: entry(weightKg: 70, reps: 5, completed: true));
+      expect(find.text('PB'), findsNothing);
+    });
+
+    double stepperOpacity(WidgetTester tester) {
+      final fade = tester.widget<AnimatedOpacity>(find.ancestor(
+        of: find.bySemanticsLabel('Increase').first,
+        matching: find.byType(AnimatedOpacity),
+      ).first);
+      return fade.opacity;
+    }
+
+    testWidgets('a completed set fades its steppers; the number stays full '
+        'contrast', (tester) async {
+      await pumpRow(tester,
+          loadType: LoadType.weighted,
+          value: entry(weightKg: 60, reps: 8, completed: true));
+      await tester.pumpAndSettle();
+
+      expect(stepperOpacity(tester), lessThan(0.5));
+      final number = tester.widget<TextField>(find.byType(TextField).first);
+      expect(number.style!.color, AppPalette.textPrimary);
+    });
+
+    testWidgets('an open set keeps its steppers at full strength',
+        (tester) async {
+      await pumpRow(tester,
+          loadType: LoadType.weighted, value: entry(weightKg: 60, reps: 8));
+      await tester.pumpAndSettle();
+      expect(stepperOpacity(tester), 1);
     });
   });
 }

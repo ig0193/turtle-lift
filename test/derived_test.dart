@@ -576,4 +576,115 @@ void main() {
       expect(trainedSubGroups(s, index), isEmpty);
     });
   });
+
+  // Last time's value inside each set row (research item 3).
+  group('lastTimeSetAt', () {
+    final monday = LocalDate(2026, 10, 19);
+    final wednesday = LocalDate(2026, 10, 21);
+
+    test('the same set index of the most recent session', () {
+      final older = session(monday, <SessionExercise>[
+        exercise('squat', LoadType.weighted,
+            <SetEntry>[set(weightKg: 70, reps: 8)]),
+      ]);
+      final newer = session(wednesday, <SessionExercise>[
+        exercise('squat', LoadType.weighted, <SetEntry>[
+          set(weightKg: 62.5, reps: 6),
+          set(weightKg: 60, reps: 8),
+        ]),
+      ]);
+      final saved = <WorkoutSession>[older, newer];
+
+      expect(lastTimeSetAt('squat', 0, saved)!.label, 'Last 62.5kg × 6');
+      expect(lastTimeSetAt('squat', 1, saved)!.label, 'Last 60kg × 8');
+    });
+
+    test('nothing past the sets last time had: no invented comparison', () {
+      final last = session(wednesday, <SessionExercise>[
+        exercise('squat', LoadType.weighted,
+            <SetEntry>[set(weightKg: 60, reps: 8)]),
+      ]);
+      expect(lastTimeSetAt('squat', 1, <WorkoutSession>[last]), isNull);
+      expect(lastTimeSetAt('bench', 0, <WorkoutSession>[last]), isNull);
+    });
+
+    test('skips sets that were never ticked', () {
+      final last = session(wednesday, <SessionExercise>[
+        exercise('squat', LoadType.weighted, <SetEntry>[
+          set(weightKg: 100, reps: 8, completed: false),
+          set(weightKg: 60, reps: 8),
+        ]),
+      ]);
+      expect(lastTimeSetAt('squat', 0, <WorkoutSession>[last])!.label,
+          'Last 60kg × 8');
+    });
+
+    test('reads correctly for every load type', () {
+      final last = session(wednesday, <SessionExercise>[
+        exercise('dip', LoadType.bodyweight,
+            <SetEntry>[set(reps: 12), set(addedKg: 10, reps: 8)]),
+        exercise('assist', LoadType.assisted,
+            <SetEntry>[set(assistKg: 20, reps: 8)]),
+        exercise('plank', LoadType.timed,
+            <SetEntry>[set(durationSec: 75), set(weightKg: 10, durationSec: 45)]),
+      ]);
+      final saved = <WorkoutSession>[last];
+
+      expect(lastTimeSetAt('dip', 0, saved)!.label, 'Last 12 reps');
+      expect(lastTimeSetAt('dip', 1, saved)!.label, 'Last +10kg × 8');
+      expect(lastTimeSetAt('assist', 0, saved)!.label, 'Last 20kg assist × 8',
+          reason: 'assistance stays assistance, never a negative weight');
+      expect(lastTimeSetAt('plank', 0, saved)!.label, 'Last 1:15');
+      expect(lastTimeSetAt('plank', 1, saved)!.label, 'Last 10kg × 0:45');
+    });
+
+    test('before: only sessions earlier than the one being corrected', () {
+      final older = session(monday, <SessionExercise>[
+        exercise('squat', LoadType.weighted,
+            <SetEntry>[set(weightKg: 70, reps: 8)]),
+      ]);
+      final edited = session(wednesday, <SessionExercise>[
+        exercise('squat', LoadType.weighted,
+            <SetEntry>[set(weightKg: 80, reps: 8)]),
+      ]);
+      expect(
+        lastTimeSetAt('squat', 0, <WorkoutSession>[older, edited],
+                before: wednesday)!
+            .label,
+        'Last 70kg × 8',
+        reason: 'a session is never its own "last time"',
+      );
+    });
+  });
+
+  // The Recent group in the exercise picker (research item 12).
+  group('recentExerciseIds', () {
+    test('newest session first, each exercise once, logged work only', () {
+      final monday = session(LocalDate(2026, 10, 19), <SessionExercise>[
+        exercise('squat', LoadType.weighted, <SetEntry>[set(weightKg: 60, reps: 8)]),
+        exercise('row', LoadType.weighted, <SetEntry>[set(weightKg: 50, reps: 8)]),
+      ]);
+      final wednesday = session(LocalDate(2026, 10, 21), <SessionExercise>[
+        exercise('bench', LoadType.weighted, <SetEntry>[set(weightKg: 60, reps: 8)]),
+        exercise('squat', LoadType.weighted, <SetEntry>[set(weightKg: 60, reps: 8)]),
+        exercise('fly', LoadType.weighted,
+            <SetEntry>[set(weightKg: 10, reps: 8, completed: false)]),
+      ]);
+
+      expect(recentExerciseIds(<WorkoutSession>[monday, wednesday]),
+          <String>['bench', 'squat', 'row']);
+    });
+
+    test('is capped', () {
+      final big = session(LocalDate(2026, 10, 21), <SessionExercise>[
+        for (var i = 0; i < 12; i++)
+          exercise('ex$i', LoadType.weighted, <SetEntry>[set(weightKg: 1, reps: 1)]),
+      ]);
+      expect(recentExerciseIds(<WorkoutSession>[big], limit: 5), hasLength(5));
+    });
+
+    test('nothing logged yet: empty', () {
+      expect(recentExerciseIds(const <WorkoutSession>[]), isEmpty);
+    });
+  });
 }

@@ -176,11 +176,25 @@ are reviewed copy.
   `01` §Usage rules). The accent `#FFA53D` could not carry "delete": it means "active / this
   has been worked" *"wherever it appears"*, so a delete confirmation painted in it
   reads as approval. `test/theme_palette_test.dart` fails on any colour outside §12.
+- **The week lives on the Workout landing** (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`,
+  amends 0004 and 0005). Profile › Schedule holds only the plan (days, reminder);
+  the derived "this week" strip and a "last workout" line sit above the landing's
+  search, and a training reminder opens the Workout tab (payload string still
+  `schedule`). Planned muscles are outlined in `textSecondary`, never amber or
+  steel. Sharing the summary card as an image (system share sheet), "Do again",
+  the folding Ready-made grid, haptics (`AppHaptics`), the pinned Mark exercise
+  done bar, last time in each set row and the live PB mark are all in 0008.
+- **iOS Live Activity + home-screen widget** (ADR 0008 §7): one method channel
+  (`glance_bridge.dart` ↔ `ios/Runner/GlanceChannel.swift`) and the
+  `ios/TurtleLiftWidgets` extension target (iOS 17+, App Group
+  `group.dev.indresh.turtleLift`). No plugin. The activity's clock is a system
+  timer from the session start; nothing is stored.
 - **Profile has three segments: Personal | Schedule | Diet**
   (`docs/adr/0007-diet-in-profile.md`, proposed). Diet is a segment, not a fifth
   tab — four tabs stays the ceiling (ADR 0004). The selected segment lives in an
   in-memory `profileSegmentProvider`, never stored: Profile opens on Personal on
-  cold start and after Delete all data; a diet reminder tap selects Diet.
+  cold start and after Delete all data; a diet reminder tap selects Diet; a
+  training reminder tap opens the Workout tab (ADR 0008).
 
 ## Still undecided — ask, don't guess
 - Typeface. The prototypes use Inter; the app currently uses the platform default.

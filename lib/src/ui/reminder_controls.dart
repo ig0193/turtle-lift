@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/reminder_scheduler.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
+import 'motion.dart';
 
 /// The reminder controls Schedule (ADR 0005) and Diet's Reminders screen
 /// (ADR 0007) share: a row with a drawn switch, a time row, the explain-first
@@ -114,7 +115,7 @@ class ReminderSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
+      duration: motionDuration(context, const Duration(milliseconds: 150)),
       // On the 4pt grid: a 20pt thumb inset 4pt in a 44 x 28 track.
       width: 44,
       height: 28,

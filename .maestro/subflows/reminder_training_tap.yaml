@@ -1,0 +1,23 @@
+# Leaves the app on Profile, then asks .maestro/scripts/push_server.py for a
+# training-day reminder (payload "schedule", the stable name ReminderTarget
+# keeps) and taps its banner: the app must open on the Workout tab, where
+# training starts, not on the settings form that scheduled it (ADR 0008).
+appId: dev.indresh.turtleLift
+---
+- launchApp:
+    stopApp: false
+- tapOn: "Profile"
+- assertVisible:
+    text: "Profile"
+    selected: true
+- pressKey: home
+- evalScript: "${http.post('http://127.0.0.1:8765/push/training', { body: '' }).status}"
+- evalScript: "${(function () { var t = Date.now(); while (Date.now() - t < 1200) {} return 1; })()}"
+- tapOn:
+    point: "50%, 9%"
+- extendedWaitUntil:
+    visible: "Start workout.*"
+    timeout: 20000
+- assertVisible:
+    text: "Workout"
+    selected: true

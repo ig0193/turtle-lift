@@ -6,9 +6,13 @@ import '../data/derived.dart';
 import '../data/exercise.dart';
 import '../data/load_type.dart';
 import '../data/session_progress.dart';
+import '../data/session_store.dart';
+import 'destructive_confirmation.dart';
 import 'exercise_detail_screen.dart';
 import 'exercise_picker_sheet.dart';
 import 'set_logging_screen.dart';
+import 'tab_index.dart';
+import 'tab_routes.dart';
 
 /// Opens [exercise] for logging in the open workout, starting an ad-hoc one when
 /// none is open.
@@ -87,3 +91,47 @@ Future<void> pickAndOpenExercise(
   if (chosen == null || !context.mounted) return;
   await openExerciseForLogging(context, ref, chosen);
 }
+
+/// "Do again": starts a new workout with [source]'s exercises and shows it on
+/// the Workout tab.
+///
+/// **User-initiated, never suggested.** It is a button on a past workout the
+/// user opened; nothing in the app proposes which one to repeat, so ADR 0005's
+/// "no today's workout" holds.
+///
+/// **A workout already open is never replaced silently.** The user is asked,
+/// and on a yes it is closed exactly as starting any new workout closes it:
+/// saved on its own day when it has a completed set, dropped otherwise. An
+/// untouched empty one is just dropped, as the landing does.
+Future<void> doAgain(
+  BuildContext context,
+  WidgetRef ref,
+  WorkoutSession source,
+) async {
+  final notifier = ref.read(activeSessionProvider.notifier);
+  final open = ref.read(activeSessionProvider);
+  if (open != null) {
+    final completed = setCountOf(open) > 0;
+    if (completed || open.hasAnyWrittenSets) {
+      final confirmed = await confirmDestructive(
+        context,
+        title: 'Replace the workout in progress?',
+        message: completed
+            ? 'It is saved first, on its own day, then this one starts.'
+            : 'It has nothing ticked, so it is discarded.',
+        confirmLabel: 'Replace',
+      );
+      if (!confirmed) return;
+    }
+    if (completed) {
+      await notifier.finish();
+    } else {
+      await notifier.discard();
+    }
+  }
+  await notifier.startAgain(source);
+  if (!context.mounted) return;
+  Navigator.of(context).popUntil((route) => route.isFirst);
+  ref.read(tabIndexProvider.notifier).select(kWorkoutTabIndex);
+}
+

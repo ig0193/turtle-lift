@@ -35,7 +35,7 @@ List<WeeklyReminder> trainingRemindersFor({
         minute: prefs.scheduleMinute,
         title: kTrainingReminderTitle,
         body: kTrainingReminderBody,
-        target: ReminderTarget.schedule,
+        target: ReminderTarget.workout,
       ),
   ];
 }

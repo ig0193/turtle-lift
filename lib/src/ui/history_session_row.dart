@@ -124,8 +124,8 @@ class HistorySessionRow extends StatelessWidget {
 ///
 /// Relative wording only for the two days a user thinks of relatively; beyond
 /// that an absolute date is what someone scanning for a particular session
-/// actually wants.
-@visibleForTesting
+/// actually wants. Also the day on the Workout landing's last-workout line,
+/// which must read exactly like the History row it points at.
 String historyDateLabel(DateTime performedOn, {DateTime? now}) {
   final clock = now ?? DateTime.now();
   // Counted on UTC midnights: a local day across a daylight-saving change is

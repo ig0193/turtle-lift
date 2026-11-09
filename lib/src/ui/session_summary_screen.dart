@@ -1,5 +1,12 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../data/active_session.dart';
 import '../data/custom_templates.dart';
@@ -19,6 +26,7 @@ import 'body_diagram.dart';
 import 'destructive_confirmation.dart';
 import 'exercise_detail_screen.dart' show MuscleFill;
 import 'finish_celebration.dart';
+import 'ghost_button.dart';
 import 'history_session_detail_screen.dart' show HistorySessionDetailScreen;
 import 'session_date_control.dart';
 import 'set_logging_screen.dart';
@@ -26,9 +34,12 @@ import 'template_library_screen.dart' show promptForTemplateName;
 
 /// The card a finished workout lands on, and the record of it ever after.
 ///
-/// **Composed to be screenshotted, with no export step.** The muscle map is the
-/// hero, the numbers are large, and the chrome is one back control — someone
-/// who has just finished can post this exactly as it appears.
+/// **Composed to be screenshotted, and shareable as an image.** The muscle map
+/// is the hero, the numbers are large, and the chrome is one back control.
+/// Share card renders exactly that card to a PNG and opens the system share
+/// sheet (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`): the user's
+/// own image, sent wherever they choose. No feed, account, link or upload --
+/// "no social features" (`docs/00` §13) still holds.
 ///
 /// **The same component opens a saved workout.** Session detail is not a
 /// read-only viewer that would drift from this one; it is this screen, pointed
@@ -61,6 +72,9 @@ class SessionSummaryScreen extends ConsumerStatefulWidget {
   /// The key a test taps for the calorie explanation.
   static const Key calorieInfoKey = ValueKey<String>('calorie-info');
 
+  /// The button that shares the card as an image.
+  static const Key shareKey = ValueKey<String>('share-card');
+
   @override
   ConsumerState<SessionSummaryScreen> createState() =>
       _SessionSummaryScreenState();
@@ -69,6 +83,39 @@ class SessionSummaryScreen extends ConsumerStatefulWidget {
 class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
   late final TextEditingController _title;
   bool _celebrating = false;
+
+  /// The card's boundary, which is what Share card renders.
+  final GlobalKey _cardKey = GlobalKey();
+  bool _sharing = false;
+
+  /// Renders the card to a PNG and hands it to the share sheet.
+  ///
+  /// **The card as it is on screen, nothing added and nothing stored.** The
+  /// image lives in the temporary directory only for the share sheet's sake.
+  Future<void> _share(BuildContext context, String name) async {
+    if (_sharing) return;
+    FocusScope.of(context).unfocus();
+    final boundary =
+        _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null) return;
+    setState(() => _sharing = true);
+    try {
+      final ratio = MediaQuery.devicePixelRatioOf(context).clamp(2.0, 3.0);
+      final image = await boundary.toImage(pixelRatio: ratio);
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      if (data == null) return;
+      if (!context.mounted) return;
+      final box = context.findRenderObject() as RenderBox?;
+      await ref.read(cardImageSharerProvider)(
+        data.buffer.asUint8List(),
+        fileName: cardImageFileName(name),
+        origin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+      );
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
 
   @override
   void initState() {
@@ -114,7 +161,9 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
             padding: screenScrollPadding(context),
             children: <Widget>[
               const SizedBox(height: 10),
-              _ShareCard(
+              RepaintBoundary(
+                key: _cardKey,
+                child: _ShareCard(
                 session: session,
                 name: name,
                 title: _title,
@@ -129,8 +178,16 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                 onRename: (value) => ref
                     .read(activeSessionProvider.notifier)
                     .renameSaved(session.id, value),
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
+              GhostButton(
+                buttonKey: SessionSummaryScreen.shareKey,
+                label: 'Share card',
+                leadingIcon: Icons.ios_share_rounded,
+                onTap: () => _share(context, name),
+              ),
+              const SizedBox(height: 8),
               const Text('What you did', style: kLandingSectionLabelStyle),
               const SizedBox(height: 8),
               for (final exercise in session.exercises)
@@ -349,14 +406,18 @@ class _ShareCard extends StatelessWidget {
                   label: 'PB',
                   valueColor: AppPalette.accentStrong,
                 ),
-              if (calories != null) _CalorieStat(calories: calories!),
+              // On a record day the PB count takes the kcal slot: an
+              // estimate with an info icon is the weakest figure on a card
+              // meant to be shown, and the record is the strongest.
+              if (calories != null && records == 0)
+                _CalorieStat(calories: calories!),
             ],
           ),
           // A workout logged before the user ever weighed in cannot have an
           // honest estimate, and adding a weight later does not back-fill it.
           // So there is no kcal figure -- and the instruction sits under the
           // row rather than in a figure's slot.
-          if (calories == null) ...<Widget>[
+          if (calories == null && records == 0) ...<Widget>[
             const SizedBox(height: 12),
             const Text(
               key: SessionSummaryScreen.addWeightKey,
@@ -388,6 +449,44 @@ const String kNoWeightKcalNote = 'Add your bodyweight in Profile to see kcal';
 
 /// The app's display name, as it appears on a card meant to be posted.
 const String kAppDisplayName = 'TurtleLift';
+
+/// Shares a rendered card image. A provider so a test can see what would be
+/// shared without a platform share sheet.
+typedef CardImageSharer = Future<void> Function(
+  Uint8List png, {
+  required String fileName,
+  Rect? origin,
+});
+
+final cardImageSharerProvider =
+    Provider<CardImageSharer>((ref) => shareCardImage);
+
+/// The image's file name: the workout's name, made safe for a file system.
+String cardImageFileName(String name) {
+  final safe = name
+      .replaceAll(RegExp(r'[^A-Za-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '')
+      .toLowerCase();
+  return '${safe.isEmpty ? 'workout' : safe}.png';
+}
+
+/// Writes [png] to the temporary directory and opens the system share sheet
+/// on it, the same route Export takes (`share_plus`, `path_provider`).
+Future<void> shareCardImage(
+  Uint8List png, {
+  required String fileName,
+  Rect? origin,
+}) async {
+  final dir = await getTemporaryDirectory();
+  final file = File('${dir.path}/$fileName');
+  await file.writeAsBytes(png, flush: true);
+  await SharePlus.instance.share(
+    ShareParams(
+      files: <XFile>[XFile(file.path, mimeType: 'image/png')],
+      sharePositionOrigin: origin,
+    ),
+  );
+}
 
 class _Stat extends StatelessWidget {
   const _Stat({

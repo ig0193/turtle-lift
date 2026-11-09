@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -7,6 +9,7 @@ import 'package:turtle_lift/src/data/custom_templates.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/data/food_index.dart';
+import 'package:turtle_lift/src/data/glance_bridge.dart';
 import 'package:turtle_lift/src/data/history_preview_data.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/reminder_scheduler.dart';
@@ -18,6 +21,7 @@ import 'package:turtle_lift/src/ui/profile_root.dart';
 import 'package:turtle_lift/src/ui/reminder_tap_listener.dart';
 import 'package:turtle_lift/src/ui/schedule_pane.dart';
 import 'package:turtle_lift/src/ui/tab_index.dart';
+import 'package:turtle_lift/src/ui/workout_root.dart';
 
 import 'support/fake_reminder_scheduler.dart';
 
@@ -100,11 +104,11 @@ void main() {
     expect(container.read(dietSelectedDayProvider), LocalDate(2026, 11, 4));
   });
 
-  testWidgets('a schedule tap leaves the Diet day alone', (tester) async {
+  testWidgets('a training tap leaves the Diet day alone', (tester) async {
     final container = await pumpApp(tester);
     container.read(dietSelectedDayProvider.notifier).select(LocalDate(2026, 11, 7));
 
-    reminders.tap(ReminderTarget.schedule);
+    reminders.tap(ReminderTarget.workout);
     await tester.pumpAndSettle();
 
     expect(container.read(dietSelectedDayProvider), LocalDate(2026, 11, 7));
@@ -128,15 +132,36 @@ void main() {
     expect(container.read(profileSegmentProvider), ProfileSegment.diet);
   });
 
-  testWidgets('a schedule tap shows Profile, Schedule', (tester) async {
+  testWidgets('a training tap opens the Workout tab, where you train '
+      '(ADR 0008)', (tester) async {
     final container = await pumpApp(tester);
-
-    reminders.tap(ReminderTarget.schedule);
+    container.read(tabIndexProvider.notifier).select(3);
     await tester.pumpAndSettle();
 
-    expect(container.read(tabIndexProvider), 3);
-    expect(container.read(profileSegmentProvider), ProfileSegment.schedule);
-    expect(find.byType(SchedulePane), findsOneWidget);
+    reminders.tap(ReminderTarget.workout);
+    await tester.pumpAndSettle();
+
+    expect(container.read(tabIndexProvider), kWorkoutTabIndex);
+    expect(find.byType(WorkoutLandingBody), findsOneWidget);
+    expect(find.byType(SchedulePane), findsNothing);
+  });
+
+  testWidgets('a training tap over a pushed route pops it first',
+      (tester) async {
+    final container = await pumpApp(tester);
+    container.read(tabIndexProvider.notifier).select(2);
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    navigator.push(MaterialPageRoute<void>(
+      builder: (_) => const Scaffold(body: Text('pushed screen')),
+    ));
+    await tester.pumpAndSettle();
+
+    reminders.tap(ReminderTarget.workout);
+    await tester.pumpAndSettle();
+
+    expect(find.text('pushed screen'), findsNothing);
+    expect(navigator.canPop(), isFalse);
+    expect(container.read(tabIndexProvider), kWorkoutTabIndex);
   });
 
   testWidgets('a tap from another Profile segment switches to Diet',
@@ -152,6 +177,25 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(container.read(profileSegmentProvider), ProfileSegment.diet);
+  });
+
+  testWidgets('a tap on the Live Activity or the home-screen widget opens the '
+      'Workout tab, popping what was pushed (ADR 0008)', (tester) async {
+    final glance = _FakeGlance();
+    final container = await pumpApp(tester,
+        extra: [glanceBridgeProvider.overrideWithValue(glance)]);
+    container.read(tabIndexProvider.notifier).select(3);
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    navigator.push(MaterialPageRoute<void>(
+      builder: (_) => const Scaffold(body: Text('pushed screen')),
+    ));
+    await tester.pumpAndSettle();
+
+    glance.taps.add(null);
+    await tester.pumpAndSettle();
+
+    expect(find.text('pushed screen'), findsNothing);
+    expect(container.read(tabIndexProvider), kWorkoutTabIndex);
   });
 
   group('launch overrides (cold start)', () {
@@ -184,6 +228,16 @@ void main() {
       expect(container.read(profileSegmentProvider), ProfileSegment.diet);
     });
 
+    test('a training launch target opens on the Workout tab', () {
+      final container = ProviderContainer(
+          overrides: reminderLaunchOverrides(ReminderTarget.workout));
+      addTearDown(container.dispose);
+
+      expect(container.read(tabIndexProvider), kWorkoutTabIndex);
+      expect(container.read(profileSegmentProvider), ProfileSegment.personal,
+          reason: 'Profile is left alone');
+    });
+
     test('no launch target overrides nothing', () {
       expect(reminderLaunchOverrides(null), isEmpty);
     });
@@ -203,4 +257,20 @@ void main() {
       expect(container.read(profileSegmentProvider), ProfileSegment.personal);
     });
   });
+}
+
+class _FakeGlance implements GlanceBridge {
+  final StreamController<void> taps = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get openWorkoutTaps => taps.stream;
+
+  @override
+  Future<void> showSession(SessionGlance glance) async {}
+
+  @override
+  Future<void> endSession() async {}
+
+  @override
+  Future<void> showWeek(WeekGlance glance) async {}
 }

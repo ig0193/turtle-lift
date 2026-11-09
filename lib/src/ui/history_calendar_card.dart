@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/history_preview_data.dart';
 import '../theme/app_palette.dart';
 import 'history_session_row.dart';
+import 'motion.dart';
 
 /// A month calendar, swipeable between months, with a dot on every day that
 /// has a logged session.
@@ -96,6 +97,10 @@ class _HistoryCalendarCardState extends ConsumerState<HistoryCalendarCard> {
   void _step(int delta) {
     final target = _page + delta;
     if (target < 0 || target > _pastMonths) return;
+    if (prefersReducedMotion(context)) {
+      _controller.jumpToPage(target);
+      return;
+    }
     _controller.animateToPage(
       target,
       duration: const Duration(milliseconds: 220),

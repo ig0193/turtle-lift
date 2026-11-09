@@ -292,6 +292,78 @@ void main() {
     });
   });
 
+  // ADR 0008: the card can be shared as an image through the system share
+  // sheet, and on a record day the PB count takes the kcal slot.
+  group('sharing the card', () {
+    testWidgets('a PB day shows the count instead of kcal', (tester) async {
+      await saveWorkout(tester,
+          exerciseId: 'bench',
+          loadType: LoadType.weighted,
+          weightKg: 60,
+          on: LocalDate.today().addDays(-3));
+      final id = await saveWorkout(tester,
+          exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 65);
+
+      await pump(tester, id, weights: <BodyweightEntry>[
+        BodyweightEntry(
+            date: LocalDate.today().addDays(-30).toDateTime(), weightKg: 78),
+      ]);
+
+      expect(find.byKey(SessionSummaryScreen.pbPillKey), findsOneWidget);
+      expect(find.text('kcal'), findsNothing);
+      expect(find.byKey(SessionSummaryScreen.addWeightKey), findsNothing);
+    });
+
+    testWidgets('Share card renders the card to a PNG and hands it to the '
+        'share sheet', (tester) async {
+      final id = await saveWorkout(tester,
+          exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 60);
+      final shared = <List<int>>[];
+      tester.view.physicalSize = const Size(1200, 3400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final saved = await tester.runAsync(() => store.readSavedSessions());
+      await tester.pumpWidget(ProviderScope(
+        key: UniqueKey(),
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          exerciseIndexProvider.overrideWithValue(index),
+          initialSavedSessionsProvider.overrideWithValue(saved!),
+          initialBodyweightLogProvider.overrideWithValue(const []),
+          cardImageSharerProvider.overrideWithValue(
+              (png, {required fileName, origin}) async => shared.add(png)),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          home: SessionSummaryScreen(sessionId: id),
+        ),
+      ));
+      await tester.pump();
+
+      final share = find.byKey(SessionSummaryScreen.shareKey);
+      expect(share, findsOneWidget);
+      expect(
+        tester.getTopLeft(share).dy,
+        lessThan(tester
+            .getTopLeft(find.byKey(SessionSummaryScreen.saveAsTemplateKey))
+            .dy),
+        reason: 'under the card, before the record actions',
+      );
+
+      await tester.runAsync(() async {
+        await tester.tap(share);
+        for (var i = 0; i < 20 && shared.isEmpty; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await tester.pump();
+        }
+      });
+
+      expect(shared, hasLength(1));
+      expect(shared.single.take(4), <int>[0x89, 0x50, 0x4E, 0x47],
+          reason: 'a PNG');
+    });
+  });
+
   group('saving as a template', () {
     /// Saves a workout of [ids], each with one completed set, in that order.
     Future<String> saveMany(WidgetTester tester, List<String> ids,

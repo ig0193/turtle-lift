@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show immutable;
 
 import 'load_type.dart';
+import 'local_date.dart';
 import 'session_store.dart';
 
 /// A set's progression, as a comparable pair.
@@ -150,3 +151,51 @@ bool isPersonalBest(
   if (!seen || previous == null) return false;
   return best.compareTo(previous) > 0;
 }
+
+/// Which set of [exercise] is a record right now, as an index into its
+/// `sets`, or null.
+///
+/// **The live form of [isPersonalBest]**, for the PB mark on a set row the
+/// moment it is ticked: the same baseline (the best across every saved session
+/// with an earlier `performedOn` than [performedOn]), the same "needs a prior
+/// session" rule, the same strictly-greater test, and the same per-exercise
+/// count -- so only the exercise's single best completed set carries the mark,
+/// the first one if two tie. The assisted inversion comes from [metricFor], so
+/// lighter assistance is the record here exactly as everywhere else.
+///
+/// Derived on every build, never stored: untick the set, or edit it below the
+/// record, and the mark is simply gone.
+int? personalBestSetIndex(
+  SessionExercise exercise,
+  LocalDate performedOn,
+  List<WorkoutSession> savedSessions,
+) {
+  SetMetric? previous;
+  for (final candidate in savedSessions) {
+    if (!candidate.performedOn.isBefore(performedOn)) continue;
+    for (final other in candidate.exercises) {
+      if (other.exerciseId != exercise.exerciseId) continue;
+      final otherBest = bestOf(other);
+      if (otherBest == null) continue;
+      if (previous == null || otherBest.compareTo(previous) > 0) {
+        previous = otherBest;
+      }
+    }
+  }
+  if (previous == null) return null;
+
+  int? bestIndex;
+  SetMetric? best;
+  for (var i = 0; i < exercise.sets.length; i++) {
+    final set = exercise.sets[i];
+    if (!set.completed) continue;
+    final metric = metricFor(exercise.loadType, set);
+    if (best == null || metric.compareTo(best) > 0) {
+      best = metric;
+      bestIndex = i;
+    }
+  }
+  if (best == null || best.compareTo(previous) <= 0) return null;
+  return bestIndex;
+}
+

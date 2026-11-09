@@ -10,6 +10,8 @@ The rest of 0003 — History as a tab, the bar showing only at L0, an open sessi
 sitting at stack depth zero — stands unchanged. **Amended by
 [ADR 0007](0007-diet-in-profile.md)** (proposed): Profile gains a third segment,
 Diet, and the placement rule a second named exception. Still four tabs.
+**Amended by [ADR 0008](0008-the-week-lives-on-the-workout-landing.md)**: the Schedule pane's week summary moves to the
+Workout landing; the Schedule segment keeps only the plan and reminders.
 
 ## Context
 
@@ -52,7 +54,8 @@ contents, not its reach.
   the tab; authored lives behind the avatar" becomes "derived lives on History;
   authored lives on Profile". The test is the same one-sentence test, and
   `app_database.dart`'s preference-vs-derived axis still agrees with it.
-- **One named exception to that rule.** The Schedule pane's week summary is
+- **One named exception to that rule** *(moved by ADR 0008 to the Workout
+  landing, under the same condition)*. The Schedule pane's week summary is
   computed from sessions yet lives on Profile. It is the feedback loop for the
   plan the user has just typed, not a stat. Condition: the same figure must
   never also render on History. If a History calendar is added later, it must

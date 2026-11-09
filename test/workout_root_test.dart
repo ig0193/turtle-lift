@@ -9,6 +9,7 @@ import 'package:turtle_lift/src/data/custom_templates.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/data/load_type.dart';
+import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
@@ -176,6 +177,79 @@ void main() {
       await pumpRoot(tester, custom: mine);
 
       expect(find.text('Biceps, triceps'), findsWidgets);
+    });
+  });
+
+  // Research item 11: once the user has their own context, the eleven
+  // ready-made tiles step back behind one row. Derived on read; the open/closed
+  // state is in memory only.
+  group('ready-made recedes for a returning user', () {
+    WorkoutSession savedSession(int i) => WorkoutSession(
+          id: 'saved-$i',
+          title: null,
+          performedOn: LocalDate(2026, 10, 10 + i),
+          loggedAt: DateTime(2026, 10, 10 + i),
+          templateId: null,
+          templateName: null,
+          isOpen: false,
+          exercises: const <SessionExercise>[],
+        );
+
+    testWidgets('a new user sees the whole grid and no disclosure row',
+        (tester) async {
+      await pumpRoot(tester,
+          saved: <WorkoutSession>[savedSession(0), savedSession(1)]);
+
+      expect(find.byKey(WorkoutLandingBody.readyMadeToggleKey), findsNothing);
+      expect(find.byKey(WorkoutLandingBody.templateKey('push')),
+          findsOneWidget);
+    });
+
+    testWidgets('with templates of their own, the grid folds behind a row',
+        (tester) async {
+      await pumpRoot(tester, custom: mine);
+
+      final toggle = find.byKey(WorkoutLandingBody.readyMadeToggleKey);
+      expect(toggle, findsOneWidget);
+      expect(find.descendant(of: toggle, matching: find.text('Ready-made')),
+          findsOneWidget);
+      expect(
+          find.descendant(
+              of: toggle,
+              matching: find.text('${kPredefinedTemplates.length}')),
+          findsOneWidget);
+      expect(find.byKey(WorkoutLandingBody.templateKey('push')),
+          findsNothing);
+
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(find.byKey(WorkoutLandingBody.templateKey('push')),
+          findsOneWidget);
+
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(find.byKey(WorkoutLandingBody.templateKey('push')),
+          findsNothing);
+    });
+
+    testWidgets('three saved workouts are enough to fold it', (tester) async {
+      await pumpRoot(tester, saved: <WorkoutSession>[
+        for (var i = 0; i < 3; i++) savedSession(i),
+      ]);
+
+      expect(find.byKey(WorkoutLandingBody.readyMadeToggleKey), findsOneWidget);
+      expect(find.byKey(WorkoutLandingBody.templateKey('push')),
+          findsNothing);
+    });
+
+    testWidgets('search still finds a folded ready-made template',
+        (tester) async {
+      await pumpRoot(tester, custom: mine);
+      await tester.enterText(find.byType(TextField), 'push');
+      await tester.pump();
+
+      expect(find.byKey(WorkoutLandingBody.templateKey('push')),
+          findsOneWidget);
     });
   });
 
