@@ -5,6 +5,7 @@ import '../data/active_session.dart';
 import '../data/derived.dart';
 import '../data/exercise.dart';
 import '../data/load_type.dart';
+import '../data/local_date.dart';
 import '../data/session_progress.dart';
 import '../data/session_store.dart';
 import 'destructive_confirmation.dart';
@@ -94,6 +95,51 @@ Future<void> pickAndOpenExercise(
   await openExerciseForLogging(context, ref, chosen);
 }
 
+/// Closes the workout in progress the way starting any new one does, asking
+/// first when it holds anything. False when the user keeps it.
+Future<bool> _closeOpenWorkout(BuildContext context, WidgetRef ref) async {
+  final notifier = ref.read(activeSessionProvider.notifier);
+  final open = ref.read(activeSessionProvider);
+  if (open == null) return true;
+  final completed = setCountOf(open) > 0;
+  if (completed || open.hasAnyWrittenSets) {
+    final confirmed = await confirmDestructive(
+      context,
+      title: 'Replace the workout in progress?',
+      message: completed
+          ? 'It is saved first, on its own day, then this one starts.'
+          : 'It has nothing ticked, so it is discarded.',
+      confirmLabel: 'Replace',
+    );
+    if (!confirmed) return false;
+  }
+  if (completed) {
+    await notifier.finish();
+  } else {
+    await notifier.discard();
+  }
+  return true;
+}
+
+/// Backfill: starts an empty workout dated [day] and shows it on the Workout
+/// tab, from an empty past day on History's calendar (ADR 0013).
+///
+/// **The existing flow, with the date already chosen.** It is the same
+/// ad-hoc workout the Workout tab starts, carrying [day] in its date chip, so
+/// the user adds exercises and logs sets exactly as they would today. A
+/// workout already open is never replaced silently.
+Future<void> startBackfill(
+  BuildContext context,
+  WidgetRef ref,
+  LocalDate day,
+) async {
+  if (!await _closeOpenWorkout(context, ref)) return;
+  await ref.read(activeSessionProvider.notifier).startAdHoc(performedOn: day);
+  if (!context.mounted) return;
+  Navigator.of(context).popUntil((route) => route.isFirst);
+  ref.read(tabIndexProvider.notifier).select(kWorkoutTabIndex);
+}
+
 /// "Do again": starts a new workout with [source]'s exercises and shows it on
 /// the Workout tab.
 ///
@@ -110,28 +156,8 @@ Future<void> doAgain(
   WidgetRef ref,
   WorkoutSession source,
 ) async {
-  final notifier = ref.read(activeSessionProvider.notifier);
-  final open = ref.read(activeSessionProvider);
-  if (open != null) {
-    final completed = setCountOf(open) > 0;
-    if (completed || open.hasAnyWrittenSets) {
-      final confirmed = await confirmDestructive(
-        context,
-        title: 'Replace the workout in progress?',
-        message: completed
-            ? 'It is saved first, on its own day, then this one starts.'
-            : 'It has nothing ticked, so it is discarded.',
-        confirmLabel: 'Replace',
-      );
-      if (!confirmed) return;
-    }
-    if (completed) {
-      await notifier.finish();
-    } else {
-      await notifier.discard();
-    }
-  }
-  await notifier.startAgain(source);
+  if (!await _closeOpenWorkout(context, ref)) return;
+  await ref.read(activeSessionProvider.notifier).startAgain(source);
   if (!context.mounted) return;
   Navigator.of(context).popUntil((route) => route.isFirst);
   ref.read(tabIndexProvider.notifier).select(kWorkoutTabIndex);

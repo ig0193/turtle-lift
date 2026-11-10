@@ -1,38 +1,41 @@
-import 'dart:io';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../data/active_session.dart';
 import '../data/custom_templates.dart';
-import '../data/body_gender.dart';
+import '../data/date_labels.dart';
 import '../data/derived.dart';
 import '../data/exercise_index.dart';
-import '../data/generated/muscle_taxonomy.dart';
-import '../data/local_date.dart';
+import '../data/history_preview_data.dart' show sessionRecordsProvider;
+import '../data/load_type.dart';
 import '../data/personal_best.dart';
-import '../data/personal_details_store.dart' show bodyweightLogProvider;
 import '../data/session_store.dart';
 import '../data/set_format.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'app_screen.dart';
-import 'body_diagram.dart';
 import 'destructive_confirmation.dart';
-import 'exercise_detail_screen.dart' show MuscleFill;
+import 'exercise_picker_sheet.dart' show showExercisePicker;
 import 'finish_celebration.dart';
 import 'ghost_button.dart';
 import 'history_session_detail_screen.dart' show HistorySessionDetailScreen;
+import 'session_card.dart';
 import 'session_date_control.dart';
 import 'set_logging_screen.dart';
 import 'template_library_screen.dart' show promptForTemplateName;
 
-/// The card a finished workout lands on, and the record of it ever after.
+export 'session_card.dart'
+    show
+        CardImageSharer,
+        cardImageFileName,
+        cardImageSharerProvider,
+        kAppDisplayName,
+        kNoWeightKcalNote,
+        shareCardImage,
+        viewsForMuscles;
+
+/// The card a finished workout lands on, and the editor of it ever after.
 ///
 /// **Composed to be screenshotted, and shareable as an image.** The muscle map
 /// is the hero, the numbers are large, and the chrome is one back control.
@@ -41,13 +44,14 @@ import 'template_library_screen.dart' show promptForTemplateName;
 /// own image, sent wherever they choose. No feed, account, link or upload --
 /// "no social features" (`docs/00` §13) still holds.
 ///
-/// **The same component opens a saved workout.** Session detail is not a
-/// read-only viewer that would drift from this one; it is this screen, pointed
-/// at a session that is already saved.
+/// **The card is [SessionCard], the same widget the History detail shows**
+/// (audit B3). This screen adds what only an editor needs: the inline title,
+/// Change date, a tappable exercise list, Save as template and Delete.
 class SessionSummaryScreen extends ConsumerStatefulWidget {
   const SessionSummaryScreen({
     required this.sessionId,
     this.celebrate = false,
+    this.editing = false,
     super.key,
   });
 
@@ -57,23 +61,44 @@ class SessionSummaryScreen extends ConsumerStatefulWidget {
   /// Whether to play the finish moment before the card settles.
   final bool celebrate;
 
+  /// Opened from History to correct a saved workout, rather than landed on
+  /// after Finish. The header then says "Edit workout", so nothing pretends
+  /// this is the moment the workout was saved (audit #13).
+  final bool editing;
+
   /// The key a test taps to delete the workout.
   static const Key deleteKey = ValueKey<String>('delete-workout');
 
   /// The key a test taps to save the workout as a template.
   static const Key saveAsTemplateKey = ValueKey<String>('save-as-template');
 
-  /// The key a test finds the personal-best pill by.
-  static const Key pbPillKey = ValueKey<String>('pb-pill');
+  /// The key a test finds the personal-best count by.
+  static const Key pbPillKey = SessionCard.pbKey;
 
   /// The key a test finds the add-weight prompt by.
-  static const Key addWeightKey = ValueKey<String>('add-weight-prompt');
+  static const Key addWeightKey = SessionCard.addWeightKey;
 
   /// The key a test taps for the calorie explanation.
-  static const Key calorieInfoKey = ValueKey<String>('calorie-info');
+  static const Key calorieInfoKey = SessionCard.calorieInfoKey;
 
   /// The button that shares the card as an image.
   static const Key shareKey = ValueKey<String>('share-card');
+
+  /// The inline title field on the card.
+  static const Key titleFieldKey = ValueKey<String>('session-title-field');
+
+  /// The button that moves a saved workout to another day.
+  static const Key changeDateKey = ValueKey<String>('session-change-date');
+
+  /// Adds an exercise to this saved workout.
+  static const Key addExerciseKey = ValueKey<String>('session-add-exercise');
+
+  /// The card's streak figure.
+  static const Key streakKey = SessionCard.streakKey;
+
+  /// The visible remove control on one logged exercise.
+  static Key removeKeyFor(String exerciseId) =>
+      ValueKey<String>('remove-$exerciseId');
 
   @override
   ConsumerState<SessionSummaryScreen> createState() =>
@@ -82,36 +107,24 @@ class SessionSummaryScreen extends ConsumerStatefulWidget {
 
 class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
   late final TextEditingController _title;
+  late final FocusNode _titleFocus;
+  late final ActiveSession _sessions;
+
+  /// The title as last written to the store, so a commit only writes a
+  /// change. Null until the session has been read once.
+  String? _storedTitle;
+  bool _titleLoaded = false;
   bool _celebrating = false;
 
   /// The card's boundary, which is what Share card renders.
   final GlobalKey _cardKey = GlobalKey();
   bool _sharing = false;
 
-  /// Renders the card to a PNG and hands it to the share sheet.
-  ///
-  /// **The card as it is on screen, nothing added and nothing stored.** The
-  /// image lives in the temporary directory only for the share sheet's sake.
   Future<void> _share(BuildContext context, String name) async {
     if (_sharing) return;
-    FocusScope.of(context).unfocus();
-    final boundary =
-        _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-    if (boundary == null) return;
     setState(() => _sharing = true);
     try {
-      final ratio = MediaQuery.devicePixelRatioOf(context).clamp(2.0, 3.0);
-      final image = await boundary.toImage(pixelRatio: ratio);
-      final data = await image.toByteData(format: ui.ImageByteFormat.png);
-      image.dispose();
-      if (data == null) return;
-      if (!context.mounted) return;
-      final box = context.findRenderObject() as RenderBox?;
-      await ref.read(cardImageSharerProvider)(
-        data.buffer.asUint8List(),
-        fileName: cardImageFileName(name),
-        origin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
-      );
+      await shareSessionCard(context, ref, boundaryKey: _cardKey, name: name);
     } finally {
       if (mounted) setState(() => _sharing = false);
     }
@@ -122,10 +135,38 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
     super.initState();
     _celebrating = widget.celebrate;
     _title = TextEditingController();
+    _titleFocus = FocusNode()..addListener(_onTitleFocus);
+    // Held from the start: Riverpod refuses `ref` once the widget is
+    // disposed, and leaving the screen is exactly when a typed name has to
+    // be saved.
+    _sessions = ref.read(activeSessionProvider.notifier);
+  }
+
+  void _onTitleFocus() {
+    if (!_titleFocus.hasFocus) _commitTitle();
+  }
+
+  /// Writes the typed name when it differs from the stored one.
+  ///
+  /// **Called on Return, when the field loses focus and when the screen
+  /// goes away** (B1). Saving only on Return threw a typed name away the
+  /// moment the user tapped the map or went back. An emptied field clears
+  /// the title, so the resolved name shows again.
+  void _commitTitle() {
+    if (!_titleLoaded) return;
+    final typed = _title.text.trim();
+    final value = typed.isEmpty ? null : typed;
+    if (value == _storedTitle) return;
+    _storedTitle = value;
+    _sessions.renameSaved(widget.sessionId, value);
   }
 
   @override
   void dispose() {
+    _commitTitle();
+    _titleFocus
+      ..removeListener(_onTitleFocus)
+      ..dispose();
     _title.dispose();
     super.dispose();
   }
@@ -134,7 +175,6 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
   Widget build(BuildContext context) {
     final saved = ref.watch(savedSessionsProvider);
     final index = ref.watch(exerciseIndexProvider);
-    final weights = ref.watch(bodyweightLogProvider);
 
     final session =
         saved.where((s) => s.id == widget.sessionId).firstOrNull;
@@ -144,17 +184,21 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
     }
 
     final name = resolvedTitle(session, index);
-    if (_title.text.isEmpty && (session.title ?? '').isNotEmpty) {
-      _title.text = session.title!;
+    // Filled once from the store. Refilling on every build put a cleared
+    // name straight back before it could be saved as "no name".
+    if (!_titleLoaded) {
+      _titleLoaded = true;
+      _storedTitle = (session.title ?? '').trim().isEmpty
+          ? null
+          : session.title!.trim();
+      _title.text = _storedTitle ?? '';
     }
 
-    final worked = workedSubGroups(session, index);
-    final views = viewsForMuscles(worked.primary.union(worked.secondary));
-    final records = pbCountFor(session, saved);
-    final calories = caloriesFor(session, weights);
+    final records =
+        ref.watch(sessionRecordsProvider)[session.id] ?? SessionRecords.none;
 
     return AppScreen.pushed(
-      title: name,
+      title: widget.editing ? 'Edit workout' : name,
       body: Stack(
         children: <Widget>[
           ListView(
@@ -163,21 +207,14 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
               const SizedBox(height: 10),
               RepaintBoundary(
                 key: _cardKey,
-                child: _ShareCard(
-                session: session,
-                name: name,
-                title: _title,
-                views: views,
-                fill: MuscleFill(
-                  primary: worked.primary,
-                  secondary: worked.secondary,
-                ),
-                records: records,
-                calories: calories,
-                streak: streakAsOf(session.performedOn, saved),
-                onRename: (value) => ref
-                    .read(activeSessionProvider.notifier)
-                    .renameSaved(session.id, value),
+                child: SessionCard(
+                  session: session,
+                  titleField: _TitleField(
+                    controller: _title,
+                    focusNode: _titleFocus,
+                    hint: name,
+                    onSubmitted: _commitTitle,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -187,15 +224,27 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                 leadingIcon: Icons.ios_share_rounded,
                 onTap: () => _share(context, name),
               ),
+              // B2: a saved workout's day can be corrected, which is what
+              // makes the streak promise true for past mistakes (`docs/04`).
+              GhostButton(
+                buttonKey: SessionSummaryScreen.changeDateKey,
+                label: 'Change date',
+                leadingIcon: Icons.event_rounded,
+                onTap: () => _changeDate(context, session),
+              ),
               const SizedBox(height: 8),
-              const Text('What you did', style: kLandingSectionLabelStyle),
+              Semantics(
+                header: true,
+                child:
+                    const Text('What you did', style: kLandingSectionLabelStyle),
+              ),
               const SizedBox(height: 8),
               for (final exercise in session.exercises)
                 _LoggedExercise(
                   exercise: exercise,
                   name: index.byId(exercise.exerciseId)?.name ??
                       'Unknown exercise',
-                  isRecord: isPersonalBest(exercise, session, saved),
+                  recordSetId: records.recordSetIds[exercise.id],
                   // The screen that logs a set is the screen that corrects
                   // one, months later — never a second read-only viewer that
                   // would drift from it.
@@ -209,10 +258,19 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                   ),
                   onRemove: () => _removeExercise(
                     context,
-                    exercise.id,
+                    session,
+                    exercise,
                     index.byId(exercise.exerciseId)?.name ?? 'this exercise',
                   ),
                 ),
+              // Something forgotten when the workout was logged: add it to
+              // this saved workout rather than start a second one that day.
+              GhostButton(
+                buttonKey: SessionSummaryScreen.addExerciseKey,
+                label: 'Add exercise',
+                leadingIcon: Icons.add_rounded,
+                onTap: () => _addExercise(context, session),
+              ),
               const SizedBox(height: 16),
               // Below the screenshot composition, like Delete: it is an action
               // on the record, not part of the card built to be posted.
@@ -224,7 +282,7 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
               // permanent record, and the destructive action does not belong
               // in the part of the screen built to be posted.
               _DeleteButton(
-                onTap: () => _delete(context, name),
+                onTap: () => _delete(context, name, session),
               ),
             ],
           ),
@@ -266,11 +324,72 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
         .showSnackBar(SnackBar(content: Text('$chosen saved to My templates')));
   }
 
+  /// Adds an exercise to this saved workout, then opens it for its sets
+  /// (ADR 0013). The same picker as a live workout, and the same set logging
+  /// screen that corrects a saved set, so nothing here is a second flow.
+  Future<void> _addExercise(BuildContext context, WorkoutSession session) async {
+    FocusScope.of(context).unfocus();
+    final chosen = await showExercisePicker(
+      context,
+      title: 'Add exercise',
+      alreadyChosen: <String>[for (final e in session.exercises) e.exerciseId],
+    );
+    if (chosen == null || !context.mounted) return;
+    final loadType = LoadType.fromName(chosen.loadType);
+    if (loadType == null) return;
+    final rowId = await _sessions.addSavedExercise(
+      sessionId: session.id,
+      exerciseId: chosen.id,
+      loadType: loadType,
+    );
+    if (rowId == null || !context.mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SetLoggingScreen(
+          sessionExerciseId: rowId,
+          savedSessionId: session.id,
+        ),
+      ),
+    );
+  }
+
+  /// Moves this saved workout to the day the user picks (B2).
+  ///
+  /// The same picker as the live workout, so the same clamp: today or
+  /// earlier. Ordering, the streak on every later card and the records all
+  /// re-derive from the new date; nothing is stored to update.
+  Future<void> _changeDate(BuildContext context, WorkoutSession session) async {
+    FocusScope.of(context).unfocus();
+    final picked =
+        await ref.read(workoutDatePickerProvider)(context, session.performedOn);
+    if (picked == null || picked == session.performedOn) return;
+    await _sessions.setSavedPerformedOn(session.id, picked);
+  }
+
   Future<void> _removeExercise(
     BuildContext context,
-    String sessionExerciseId,
+    WorkoutSession session,
+    SessionExercise exercise,
     String name,
   ) async {
+    // B6: removing the only exercise with work in it would leave a workout
+    // of nothing, a row with a calendar dot that claims a trained day. The
+    // honest outcome is deleting the workout, so that is what is offered.
+    final othersWithWork = session.exercises.where((e) =>
+        e.id != exercise.id && e.sets.any((s) => isSetComplete(e.loadType, s)));
+    if (othersWithWork.isEmpty) {
+      final confirmed = await confirmDestructive(
+        context,
+        title: 'Delete this workout?',
+        message: '$name is the only exercise in it, so removing it deletes '
+            'the workout. Records and your streak will update.',
+        confirmLabel: 'Delete',
+      );
+      if (!confirmed || !context.mounted) return;
+      await _deleteAndLeave(context);
+      return;
+    }
+
     final confirmed = await confirmDestructive(
       context,
       title: 'Remove $name?',
@@ -278,20 +397,28 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
       confirmLabel: 'Remove',
     );
     if (!confirmed) return;
-    await ref
-        .read(activeSessionProvider.notifier)
-        .removeSavedExercise(sessionExerciseId);
+    await _sessions.removeSavedExercise(exercise.id);
   }
 
-  Future<void> _delete(BuildContext context, String name) async {
+  Future<void> _delete(
+    BuildContext context,
+    String name,
+    WorkoutSession session,
+  ) async {
     final confirmed = await confirmDestructive(
       context,
       title: 'Delete $name?',
-      message: 'This permanently removes the workout and every set in it.',
+      message: 'This permanently removes the workout from '
+          '${cardDateLabel(session.performedOn)} and every set in it. '
+          'Records and your streak will update.',
       confirmLabel: 'Delete',
     );
-    if (!confirmed) return;
-    await ref.read(activeSessionProvider.notifier).deleteSaved(widget.sessionId);
+    if (!confirmed || !context.mounted) return;
+    await _deleteAndLeave(context);
+  }
+
+  Future<void> _deleteAndLeave(BuildContext context) async {
+    await _sessions.deleteSaved(widget.sessionId);
     if (!context.mounted) return;
     // This screen, then the History detail screen for the same workout if
     // that is what opened it: left open, it is a dead end that can only say
@@ -303,325 +430,78 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
   }
 }
 
-/// The part built to be screenshotted.
-class _ShareCard extends StatelessWidget {
-  const _ShareCard({
-    required this.session,
-    required this.name,
-    required this.title,
-    required this.views,
-    required this.fill,
-    required this.records,
-    required this.calories,
-    required this.streak,
-    required this.onRename,
+/// The card's title, editable in place: the workout is already saved, and
+/// the name is optional forever.
+class _TitleField extends StatelessWidget {
+  const _TitleField({
+    required this.controller,
+    required this.focusNode,
+    required this.hint,
+    required this.onSubmitted,
   });
 
-  final WorkoutSession session;
-  final String name;
-  final TextEditingController title;
-  final List<BodyView> views;
-  final MuscleFill fill;
-  final int records;
-  final double? calories;
-  final int streak;
-  final ValueChanged<String?> onRename;
+  final TextEditingController controller;
+  final FocusNode focusNode;
+
+  /// The resolved name, shown while the field is empty.
+  final String hint;
+  final VoidCallback onSubmitted;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        color: AppPalette.surface,
-        border: Border.all(color: AppPalette.border),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Text(
-            session.performedOn == LocalDate.today()
-                ? 'Today'
-                : longDateLabel(session.performedOn),
-            style: const TextStyle(fontSize: 12, color: AppPalette.textMuted),
+    return Semantics(
+      // Named for VoiceOver (audit B10): a bare field read as "text field".
+      label: 'Workout title',
+      identifier: 'workout-title',
+      container: true,
+      child: TextField(
+        key: SessionSummaryScreen.titleFieldKey,
+        controller: controller,
+        focusNode: focusNode,
+        maxLength: 40,
+        textCapitalization: TextCapitalization.sentences,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: AppPalette.textPrimary,
+        ),
+        decoration: InputDecoration(
+          counterText: '',
+          filled: false,
+          isDense: true,
+          contentPadding: EdgeInsets.zero,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          hintText: hint,
+          hintStyle: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: AppPalette.textPrimary,
           ),
-          const SizedBox(height: 4),
-          // Inline-editable: the workout is already saved, and the name is
-          // optional forever.
-          TextField(
-            controller: title,
-            maxLength: 40,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: AppPalette.textPrimary,
-            ),
-            decoration: InputDecoration(
-              counterText: '',
-              filled: false,
-              isDense: true,
-              contentPadding: EdgeInsets.zero,
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              hintText: name,
-              hintStyle: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppPalette.textPrimary,
-              ),
-            ),
-            onSubmitted: (value) =>
-                onRename(value.trim().isEmpty ? null : value.trim()),
-            onTapOutside: (_) => FocusScope.of(context).unfocus(),
-          ),
-          const SizedBox(height: 12),
-          // Only the views that carry trained muscles; never an empty second
-          // diagram beside a filled one. The map is the card's moment, so it
-          // takes the card's width and most of its height.
-          SizedBox(
-            height: 280,
-            child: Row(
-              children: <Widget>[
-                for (final view in views) ...<Widget>[
-                  if (view != views.first) const SizedBox(width: 12),
-                  Expanded(child: BodyDiagram(view: view, fill: fill.colorFor)),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: <Widget>[
-              _Stat(value: '${setCountOf(session)}', label: 'Sets'),
-              _Stat(value: '${exerciseCountOf(session)}', label: 'Exercises'),
-              _Stat(value: '$streak', label: 'Day streak'),
-              // A figure among the figures, in the PB colour -- not an
-              // outlined pill under the map. Absent at zero: never "0 PB" on
-              // a card built to be screenshotted.
-              if (records > 0)
-                _Stat(
-                  key: SessionSummaryScreen.pbPillKey,
-                  value: '$records',
-                  label: 'PB',
-                  valueColor: AppPalette.accentStrong,
-                ),
-              // On a record day the PB count takes the kcal slot: an
-              // estimate with an info icon is the weakest figure on a card
-              // meant to be shown, and the record is the strongest.
-              if (calories != null && records == 0)
-                _CalorieStat(calories: calories!),
-            ],
-          ),
-          // A workout logged before the user ever weighed in cannot have an
-          // honest estimate, and adding a weight later does not back-fill it.
-          // So there is no kcal figure -- and the instruction sits under the
-          // row rather than in a figure's slot.
-          if (calories == null && records == 0) ...<Widget>[
-            const SizedBox(height: 12),
-            const Text(
-              key: SessionSummaryScreen.addWeightKey,
-              kNoWeightKcalNote,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: AppPalette.textMuted),
-            ),
-          ],
-          const SizedBox(height: 16),
-          Center(
-            child: Text(
-              kAppDisplayName.toUpperCase(),
-              style: const TextStyle(
-                fontSize: 12,
-                letterSpacing: 2,
-                color: AppPalette.textMuted,
-              ),
-            ),
-          ),
-        ],
+        ),
+        onSubmitted: (_) => onSubmitted(),
+        onTapOutside: (_) => focusNode.unfocus(),
       ),
     );
   }
 }
 
-/// What stands in for the calorie figure when no bodyweight was in effect on
-/// the session's day. Shared by the summary card and Session Detail.
-const String kNoWeightKcalNote = 'Add your bodyweight in Profile to see kcal';
-
-/// The app's display name, as it appears on a card meant to be posted.
-const String kAppDisplayName = 'TurtleLift';
-
-/// Shares a rendered card image. A provider so a test can see what would be
-/// shared without a platform share sheet.
-typedef CardImageSharer = Future<void> Function(
-  Uint8List png, {
-  required String fileName,
-  Rect? origin,
-});
-
-final cardImageSharerProvider =
-    Provider<CardImageSharer>((ref) => shareCardImage);
-
-/// The image's file name: the workout's name, made safe for a file system.
-String cardImageFileName(String name) {
-  final safe = name
-      .replaceAll(RegExp(r'[^A-Za-z0-9]+'), '-')
-      .replaceAll(RegExp(r'^-+|-+$'), '')
-      .toLowerCase();
-  return '${safe.isEmpty ? 'workout' : safe}.png';
-}
-
-/// Writes [png] to the temporary directory and opens the system share sheet
-/// on it, the same route Export takes (`share_plus`, `path_provider`).
-Future<void> shareCardImage(
-  Uint8List png, {
-  required String fileName,
-  Rect? origin,
-}) async {
-  final dir = await getTemporaryDirectory();
-  final file = File('${dir.path}/$fileName');
-  await file.writeAsBytes(png, flush: true);
-  await SharePlus.instance.share(
-    ShareParams(
-      files: <XFile>[XFile(file.path, mimeType: 'image/png')],
-      sharePositionOrigin: origin,
-    ),
-  );
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({
-    required this.value,
-    required this.label,
-    this.valueColor = AppPalette.textPrimary,
-    super.key,
-  });
-
-  final String value;
-  final String label;
-  final Color valueColor;
-
-  @override
-  Widget build(BuildContext context) => Expanded(
-        child: Column(
-          children: <Widget>[
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-                color: valueColor,
-                fontFeatures: const <FontFeature>[
-                  FontFeature.tabularFigures(),
-                ],
-              ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(
-                  fontSize: 12, color: AppPalette.textMuted),
-            ),
-          ],
-        ),
-      );
-}
-
-/// Calories, with the way to read how they are estimated.
-///
-/// Built only when there is an honest figure; the summary shows
-/// [kNoWeightKcalNote] under the row otherwise.
-class _CalorieStat extends StatelessWidget {
-  const _CalorieStat({required this.calories});
-
-  final double calories;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: <Widget>[
-          Text(
-            '${calories.round()}',
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              color: AppPalette.textPrimary,
-              fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              const Text('kcal',
-                  style: TextStyle(
-                      fontSize: 12, color: AppPalette.textMuted)),
-              const SizedBox(width: 4),
-              Builder(
-                builder: (context) => Semantics(
-                  container: true,
-                  button: true,
-                  label: 'How the calorie estimate works',
-                  onTap: () => _explain(context),
-                  excludeSemantics: true,
-                  child: GestureDetector(
-                    key: SessionSummaryScreen.calorieInfoKey,
-                    onTap: () => _explain(context),
-                    child: const Icon(Icons.info_outline,
-                        size: 13, color: AppPalette.textMuted),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _explain(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppPalette.surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppPalette.border),
-        ),
-        title: const Text(
-          'How this is estimated',
-          style: TextStyle(fontSize: 17, color: AppPalette.textPrimary),
-        ),
-        content: const Text(
-          'Estimated from the sets you logged and your body weight, using '
-          'standard exercise-science averages for resistance training. Actual '
-          'calories burned vary by person and effort.',
-          style: TextStyle(fontSize: 15, color: AppPalette.textSecondary),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Got it',
-                style: TextStyle(color: AppPalette.textSecondary)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// One exercise in the log below the card, with its sets and its record badge.
+/// One exercise in the log below the card, with its sets and its record mark.
 class _LoggedExercise extends StatelessWidget {
   const _LoggedExercise({
     required this.exercise,
     required this.name,
-    required this.isRecord,
+    required this.recordSetId,
     required this.onEdit,
     required this.onRemove,
   });
 
   final SessionExercise exercise;
   final String name;
-  final bool isRecord;
+
+  /// The set that set a record in this workout, or null.
+  final String? recordSetId;
   final VoidCallback onEdit;
   final VoidCallback onRemove;
 
@@ -634,52 +514,88 @@ class _LoggedExercise extends StatelessWidget {
     final sets = formatSetList(exercise);
     if (sets.isEmpty) return const SizedBox.shrink();
 
-    return GestureDetector(
-      key: rowKey(exercise.exerciseId),
-      behavior: HitTestBehavior.opaque,
-      onTap: onEdit,
-      onLongPress: onRemove,
-      child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: AppPalette.textPrimary,
-                  ),
+    final mark = recordSetId != null ? pbMarkLabel(exercise.loadType) : null;
+    // The row is a button that opens the sets, and says so; remove is a
+    // visible control and a VoiceOver action rather than a long-press only
+    // (audit B10, #13). Long-press still works for the one-handed path.
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Semantics(
+            container: true,
+            button: true,
+            label: <String>[name, ?mark, sets].join('\n'),
+            hint: 'Edit sets',
+            onTap: onEdit,
+            onLongPress: onRemove,
+            customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
+              const CustomSemanticsAction(label: 'Remove'): onRemove,
+            },
+            excludeSemantics: true,
+            child: GestureDetector(
+              key: rowKey(exercise.exerciseId),
+              behavior: HitTestBehavior.opaque,
+              onTap: onEdit,
+              onLongPress: onRemove,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Flexible(
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: AppPalette.textPrimary,
+                            ),
+                          ),
+                        ),
+                        if (mark != null) ...<Widget>[
+                          const SizedBox(width: 8),
+                          // Says what kind of record it is, because a badge
+                          // beside a smaller number would otherwise read as a
+                          // bug weeks later.
+                          Text(mark, style: kPbMarkStyle),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    SessionSetLine(
+                      exercise: exercise,
+                      recordSetId: recordSetId,
+                    ),
+                  ],
                 ),
               ),
-              if (isRecord)
-                Text(
-                  // Says what kind of record it is, because a badge beside a
-                  // smaller number would otherwise read as a bug weeks later.
-                  // The logging screen's banner is not on this page.
-                  exercise.loadType?.name == 'assisted'
-                      ? 'PB · lightest assist'
-                      : 'PB',
-                  style: kPbMarkStyle,
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            sets,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppPalette.textSecondary,
-              fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
             ),
           ),
-        ],
-      ),
-      ),
+        ),
+        Semantics(
+          container: true,
+          button: true,
+          label: 'Remove $name',
+          onTap: onRemove,
+          excludeSemantics: true,
+          child: GestureDetector(
+            key: SessionSummaryScreen.removeKeyFor(exercise.exerciseId),
+            behavior: HitTestBehavior.opaque,
+            onTap: onRemove,
+            child: const SizedBox(
+              width: 48,
+              height: 48,
+              child: Icon(
+                Icons.remove_circle_outline_rounded,
+                size: 20,
+                color: AppPalette.textMuted,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -689,31 +605,14 @@ class _SaveAsTemplateButton extends StatelessWidget {
 
   final VoidCallback onTap;
 
+  /// Text in chalk, like every secondary action, so it reads as available.
+  /// The muted outlined capsule it used to be looked disabled (audit #13).
   @override
-  Widget build(BuildContext context) => Semantics(
-        container: true,
-        button: true,
+  Widget build(BuildContext context) => GhostButton(
+        buttonKey: SessionSummaryScreen.saveAsTemplateKey,
         label: 'Save as template',
+        leadingIcon: Icons.bookmark_add_outlined,
         onTap: onTap,
-        excludeSemantics: true,
-        child: GestureDetector(
-          key: SessionSummaryScreen.saveAsTemplateKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppPalette.surface,
-              border: Border.all(color: AppPalette.border),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Text(
-              'Save as template',
-              style: TextStyle(fontSize: 15, color: AppPalette.textSecondary),
-            ),
-          ),
-        ),
       );
 }
 
@@ -745,33 +644,20 @@ class _DeleteButton extends StatelessWidget {
       );
 }
 
-/// Which body views to draw for a set of trained muscles.
-///
-/// Only the views that carry something: never an empty second diagram beside a
-/// filled one.
-List<BodyView> viewsForMuscles(Set<String> subGroupIds) {
-  final views = <BodyView>{};
-  for (final id in subGroupIds) {
-    for (final placement in kSubMuscleGroups[id]?.segments ??
-        const <({String view, String segment})>[]) {
-      views.add(placement.view == 'front' ? BodyView.front : BodyView.back);
-    }
-  }
-  if (views.isEmpty) return <BodyView>[BodyView.front];
-  return BodyView.values.where(views.contains).toList(growable: false);
-}
-
-/// Pushes the summary for [sessionId].
+/// Pushes the summary for [sessionId]. [editing] when it is opened from
+/// History to correct a saved workout.
 Future<void> pushSessionSummary(
   BuildContext context,
   String sessionId, {
   bool celebrate = false,
+  bool editing = false,
 }) =>
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => SessionSummaryScreen(
           sessionId: sessionId,
           celebrate: celebrate,
+          editing: editing,
         ),
       ),
     );

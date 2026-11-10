@@ -2,36 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/active_session.dart' show savedSessionsProvider;
-import '../data/body_gender.dart';
-import '../data/bodyweight_resolution.dart';
-import '../data/generated/muscle_taxonomy.dart';
-import '../data/history_preview_data.dart';
+import '../data/derived.dart';
 import '../data/exercise_index.dart';
+import '../data/history_preview_data.dart' show sessionRecordsProvider;
 import '../data/personal_best.dart';
-import '../data/personal_details_store.dart';
+import '../data/session_store.dart';
 import '../data/set_format.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'app_screen.dart';
-import 'body_diagram.dart';
+import 'exercise_history_screen.dart' show pushExerciseHistory;
 import 'ghost_button.dart';
-import 'session_summary_screen.dart';
+import 'session_card.dart';
 import 'session_entry.dart' show doAgain;
+import 'session_summary_screen.dart' show pushSessionSummary;
 
 /// One logged session, opened from a History row.
 ///
 /// **This is the read half.** Editing (title, `performedOn`, sets) and delete
-/// live on `SessionSummaryScreen`, the screen a workout lands on when it is
-/// finished; the Edit workout button at the foot of the log opens it, so there
-/// is one editor and nothing for two of them to disagree about.
+/// live on `SessionSummaryScreen`; the Edit workout button at the foot of the
+/// log opens it, so there is one editor and nothing for two of them to
+/// disagree about.
 ///
-/// **The card is the shareable part; the log is the reason to scroll past it.**
-/// `docs/04` draws that line explicitly: the card is a summary someone would
-/// screenshot, and the exercise-by-exercise log underneath is for the user who
-/// actually wants to review what they did. The personal-best count on the card
-/// and the trophies in the log come from the same derivation, so the two can
-/// never disagree.
-class HistorySessionDetailScreen extends ConsumerWidget {
+/// **The card is [SessionCard], the same widget the editor shows** (audit
+/// B3): the same muscles (primaries amber, secondaries steel, at sub-muscle
+/// precision), the same figures and labels, the same date. Share in the
+/// header sends that card as an image, as prototype 22 draws it: revisiting a
+/// workout is "just as shareable" as finishing it (`docs/04`).
+///
+/// **The log is the reason to scroll past the card**, and each exercise in it
+/// opens that exercise's history (audit B9): progress lives one tap from
+/// wherever an exercise appears.
+class HistorySessionDetailScreen extends ConsumerStatefulWidget {
   const HistorySessionDetailScreen({required this.sessionId, super.key});
 
   final String sessionId;
@@ -50,14 +52,38 @@ class HistorySessionDetailScreen extends ConsumerWidget {
   /// The button that starts a new workout with this one's exercises.
   static const Key doAgainKey = ValueKey<String>('session-do-again');
 
-  /// Finds the calorie figure, or the prompt standing in for it.
+  /// The header button that shares the card.
+  static const Key shareKey = ValueKey<String>('session-detail-share');
+
+  /// Finds the calorie figure.
   @visibleForTesting
-  static const Key calorieKey = ValueKey<String>('session-calories');
+  static const Key calorieKey = SessionCard.calorieKey;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final sessions = ref.watch(historySessionsProvider);
-    final session = sessions.where((s) => s.id == sessionId).firstOrNull;
+  ConsumerState<HistorySessionDetailScreen> createState() =>
+      _HistorySessionDetailScreenState();
+}
+
+class _HistorySessionDetailScreenState
+    extends ConsumerState<HistorySessionDetailScreen> {
+  final GlobalKey _cardKey = GlobalKey();
+  bool _sharing = false;
+
+  Future<void> _share(String name) async {
+    if (_sharing) return;
+    _sharing = true;
+    try {
+      await shareSessionCard(context, ref, boundaryKey: _cardKey, name: name);
+    } finally {
+      _sharing = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final saved = ref.watch(savedSessionsProvider);
+    final session =
+        saved.where((s) => s.id == widget.sessionId).firstOrNull;
 
     // The session can genuinely be gone — a delete elsewhere, or a stale route.
     // Popping would be worse than saying so.
@@ -80,354 +106,75 @@ class HistorySessionDetailScreen extends ConsumerWidget {
       );
     }
 
-    final figures = ref.watch(historyProjectionProvider)[session.id]!;
-    final title = resolvedTitle(session, figures);
-
-    // Every figure below is derived at this moment from the session rows and
-    // the bodyweight series. Nothing is read from a stored counter, which is
-    // why editing or deleting a session anywhere makes all of them correct
-    // again with no invalidation to remember.
-    final streak = streakAsOf(sessions, session.performedOn);
-    final weight = weightInEffectOn(
-      ref.watch(bodyweightLogProvider),
-      session.performedOn,
-    );
-    final kcal = caloriesFor(
-      setCount: figures.setCount,
-      weightKg: weight?.weightKg,
-    );
+    final index = ref.watch(exerciseIndexProvider);
+    final name = resolvedTitle(session, index);
+    final records =
+        ref.watch(sessionRecordsProvider)[session.id] ?? SessionRecords.none;
 
     return AppScreen.pushed(
-      title: title,
+      title: name,
+      actions: <Widget>[
+        Semantics(
+          container: true,
+          button: true,
+          label: 'Share card',
+          onTap: () => _share(name),
+          excludeSemantics: true,
+          child: GestureDetector(
+            key: HistorySessionDetailScreen.shareKey,
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _share(name),
+            child: const SizedBox(
+              width: 48,
+              height: 48,
+              child: Icon(
+                Icons.ios_share_rounded,
+                size: 20,
+                color: AppPalette.textPrimary,
+              ),
+            ),
+          ),
+        ),
+      ],
       body: ListView(
         padding: screenScrollPadding(context),
         children: <Widget>[
-          _HeroCard(
-            session: session,
-            figures: figures,
-            title: title,
-            streak: streak,
-            kcal: kcal,
+          const SizedBox(height: 10),
+          RepaintBoundary(
+            key: _cardKey,
+            child: SessionCard(session: session),
           ),
           const SizedBox(height: 16),
           Semantics(
             header: true,
-            child: Text(
-              figures.pbCount > 0
-                  ? 'Logged · ${figures.pbCount} personal best'
-                      '${figures.pbCount == 1 ? '' : 's'}'
-                  : 'Logged',
-              style: kLandingSectionLabelStyle,
-            ),
+            child: const Text('What you did', style: kLandingSectionLabelStyle),
           ),
           const SizedBox(height: 4),
-          ..._logBlocks(ref, sessions, session),
+          for (final exercise in session.exercises)
+            if (exercise.sets.any((s) => isSetComplete(exercise.loadType, s)))
+              _ExerciseBlock(
+                key: HistorySessionDetailScreen.exerciseKey(
+                    index.byId(exercise.exerciseId)?.name ??
+                        'Unknown exercise'),
+                exercise: exercise,
+                name: index.byId(exercise.exerciseId)?.name ??
+                    'Unknown exercise',
+                recordSetId: records.recordSetIds[exercise.id],
+                onTap: () => pushExerciseHistory(context, exercise.exerciseId),
+              ),
           const SizedBox(height: 24),
-          if (ref
-                  .watch(savedSessionsProvider)
-                  .where((s) => s.id == sessionId)
-                  .firstOrNull
-              case final workout?)
-            GhostButton(
-              buttonKey: HistorySessionDetailScreen.doAgainKey,
-              label: 'Do again',
-              leadingIcon: Icons.replay_rounded,
-              onTap: () => doAgain(context, ref, workout),
-            ),
+          GhostButton(
+            buttonKey: HistorySessionDetailScreen.doAgainKey,
+            label: 'Do again',
+            leadingIcon: Icons.replay_rounded,
+            onTap: () => doAgain(context, ref, session),
+          ),
           GhostButton(
             buttonKey: HistorySessionDetailScreen.editKey,
             label: 'Edit workout',
-            onTap: () => pushSessionSummary(context, sessionId),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The log under the hero card, one block per exercise.
-///
-/// **Read from the saved workout itself whenever it exists**, so each set is
-/// written by [formatSet] and each PB mark comes from [isPersonalBest] -- the
-/// same two functions the summary card uses. The reduced [HistoryExercise]
-/// keeps only each set's personal-best score, which is addedKg for a push-up,
-/// minus the assistance for an assisted lift and the added weight for a
-/// plank; printed with a "kg" suffix it read "0kg" and "-25kg" (QA, Maestro).
-/// The fixture path below is what the widget tests that hand History a plain
-/// list still render.
-List<Widget> _logBlocks(
-  WidgetRef ref,
-  List<HistorySession> sessions,
-  HistorySession session,
-) {
-  final saved = ref.watch(savedSessionsProvider);
-  final workout = saved.where((s) => s.id == session.id).firstOrNull;
-  if (workout == null) {
-    return <Widget>[
-      for (final exercise in session.exercises)
-        () {
-          final record = _recordScoreFor(sessions, session, exercise);
-          return _ExerciseBlock(
-            key: HistorySessionDetailScreen.exerciseKey(exercise.name),
-            name: exercise.name,
-            sets: <String>[
-              for (final score in exercise.setScores) '${formatWeight(score)}kg',
-            ],
-            recordIndex:
-                record == null ? null : exercise.setScores.indexOf(record),
-          );
-        }(),
-    ];
-  }
-
-  final index = ref.watch(exerciseIndexProvider);
-  return <Widget>[
-    for (final exercise in workout.exercises)
-      if (exercise.completedSets.isNotEmpty)
-        () {
-          final name =
-              index.byId(exercise.exerciseId)?.name ?? 'Unknown exercise';
-          final completed = exercise.completedSets.toList();
-          int? recordIndex;
-          if (isPersonalBest(exercise, workout, saved)) {
-            final best = bestOf(exercise);
-            final i = completed.indexWhere(
-                (set) => metricFor(exercise.loadType, set) == best);
-            recordIndex = i < 0 ? null : i;
-          }
-          return _ExerciseBlock(
-            key: HistorySessionDetailScreen.exerciseKey(name),
-            name: name,
-            note: exercise.note,
-            sets: <String>[
-              for (final set in completed) formatSet(exercise.loadType, set),
-            ],
-            recordIndex: recordIndex,
-          );
-        }(),
-  ];
-}
-
-/// The best score this exercise had ever reached *before* [session], or null
-/// when this session did not beat it.
-///
-/// Recomputed here rather than carried on the projection because it is only
-/// ever needed for the handful of exercises on one open screen, and the
-/// projection's job is the whole list.
-double? _recordScoreFor(
-  List<HistorySession> sessions,
-  HistorySession session,
-  HistoryExercise exercise,
-) {
-  var previous = 0.0;
-  var seen = false;
-  for (final other in sessions) {
-    if (!other.performedOn.isBefore(session.performedOn)) continue;
-    for (final e in other.exercises) {
-      if (e.name != exercise.name) continue;
-      seen = true;
-      for (final score in e.setScores) {
-        if (score > previous) previous = score;
-      }
-    }
-  }
-  if (!seen) return null; // first-ever occurrence is never a record
-
-  final best = exercise.setScores.fold<double>(0, (a, b) => a > b ? a : b);
-  return best > previous ? best : null;
-}
-
-/// The **qualified** sub-muscle-group ids belonging to [groupIds].
-///
-/// **`kMuscleTaxonomy` stores bare sub-names, everything else uses qualified
-/// ones.** The taxonomy lists `'chest': ['upper', 'mid', 'lower']`, while
-/// `kSubMuscleGroups` and the diagram's fill callback both speak in
-/// `'chest/upper'`. Joining the two without re-qualifying compares `'upper'`
-/// against `'chest/upper'`, matches nothing, and paints a body that is
-/// correctly shaped and entirely unfilled — which is exactly the "two
-/// vocabularies for one idea" trap `body_gender.dart` documents, met from the
-/// other side.
-///
-/// Done here once so no caller has to remember it.
-Set<String> subMuscleGroupIdsFor(Iterable<String> groupIds) => <String>{
-      for (final groupId in groupIds)
-        for (final subName in kMuscleTaxonomy[groupId] ?? const <String>[])
-          '$groupId/$subName',
-    };
-
-/// The screenshot-friendly summary: what was trained, and four figures.
-class _HeroCard extends ConsumerWidget {
-  const _HeroCard({
-    required this.session,
-    required this.figures,
-    required this.title,
-    required this.streak,
-    required this.kcal,
-  });
-
-  final HistorySession session;
-  final HistoryRowFigures figures;
-  final String title;
-  final int streak;
-  final int? kcal;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final views = _viewsFor(figures.trainedGroupIds);
-    final fill = _SessionMuscleFill(figures.trainedGroupIds.toSet());
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppPalette.surface,
-        border: Border.all(color: AppPalette.border),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: AppPalette.textPrimary,
-                  ),
-                ),
-              ),
-              // The app's one PB mark: the word in amber, no pill, no icon.
-              if (figures.pbCount > 0)
-                Text('${figures.pbCount} PB', style: kPbMarkStyle),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _longDate(session.performedOn) +
-                (session.isQuickLog ? ' · quick log' : ''),
-            style: const TextStyle(fontSize: 12, color: AppPalette.textMuted),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 200,
-            child: Row(
-              children: <Widget>[
-                for (final view in views) ...<Widget>[
-                  if (view != views.first) const SizedBox(width: 12),
-                  Expanded(
-                    child: BodyDiagram(view: view, fill: fill.colorFor),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.only(top: 12),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppPalette.border)),
-            ),
-            child: Row(
-              children: <Widget>[
-                _Figure(value: '${figures.setCount}', label: 'Sets'),
-                _Figure(value: '${figures.exerciseCount}', label: 'Exercises'),
-                _Figure(value: '$streak', label: 'Streak'),
-                if (kcal != null)
-                  _Figure(
-                    key: HistorySessionDetailScreen.calorieKey,
-                    value: '$kcal',
-                    label: 'kcal',
-                  ),
-              ],
-            ),
-          ),
-          // No weight was in effect on this day, so there is no figure -- and
-          // an instruction does not belong in a figure's slot. A figure derived
-          // from today's weight would be the retroactive rewrite the dated
-          // series exists to prevent.
-          if (kcal == null) ...<Widget>[
-            const SizedBox(height: 12),
-            const Text(
-              key: HistorySessionDetailScreen.calorieKey,
-              kNoWeightKcalNote,
-              style: TextStyle(fontSize: 12, color: AppPalette.textMuted),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// **Only the view or views that carry a trained muscle.** `docs/01` is
-/// explicit: never render an empty second diagram — a blank back on a session
-/// that was all chest reads as missing data rather than as nothing to show.
-List<BodyView> _viewsFor(List<String> trainedGroupIds) {
-  var front = false;
-  var back = false;
-  for (final subId in subMuscleGroupIdsFor(trainedGroupIds)) {
-    {
-      for (final segment in kSubMuscleGroups[subId]?.segments ??
-          const <({String view, String segment})>[]) {
-        if (segment.view == BodyView.front.taxonomyView) front = true;
-        if (segment.view == BodyView.back.taxonomyView) back = true;
-      }
-    }
-  }
-  if (front && back) return const <BodyView>[BodyView.front, BodyView.back];
-  if (back) return const <BodyView>[BodyView.back];
-  return const <BodyView>[BodyView.front];
-}
-
-/// Fills a segment accent-strong when the session trained it.
-///
-/// One instance per build, handed to the diagram, so the painter's repaint
-/// guard compares the same tear-off rather than a fresh closure each frame —
-/// the reason `ExerciseMuscleFill` exists in the same shape.
-@immutable
-class _SessionMuscleFill {
-  _SessionMuscleFill(Set<String> trainedGroupIds)
-      : trainedSubGroups =
-            Set<String>.unmodifiable(subMuscleGroupIdsFor(trainedGroupIds));
-
-  final Set<String> trainedSubGroups;
-
-  Color colorFor(Set<String> subMuscleGroupIds) {
-    return subMuscleGroupIds.any(trainedSubGroups.contains)
-        ? AppPalette.accentStrong
-        : AppPalette.mutedSurface;
-  }
-}
-
-class _Figure extends StatelessWidget {
-  const _Figure({required this.value, required this.label, super.key});
-
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: <Widget>[
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              color: AppPalette.textPrimary,
-              fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppPalette.textMuted,
-            ),
+            leadingIcon: Icons.edit_outlined,
+            onTap: () =>
+                pushSessionSummary(context, widget.sessionId, editing: true),
           ),
         ],
       ),
@@ -436,116 +183,92 @@ class _Figure extends StatelessWidget {
 }
 
 /// One exercise and every set performed, with the record-setting set marked.
+/// A link to that exercise's history.
 class _ExerciseBlock extends StatelessWidget {
   const _ExerciseBlock({
+    required this.exercise,
     required this.name,
-    this.note,
-    required this.sets,
-    required this.recordIndex,
+    required this.recordSetId,
+    required this.onTap,
     super.key,
   });
 
+  final SessionExercise exercise;
   final String name;
 
-  /// The user's note for this exercise in this workout, or null.
-  final String? note;
-
-  /// Every completed set, already written for display.
-  final List<String> sets;
-
-  /// Which set beat the previous best, or null when this exercise set no
-  /// record in this session.
-  final int? recordIndex;
+  /// The set that beat the previous best, or null.
+  final String? recordSetId;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppPalette.border)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
+    final mark = recordSetId != null ? pbMarkLabel(exercise.loadType) : null;
+    final note = exercise.note;
+    return Semantics(
+      container: true,
+      button: true,
+      label: <String>[name, ?mark, formatSetList(exercise), ?note].join('\n'),
+      hint: 'See history',
+      onTap: onTap,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppPalette.border)),
+          ),
+          child: Row(
             children: <Widget>[
-              Flexible(
-                child: Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: AppPalette.textPrimary,
-                  ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Flexible(
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: AppPalette.textPrimary,
+                            ),
+                          ),
+                        ),
+                        if (mark != null) ...<Widget>[
+                          const SizedBox(width: 8),
+                          Text(mark, style: kPbMarkStyle),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    SessionSetLine(exercise: exercise, recordSetId: recordSetId),
+                    if (note != null) ...<Widget>[
+                      const SizedBox(height: 4),
+                      Text(
+                        note,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontStyle: FontStyle.italic,
+                          color: AppPalette.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              if (recordIndex != null) ...<Widget>[
-                const SizedBox(width: 8),
-                const Text('PB', style: kPbMarkStyle),
-              ],
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: AppPalette.textMuted,
+              ),
             ],
           ),
-          const SizedBox(height: 4),
-          _SetLine(sets: sets, recordIndex: recordIndex),
-          if (note != null) ...<Widget>[
-            const SizedBox(height: 4),
-            Text(
-              note!,
-              style: const TextStyle(
-                fontSize: 13,
-                fontStyle: FontStyle.italic,
-                color: AppPalette.textSecondary,
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
-}
-
-/// Every set as one muted line, `77.5kg × 8 · 75kg × 8`, with the
-/// record-setting set the only thing in the log painted amber.
-///
-/// **A line, not a pill per set.** The sets are a record to read, not controls;
-/// pills made them look tappable and made the log the loudest part of the
-/// screen.
-class _SetLine extends StatelessWidget {
-  const _SetLine({required this.sets, required this.recordIndex});
-
-  final List<String> sets;
-  final int? recordIndex;
-
-  static const _style = TextStyle(
-    fontSize: 13,
-    color: AppPalette.textSecondary,
-    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final spans = <InlineSpan>[];
-    for (var i = 0; i < sets.length; i++) {
-      if (i > 0) spans.add(const TextSpan(text: ' · '));
-      final isRecord = i == recordIndex;
-      spans.add(TextSpan(
-        text: sets[i],
-        style: isRecord
-            ? const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: AppPalette.accentStrong,
-              )
-            : null,
-      ));
-    }
-    return Text.rich(TextSpan(style: _style, children: spans));
-  }
-}
-
-String _longDate(DateTime date) {
-  const months = <String>[
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ];
-  return '${date.day} ${months[date.month - 1]} ${date.year}';
 }

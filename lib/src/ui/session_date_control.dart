@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/active_session.dart';
+import '../data/date_labels.dart';
 import '../data/local_date.dart';
 import '../theme/app_palette.dart';
 
@@ -77,60 +78,75 @@ class SessionDateControl extends ConsumerWidget {
     WidgetRef ref,
     LocalDate current,
   ) async {
-    final today = LocalDate.today();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: current.toDateTime(),
-      firstDate: today.addDays(-365 * 5).toDateTime(),
-      // The picker cannot offer tomorrow at all, so the clamp is a second line
-      // of defence rather than the only one.
-      lastDate: today.toDateTime(),
-      // Painted from the app's own surfaces: `app_theme.dart` sets no
-      // date-picker theme, and Material's defaults bring a palette this app
-      // uses nowhere.
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          datePickerTheme: DatePickerThemeData(
-            backgroundColor: AppPalette.surface,
-            surfaceTintColor: Colors.transparent,
-            headerBackgroundColor: AppPalette.mutedSurface,
-            headerForegroundColor: AppPalette.textPrimary,
-            dayForegroundColor: WidgetStateProperty.resolveWith(
-              (states) => states.contains(WidgetState.selected)
-                  ? AppPalette.onAccent
-                  : AppPalette.textPrimary,
-            ),
-            dayBackgroundColor: WidgetStateProperty.resolveWith(
-              (states) => states.contains(WidgetState.selected)
-                  ? AppPalette.accentStrong
-                  : Colors.transparent,
-            ),
-            todayForegroundColor:
-                WidgetStateProperty.all(AppPalette.accentStrong),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-              side: const BorderSide(color: AppPalette.border),
-            ),
-          ),
-        ),
-        child: child!,
-      ),
-    );
+    final picked = await ref.read(workoutDatePickerProvider)(context, current);
     if (picked == null) return;
-    await ref
-        .read(activeSessionProvider.notifier)
-        .setPerformedOn(LocalDate.fromDateTime(picked));
+    await ref.read(activeSessionProvider.notifier).setPerformedOn(picked);
   }
 }
 
-/// `Mon 28 Jul` — enough to recognise the day at a glance without a year that
-/// is almost always this one.
-String longDateLabel(LocalDate date) {
-  const days = <String>['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const months = <String>[
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-  final weekday = days[date.toDateTime().weekday - 1];
-  return '$weekday ${date.day} ${months[date.month - 1]}';
+/// Asks for the day a workout happened, starting at [current]; null when the
+/// user backs out.
+typedef WorkoutDatePicker = Future<LocalDate?> Function(
+  BuildContext context,
+  LocalDate current,
+);
+
+/// The date picker the live workout and a saved one both use. A provider so a
+/// test can answer it without driving Material's calendar.
+final workoutDatePickerProvider =
+    Provider<WorkoutDatePicker>((ref) => showWorkoutDatePicker);
+
+/// The one picker for a workout's day: five years back, **never past today**.
+///
+/// A future-dated workout would make the streak meaningless, so the picker
+/// cannot offer tomorrow at all; the store's clamp is a second line of
+/// defence rather than the only one.
+Future<LocalDate?> showWorkoutDatePicker(
+  BuildContext context,
+  LocalDate current,
+) async {
+  final today = LocalDate.today();
+  final picked = await showDatePicker(
+    context: context,
+    initialDate: (current.isAfter(today) ? today : current).toDateTime(),
+    firstDate: today.addDays(-365 * 5).toDateTime(),
+    lastDate: today.toDateTime(),
+    // Painted from the app's own surfaces: `app_theme.dart` sets no
+    // date-picker theme, and Material's defaults bring a palette this app
+    // uses nowhere.
+    builder: (context, child) => Theme(
+      data: Theme.of(context).copyWith(
+        datePickerTheme: DatePickerThemeData(
+          backgroundColor: AppPalette.surface,
+          surfaceTintColor: Colors.transparent,
+          headerBackgroundColor: AppPalette.mutedSurface,
+          headerForegroundColor: AppPalette.textPrimary,
+          dayForegroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? AppPalette.onAccent
+                : AppPalette.textPrimary,
+          ),
+          dayBackgroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? AppPalette.accentStrong
+                : Colors.transparent,
+          ),
+          todayForegroundColor:
+              WidgetStateProperty.all(AppPalette.accentStrong),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: AppPalette.border),
+          ),
+        ),
+      ),
+      child: child!,
+    ),
+  );
+  if (picked == null) return null;
+  return LocalDate.fromDateTime(picked);
 }
+
+/// `Mon 28 Jul`, or `Mon 28 Jul 2025` once it is not this year: the picker
+/// reaches five years back, and a backdated workout from last year must not
+/// read like one from this year (audit B4).
+String longDateLabel(LocalDate date) => weekdayDateLabel(date);

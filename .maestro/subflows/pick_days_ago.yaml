@@ -1,0 +1,24 @@
+# With the workout date picker open, picks the day DAYS days ago and confirms.
+# Leaves output.pickLabel set to that day as a History row prints it
+# ("7 Nov", or "7 Nov 2025" when it is not this year).
+appId: dev.indresh.turtleLift
+env:
+  DAYS: "3"
+---
+- evalScript: "${(function () {
+    var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var now = new Date();
+    var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - Number(DAYS));
+    output.pickDay = String(d.getDate());
+    output.pickPrev = (d.getMonth() != now.getMonth()) ? 'yes' : 'no';
+    output.pickLabel = d.getDate() + ' ' + m[d.getMonth()] + (d.getFullYear() == now.getFullYear() ? '' : ' ' + d.getFullYear());
+    return output.pickLabel;
+  })()}"
+- runFlow:
+    when:
+      true: ${output.pickPrev == 'yes'}
+    commands:
+      - tapOn: "Previous month"
+- tapOn: "${output.pickDay}, .*"
+- tapOn: "OK"
+- waitForAnimationToEnd

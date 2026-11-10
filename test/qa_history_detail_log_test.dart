@@ -10,6 +10,7 @@ import 'package:turtle_lift/src/data/personal_details_store.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/history_session_detail_screen.dart';
+import 'package:turtle_lift/src/ui/session_card.dart';
 
 /// QA (Maestro, iPhone 17e): History → a saved workout's "Logged" list read
 /// "Push-up 0kg", "Assisted pull-up machine -25kg" and "Plank 0kg", and the
@@ -120,7 +121,7 @@ void main() {
         .widgetList<RichText>(
           find.descendant(of: block, matching: find.byType(RichText)),
         )
-        .map((t) => t.text.toPlainText())
+        .map((t) => t.text.toPlainText().replaceAll('\u00A0', ' '))
         .toList();
     return texts.join('\n');
   }
@@ -155,7 +156,14 @@ void main() {
     tester,
   ) async {
     await pump(tester);
-    expect(find.text('Logged · 2 personal bests'), findsOneWidget);
+    // The count lives on the shared card (audit B3); the log marks which.
+    expect(
+      find.descendant(
+        of: find.byKey(SessionCard.pbKey),
+        matching: find.text('2'),
+      ),
+      findsOneWidget,
+    );
     for (final name in <String>[
       'Barbell bench press',
       'Assisted pull-up machine',
@@ -163,7 +171,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(HistorySessionDetailScreen.exerciseKey(name)),
-          matching: find.text('PB'),
+          matching: find.textContaining('PB'),
         ),
         findsOneWidget,
         reason: '$name beat its previous best (less assistance is better)',
@@ -173,7 +181,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(HistorySessionDetailScreen.exerciseKey(name)),
-          matching: find.text('PB'),
+          matching: find.textContaining('PB'),
         ),
         findsNothing,
         reason: 'a first-ever exercise is never a record',

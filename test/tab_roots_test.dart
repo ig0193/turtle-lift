@@ -172,7 +172,7 @@ void main() {
     expect(find.text('No workouts yet'), findsOneWidget,
         reason: 'the History empty-state heading, verbatim from the prototype');
     expect(
-      find.text("Finish your first session and it'll show up here."),
+      find.text("Finish your first workout and it'll show up here."),
       findsOneWidget,
       reason: 'the History empty-state body copy, verbatim from the prototype',
     );
@@ -384,7 +384,7 @@ void main() {
 
     final body = tester
         .widget<Text>(
-          find.text("Finish your first session and it'll show up here."),
+          find.text("Finish your first workout and it'll show up here."),
         )
         .style!;
     expect(body.fontSize, 13, reason: '.empty p font-size (12.5 snapped to the type scale)');

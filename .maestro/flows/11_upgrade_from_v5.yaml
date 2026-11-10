@@ -17,7 +17,7 @@ tags: [data]
 # Saved workouts, with the assisted record read the right way round (20kg
 # assistance beats 25kg) and the timed and bodyweight sets intact.
 - tapOn: "History"
-- assertVisible: "Pull day, 1 personal best, 12 Oct · 2 exercises · 3 sets"
+- assertVisible: "Pull day, personal best, 12 Oct.* · 2 exercises · 3 sets"
 - assertVisible: ".*7 Oct · 2 exercises · 4 sets"
 - assertVisible: "Push day, 5 Oct · 2 exercises · 4 sets"
 - tapOn: ".*7 Oct · 2 exercises · 4 sets"

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:turtle_lift/src/data/date_labels.dart';
 import 'package:turtle_lift/src/data/history_preview_data.dart';
+import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
@@ -107,10 +109,19 @@ void main() {
       ),
     ));
 
-    final empty = today.day == 1 ? 2 : 1;
-    expect(find.semantics.byLabel('$empty, no workout logged').evaluate(),
+    // Named in full since audit B10: weekday, day, month, year, "today".
+    final empty = LocalDate(today.year, today.month, today.day == 1 ? 2 : 1);
+    expect(
+        find.semantics
+            .byLabel(RegExp('^${spokenDateLabel(empty)}, '
+                '(no workout|not yet)\$'))
+            .evaluate(),
         hasLength(1));
-    expect(find.semantics.byLabel('${today.day}, 1 workout').evaluate(),
+    expect(
+        find.semantics
+            .byLabel('${spokenDateLabel(LocalDate.fromDateTime(today))}, '
+                'today, 1 workout')
+            .evaluate(),
         hasLength(1));
     handle.dispose();
   });

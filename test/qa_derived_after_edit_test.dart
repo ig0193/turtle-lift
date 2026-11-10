@@ -7,10 +7,7 @@ import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/derived.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
-import 'package:turtle_lift/src/data/history_preview_data.dart' hide streakAsOf;
-import 'package:turtle_lift/src/data/history_preview_data.dart'
-    as history
-    show streakAsOf;
+import 'package:turtle_lift/src/data/history_preview_data.dart';
 import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
@@ -200,10 +197,11 @@ void main() {
     });
 
     test('the History detail card agrees once a session is emptied', () async {
-      // The History detail screen computes its streak from the History rows,
-      // not the saved sessions; a saved workout edited down to nothing is still
-      // a row there, so it must not keep the chain alive (docs/00 §7: only a
-      // session with >= 1 completed set counts).
+      // The History detail now shows the one shared card, whose streak is
+      // derived from the saved sessions (audit B3). A saved workout edited
+      // down to nothing is no longer a History row (audit B6), and it must
+      // not keep the chain alive (docs/00 §7: only a session with >= 1
+      // completed set counts).
       final newest = await saveWorkout(daysAgo: 0);
       final middle = await saveWorkout(daysAgo: 2);
       await saveWorkout(daysAgo: 5);
@@ -212,12 +210,9 @@ void main() {
       await notifier().deleteSavedSet(set.id);
 
       final rows = container.read(historySessionsProvider);
-      final newestRow = rows.firstWhere((r) => r.id == newest);
-      expect(
-        history.streakAsOf(rows, newestRow.performedOn),
-        streakAsOf(today, saved()),
-      );
-      expect(history.streakAsOf(rows, newestRow.performedOn), 1);
+      expect(rows.map((r) => r.id), contains(newest));
+      expect(rows.map((r) => r.id), isNot(contains(middle)));
+      expect(streakAsOf(today, saved()), 1);
     });
   });
 

@@ -83,6 +83,13 @@ passed.
 | 14 | Custom exercise (ADR 0009): create from the picker, straight to logging, History, its no-form-guide page, into a template, Export counts it |
 | 15 | Swap in place (ADR 0011): Edit list swaps an untouched exercise at its position; one with a logged set is refused with a one-line reason and Add instead |
 | 16 | Exercise note (ADR 0011): note in set logging, shown in History detail, `Last time: …` hint next workout |
+| 21 | History edit safety (ADR 0013): rename then tap away and go back keeps the name; Change date moves the row; removing the only exercise deletes the workout |
+| 22 | History card parity: detail and editor show the same figures ("Day streak"); Share from the detail header; an exercise in the log opens its history, whose row opens the read-only detail |
+| 23 | Dates: a workout backdated to last December carries the year on the date chip, the share card, the History row and "first logged" |
+| 24 | Exercise progress: three rising bench sessions; the chart's spoken summary and the "Best at" row |
+| 25 | History stats line and explainer, month total, full day labels, paging back and "Back to this month" |
+| 26 | All workouts search (match and no match) and swipe to delete with confirmation; counts follow |
+| 27 | Backfill: an empty past calendar day starts a workout dated that day; it files under Yesterday and the streak counts it |
 
 **The v5 fixture** was written by commit 5fcae5f's own stores (a throwaway
 worktree at that commit), so it is exactly what a user's device holds. The

@@ -1,0 +1,50 @@
+# User story (History audit slice 6): find a workout in All workouts by
+# searching an exercise, filter by muscle, then delete one with a swipe on its
+# row (confirmed), and see the count drop and the Muscles map follow.
+appId: dev.indresh.turtleLift
+name: 26 History search, filter and swipe to delete
+tags: [history]
+---
+- launchApp:
+    clearState: true
+# Seven bench workouts, so "See all" has something behind Recent.
+- repeat:
+    times: 7
+    commands:
+      - runFlow: ../subflows/log_bench_workout.yaml
+      - waitForAnimationToEnd
+      - tapOn: "Back"
+- tapOn: "History"
+- assertVisible: "1 day streak, 7 workouts, 14 sets"
+- scrollUntilVisible:
+    element: "See all 7 workouts"
+    centerElement: true
+- tapOn: "See all 7 workouts"
+
+# --- search by exercise, then a search that matches nothing
+- tapOn: "Search workouts"
+- inputText: "bench"
+- assertVisible: "Barbell bench press, quick log, Today · 1 exercise · 2 sets"
+- eraseText: 10
+- inputText: "squat"
+- assertVisible: "No workouts match."
+- eraseText: 10
+- tapOn: "All workouts"
+
+# --- swipe one row to delete: confirm, and the month count drops
+# A full-width swipe across the second row (rows start under the search field
+# at about 22% of the height on both test phones); a swipe "from" the element
+# travelled too little to pass Dismissible's threshold.
+- swipe:
+    start: "92%, 35%"
+    end: "4%, 35%"
+    duration: 300
+- assertVisible: "Delete Barbell bench press\\?"
+- tapOn: "Delete"
+- waitForAnimationToEnd
+- assertVisible: ".* · 6 workouts"
+- tapOn: "Back"
+# The root is still scrolled to "See all"; the stats line is at the top.
+- scrollUntilVisible:
+    element: ".*6 workouts, 12 sets"
+    direction: UP

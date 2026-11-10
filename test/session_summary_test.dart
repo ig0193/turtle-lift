@@ -155,7 +155,7 @@ void main() {
 
       await pump(tester, id);
 
-      expect(find.text('60kg × 8'), findsOneWidget);
+      expect(find.text('60kg\u00A0×\u00A08'), findsOneWidget);
     });
   });
 
@@ -639,7 +639,7 @@ void main() {
           exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 60);
       await pump(tester, id);
 
-      await tester.tap(find.text('60kg × 8'));
+      await tester.tap(find.text('60kg\u00A0×\u00A08'));
       await tester.pumpAndSettle();
 
       expect(
@@ -655,7 +655,7 @@ void main() {
           exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 60);
       await pump(tester, id);
 
-      await tester.tap(find.text('60kg × 8'));
+      await tester.tap(find.text('60kg\u00A0×\u00A08'));
       await tester.pumpAndSettle();
       await tester.runAsync(() async {
         await tester.enterText(find.byType(TextField).first, '65');
@@ -673,21 +673,22 @@ void main() {
           exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 60);
       await pump(tester, id);
 
-      await tester.tap(find.text('60kg × 8'));
+      await tester.tap(find.text('60kg\u00A0×\u00A08'));
       await tester.pumpAndSettle();
 
       expect(find.byKey(SetLoggingScreen.markDoneKey), findsNothing);
     });
 
-    testWidgets('long-pressing an exercise offers to remove it',
+    testWidgets('long-pressing the only exercise offers to delete the workout '
+        '(B6: no ghost workout)',
         (tester) async {
       final id = await saveWorkout(tester,
           exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 60);
       await pump(tester, id);
 
-      await tester.longPress(find.text('60kg × 8'));
+      await tester.longPress(find.text('60kg\u00A0×\u00A08'));
       await tester.pumpAndSettle();
-      expect(find.text('Remove Barbell bench press?'), findsOneWidget);
+      expect(find.text('Delete this workout?'), findsOneWidget);
 
       await tester.runAsync(() async {
         await tester.tap(find.byKey(confirmDestructiveKey));
@@ -696,7 +697,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final saved = await tester.runAsync(() => store.readSavedSessions());
-      expect(saved!.single.exercises, isEmpty);
+      expect(saved, isEmpty);
     });
   });
 }

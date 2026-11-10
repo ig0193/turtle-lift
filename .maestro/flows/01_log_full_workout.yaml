@@ -87,8 +87,12 @@ tags: [workout]
 - tapOn: "History"
 - assertVisible: "Chest, back, abs, Today · 4 exercises · 5 sets"
 - tapOn: "Chest, back, abs, Today.*"
-- assertVisible: ".*5\nSets\n4\nExercises\n1\nStreak.*"
+- assertVisible: ".*5\nSets\n4\nExercises\n1\nDay streak.*"
 # Regression: the log printed PB scores as "0kg" / "-25kg".
+# The detail shows the full-height shared card now (ADR 0013), so it scrolls.
+- scrollUntilVisible:
+    element: "Plank\n0:45"
+    centerElement: true
 - assertVisible: "Push-up\n15 reps"
 - assertVisible: "Assisted pull-up machine\n25kg assist × 8"
 - assertVisible: "Plank\n0:45"

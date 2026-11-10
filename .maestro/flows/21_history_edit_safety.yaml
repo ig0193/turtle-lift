@@ -1,0 +1,62 @@
+# User story (History audit slice 1): what a user types or picks on a saved
+# workout is never lost, and a workout edited down to nothing is gone rather
+# than left as a ghost row.
+#   B1 rename, then tap away and go back: the new name is on the row.
+#   B2 Change date on a saved workout: the row moves to that day.
+#   B6 remove the only exercise: the editor offers to delete the workout.
+appId: dev.indresh.turtleLift
+name: 21 History edit safety (rename, change date, no ghost workout)
+tags: [history]
+---
+- launchApp:
+    clearState: true
+- runFlow: ../subflows/log_bench_workout.yaml
+- waitForAnimationToEnd
+- tapOn: "Back"
+- tapOn: "History"
+- tapOn: ".*Today · 1 exercise · 2 sets"
+- scrollUntilVisible:
+    element: "Edit workout"
+    centerElement: true
+- tapOn: "Edit workout"
+
+# --- B1: rename, tap somewhere else (not Return), then Back
+- tapOn:
+    id: "workout-title"
+- eraseText: 40
+- inputText: "Heavy bench"
+# Tap away (the header) rather than Return: the case B1 lost.
+- tapOn: "Edit workout"
+- tapOn: "Back"
+- tapOn: "Back"
+- assertVisible: "Heavy bench, .*Today · 1 exercise · 2 sets"
+
+# --- B2: Change date moves the saved workout three days back
+- tapOn: "Heavy bench, .*"
+- scrollUntilVisible:
+    element: "Edit workout"
+    centerElement: true
+- tapOn: "Edit workout"
+- tapOn: "Change date"
+- runFlow:
+    file: ../subflows/pick_days_ago.yaml
+    env: { DAYS: "3" }
+- tapOn: "Back"
+- tapOn: "Back"
+- assertVisible: "Heavy bench, .*${output.pickLabel} · 1 exercise · 2 sets"
+- assertNotVisible: ".*Today · 1 exercise.*"
+
+# --- B6: removing the only exercise deletes the workout, no ghost row
+- tapOn: "Heavy bench, .*"
+- scrollUntilVisible:
+    element: "Edit workout"
+    centerElement: true
+- tapOn: "Edit workout"
+- scrollUntilVisible:
+    element: "Remove Barbell bench press"
+    centerElement: true
+- tapOn: "Remove Barbell bench press"
+- assertVisible: "Delete this workout?"
+- tapOn: "Delete"
+- waitForAnimationToEnd
+- assertVisible: "No workouts yet.*"

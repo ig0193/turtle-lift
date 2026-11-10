@@ -147,9 +147,34 @@ class ActiveSession extends Notifier<WorkoutSession?> {
   /// Called when the first exercise is added, not when the ad-hoc entry is
   /// tapped: creating it on the tap strands a user who backs out of search with
   /// nothing added in an empty session that has replaced the landing.
-  Future<void> startAdHoc() async {
-    await _store.createSession();
+  ///
+  /// [performedOn] backfills a missed day: History's calendar starts a
+  /// workout dated the empty past day the user tapped (ADR 0013). The store
+  /// clamps it to today or earlier like every other date.
+  Future<void> startAdHoc({LocalDate? performedOn}) async {
+    await _store.createSession(performedOn: performedOn);
     await _refresh();
+  }
+
+  /// Adds an exercise to a workout that is already saved, and returns its row
+  /// id (the existing row's when it is already there).
+  ///
+  /// **The saved workout stays saved**: nothing reopens it, so the open
+  /// session and the Workout tab are untouched. Its sets are then logged
+  /// through set logging pointed at the saved session, the same path that
+  /// corrects a set months later (ADR 0013).
+  Future<String?> addSavedExercise({
+    required String sessionId,
+    required String exerciseId,
+    required LoadType loadType,
+  }) async {
+    final id = await _store.addExercise(
+      sessionId: sessionId,
+      exerciseId: exerciseId,
+      loadType: loadType,
+    );
+    await _refreshSaved();
+    return id;
   }
 
   /// Saves the workout in progress, keeping its original date.

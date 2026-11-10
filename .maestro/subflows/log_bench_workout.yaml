@@ -6,12 +6,13 @@ env:
   REPS: "8"
 ---
 - tapOn: "Start workout.*"
+- waitForAnimationToEnd
 - tapOn: "Start logging"
 - runFlow:
     file: add_exercise.yaml
     env:
       QUERY: "barbell bench"
-      ROW: "Barbell bench press. Barbell"
+      ROW: "Barbell bench press. Barbell.*"
 - runFlow:
     file: type_into.yaml
     env: { FIELD: "set-0-weight", VALUE: "${WEIGHT}" }

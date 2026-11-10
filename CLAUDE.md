@@ -210,6 +210,16 @@ are reviewed copy.
   figure (`lib/src/demo/`) for all 260 exercises, mapped in `assets/exercises/animation_map.py`. **Never bundle
   third-party exercise GIFs/videos** (openGym's are licensed Gym Visual stock; ExerciseDB forbids storage).
   Review the figures with `DEMO_SHEET_DIR=… flutter test tool/demo_sheet_test.dart`.
+- **History is also the progress surface** (`docs/adr/0013-history-is-also-the-progress-surface.md`).
+  A stats line (day streak, workouts, sets) and a month total on the calendar,
+  never the current week; a per-exercise best-set chart (assisted inverted, no
+  e1RM) and a quiet "Best at" table on exercise history; streak runs drawn on the
+  calendar by `streakChains`. History detail and the editor share one
+  `SessionCard`; records come from one cached pass (`personalBestProjection`); the
+  title chain is `titleFromParts`; every date goes through `date_labels.dart`
+  (year only when not this year in lists, always on the share card). Rows swipe to
+  delete; a saved workout can change date and take another exercise; an empty past
+  calendar day backfills a workout.
 
 ## Still undecided — ask, don't guess
 - Typeface. The prototypes use Inter; the app currently uses the platform default.
