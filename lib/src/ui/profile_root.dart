@@ -84,19 +84,33 @@ class _ProfileRootState extends ConsumerState<ProfileRoot> {
       if (previous != next && _scroll.hasClients) _scroll.jumpTo(0);
     });
     final segment = ref.watch(profileSegmentProvider);
-    return ListView(
-      controller: _scroll,
-      padding: screenScrollPadding(context),
+    final padding = screenScrollPadding(context);
+    // The control is pinned above the scroll view (profile audit B4, ADR
+    // 0014): on a long Diet day, or back from a pushed screen, the way to the
+    // other panes is never scrolled away. Same reasoning as the pinned header.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _SegmentedControl(
-          selected: segment,
-          onSelected: ref.read(profileSegmentProvider.notifier).select,
+        Padding(
+          padding: EdgeInsets.only(left: padding.left, right: padding.right),
+          child: _SegmentedControl(
+            selected: segment,
+            onSelected: ref.read(profileSegmentProvider.notifier).select,
+          ),
         ),
-        switch (segment) {
-          ProfileSegment.personal => const ProfilePersonalPane(),
-          ProfileSegment.schedule => const SchedulePane(),
-          ProfileSegment.diet => const DietPane(),
-        },
+        Expanded(
+          child: ListView(
+            controller: _scroll,
+            padding: padding,
+            children: <Widget>[
+              switch (segment) {
+                ProfileSegment.personal => const ProfilePersonalPane(),
+                ProfileSegment.schedule => const SchedulePane(),
+                ProfileSegment.diet => const DietPane(),
+              },
+            ],
+          ),
+        ),
       ],
     );
   }

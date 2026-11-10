@@ -187,8 +187,9 @@ void main() {
       for (final k in childSwitches) {
         final row = switchRow(tester, k);
         expect(row.onTap, isNull);
-        expect(row.subtitle, 'Turn on reminders to set times');
       }
+      // ADR 0014 (B8): the reason is said once, not on every row.
+      expect(find.text(DietRemindersScreen.disabledReason), findsOneWidget);
       for (final k in childTimes) {
         expect(tester.widget<TimeRow>(find.byKey(k)).onTap, isNull);
       }
@@ -383,6 +384,8 @@ void main() {
     testWidgets('a slot header shows its time only while the master and that '
         'slot reminder are on (A7)', (tester) async {
       tallView(tester);
+      // ADR 0014 (B7): and only while the OS will deliver it.
+      reminders.permitted = true;
       await tester.pumpWidget(host(pane(), prefs: allOn));
       await tester.pumpAndSettle();
 

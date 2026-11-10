@@ -220,6 +220,17 @@ are reviewed copy.
   (year only when not this year in lists, always on the share card). Rows swipe to
   delete; a saved workout can change date and take another exercise; an empty past
   calendar day backfills a workout.
+- **Profile: honest inputs, honest reminders, complete export**
+  (`docs/adr/0014-profile-production-pass.md`). Bodyweight is 20 to 250 kg
+  (`parseBodyweight`), with an inline reason, a recorded status line and a greys-only
+  trend line; a weigh-in that moves the protein suggestion offers Update target but
+  never changes the stored target. The segment control is pinned above the pane.
+  Reminders never read "on" when nothing will fire (no-days note, "None chosen",
+  "Off in Settings" from `notificationPermissionProvider`, Open Settings over the
+  `dev.indresh.turtleLift/system` channel). Export also shares a sets CSV and the
+  reminder settings; Delete all data offers Export first. Personal ends with About
+  (version from `lib/src/app_info.dart`, checked against the pubspec; privacy note;
+  licences). kg only and no import: both left for the user.
 
 ## Still undecided — ask, don't guess
 - Typeface. The prototypes use Inter; the app currently uses the platform default.

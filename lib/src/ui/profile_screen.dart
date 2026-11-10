@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app_info.dart';
+import '../data/body_gender.dart';
 import '../data/custom_templates.dart';
+import '../data/personal_details_store.dart';
+import '../data/set_format.dart';
 import '../data/workout_templates.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
@@ -60,6 +64,15 @@ final profileDeleteAllDestinationProvider = Provider<WidgetBuilder>(
   (ref) => (_) => const DeleteAllDataScreen(),
 );
 
+/// Where the "Open-source licences" row goes: Flutter's own licence page,
+/// which lists every package compiled into the app.
+final profileLicencesDestinationProvider = Provider<WidgetBuilder>(
+  (ref) => (_) => const LicensePage(
+        applicationName: 'TurtleLift',
+        applicationVersion: '$kAppVersion ($kAppBuild)',
+      ),
+);
+
 /// The first row: the user's template library, predefined and custom together.
 const String templatesRowTitle = 'My workout templates';
 
@@ -90,10 +103,23 @@ const String deleteAllRowTitle = 'Delete all data';
 String templateCountLabel({required int predefined, required int custom}) =>
     '$predefined predefined · $custom custom';
 
-/// The second line under [personalDetailsRowTitle]. Names the two things that
-/// screen holds, because "Personal details" alone does not say whether that is
-/// a weight, a name or an account — and this app has no account.
-const String personalDetailsRowSubtitle = 'Weight log · gender';
+/// The second line under [personalDetailsRowTitle]: the two values that
+/// screen holds, so the row is a glance rather than a door (profile audit B12,
+/// ADR 0014). Both are **authored** -- the latest weigh-in the user typed and
+/// the diagram they chose -- so they may show on Profile (ADR 0004).
+String personalDetailsSubtitle(double? latestKg, BodyGender gender) {
+  final weight =
+      latestKg == null ? 'No weight yet' : '${formatWeight(latestKg)} kg';
+  final diagram = switch (gender) {
+    BodyGender.male => 'male diagram',
+    BodyGender.female => 'female diagram',
+    BodyGender.preferNotToSay => 'default diagram',
+  };
+  return '$weight · $diagram';
+}
+
+/// The About block's licences row.
+const String licencesRowTitle = 'Open-source licences';
 
 /// The Personal pane of the Profile tab: everything the app remembers because
 /// the user *told* it, and the two ways out of it.
@@ -131,12 +157,23 @@ class ProfilePersonalPane extends ConsumerWidget {
   @visibleForTesting
   static const String dataGroupLabel = 'Data';
 
+  /// The heading over the version, the privacy note and the licences.
+  static const String aboutGroupLabel = 'About';
+
+  /// The app's biggest promise, said once where a user looks for it.
+  static const String privacyNote =
+      'Your data stays on this phone. TurtleLift has no account and sends '
+      'nothing anywhere. Reminders are scheduled on the phone itself.';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // The only provider this pane reads for *content*, and it is authored
     // data: templates the user saved. Watched rather than read, so adding a
     // template and coming back shows the new count.
     final customCount = ref.watch(customTemplatesProvider).length;
+    // Authored too: the newest weigh-in and the chosen diagram (B12).
+    final weights = ref.watch(bodyweightLogProvider);
+    final gender = ref.watch(bodyGenderProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -154,7 +191,10 @@ class ProfilePersonalPane extends ConsumerWidget {
         _ProfileRow(
           id: 'personal-details',
           title: personalDetailsRowTitle,
-          subtitle: personalDetailsRowSubtitle,
+          subtitle: personalDetailsSubtitle(
+            weights.isEmpty ? null : weights.last.weightKg,
+            gender,
+          ),
           destination: profilePersonalDetailsDestinationProvider,
         ),
         const _GroupLabel(ProfilePersonalPane.dataGroupLabel),
@@ -168,6 +208,33 @@ class ProfilePersonalPane extends ConsumerWidget {
           title: deleteAllRowTitle,
           destructive: true,
           destination: profileDeleteAllDestinationProvider,
+        ),
+        const _GroupLabel(ProfilePersonalPane.aboutGroupLabel),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(2, 0, 2, 4),
+          child: Semantics(
+            container: true,
+            child: Text(appVersionLabel(), style: kProfileRowTitleStyle),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(2, 2, 2, 8),
+          child: Semantics(
+            container: true,
+            child: const Text(
+            ProfilePersonalPane.privacyNote,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.5,
+              color: AppPalette.textSecondary,
+            ),
+          ),
+          ),
+        ),
+        _ProfileRow(
+          id: 'licences',
+          title: licencesRowTitle,
+          destination: profileLicencesDestinationProvider,
         ),
       ],
     );

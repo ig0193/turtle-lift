@@ -25,5 +25,24 @@ import UserNotifications
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "GlanceChannel") {
       AppDelegate.glance = GlanceChannel(messenger: registrar.messenger())
     }
+    // "Open Settings" under a notifications-off note (ADR 0014): the app's own
+    // page in iOS Settings, where its notification switch lives.
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "SystemChannel") {
+      let channel = FlutterMethodChannel(
+        name: "dev.indresh.turtleLift/system", binaryMessenger: registrar.messenger())
+      AppDelegate.system = channel
+      channel.setMethodCallHandler { call, result in
+        guard call.method == "openSettings",
+          let url = URL(string: UIApplication.openSettingsURLString)
+        else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        UIApplication.shared.open(url) { opened in result(opened) }
+      }
+    }
   }
+
+  /// Kept alive for the life of the engine; see `didInitializeImplicitFlutterEngine`.
+  static var system: FlutterMethodChannel?
 }

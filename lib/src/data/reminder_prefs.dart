@@ -234,11 +234,18 @@ class ReminderPrefsLog extends Notifier<ReminderPreferences> {
   @override
   ReminderPreferences build() => ref.read(initialReminderPrefsProvider);
 
-  /// Writes [next] and then shows it. A refused write leaves the state as it
-  /// was.
+  /// Shows [next], then writes it (profile audit B5: a second quick tap
+  /// reads this state, so it must not wait for the database). A refused
+  /// write puts back what was there.
   Future<void> save(ReminderPreferences next) async {
-    await ref.read(reminderPrefsStoreProvider).write(next);
+    final previous = state;
     state = next;
+    try {
+      await ref.read(reminderPrefsStoreProvider).write(next);
+    } catch (_) {
+      state = previous;
+      rethrow;
+    }
   }
 }
 

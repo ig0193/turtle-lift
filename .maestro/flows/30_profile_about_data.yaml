@@ -1,0 +1,47 @@
+# User story (ADR 0014): Personal ends with About (version, the privacy
+# promise, open-source licences). A training plan alone is something to
+# export and is counted; Export says it adds a CSV. Delete all data offers
+# Export first and says exported files are not touched.
+appId: dev.indresh.turtleLift
+name: 30 Profile - About, export a schedule, Export first
+tags: [profile, data]
+---
+- launchApp:
+    clearState: true
+- tapOn: "Profile"
+- scrollUntilVisible:
+    element: "Open-source licences"
+    centerElement: true
+- assertVisible: "About"
+- assertVisible: "Version .*"
+- assertVisible: "Your data stays on this phone.*"
+- takeScreenshot: 30-about
+- tapOn: "Open-source licences"
+- assertVisible: ".*TurtleLift.*"
+- tapOn: "Back"
+
+# --- a schedule alone makes something to export (B9)
+- scrollUntilVisible:
+    element: "Personal"
+    direction: UP
+- tapOn: "Schedule"
+- tapOn: "Monday"
+- tapOn: "Thursday"
+- tapOn: "Personal"
+- tapOn: "Export everything"
+- assertNotVisible: "Nothing to export yet.*"
+- assertVisible: ".*Training days.*2 a week.*"
+- assertVisible: ".*CSV of your sets.*"
+- assertVisible:
+    text: "Export"
+    enabled: true
+- tapOn: "Back"
+
+# --- Delete all data: Export first, and what it does not touch
+- tapOn: "Delete all data"
+- assertVisible: ".*Files you already exported or shared are not touched\\..*"
+- tapOn: "Export first"
+- assertVisible: "Export everything"
+- assertVisible: ".*Training days.*2 a week.*"
+- tapOn: "Back"
+- assertVisible: "Delete all data"

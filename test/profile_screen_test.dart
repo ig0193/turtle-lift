@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:turtle_lift/src/app_info.dart';
+import 'package:turtle_lift/src/data/body_gender.dart';
+import 'package:turtle_lift/src/data/personal_details_store.dart';
 import 'package:turtle_lift/src/data/custom_templates.dart';
 import 'package:turtle_lift/src/data/exercise.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
@@ -105,9 +108,11 @@ void main() {
       expect(find.text(exportRowTitle), findsOneWidget);
       expect(find.text(deleteAllRowTitle), findsOneWidget);
 
-      expect(find.byType(DividerRow), findsNWidgets(4),
-          reason: 'R4: templates, personal details, export, delete all — and '
-              'nothing else that behaves like a row');
+      expect(find.text(ProfilePersonalPane.aboutGroupLabel), findsOneWidget);
+      expect(find.byType(DividerRow), findsNWidgets(5),
+          reason: 'R4: templates, personal details, export, delete all, and '
+              "ADR 0014's open-source licences — nothing else that behaves "
+              'like a row');
     });
 
     testWidgets('rows read out as buttons, with their second line',
@@ -125,7 +130,8 @@ void main() {
       expect(
         tester.getSemantics(find.byKey(profileRowKey('personal-details'))),
         isSemantics(
-          label: '$personalDetailsRowTitle. $personalDetailsRowSubtitle',
+          label: '$personalDetailsRowTitle. '
+              '${personalDetailsSubtitle(null, BodyGender.male)}',
           isButton: true,
         ),
         reason: 'the row excludes its children, so its own label is all a '
@@ -266,9 +272,13 @@ void main() {
         custom: 1,
       );
       final digit = RegExp(r'\d');
+      // ADR 0014 widened this on purpose: the app version is a constant
+      // compiled into the app, not a figure from anything the user did.
+      final version = appVersionLabel();
 
       for (final rendered in spokenAndWritten(tester)) {
         if (!digit.hasMatch(rendered)) continue;
+        if (rendered.contains(version)) continue;
         expect(
           rendered,
           contains(authored),
@@ -321,7 +331,17 @@ void main() {
       // UI state that holds no content, so it is not a second source of truth.
       expect(
         read,
-        <Object>{customTemplatesProvider, profileSegmentProvider},
+        // ADR 0014 (B12) added the two other authored values the Personal
+        // details row now shows: the weigh-ins the user typed and the
+        // diagram they chose. Neither is computed from a session.
+        <Object>{
+          customTemplatesProvider,
+          profileSegmentProvider,
+          bodyweightLogProvider,
+          initialBodyweightLogProvider,
+          bodyGenderProvider,
+          initialBodyGenderProvider,
+        },
         reason: 'the screen reads exactly one provider for content, and it '
             'holds authored data. A new entry here is a new source of truth '
             'on a screen that is meant to have one -- check it is not '

@@ -16,6 +16,7 @@ import '../data/diet_plan.dart';
 import '../data/exercise_index.dart';
 import '../data/food_index.dart';
 import '../data/personal_details_store.dart';
+import '../data/reminder_prefs.dart';
 import '../data/reminder_scheduler.dart' show reminderSchedulerProvider;
 import '../data/settings_store.dart' show appDatabaseProvider;
 import '../data/training_plan.dart';
@@ -40,6 +41,9 @@ class _DataCounts {
     required this.exercises,
     required this.foodsPlanned,
     required this.hasDiet,
+    required this.trainingDays,
+    required this.hasSchedule,
+    required this.hasReminders,
   });
 
   factory _DataCounts.read(WidgetRef ref) {
@@ -59,6 +63,11 @@ class _DataCounts {
           0,
       hasDiet:
           dietPlan.isNotEmpty || ref.watch(proteinTargetProvider) != null,
+      // This week's plan, the one the Schedule pane shows (profile audit B9).
+      trainingDays: ref.watch(todayPlanWeekdaysProvider).length,
+      hasSchedule: ref.watch(trainingPlanLogProvider).isNotEmpty,
+      hasReminders:
+          ref.watch(reminderPrefsProvider) != ReminderPreferences.defaults,
     );
   }
 
@@ -76,12 +85,25 @@ class _DataCounts {
   /// Any plan version or a target exists, even if this week is empty.
   final bool hasDiet;
 
+  /// Days in this week's training plan.
+  final int trainingDays;
+
+  /// Any training plan was ever saved.
+  final bool hasSchedule;
+
+  /// A reminder setting differs from the defaults.
+  final bool hasReminders;
+
+  /// Nothing the user entered, so nothing to export (B9: a schedule or a
+  /// reminder setting alone is entered data and is in the file).
   bool get isEmpty =>
       workouts == 0 &&
       weighIns == 0 &&
       templates == 0 &&
       exercises == 0 &&
-      !hasDiet;
+      !hasDiet &&
+      !hasSchedule &&
+      !hasReminders;
 
   /// Label and count. The label already names the unit, so the count stands
   /// alone ("Workouts 12", not "Workouts 12 workouts").
@@ -92,6 +114,7 @@ class _DataCounts {
         ('Your templates', '$templates'),
         if (exercises > 0) ('Your exercises', '$exercises'),
         ('Foods planned', '$foodsPlanned'),
+        ('Training days', trainingDays == 0 ? 'None' : '$trainingDays a week'),
       ];
 }
 
@@ -184,17 +207,27 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
         proteinTargetG: ref.read(proteinTargetProvider),
         foods: ref.read(foodIndexProvider),
         exportedAt: now,
+        reminders: ref.read(reminderPrefsProvider),
+      );
+      final csv = buildSetsCsv(
+        sessions: ref.read(savedSessionsProvider),
+        index: ref.read(exerciseIndexProvider),
       );
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/${exportFileName(now)}');
       await file.writeAsString(json);
+      final csvFile = File('${dir.path}/${setsCsvFileName(now)}');
+      await csvFile.writeAsString(csv);
       if (!mounted) return;
       // The share sheet anchors to the button on iPad; on a phone it is
       // ignored.
       final box = context.findRenderObject() as RenderBox?;
       final result = await SharePlus.instance.share(
         ShareParams(
-          files: <XFile>[XFile(file.path, mimeType: 'application/json')],
+          files: <XFile>[
+            XFile(file.path, mimeType: 'application/json'),
+            XFile(csvFile.path, mimeType: 'text/csv'),
+          ],
           subject: 'TurtleLift export',
           sharePositionOrigin:
               box == null ? null : box.localToGlobal(Offset.zero) & box.size,
@@ -229,8 +262,9 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
           const SizedBox(height: 8),
           const Text(
             'Saves every finished workout, set, bodyweight entry, template, '
-            'your schedule and your diet plan as one JSON file. Choose where '
-            'it goes: Files, Mail, or another app.',
+            'your schedule, your reminders and your diet plan as one JSON file, '
+            'plus a CSV of your sets for a spreadsheet. Choose where they go: '
+            'Files, Mail, or another app.',
             style: _bodyStyle,
           ),
           const SizedBox(height: 16),
@@ -278,6 +312,9 @@ class DeleteAllDataScreen extends ConsumerStatefulWidget {
 
   static const Key deleteKey = ValueKey<String>('delete-all-button');
 
+  /// The softer exit, inside the flow (ADR 0014 §6).
+  static const Key exportFirstKey = ValueKey<String>('delete-export-first');
+
   @override
   ConsumerState<DeleteAllDataScreen> createState() =>
       _DeleteAllDataScreenState();
@@ -285,6 +322,10 @@ class DeleteAllDataScreen extends ConsumerStatefulWidget {
 
 class _DeleteAllDataScreenState extends ConsumerState<DeleteAllDataScreen> {
   bool _busy = false;
+
+  void _exportFirst() => Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const ExportScreen()),
+      );
 
   Future<void> _delete() async {
     final confirmed = await confirmDestructive(
@@ -316,9 +357,35 @@ class _DeleteAllDataScreenState extends ConsumerState<DeleteAllDataScreen> {
           const SizedBox(height: 8),
           const Text(
             'Removes everything you have entered from this phone. There is no '
-            'cloud copy, so it cannot be recovered. Export first if you want '
-            'to keep a copy.',
+            'cloud copy, so it cannot be recovered. Files you already exported '
+            'or shared are not touched.',
             style: _bodyStyle,
+          ),
+          Semantics(
+            container: true,
+            button: true,
+            label: 'Export first',
+            excludeSemantics: true,
+            onTap: _exportFirst,
+            child: GestureDetector(
+              key: DeleteAllDataScreen.exportFirstKey,
+              behavior: HitTestBehavior.opaque,
+              onTap: _exportFirst,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 48),
+                alignment: Alignment.centerLeft,
+                child: const Text(
+                  'Export first',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppPalette.textPrimary,
+                    decoration: TextDecoration.underline,
+                    decorationColor: AppPalette.textSecondary,
+                  ),
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           _CountsCard(counts: counts),

@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:turtle_lift/src/data/date_labels.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/diet_plan.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
@@ -128,8 +129,9 @@ void main() {
       expect(
         find.descendant(
             of: row,
-            matching: find.text('1.6 g per kg at 72 kg, your current '
-                'bodyweight. A common starting point.')),
+            // ADR 0014 §3: it names the weigh-in it uses.
+            matching: find.text('1.6 g per kg at 72 kg, your weigh-in on '
+                '${shortDateLabel(today.addDays(-3))}. A common starting point.')),
         findsOneWidget,
       );
       expect(find.byKey(ProteinTargetScreen.addBodyweightKey), findsNothing);

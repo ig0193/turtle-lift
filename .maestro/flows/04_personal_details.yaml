@@ -24,6 +24,7 @@ tags: [profile]
 - tapOn: { id: "bodyweight-field" }
 - inputText: "72.5"
 - tapOn: { id: "record-weight" }
+- assertVisible: "Recorded 72\\.5 kg for today\\."
 - assertVisible: ".*72\\.5.*"
 - takeScreenshot: 04-personal-details
 
@@ -42,6 +43,8 @@ tags: [profile]
     selected: true
 - assertVisible: ".*72\\.5.*"
 - tapOn: "Back"
+# ADR 0014: the row shows the authored values.
+- assertVisible: "Personal details\\. 72\\.5 kg · female diagram"
 
 # --- the calorie estimate now shows on a new workout's summary
 - tapOn: "Workout"

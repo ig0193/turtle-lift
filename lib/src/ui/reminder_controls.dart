@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../data/notification_permission.dart' show openAppSettingsProvider;
 
 import '../data/reminder_scheduler.dart';
 import '../theme/app_palette.dart';
@@ -205,27 +208,62 @@ class TimeRow extends StatelessWidget {
 
 /// The line under a reminder switch when the OS will not deliver
 /// notifications ([kNotificationsOffCopy]).
-class NotificationsOffNote extends StatelessWidget {
+class NotificationsOffNote extends ConsumerWidget {
   const NotificationsOffNote({super.key});
 
+  /// Finds the Open Settings link.
+  @visibleForTesting
+  static const Key openSettingsKey = ValueKey<String>('open-settings');
+
   @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(2, 8, 2, 0),
-      child: Text(
-        kNotificationsOffCopy,
-        style: TextStyle(
-          fontSize: 12,
-          height: 1.5,
-          color: AppPalette.textSecondary,
-        ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    void open() => ref.read(openAppSettingsProvider)();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 8, 2, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Text(
+            kNotificationsOffCopy,
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.5,
+              color: AppPalette.textSecondary,
+            ),
+          ),
+          // The route the copy names (profile audit B11, ADR 0014).
+          Semantics(
+            container: true,
+            button: true,
+            label: 'Open Settings',
+            excludeSemantics: true,
+            onTap: open,
+            child: GestureDetector(
+              key: openSettingsKey,
+              behavior: HitTestBehavior.opaque,
+              onTap: open,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 44),
+                alignment: Alignment.centerLeft,
+                child: const Text(
+                  'Open Settings',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppPalette.textPrimary,
+                    decoration: TextDecoration.underline,
+                    decorationColor: AppPalette.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// The explain-first sheet (ADR 0005 §3): what will be sent, before any
-/// system prompt. Pops `true` for Allow and `false` for Not now.
 class ExplainSheet extends StatelessWidget {
   const ExplainSheet({
     required this.title,

@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/diet_derived.dart' show suggestedTargetProvider;
+import '../data/date_labels.dart' show shortDateLabel;
 import '../data/diet_plan.dart' show proteinTargetProvider;
+import '../data/local_date.dart' show LocalDate;
 import '../data/bodyweight_resolution.dart' show weightInEffectProvider;
 import '../data/settings_store.dart'
     show kMaxProteinTargetG, kMinProteinTargetG;
@@ -14,9 +16,14 @@ import 'ghost_button.dart';
 import 'personal_details_screen.dart';
 
 /// Pushes the [ProteinTargetScreen] onto the stack.
-Future<void> pushProteinTargetScreen(BuildContext context) =>
+Future<void> pushProteinTargetScreen(
+  BuildContext context, {
+  int? initialGrams,
+}) =>
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const ProteinTargetScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => ProteinTargetScreen(initialGrams: initialGrams),
+      ),
     );
 
 /// "Daily protein target": set or clear the one number every day's plan is
@@ -36,7 +43,12 @@ Future<void> pushProteinTargetScreen(BuildContext context) =>
 /// * **One filled button**, Save. Clear target is a ghost button, and only
 ///   when a target is set.
 class ProteinTargetScreen extends ConsumerStatefulWidget {
-  const ProteinTargetScreen({super.key});
+  const ProteinTargetScreen({this.initialGrams, super.key});
+
+  /// What the field starts with instead of the stored target: the new
+  /// suggestion, when this screen is opened from a weigh-in's Update target
+  /// (ADR 0014 §3). Nothing is stored until Save.
+  final int? initialGrams;
 
   static const String title = 'Daily protein target';
 
@@ -68,8 +80,8 @@ class ProteinTargetScreen extends ConsumerStatefulWidget {
 
   /// "1.6 g per kg at 72 kg, your current bodyweight. A common starting
   /// point."
-  static String workingLine(double kg) =>
-      '1.6 g per kg at ${_trimZero(kg)} kg, your current bodyweight. '
+  static String workingLine(double kg, String date) =>
+      '1.6 g per kg at ${_trimZero(kg)} kg, your weigh-in on $date. '
       'A common starting point.';
 
   @visibleForTesting
@@ -99,7 +111,9 @@ class ProteinTargetScreen extends ConsumerStatefulWidget {
 
 class _ProteinTargetScreenState extends ConsumerState<ProteinTargetScreen> {
   late final TextEditingController _grams = TextEditingController(
-    text: ref.read(proteinTargetProvider)?.toString() ?? '',
+    text: (widget.initialGrams ?? ref.read(proteinTargetProvider))
+            ?.toString() ??
+        '',
   )..addListener(_changed);
 
   void _changed() => setState(() {});
@@ -128,7 +142,8 @@ class _ProteinTargetScreenState extends ConsumerState<ProteinTargetScreen> {
     // Both follow a weigh-in made on Personal details while this screen sits
     // underneath it: the weight resolver is rebuilt from the series.
     final today = ref.watch(planTodayProvider);
-    final kg = ref.watch(weightInEffectProvider)(today.toDateTime())?.weightKg;
+    final weighIn = ref.watch(weightInEffectProvider)(today.toDateTime());
+    final kg = weighIn?.weightKg;
 
     return AppScreen.pushed(
       title: ProteinTargetScreen.title,
@@ -147,6 +162,7 @@ class _ProteinTargetScreenState extends ConsumerState<ProteinTargetScreen> {
             _SuggestionRow(
               grams: suggested,
               kg: kg,
+              date: shortDateLabel(LocalDate.fromDateTime(weighIn!.date)),
               onTap: () => _grams.text = '$suggested',
             )
           else
@@ -208,6 +224,8 @@ class _TargetField extends StatelessWidget {
           Expanded(
             child: Semantics(
               label: 'Grams a day',
+              // Stable id for UI automation (Maestro); never read aloud.
+              identifier: 'protein-target-field',
               child: TextField(
                 key: ProteinTargetScreen.fieldKey,
                 controller: controller,
@@ -248,17 +266,19 @@ class _SuggestionRow extends StatelessWidget {
   const _SuggestionRow({
     required this.grams,
     required this.kg,
+    required this.date,
     required this.onTap,
   });
 
   final int grams;
   final double kg;
+  final String date;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final title = ProteinTargetScreen.suggestedLine(grams);
-    final working = ProteinTargetScreen.workingLine(kg);
+    final working = ProteinTargetScreen.workingLine(kg, date);
     return Semantics(
       container: true,
       button: true,

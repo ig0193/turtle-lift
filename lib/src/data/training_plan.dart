@@ -261,14 +261,23 @@ class TrainingPlanLog extends Notifier<List<TrainingPlanEntry>> {
     // applies to can never disagree about what day it is.
     final weekStart = startOfWeek(ref.read(planTodayProvider));
     final entry = TrainingPlanEntry(effectiveFrom: weekStart, weekdays: weekdays);
-    await ref
-        .read(trainingPlanStoreProvider)
-        .replaceFromWeek(weekStart.encode(), entry.mask);
-
+    // Shown before the write (profile audit B5): a second quick tap reads
+    // this state, so waiting for the database first lost the first tap's
+    // day. Drift runs the writes in call order; a refused write puts back
+    // what was there.
+    final previous = state;
     state = <TrainingPlanEntry>[
       ...state.where((e) => e.effectiveFrom < weekStart),
       entry,
     ];
+    try {
+      await ref
+          .read(trainingPlanStoreProvider)
+          .replaceFromWeek(weekStart.encode(), entry.mask);
+    } catch (_) {
+      state = previous;
+      rethrow;
+    }
   }
 }
 

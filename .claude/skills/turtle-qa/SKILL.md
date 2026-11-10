@@ -70,7 +70,7 @@ passed.
 | 01 | Log a full workout: weighted, bodyweight, assisted (with its banner), timed; mark done; finish; summary numbers; History row and card; Muscles renders |
 | 02 | Edit a past workout from History (set value, remove a set), derived figures follow; delete with Cancel then Delete |
 | 03 | Ready-made template preview, Cancel, start, discard; Save as template; start it from My templates; duplicate, rename, delete on Profile |
-| 04 | Personal details: gender, bodyweight, keypad dismiss, persistence, kcal appears |
+| 04 | Personal details: gender, bodyweight (confirmation line, row value), keypad dismiss, persistence, kcal appears |
 | 05 | Schedule: training days, Remind me, explain-first sheet, iOS prompt, persistence after kill |
 | 06 | Diet: first-time state, target from suggestion, picker filters and search, serving sheet, Repeat on, eaten tick, edit servings, remove and undo, meal reminders screen, persistence after kill |
 | 07 | Reminder tap deep link: a diet reminder, warm (pops a pushed screen) and cold, opens Profile › Diet; a training reminder opens the Workout tab (ADR 0008). Scripted: `.maestro/scripts/07_reminder_deep_link.sh` |
@@ -90,6 +90,9 @@ passed.
 | 25 | History stats line and explainer, month total, full day labels, paging back and "Back to this month" |
 | 26 | All workouts search (match and no match) and swipe to delete with confirmation; counts follow |
 | 27 | Backfill: an empty past calendar day starts a workout dated that day; it files under Yesterday and the streak counts it |
+| 28 | Profile bodyweight (ADR 0014): 0.5 kg refused with "Between 20 and 250 kg"; a real weight confirmed and shown on the Personal row; a moved protein suggestion offers Update target (pre-filled, saved only on Save); the segment control is reachable after scrolling a Diet day |
+| 29 | Honest reminders (ADR 0014): Remind me with no days says to pick one; named time rows; meal reminders on with nothing chosen read "None chosen" on Diet |
+| 30 | About and data (ADR 0014): version, privacy note, licences page; a schedule alone is exportable and counted; Export mentions the CSV; Delete all data offers Export first |
 
 **The v5 fixture** was written by commit 5fcae5f's own stores (a throwaway
 worktree at that commit), so it is exactly what a user's device holds. The

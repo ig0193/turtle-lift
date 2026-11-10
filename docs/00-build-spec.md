@@ -270,9 +270,13 @@ History and Profile are both tabs (`docs/adr/0003-l0-navigation-variant-a.md`, a
 - Backfill: an empty past calendar day offers to start a workout dated that day (ADR 0013).
 - Templates: predefined are immutable; duplicate → custom copy. **Duplicate, rename, edit (exercises and order), delete custom; build one from scratch** (ADR 0009, which supersedes the deferral here). Authored in the template library (reached from Workout and Profile) and from the Workout landing's New template tile.
 - Personal details: bodyweight and gender, both on the Profile tab because the user types them.
+  - **Bodyweight is 20 to 250 kg** (ADR 0014): anything else is refused with an inline reason; Record says what it recorded; today's entry can be replaced until midnight. The weigh-ins show a greys-only trend line from two entries. A weigh-in that moves the protein suggestion away from a stored target offers Update target and never changes the target itself.
   - **Bodyweight is a dated series, not one number** (optional, kg, gates calories). An entry is immutable and takes effect from the day it is recorded: no edit, no delete, no backdating. A correction is a new entry that supersedes the old one going forward. One undated number plus derive-on-read would rewrite the calorie figure on every session already logged. → `04`.
   - `caloriesFor(session)` resolves the weight in effect on that session's `performedOn`. A session predating the earliest entry shows the add-weight prompt and never a figure, permanently — entering a weight later does not backfill it.
   - Gender (Male / Female / Prefer not to say, default male, selects asset pair).
+- Profile shell (ADR 0014): the Personal | Schedule | Diet control is pinned above the pane's scroll view. Personal's rows show their authored values ("74.5 kg · female diagram") and end with About (version, the privacy promise, open-source licences).
+- Reminders never read "on" when nothing will fire: Schedule says to pick a day when Remind me is on with none; the Diet Reminders row reads "None chosen" or "Off in Settings"; the off note has Open Settings. Saves show the new value before the write.
+- Export: one JSON (entered data, now including reminder settings) plus a CSV of completed sets (units in the column names), enabled by any entered data. Delete all data offers Export first.
 
 → `04`.
 

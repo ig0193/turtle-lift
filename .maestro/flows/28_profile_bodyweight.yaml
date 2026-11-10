@@ -1,0 +1,61 @@
+# User story (ADR 0014): a typo bodyweight is refused with a reason; a real
+# one is confirmed and shows on the Personal row; when a protein target is
+# set, a weigh-in that moves the suggestion offers Update target, which
+# opens the target screen pre-filled and changes nothing until Save. The
+# segment control stays reachable after scrolling a long Diet day.
+appId: dev.indresh.turtleLift
+name: 28 Profile - bodyweight range, confirmation, suggestion follow-up
+tags: [profile]
+---
+- launchApp:
+    clearState: true
+- tapOn: "Profile"
+- assertVisible: "Personal details\\. No weight yet · male diagram"
+
+# --- a target first, typed by hand
+- tapOn: "Diet"
+- tapOn: "Set a daily target"
+- tapOn: { id: "protein-target-field" }
+- inputText: "100"
+- tapOn: "Daily protein target"
+- tapOn: "Save"
+- assertVisible: "0 of 100 g planned.*"
+
+# --- B1: 0.5 kg is refused, with the reason
+- tapOn: "Personal"
+- tapOn: "Personal details.*"
+- tapOn: { id: "bodyweight-field" }
+- inputText: "0.5"
+- tapOn: "Body diagram"
+- assertVisible: "Between 20 and 250 kg"
+- tapOn: { id: "record-weight" }
+- assertVisible: "Add your weight to see calorie estimates.*"
+
+# --- a real weight: confirmed, and the suggestion moved off the target
+- tapOn: { id: "bodyweight-field" }
+- eraseText: 8
+- inputText: "80"
+- tapOn: "Body diagram"
+- assertNotVisible: "Between 20 and 250 kg"
+- tapOn: { id: "record-weight" }
+- assertVisible: "Recorded 80 kg for today\\. Protein suggestion is now 130 g\\."
+- assertVisible: "Recording again today replaces today's entry until midnight.*"
+- takeScreenshot: 28-weight-recorded
+- tapOn: "Update target"
+- assertVisible: "Daily protein target"
+- assertVisible: ".*130.*"
+- assertVisible: ".*your weigh-in on .*"
+- tapOn: "Save"
+- tapOn: "Back"
+
+# --- the row shows the value; the target followed only because we saved
+- assertVisible: "Personal details\\. 80 kg · male diagram"
+- tapOn: "Diet"
+- assertVisible: "0 of 130 g planned.*"
+
+# --- B4: scrolled down a Diet day, the segment control is still there
+- scrollUntilVisible:
+    element: "Plan settings"
+    centerElement: true
+- tapOn: "Personal"
+- assertVisible: "Personal details\\. 80 kg · male diagram"

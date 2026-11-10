@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/diet_reminders.dart';
+import '../data/notification_permission.dart';
 import '../data/meal_slot.dart';
 import '../data/reminder_prefs.dart';
 import '../data/reminder_scheduler.dart';
@@ -118,6 +119,7 @@ class _DietRemindersScreenState extends ConsumerState<DietRemindersScreen> {
       _permitted = permitted;
       if (permitted) _refused = false;
     });
+    ref.read(notificationPermissionProvider.notifier).set(permitted);
   }
 
   Future<void> _save(ReminderPreferences next) =>
@@ -175,8 +177,9 @@ class _DietRemindersScreenState extends ConsumerState<DietRemindersScreen> {
     final prefs = ref.watch(reminderPrefsProvider);
     final revoked = prefs.dietOn && _permitted == false;
     final masterOn = prefs.dietOn && !revoked;
-    String subtitle(String own) =>
-        masterOn ? own : DietRemindersScreen.disabledReason;
+    // The disabled reason is said once, under the heading, not on every row
+    // (profile audit B8).
+    String subtitle(String own) => own;
 
     return AppScreen.pushed(
       title: DietRemindersScreen.title,
@@ -193,6 +196,21 @@ class _DietRemindersScreenState extends ConsumerState<DietRemindersScreen> {
           ),
           if (_refused || revoked) const NotificationsOffNote(),
           const _Label(DietRemindersScreen.timesLabel),
+          if (!masterOn)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
+              child: Semantics(
+                container: true,
+                child: const Text(
+                  DietRemindersScreen.disabledReason,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.5,
+                    color: AppPalette.textSecondary,
+                  ),
+                ),
+              ),
+            ),
           SwitchRow(
             switchKey: DietRemindersScreen.summarySwitchKey,
             title: DietRemindersScreen.summaryTitle,
@@ -204,6 +222,7 @@ class _DietRemindersScreenState extends ConsumerState<DietRemindersScreen> {
           ),
           TimeRow(
             key: DietRemindersScreen.summaryTimeKey,
+            label: '${DietRemindersScreen.summaryTitle} time',
             time: formatReminderMinute(context, prefs.summaryMinute),
             onTap: masterOn
                 ? () => _pickTime(prefs.summaryMinute,
@@ -226,6 +245,7 @@ class _DietRemindersScreenState extends ConsumerState<DietRemindersScreen> {
             ),
             TimeRow(
               key: DietRemindersScreen.slotTimeKey(slot),
+              label: '${slot.label} time',
               time: formatReminderMinute(context, prefs.slot(slot).minute),
               onTap: masterOn
                   ? () => _pickTime(prefs.slot(slot).minute, (m) {

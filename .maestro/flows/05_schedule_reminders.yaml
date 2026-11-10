@@ -76,7 +76,7 @@ tags: [profile, notifications]
 - assertVisible:
     text: "Remind me\\. Notification on training days"
     checked: true
-- assertVisible: "Time\\. 6:30 PM"
+- assertVisible: "Reminder time\\. 6:30 PM"
 
 # --- Turning it off asks nothing further.
 - tapOn: "Remind me.*"

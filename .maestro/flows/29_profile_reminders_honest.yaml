@@ -1,0 +1,54 @@
+# User story (ADR 0014): reminders never read "on" when nothing will fire.
+# Remind me with no training days says to pick one; picking a day clears the
+# note. Meal reminders with the master on and nothing chosen read "None
+# chosen" on the Diet pane, and each time row names its meal.
+appId: dev.indresh.turtleLift
+name: 29 Profile - honest reminder states
+tags: [profile, notifications]
+---
+- launchApp:
+    clearState: true
+- tapOn: "Profile"
+- tapOn: "Schedule"
+- tapOn: "Remind me.*"
+- assertVisible: "Remind you on training days\\?"
+- tapOn: "Allow reminders"
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn:
+          text: "Allow"
+          optional: true
+- assertVisible:
+    text: "Remind me\\. Notification on training days"
+    checked: true
+- assertVisible: "Pick at least one training day above to get a reminder\\."
+- assertVisible: "Reminder time\\. .*"
+- takeScreenshot: 29-no-days
+- tapOn: "Tuesday"
+- assertNotVisible: "Pick at least one training day above to get a reminder\\."
+
+# --- meal reminders: master on, nothing chosen
+- tapOn: "Diet"
+- tapOn: "Set a daily target"
+- tapOn: { id: "protein-target-field" }
+- inputText: "120"
+- tapOn: "Daily protein target"
+- tapOn: "Save"
+- scrollUntilVisible:
+    element: "Reminders.*"
+    centerElement: true
+- assertVisible: "Reminders, Off\\..*"
+- tapOn: "Reminders.*"
+- assertVisible: "Turn on reminders to set times"
+- assertVisible: "Breakfast time\\. 8:00 AM"
+- assertVisible: "Dinner time\\. 8:30 PM"
+- tapOn: "Remind me\\. Notifications built from your plan"
+- assertNotVisible: "Turn on reminders to set times"
+- tapOn: "Back"
+- scrollUntilVisible:
+    element: "Reminders.*"
+    centerElement: true
+- assertVisible: "Reminders, None chosen\\..*"
+- takeScreenshot: 29-none-chosen

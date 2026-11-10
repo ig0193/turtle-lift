@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/notification_permission.dart';
 import '../data/reminder_prefs.dart';
 import '../data/reminder_scheduler.dart';
 import '../data/training_plan.dart';
@@ -40,6 +41,11 @@ class SchedulePane extends ConsumerStatefulWidget {
       'week on the Workout tab compares against.';
 
   static const String explainTitle = 'Remind you on training days?';
+
+  /// Under Remind me when it is on but no day is picked, so nothing would
+  /// ever fire (profile audit B6, ADR 0014).
+  static const String noDaysNote =
+      'Pick at least one training day above to get a reminder.';
 
   /// The explain-first sheet's body: what will be sent, and what never will.
   static String explainBody({required String time, required Set<int> days}) {
@@ -110,6 +116,7 @@ class _SchedulePaneState extends ConsumerState<SchedulePane> {
       _permitted = permitted;
       if (permitted) _refused = false;
     });
+    ref.read(notificationPermissionProvider.notifier).set(permitted);
   }
 
   /// On: the explain-first sheet (unless permission is already granted),
@@ -222,10 +229,27 @@ class _SchedulePaneState extends ConsumerState<SchedulePane> {
           ),
           TimeRow(
             key: SchedulePane.timeRowKey,
+            label: 'Reminder time',
             time: formatReminderMinute(context, prefs.scheduleMinute),
             onTap: _pickTime,
           ),
-          if (_refused || revoked) const NotificationsOffNote(),
+          if (_refused || revoked)
+            const NotificationsOffNote()
+          else if (remindOn && days.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(2, 8, 2, 0),
+              child: Semantics(
+                container: true,
+                child: const Text(
+                  SchedulePane.noDaysNote,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.5,
+                    color: AppPalette.textSecondary,
+                  ),
+                ),
+              ),
+            ),
         ],
       ],
     );

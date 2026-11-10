@@ -6,6 +6,7 @@ import '../data/diet_plan.dart';
 import '../data/food_index.dart';
 import '../data/meal_slot.dart';
 import '../data/local_date.dart';
+import '../data/notification_permission.dart';
 import '../data/reminder_prefs.dart';
 import '../data/reminder_scheduler.dart' show reminderSchedulerProvider;
 import '../data/training_plan.dart' show planTodayProvider, startOfWeek;
@@ -93,11 +94,17 @@ class DietPane extends ConsumerWidget {
       'A morning summary and meal times from your plan';
 
   /// "Off", "On" (master on, nothing chosen) or "4 a day".
-  static String remindersValue(ReminderPreferences prefs) {
+  ///
+  /// Never "on" when nothing will fire (profile audit B7, ADR 0014): "None
+  /// chosen" with the master on but no reminder picked, and "Off in Settings"
+  /// when the OS refuses notifications. [permitted] null (not read yet)
+  /// counts as allowed, so the row does not flash a warning on open.
+  static String remindersValue(ReminderPreferences prefs, {bool? permitted}) {
     if (!prefs.dietOn) return 'Off';
+    if (permitted == false) return 'Off in Settings';
     final count = (prefs.summaryOn ? 1 : 0) +
         MealSlot.values.where((s) => prefs.slot(s).on).length;
-    return count == 0 ? 'On' : '$count a day';
+    return count == 0 ? 'None chosen' : '$count a day';
   }
 
   /// "Nothing planned for Thursday", above four empty slots.
@@ -274,6 +281,8 @@ String? _reminderTime(BuildContext context, WidgetRef ref, MealSlot slot) {
   final prefs = ref.watch(reminderPrefsProvider);
   final reminder = prefs.slot(slot);
   if (!prefs.dietOn || !reminder.on) return null;
+  // No time on the card when the OS will not deliver it (B7).
+  if (ref.watch(notificationPermissionProvider) == false) return null;
   return formatReminderMinute(context, reminder.minute);
 }
 
@@ -313,7 +322,10 @@ class _PlanSettings extends ConsumerWidget {
             key: DietPane.remindersRowKey,
             title: DietPane.remindersRowTitle,
             subtitle: DietPane.remindersRowSubtitle,
-            value: DietPane.remindersValue(ref.watch(reminderPrefsProvider)),
+            value: DietPane.remindersValue(
+              ref.watch(reminderPrefsProvider),
+              permitted: ref.watch(notificationPermissionProvider),
+            ),
             onTap: () => pushDietRemindersScreen(context),
           ),
       ],

@@ -3,11 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/body_gender.dart';
+import '../data/date_labels.dart';
+import '../data/diet_derived.dart' show suggestedTargetFor;
+import '../data/diet_plan.dart' show proteinTargetProvider;
+import '../data/local_date.dart';
 import '../data/personal_details_store.dart';
 import '../data/set_format.dart';
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
+import 'bodyweight_trend_chart.dart';
 import 'number_input.dart';
+import 'protein_target_screen.dart' show DietTextLink, pushProteinTargetScreen;
 import 'template_row.dart';
 
 /// The two things the app collects about the user, and the log of one of them.
@@ -53,6 +59,32 @@ class PersonalDetailsScreen extends ConsumerStatefulWidget {
       'Chooses which body diagram is used throughout the app. '
       'It changes nothing else.';
 
+  /// Shown under the field while it holds something that is not a weight
+  /// (profile audit B1).
+  static const String rangeReason = 'Between 20 and 250 kg';
+
+  /// What a weigh-in can and cannot be changed by (profile audit B3, KD5).
+  static const String correctionNote =
+      "Recording again today replaces today's entry until midnight. After "
+      'that it stays, so a correction is a new entry from that day.';
+
+  /// The status line after a weigh-in.
+  static String recordedLine(double kg) =>
+      'Recorded ${formatWeight(kg)} kg for today.';
+
+  /// The follow-up when a weigh-in moves the protein suggestion away from a
+  /// stored target (ADR 0014 §3). The target itself never changes here.
+  static String suggestionMovedLine(int grams) =>
+      'Protein suggestion is now $grams g.';
+
+  /// Finds the Update target link after a weigh-in.
+  @visibleForTesting
+  static const Key updateTargetKey = ValueKey<String>('weight-update-target');
+
+  /// Finds the status line after a weigh-in.
+  @visibleForTesting
+  static const Key statusKey = ValueKey<String>('weight-status');
+
   /// Finds one gender option.
   @visibleForTesting
   static Key genderKey(BodyGender gender) =>
@@ -78,7 +110,20 @@ class PersonalDetailsScreen extends ConsumerStatefulWidget {
 
 class _PersonalDetailsScreenState
     extends ConsumerState<PersonalDetailsScreen> {
-  final TextEditingController _weight = TextEditingController();
+  late final TextEditingController _weight = TextEditingController()
+    ..addListener(_changed);
+
+  /// What the last Record did, read out by VoiceOver; null until then.
+  String? _status;
+
+  /// The new protein suggestion, when the last weigh-in moved it away from
+  /// the stored target; null otherwise.
+  int? _movedSuggestion;
+
+  void _changed() => setState(() {});
+
+  bool get _showReason =>
+      _weight.text.trim().isNotEmpty && parseBodyweight(_weight.text) == null;
 
   @override
   void dispose() {
@@ -126,7 +171,63 @@ class _PersonalDetailsScreenState
           _WeightField(
             controller: _weight,
             onRecord: _record,
+            valid: parseBodyweight(_weight.text) != null,
           ),
+          if (_showReason)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Semantics(
+                container: true,
+                child: const Text(
+                  PersonalDetailsScreen.rangeReason,
+                  style: _reasonStyle,
+                ),
+              ),
+            ),
+          if (_status != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Semantics(
+                container: true,
+                liveRegion: true,
+                child: Text(
+                  <String>[
+                    _status!,
+                    if (_movedSuggestion != null)
+                      PersonalDetailsScreen.suggestionMovedLine(
+                          _movedSuggestion!),
+                  ].join(' '),
+                  key: PersonalDetailsScreen.statusKey,
+                  style: _reasonStyle,
+                ),
+              ),
+            ),
+          if (_movedSuggestion != null)
+            DietTextLink(
+              key: PersonalDetailsScreen.updateTargetKey,
+              label: 'Update target',
+              onTap: () => pushProteinTargetScreen(
+                context,
+                initialGrams: _movedSuggestion,
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: Semantics(
+              container: true,
+              child: const Text(
+                PersonalDetailsScreen.correctionNote,
+                style: kTemplateRowSubtitleStyle,
+              ),
+            ),
+          ),
+          if (entries.length >= 2)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: BodyweightTrendChart(
+                entries: entries.reversed.toList(growable: false),
+              ),
+            ),
           if (entries.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
@@ -150,11 +251,20 @@ class _PersonalDetailsScreenState
   }
 
   Future<void> _record() async {
-    final parsed = double.tryParse(_weight.text.trim());
-    if (parsed == null || parsed <= 0 || !parsed.isFinite) return;
+    final parsed = parseBodyweight(_weight.text);
+    if (parsed == null) return;
     await ref.read(bodyweightLogProvider.notifier).record(parsed);
     if (!mounted) return;
     _weight.clear();
+    final target = ref.read(proteinTargetProvider);
+    final suggestion = suggestedTargetFor(parsed);
+    setState(() {
+      _status = PersonalDetailsScreen.recordedLine(parsed);
+      _movedSuggestion =
+          target != null && suggestion != null && suggestion != target
+              ? suggestion
+              : null;
+    });
     FocusScope.of(context).unfocus();
   }
 }
@@ -228,10 +338,20 @@ class _GenderChip extends StatelessWidget {
 /// **One field, no date control.** KD5 forbids backdating, so offering a date
 /// would be offering an illegal action; the entry is always dated today.
 class _WeightField extends StatelessWidget {
-  const _WeightField({required this.controller, required this.onRecord});
+  const _WeightField({
+    required this.controller,
+    required this.onRecord,
+    required this.valid,
+  });
 
   final TextEditingController controller;
+
+  /// Records the field's value; does nothing when it is not a valid weight.
   final VoidCallback onRecord;
+
+  /// False while the field does not hold a valid weight: the button dims, a
+  /// tap records nothing, and the reason under the field says why.
+  final bool valid;
 
   @override
   Widget build(BuildContext context) {
@@ -276,13 +396,16 @@ class _WeightField extends StatelessWidget {
           button: true,
           label: 'Record weight',
           identifier: 'record-weight',
+          enabled: valid,
           onTap: onRecord,
           excludeSemantics: true,
           child: GestureDetector(
             key: PersonalDetailsScreen.recordKey,
             behavior: HitTestBehavior.opaque,
             onTap: onRecord,
-            child: Container(
+            child: Opacity(
+              opacity: valid ? 1 : 0.5,
+              child: Container(
               height: 48,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               alignment: Alignment.center,
@@ -300,6 +423,7 @@ class _WeightField extends StatelessWidget {
                   color: AppPalette.onAccent,
                 ),
               ),
+            ),
             ),
           ),
         ),
@@ -333,7 +457,7 @@ class _WeightRow extends StatelessWidget {
           Text('${formatWeight(entry.weightKg)}kg',
               style: kTemplateRowTitleStyle),
           Text(
-            'from ${encodeCalendarDate(entry.date)}',
+            'from ${shortDateLabel(LocalDate.fromDateTime(entry.date))}',
             style: kTemplateRowSubtitleStyle,
           ),
         ],
@@ -413,3 +537,8 @@ class _GroupLabel extends StatelessWidget {
     );
   }
 }
+
+const TextStyle _reasonStyle = TextStyle(
+  fontSize: 13,
+  color: AppPalette.textSecondary,
+);
