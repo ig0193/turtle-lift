@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'custom_exercises.dart';
 import 'exercise.dart';
+import 'generated/muscle_taxonomy.dart';
+import 'muscle_synonyms.dart';
+import 'search_spelling.dart';
 
 /// The 260 shipped exercises, arranged for the three lookups the Muscles tab
 /// makes: by id, by primary sub-muscle group, and by equipment.
@@ -83,12 +87,56 @@ class ExerciseIndex {
   /// is one field over three vocabularies (R11); returning all 260 for an empty
   /// box would bury the muscle and equipment matches under the whole library
   /// before the user has typed anything.
+  ///
+  /// **Hyphens and apostrophes are forgiven** ([searchFold]), so "pull up"
+  /// and "pushup" find "Pull-up" and "Push-up", and the curly apostrophe the
+  /// iOS keyboard types finds "Farmer's carry" (QA second pass).
+  /// Every word search can match — exercise names, muscle labels and their
+  /// synonyms, equipment values — for the "Did you mean …" correction.
+  ///
+  /// Built on first use rather than in the constructor: it is only needed when
+  /// a query has already matched nothing.
+  late final SearchSpelling spelling = SearchSpelling(<String>[
+    for (final exercise in all) ...searchFold(exercise.name).split(' '),
+    for (final exercise in all)
+      ...searchFold(exercise.name.replaceAll(_hyphens, '')).split(' '),
+    for (final group in kSubMuscleGroups.values)
+      ...searchFold(group.label).split(' '),
+    for (final key in kMuscleSynonyms.keys) ...key.split(' '),
+    ...equipmentValues,
+  ]);
+
+  /// The exercises whose name holds every word of [query], in any order —
+  /// "press bench" finds "Barbell bench press" (audit B1).
+  ///
+  /// Ordered by relevance: an exact name, then names starting with the whole
+  /// query, then names containing it, then names that only hold its words.
+  List<Exercise> searchByWords(String query) {
+    final needle = searchFold(query);
+    if (needle.isEmpty) return const <Exercise>[];
+    final words = needle.split(' ');
+    final tiers = List<List<Exercise>>.generate(4, (_) => <Exercise>[]);
+    for (final exercise in all) {
+      final name = searchFold(exercise.name);
+      if (name == needle) {
+        tiers[0].add(exercise);
+      } else if (name.startsWith(needle)) {
+        tiers[1].add(exercise);
+      } else if (searchMatches(exercise.name, needle)) {
+        tiers[2].add(exercise);
+      } else if (words.every((word) => searchMatches(exercise.name, word))) {
+        tiers[3].add(exercise);
+      }
+    }
+    return <Exercise>[for (final tier in tiers) ...tier];
+  }
+
   List<Exercise> searchByName(String query) {
-    final needle = query.trim().toLowerCase();
+    final needle = searchFold(query);
     if (needle.isEmpty) return const <Exercise>[];
     return <Exercise>[
       for (final exercise in all)
-        if (exercise.name.toLowerCase().contains(needle)) exercise,
+        if (searchMatches(exercise.name, needle)) exercise,
     ];
   }
 
@@ -109,8 +157,8 @@ class ExerciseIndex {
   }
 }
 
-/// The exercise library, indexed and available **synchronously on the first
-/// frame**.
+/// The shipped exercise library, indexed and available **synchronously on the
+/// first frame**. Read [exerciseIndexProvider], which adds the user's own.
 ///
 /// **This exists to be overridden, and `main()` is what overrides it** — the
 /// same boot seam as `initialTemplateFilterProvider`, for the same reason: no
@@ -132,10 +180,49 @@ class ExerciseIndex {
 /// that gap is `test/boot_test.dart`, which boots the real entrypoint and looks
 /// for the Muscles root — so dropping the boot wiring now fails in CI rather
 /// than on a device.
-final exerciseIndexProvider = Provider<ExerciseIndex>(
+final libraryIndexProvider = Provider<ExerciseIndex>(
   (ref) => throw UnimplementedError(
-    'exerciseIndexProvider must be overridden. main() builds the index from '
+    'libraryIndexProvider must be overridden. main() builds the index from '
     'exerciseLibraryProvider before runApp; a test wanting the real library '
-    'does the same, or overrides this with an index of its own fixtures.',
+    'does the same, or overrides exerciseIndexProvider with an index of its '
+    'own fixtures.',
   ),
 );
+
+/// Every exercise the app knows: the shipped library **plus the user's own**
+/// (`docs/adr/0009-custom-exercises-and-template-editing.md`), as one index.
+///
+/// **One index, so a custom exercise needs no special case anywhere it is
+/// looked up by id** — the picker, a template, the session, set logging,
+/// history, records and export all read this. It rebuilds when the user adds,
+/// edits or deletes one of theirs; the library half is the boot-time
+/// [libraryIndexProvider]. A widget test may still override this provider with
+/// a fixture index directly, which simply leaves custom exercises out.
+final exerciseIndexProvider = Provider<ExerciseIndex>((ref) {
+  final library = ref.watch(libraryIndexProvider);
+  final custom = ref.watch(customExerciseListProvider);
+  if (custom.isEmpty) return library;
+  return ExerciseIndex(<Exercise>[...library.all, ...custom]);
+});
+
+/// [text] lower-cased, apostrophes and full stops dropped, hyphens read as
+/// spaces, and runs of whitespace collapsed: the punctuation a person types
+/// differently from how a name is spelled.
+String searchFold(String text) => text
+    .toLowerCase()
+    .replaceAll(_apostrophes, '')
+    .replaceAll(_hyphens, ' ')
+    .replaceAll(_spaces, ' ')
+    .trim();
+
+/// Whether [name] holds [needle], already folded by [searchFold]. A
+/// hyphenated word also matches written solid, so "pushup" finds "push-up";
+/// words that were never joined are not run together, so a short query does
+/// not match across a space.
+bool searchMatches(String name, String needle) =>
+    searchFold(name).contains(needle) ||
+    searchFold(name.replaceAll(_hyphens, '')).contains(needle);
+
+final RegExp _apostrophes = RegExp("['\u2018\u2019.]");
+final RegExp _hyphens = RegExp('[\\-\u2010-\u2015]');
+final RegExp _spaces = RegExp(r'\s+');

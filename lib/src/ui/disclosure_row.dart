@@ -75,9 +75,11 @@ class _DisclosureRowState extends State<DisclosureRow> {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Semantics(
+            container: true,
             button: true,
             expanded: _expanded,
             label: widget.label,
+            onTap: () => setState(() => _expanded = !_expanded),
             excludeSemantics: true,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -130,17 +132,15 @@ class _DisclosureRowState extends State<DisclosureRow> {
 /// The label line: the section-label treatment, because a closed row is a
 /// heading for something rather than content in its own right.
 const TextStyle kDisclosureLabelStyle = TextStyle(
-  fontSize: 11,
-  fontWeight: FontWeight.w700,
-  letterSpacing: 0.9,
+  fontSize: 12,
+  fontWeight: FontWeight.w600,
   color: AppPalette.textMuted,
 );
 
 /// The same line, a step brighter — see [DisclosureRow.emphasised].
 const TextStyle kDisclosureLabelEmphasisedStyle = TextStyle(
-  fontSize: 11,
-  fontWeight: FontWeight.w700,
-  letterSpacing: 0.9,
+  fontSize: 12,
+  fontWeight: FontWeight.w600,
   color: AppPalette.textSecondary,
 );
 

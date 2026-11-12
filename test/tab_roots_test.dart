@@ -153,7 +153,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(hostTall(const WorkoutRoot()));
 
-    expect(find.text('READY-MADE'), findsOneWidget,
+    expect(find.text('Ready-made'), findsOneWidget,
         reason: 'the group label over the templates that ship with the app');
     expect(find.text('Start workout'), findsOneWidget,
         reason: 'the pinned bar that starts an empty workout');
@@ -172,7 +172,7 @@ void main() {
     expect(find.text('No workouts yet'), findsOneWidget,
         reason: 'the History empty-state heading, verbatim from the prototype');
     expect(
-      find.text("Finish your first session and it'll show up here."),
+      find.text("Finish your first workout and it'll show up here."),
       findsOneWidget,
       reason: 'the History empty-state body copy, verbatim from the prototype',
     );
@@ -384,10 +384,10 @@ void main() {
 
     final body = tester
         .widget<Text>(
-          find.text("Finish your first session and it'll show up here."),
+          find.text("Finish your first workout and it'll show up here."),
         )
         .style!;
-    expect(body.fontSize, 12.5, reason: '.empty p font-size');
+    expect(body.fontSize, 13, reason: '.empty p font-size (12.5 snapped to the type scale)');
     expect(body.height, 1.55, reason: '.empty p line-height');
   });
 }

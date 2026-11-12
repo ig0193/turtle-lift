@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/body_gender.dart';
 import '../data/exercise.dart';
 import '../data/active_session.dart';
+import '../data/derived.dart' show lastSetLine, timesLogged;
 import '../data/session_progress.dart';
 import '../data/exercise_index.dart';
 import '../data/load_type.dart';
@@ -15,7 +16,10 @@ import '../theme/app_typography.dart';
 import 'app_screen.dart';
 import 'set_logging_screen.dart';
 import 'body_diagram.dart';
+import 'custom_exercise_screens.dart' show CustomExerciseScreen;
 import 'disclosure_row.dart';
+import 'exercise_history_screen.dart' show pushExerciseHistory;
+import 'exercise_demo.dart';
 import 'muscle_exercise_list_screen.dart';
 
 /// One exercise, as reference: what it needs, what it trains, how to do it,
@@ -58,6 +62,15 @@ class ExerciseDetailScreen extends ConsumerWidget {
   /// The key a test taps to add this exercise to an ad-hoc session.
   static const Key addToWorkoutKey = ValueKey<String>('add-to-workout');
 
+  /// The outlined state once the exercise is already in the open workout.
+  static const Key alreadyInWorkoutKey = ValueKey<String>('already-in-workout');
+
+  /// "Start workout with this", offered when no workout is open (ADR 0012).
+  static const Key startWorkoutKey = ValueKey<String>('start-workout-with-this');
+
+  /// The "Last … · N times · See history" line (ADR 0012).
+  static const Key historyLineKey = ValueKey<String>('exercise-history-line');
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(exerciseIndexProvider);
@@ -67,6 +80,7 @@ class ExerciseDetailScreen extends ConsumerWidget {
     // rather than by re-typing a field name the compiler would not check.
     final fields = exerciseContentFields(exercise);
     final leadField = fields.first;
+    final demo = ExerciseDemo.forExercise(exercise);
 
     return AppScreen.pushed(
       title: exercise.name,
@@ -81,12 +95,16 @@ class ExerciseDetailScreen extends ConsumerWidget {
               style: kLandingSectionLabelStyle,
             ),
           ),
+          _HistoryLine(exerciseId: exercise.id),
           const SizedBox(height: 16),
+          // The demonstration leads: how the movement looks is the first
+          // question on a reference page (docs/adr/0010).
+          if (demo != null) ...<Widget>[demo, const SizedBox(height: 20)],
           Semantics(
             header: true,
             child: Text(kExerciseMusclesLabel, style: kLandingSectionLabelStyle),
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 8),
           _MuscleChips(exercise: exercise),
           const SizedBox(height: 6),
           _ExerciseDiagrams(exercise: exercise),
@@ -106,7 +124,7 @@ class ExerciseDetailScreen extends ConsumerWidget {
               emphasised: field == leadField,
             ),
           if (substitutes.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 22),
+            const SizedBox(height: 24),
             Semantics(
               header: true,
               child: Text(
@@ -114,7 +132,7 @@ class ExerciseDetailScreen extends ConsumerWidget {
                 style: kLandingSectionLabelStyle,
               ),
             ),
-            const SizedBox(height: 9),
+            const SizedBox(height: 8),
             _SubstituteRail(substitutes: substitutes),
           ],
         ],
@@ -152,28 +170,93 @@ class ExerciseDetailScreen extends ConsumerWidget {
         // nothing to add to. A template session no longer locks the workout to
         // its muscles, so it takes an addition like any other
         // (`docs/adr/0006-workout-tab-is-exercise-first.md`).
-        if (session == null) return const <Widget>[];
-        return <Widget>[
-          const SizedBox(height: 16),
-          _DetailAction(
-            actionKey: addToWorkoutKey,
-            label: 'Add to current workout',
-            onTap: () async {
-              final loadType = LoadType.fromName(exercise.loadType);
-              if (loadType == null) return;
-              await ref.read(activeSessionProvider.notifier).addExercise(
-                    exerciseId: exercise.id,
-                    loadType: loadType,
-                  );
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${exercise.name} added')),
-              );
-            },
-          ),
-        ];
+        return referenceDetailActions(context, ref, exercise, session);
     }
   }
+}
+
+/// What a reference visit to an exercise's page offers (the Muscles route),
+/// shared by the shipped and the custom exercise pages so the two cannot
+/// disagree.
+List<Widget> referenceDetailActions(
+  BuildContext context,
+  WidgetRef ref,
+  Exercise exercise,
+  WorkoutSession? session,
+) {
+  if (session == null) {
+    // ADR 0012: "I found it, now do it" no longer ends here.
+    return <Widget>[
+      const SizedBox(height: 16),
+      _DetailAction(
+        actionKey: ExerciseDetailScreen.startWorkoutKey,
+        label: kStartWorkoutWithThisLabel,
+        onTap: () => startWorkoutWithExercise(context, ref, exercise),
+      ),
+    ];
+  }
+  final alreadyIn = session.exercises.any((e) => e.exerciseId == exercise.id);
+  if (alreadyIn) {
+    // B4: say it is there rather than "added" a second time.
+    return <Widget>[
+      const SizedBox(height: 16),
+      OutlinedButton(
+        key: ExerciseDetailScreen.alreadyInWorkoutKey,
+        onPressed: () => showAppSnackBar(context, kAlreadyInWorkoutMessage),
+        child: const Text(kInYourWorkoutLabel),
+      ),
+    ];
+  }
+  return <Widget>[
+    const SizedBox(height: 16),
+    _DetailAction(
+      actionKey: ExerciseDetailScreen.addToWorkoutKey,
+      label: 'Add to current workout',
+      onTap: () async {
+        final loadType = LoadType.fromName(exercise.loadType);
+        if (loadType == null) return;
+        await ref.read(activeSessionProvider.notifier).addExercise(
+              exerciseId: exercise.id,
+              loadType: loadType,
+            );
+        if (!context.mounted) return;
+        showAppSnackBar(context, '${exercise.name} added');
+      },
+    ),
+  ];
+}
+
+/// The detail action with no workout open.
+const String kStartWorkoutWithThisLabel = 'Start workout with this';
+
+/// Opens a new workout holding [exercise] and goes straight to logging it.
+Future<void> startWorkoutWithExercise(
+  BuildContext context,
+  WidgetRef ref,
+  Exercise exercise,
+) async {
+  final notifier = ref.read(activeSessionProvider.notifier);
+  if (ref.read(activeSessionProvider) == null) await notifier.startAdHoc();
+  if (!context.mounted) return;
+  await startLoggingFromDetail(context, ref, exercise);
+}
+
+/// The detail action once the exercise is already in the open workout.
+const String kInYourWorkoutLabel = 'In your workout';
+
+/// Said when that button is tapped.
+const String kAlreadyInWorkoutMessage = 'Already in your workout';
+
+/// A short confirmation in the app's style: floating, on the card radius, so
+/// it does not span the page and cover the reviewed copy's first header.
+void showAppSnackBar(BuildContext context, String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(
+      content: Text(message),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ));
 }
 
 /// How the user reached the exercise's page, which decides what it offers.
@@ -216,6 +299,58 @@ Future<void> startLoggingFromDetail(
   );
 }
 
+/// "Last 62.5kg × 6 · 14 times · See history" under the facts line, when the
+/// exercise has been logged; nothing otherwise (ADR 0012). The figures come
+/// from the same helpers as the picker rows, so they agree.
+class _HistoryLine extends ConsumerWidget {
+  const _HistoryLine({required this.exerciseId});
+
+  final String exerciseId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final saved = ref.watch(savedSessionsProvider);
+    final last = lastSetLine(exerciseId, saved);
+    if (last == null) return const SizedBox.shrink();
+    final times = timesLogged(exerciseId, saved);
+    final facts = '$last · $times ${times == 1 ? 'time' : 'times'}';
+    return Semantics(
+      container: true,
+      button: true,
+      label: '$facts. See history',
+      excludeSemantics: true,
+      onTap: () => pushExerciseHistory(context, exerciseId),
+      child: GestureDetector(
+        key: ExerciseDetailScreen.historyLineKey,
+        behavior: HitTestBehavior.opaque,
+        onTap: () => pushExerciseHistory(context, exerciseId),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  '$facts · See history',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppPalette.textSecondary,
+                    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: AppPalette.textMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// The page's one contextual action.
 class _DetailAction extends StatelessWidget {
   const _DetailAction({
@@ -248,21 +383,26 @@ Future<void> pushExerciseDetail(
 }) =>
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ExerciseDetailScreen(exercise: exercise, entry: entry),
+        // A custom exercise has no reviewed content, so it has its own page
+        // that says so instead of four empty blocks (ADR 0009).
+        builder: (_) => exercise.isCustom
+            ? CustomExerciseScreen(exerciseId: exercise.id, entry: entry)
+            : ExerciseDetailScreen(exercise: exercise, entry: entry),
       ),
     );
 
 /// The line under the header: what the lift needs, and how it is loaded.
 ///
-/// Both are the library's own lower-case keys, upper-cased here for the same
-/// reason [exerciseEquipmentLabel] upper-cases equipment on a row — the
+/// Both are the library's own lower-case keys, written in sentence case for
+/// the same reason [exerciseEquipmentLabel] gives — the
 /// display spelling belongs to the screen, and `Exercise.loadType` stays the
 /// value the set-logging screen will match on.
 String exerciseFactsLabel(Exercise exercise) =>
-    '${exercise.equipment.toUpperCase()} · ${exercise.loadType.toUpperCase()}';
+    '${exerciseEquipmentLabel(exercise.equipment)} · '
+    '${exerciseEquipmentLabel(exercise.loadType)}';
 
 /// The label over the chips and the diagram.
-const String kExerciseMusclesLabel = 'MUSCLES';
+const String kExerciseMusclesLabel = 'Muscles';
 
 /// The row for [field], so a test can open one by name rather than by
 /// position.
@@ -293,12 +433,12 @@ List<({String field, String label, String text})> exerciseContentFields(
     <({String field, String label, String text})>[
       (
         field: 'commonMistakes',
-        label: 'COMMON MISTAKES',
+        label: 'Common mistakes',
         text: exercise.commonMistakes,
       ),
-      (field: 'setup', label: 'SETUP', text: exercise.setup),
-      (field: 'posture', label: 'POSTURE', text: exercise.posture),
-      (field: 'execution', label: 'EXECUTION', text: exercise.execution),
+      (field: 'setup', label: 'Setup', text: exercise.setup),
+      (field: 'posture', label: 'Posture', text: exercise.posture),
+      (field: 'execution', label: 'Execution', text: exercise.execution),
     ];
 
 /// The body views needed to show every muscle [exercise] names.
@@ -497,11 +637,11 @@ String substituteRailLabel(Exercise exercise) {
   if (exercise.primary.length != 1) return kNeutralSubstituteRailLabel;
   final id = exercise.primary.single;
   final label = kSubMuscleGroups[id]?.label ?? id;
-  return 'OTHER EXERCISES FOR ${label.toUpperCase()}';
+  return 'Other exercises for ${label.toLowerCase()}';
 }
 
 /// Said when the exercise has more than one primary muscle.
-const String kNeutralSubstituteRailLabel = 'OTHER EXERCISES FOR THESE MUSCLES';
+const String kNeutralSubstituteRailLabel = 'Other exercises for these muscles';
 
 /// The muscles this exercise trains, as chips over the diagram they colour.
 ///
@@ -544,20 +684,32 @@ class _MuscleChip extends StatelessWidget {
       // one.
       label: isPrimary ? 'Primary muscle: $label' : 'Also works: $label',
       excludeSemantics: true,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isPrimary ? AppPalette.accentStrong : AppPalette.mutedSurface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: isPrimary ? AppPalette.accentStrong : AppPalette.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: isPrimary
-              ? kMuscleChipPrimaryStyle
-              : kMuscleChipSecondaryStyle,
+      // A legend entry, not a chip: a dot in the map's own fill and the name
+      // beside it. A filled amber chip read as a selected control, and nothing
+      // here can be tapped.
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isPrimary
+                    ? AppPalette.accentStrong
+                    : AppPalette.accentLight,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: isPrimary
+                  ? kMuscleChipPrimaryStyle
+                  : kMuscleChipSecondaryStyle,
+            ),
+          ],
         ),
       ),
     );
@@ -629,7 +781,7 @@ class _SubstituteRail extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             for (final exercise in substitutes) ...<Widget>[
-              if (exercise != substitutes.first) const SizedBox(width: 9),
+              if (exercise != substitutes.first) const SizedBox(width: 8),
               _SubstituteCard(exercise: exercise),
             ],
           ],
@@ -651,9 +803,11 @@ class _SubstituteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       label: '${exercise.name}. '
           '${exerciseEquipmentLabel(exercise.equipment)}',
+      onTap: () => pushExerciseDetail(context, exercise),
       excludeSemantics: true,
       child: GestureDetector(
         key: substituteCardKey(exercise.id),
@@ -664,10 +818,10 @@ class _SubstituteCard extends StatelessWidget {
         onTap: () => pushExerciseDetail(context, exercise),
         child: Container(
           width: kSubstituteCardWidth,
-          padding: const EdgeInsets.all(11),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: AppPalette.surface,
-            borderRadius: BorderRadius.circular(11),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppPalette.border),
           ),
           child: Column(
@@ -682,7 +836,7 @@ class _SubstituteCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 4),
               Text(
                 exerciseEquipmentLabel(exercise.equipment),
                 style: kExerciseEquipmentChipStyle,
@@ -702,21 +856,20 @@ const double kSubstituteCardWidth = 132;
 /// Past the 48pt floor several times over — the card is the tap target.
 const double kSubstituteCardHeight = 92;
 
-/// A primary muscle: the diagram's own fill, so the chip and the polygon read
-/// as the same statement.
+/// A primary muscle's name in the legend. Its dot carries the diagram's fill,
+/// so the entry and the polygon read as the same statement.
 const TextStyle kMuscleChipPrimaryStyle = TextStyle(
-  fontSize: 11,
-  fontWeight: FontWeight.w600,
-  color: AppPalette.onAccent,
+  fontSize: 13,
+  fontWeight: FontWeight.w500,
+  color: AppPalette.textPrimary,
 );
 
-/// A secondary muscle. **Not [AppPalette.accentLight]**, even though that is
-/// what its segment is filled with: §12 allows that colour for the muscle
-/// fill, and a chip is not a fill. The prototype draws these as quiet muted
-/// chips, and the ordering — primaries first — is what pairs them with the
-/// body.
+/// A secondary muscle's name. The text stays grey: only the legend dot takes
+/// the secondary-muscle colour, because §12 allows that colour for the muscle
+/// mark and nothing else. The ordering — primaries first — is what pairs the
+/// legend with the body.
 const TextStyle kMuscleChipSecondaryStyle = TextStyle(
-  fontSize: 11,
+  fontSize: 13,
   color: AppPalette.textSecondary,
 );
 

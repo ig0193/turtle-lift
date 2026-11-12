@@ -28,20 +28,20 @@ Future<bool> confirmDestructive(
       backgroundColor: AppPalette.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppPalette.border),
       ),
       title: Text(
         title,
         style: const TextStyle(
-          fontSize: 16,
+          fontSize: 17,
           fontWeight: FontWeight.w600,
           color: AppPalette.textPrimary,
         ),
       ),
       content: Text(
         message,
-        style: const TextStyle(fontSize: 13.5, color: AppPalette.textSecondary),
+        style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary),
       ),
       actions: <Widget>[
         TextButton(

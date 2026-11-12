@@ -92,6 +92,21 @@ class CustomTemplateStore {
         .write(CustomTemplatesCompanion(name: Value<String>(name)));
   }
 
+  /// Replaces the name and the exercise list of the template with [id], the
+  /// template editor's one write. A partial companion, so `sourceTemplateId`
+  /// is left as it was. A stale id writes nothing.
+  Future<void> updateCustomTemplate(
+    String id, {
+    required String name,
+    required String exerciseIds,
+  }) async {
+    await (_db.update(_db.customTemplates)..where((t) => t.id.equals(id)))
+        .write(CustomTemplatesCompanion(
+      name: Value<String>(name),
+      exerciseIds: Value<String>(exerciseIds),
+    ));
+  }
+
   /// Deletes the template with [id]. A stale id deletes nothing.
   ///
   /// **A real delete, and `CLAUDE.md` is explicit that V1 has no soft delete.**
@@ -257,6 +272,55 @@ class CustomTemplateList extends Notifier<List<WorkoutTemplate>> {
         else
           template,
     ]);
+  }
+
+  /// Replaces the name and exercises of the template with [id] — what the
+  /// template editor saves. A stale id is a no-op in both the database and the
+  /// list. Sessions already started from it are untouched: a session copies
+  /// its list at start and never reads the template again.
+  Future<void> update(
+    String id, {
+    required String name,
+    required List<String> exerciseIds,
+  }) async {
+    final encoded = encodeExerciseIds(exerciseIds);
+    await ref.read(customTemplateStoreProvider).updateCustomTemplate(
+          id,
+          name: name,
+          exerciseIds: encoded,
+        );
+    state = _sorted(<WorkoutTemplate>[
+      for (final template in state)
+        if (template.id == id)
+          WorkoutTemplate(
+            id: template.id,
+            name: name,
+            exerciseIds: decodeExerciseIds(encoded),
+            isPredefined: false,
+          )
+        else
+          template,
+    ]);
+  }
+
+  /// Takes [exerciseId] out of every template in memory, after the store has
+  /// already done it on disk (deleting a custom exercise).
+  void forgetExercise(String exerciseId) {
+    state = <WorkoutTemplate>[
+      for (final template in state)
+        if (template.exerciseIds.contains(exerciseId))
+          WorkoutTemplate(
+            id: template.id,
+            name: template.name,
+            exerciseIds: <String>[
+              for (final id in template.exerciseIds)
+                if (id != exerciseId) id,
+            ],
+            isPredefined: false,
+          )
+        else
+          template,
+    ];
   }
 
   /// Deletes the template with [id]. A stale id is a no-op in both the database

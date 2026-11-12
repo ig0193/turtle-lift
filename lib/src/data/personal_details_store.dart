@@ -117,6 +117,28 @@ class PersonalDetailsStore {
 ///
 /// It reads [appDatabaseProvider], which is the seam a test overrides with an
 /// in-memory database; there is no second database handle anywhere.
+/// The lightest bodyweight the app records, in kg (profile audit B1).
+///
+/// An entry can never be removed after its day (KD5), so a typo such as
+/// "0.5" would price that day's calories near zero for good. The range is
+/// wide enough for any adult who trains and narrow enough to catch a slip.
+const double kMinBodyweightKg = 20;
+
+/// The heaviest bodyweight the app records, in kg. Chosen with the protein
+/// rule: 1.6 g per kg at 250 kg is exactly the 400 g target cap, so a valid
+/// weight always gives a suggestion the target screen can store.
+const double kMaxBodyweightKg = 250;
+
+/// [text] as a bodyweight in kg, or null when it is not a number from
+/// [kMinBodyweightKg] to [kMaxBodyweightKg]. A comma decimal ("72,5") is
+/// accepted, like every other number field in the app.
+double? parseBodyweight(String text) {
+  final value = double.tryParse(text.trim().replaceAll(',', '.'));
+  if (value == null || !value.isFinite) return null;
+  if (value < kMinBodyweightKg || value > kMaxBodyweightKg) return null;
+  return value;
+}
+
 final personalDetailsStoreProvider = Provider<PersonalDetailsStore>(
   (ref) => PersonalDetailsStore(ref.watch(appDatabaseProvider)),
 );
@@ -221,8 +243,9 @@ class BodyweightLog extends Notifier<List<BodyweightEntry>> {
   /// leave the series claiming the user has not weighed in since.
   Future<void> record(double weightKg) async {
     assert(
-      weightKg > 0 && weightKg.isFinite,
-      'a bodyweight is an unsigned positive number, got $weightKg',
+      weightKg >= kMinBodyweightKg && weightKg <= kMaxBodyweightKg,
+      'a bodyweight is $kMinBodyweightKg to $kMaxBodyweightKg kg, '
+      'got $weightKg',
     );
 
     final today = todayLocal();

@@ -40,8 +40,10 @@ class _StartAnotherButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
+        container: true,
         button: true,
         label: 'Browse templates',
+        onTap: () => pushTemplateList(context),
         excludeSemantics: true,
         child: GestureDetector(
           key: startAnotherWorkoutKey,

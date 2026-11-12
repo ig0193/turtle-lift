@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/body_gender.dart';
+import '../data/date_labels.dart';
+import '../data/diet_derived.dart' show suggestedTargetFor;
+import '../data/diet_plan.dart' show proteinTargetProvider;
+import '../data/local_date.dart';
 import '../data/personal_details_store.dart';
+import '../data/set_format.dart';
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
+import 'bodyweight_trend_chart.dart';
+import 'number_input.dart';
+import 'protein_target_screen.dart' show DietTextLink, pushProteinTargetScreen;
 import 'template_row.dart';
 
 /// The two things the app collects about the user, and the log of one of them.
@@ -29,11 +38,11 @@ class PersonalDetailsScreen extends ConsumerStatefulWidget {
 
   /// The heading over the gender choice.
   @visibleForTesting
-  static const String genderGroupLabel = 'BODY DIAGRAM';
+  static const String genderGroupLabel = 'Body diagram';
 
   /// The heading over the weight series.
   @visibleForTesting
-  static const String weightGroupLabel = 'BODYWEIGHT';
+  static const String weightGroupLabel = 'Bodyweight';
 
   /// What the weight group says before the user has recorded anything.
   ///
@@ -49,6 +58,32 @@ class PersonalDetailsScreen extends ConsumerStatefulWidget {
   static const String genderCaption =
       'Chooses which body diagram is used throughout the app. '
       'It changes nothing else.';
+
+  /// Shown under the field while it holds something that is not a weight
+  /// (profile audit B1).
+  static const String rangeReason = 'Between 20 and 250 kg';
+
+  /// What a weigh-in can and cannot be changed by (profile audit B3, KD5).
+  static const String correctionNote =
+      "Recording again today replaces today's entry until midnight. After "
+      'that it stays, so a correction is a new entry from that day.';
+
+  /// The status line after a weigh-in.
+  static String recordedLine(double kg) =>
+      'Recorded ${formatWeight(kg)} kg for today.';
+
+  /// The follow-up when a weigh-in moves the protein suggestion away from a
+  /// stored target (ADR 0014 §3). The target itself never changes here.
+  static String suggestionMovedLine(int grams) =>
+      'Protein suggestion is now $grams g.';
+
+  /// Finds the Update target link after a weigh-in.
+  @visibleForTesting
+  static const Key updateTargetKey = ValueKey<String>('weight-update-target');
+
+  /// Finds the status line after a weigh-in.
+  @visibleForTesting
+  static const Key statusKey = ValueKey<String>('weight-status');
 
   /// Finds one gender option.
   @visibleForTesting
@@ -75,7 +110,20 @@ class PersonalDetailsScreen extends ConsumerStatefulWidget {
 
 class _PersonalDetailsScreenState
     extends ConsumerState<PersonalDetailsScreen> {
-  final TextEditingController _weight = TextEditingController();
+  late final TextEditingController _weight = TextEditingController()
+    ..addListener(_changed);
+
+  /// What the last Record did, read out by VoiceOver; null until then.
+  String? _status;
+
+  /// The new protein suggestion, when the last weigh-in moved it away from
+  /// the stored target; null otherwise.
+  int? _movedSuggestion;
+
+  void _changed() => setState(() {});
+
+  bool get _showReason =>
+      _weight.text.trim().isNotEmpty && parseBodyweight(_weight.text) == null;
 
   @override
   void dispose() {
@@ -123,7 +171,63 @@ class _PersonalDetailsScreenState
           _WeightField(
             controller: _weight,
             onRecord: _record,
+            valid: parseBodyweight(_weight.text) != null,
           ),
+          if (_showReason)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Semantics(
+                container: true,
+                child: const Text(
+                  PersonalDetailsScreen.rangeReason,
+                  style: _reasonStyle,
+                ),
+              ),
+            ),
+          if (_status != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Semantics(
+                container: true,
+                liveRegion: true,
+                child: Text(
+                  <String>[
+                    _status!,
+                    if (_movedSuggestion != null)
+                      PersonalDetailsScreen.suggestionMovedLine(
+                          _movedSuggestion!),
+                  ].join(' '),
+                  key: PersonalDetailsScreen.statusKey,
+                  style: _reasonStyle,
+                ),
+              ),
+            ),
+          if (_movedSuggestion != null)
+            DietTextLink(
+              key: PersonalDetailsScreen.updateTargetKey,
+              label: 'Update target',
+              onTap: () => pushProteinTargetScreen(
+                context,
+                initialGrams: _movedSuggestion,
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: Semantics(
+              container: true,
+              child: const Text(
+                PersonalDetailsScreen.correctionNote,
+                style: kTemplateRowSubtitleStyle,
+              ),
+            ),
+          ),
+          if (entries.length >= 2)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: BodyweightTrendChart(
+                entries: entries.reversed.toList(growable: false),
+              ),
+            ),
           if (entries.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
@@ -147,11 +251,20 @@ class _PersonalDetailsScreenState
   }
 
   Future<void> _record() async {
-    final parsed = double.tryParse(_weight.text.trim());
-    if (parsed == null || parsed <= 0 || !parsed.isFinite) return;
+    final parsed = parseBodyweight(_weight.text);
+    if (parsed == null) return;
     await ref.read(bodyweightLogProvider.notifier).record(parsed);
     if (!mounted) return;
     _weight.clear();
+    final target = ref.read(proteinTargetProvider);
+    final suggestion = suggestedTargetFor(parsed);
+    setState(() {
+      _status = PersonalDetailsScreen.recordedLine(parsed);
+      _movedSuggestion =
+          target != null && suggestion != null && suggestion != target
+              ? suggestion
+              : null;
+    });
     FocusScope.of(context).unfocus();
   }
 }
@@ -182,30 +295,36 @@ class _GenderChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       selected: selected,
       label: label,
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 13),
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? AppPalette.accentStrong : AppPalette.surface,
+            // Selected = raised neutral, amber outline and label: the same
+            // selection language as the Front/Back toggle and the Profile
+            // switch. A solid accent is reserved for the primary action.
+            color: selected ? AppPalette.mutedSurface : AppPalette.surface,
             border: Border.all(
               color: selected ? AppPalette.accentStrong : AppPalette.border,
             ),
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: selected ? AppPalette.onAccent : AppPalette.textSecondary,
+              color:
+                  selected ? AppPalette.accentStrong : AppPalette.textSecondary,
             ),
           ),
         ),
@@ -219,66 +338,92 @@ class _GenderChip extends StatelessWidget {
 /// **One field, no date control.** KD5 forbids backdating, so offering a date
 /// would be offering an illegal action; the entry is always dated today.
 class _WeightField extends StatelessWidget {
-  const _WeightField({required this.controller, required this.onRecord});
+  const _WeightField({
+    required this.controller,
+    required this.onRecord,
+    required this.valid,
+  });
 
   final TextEditingController controller;
+
+  /// Records the field's value; does nothing when it is not a valid weight.
   final VoidCallback onRecord;
+
+  /// False while the field does not hold a valid weight: the button dims, a
+  /// tap records nothing, and the reason under the field says why.
+  final bool valid;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
         Expanded(
-          child: TextField(
+          // Stable id for UI automation (Maestro); never read aloud.
+          child: Semantics(
+            identifier: 'bodyweight-field',
+            child: TextField(
             key: PersonalDetailsScreen.weightFieldKey,
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            // A comma decimal ("77,5") is accepted, and nothing that is not a
+            // weight can be typed or pasted.
+            inputFormatters: <TextInputFormatter>[
+              UnsignedNumberFormatter(decimals: 1, maxIntegerDigits: 3),
+            ],
+            // The iOS number pad has no return key: a tap off the field
+            // is how it is put away.
+            onTapOutside: (_) => FocusScope.of(context).unfocus(),
             style: kTemplateRowTitleStyle,
             cursorColor: AppPalette.accentStrong,
             onSubmitted: (_) => onRecord(),
+            // The theme's field: 16pt radius, hairline border, amber on
+            // focus -- the same box as the search field, not Material's 4pt
+            // default sitting next to a capsule.
             decoration: const InputDecoration(
-              isDense: true,
               hintText: 'Weight in kg',
               hintStyle: kTemplateRowSubtitleStyle,
               suffixText: 'kg',
               suffixStyle: kTemplateRowSubtitleStyle,
-              border: OutlineInputBorder(
-                borderSide: BorderSide(color: AppPalette.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: AppPalette.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: AppPalette.accentStrong),
-              ),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
+          ),
           ),
         ),
         const SizedBox(width: 8),
         Semantics(
+          container: true,
           button: true,
           label: 'Record weight',
+          identifier: 'record-weight',
+          enabled: valid,
+          onTap: onRecord,
           excludeSemantics: true,
           child: GestureDetector(
             key: PersonalDetailsScreen.recordKey,
             behavior: HitTestBehavior.opaque,
             onTap: onRecord,
-            child: Container(
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Opacity(
+              opacity: valid ? 1 : 0.5,
+              child: Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppPalette.accentStrong,
-                borderRadius: BorderRadius.circular(9),
+              // The screen's primary action, so it takes the primary button's
+              // look: a chalk capsule.
+              decoration: const ShapeDecoration(
+                shape: StadiumBorder(),
+                color: AppPalette.textPrimary,
               ),
               child: const Text(
                 'Record',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: AppPalette.onAccent,
                 ),
               ),
+            ),
             ),
           ),
         ),
@@ -302,17 +447,17 @@ class _WeightRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(minHeight: TemplateRow.minHeight),
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: AppPalette.border)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          Text('${_trimZero(entry.weightKg)} kg',
+          Text('${formatWeight(entry.weightKg)}kg',
               style: kTemplateRowTitleStyle),
           Text(
-            'from ${encodeCalendarDate(entry.date)}',
+            'from ${shortDateLabel(LocalDate.fromDateTime(entry.date))}',
             style: kTemplateRowSubtitleStyle,
           ),
         ],
@@ -320,10 +465,6 @@ class _WeightRow extends StatelessWidget {
     );
   }
 }
-
-/// `78.0` reads as a precision the scale did not offer; `78.5` keeps its half.
-String _trimZero(double kg) =>
-    kg == kg.roundToDouble() ? kg.toStringAsFixed(0) : kg.toString();
 
 /// How the calorie estimate works, carried from `docs/04` §Personal details.
 ///
@@ -340,7 +481,7 @@ class _CalorieExplainer extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppPalette.surface,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,12 +492,12 @@ class _CalorieExplainer extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           for (final tier in const <(String, String)>[
-            ('1–9 sets', 'Light effort'),
-            ('10–20 sets', 'Moderate effort'),
+            ('1-9 sets', 'Light effort'),
+            ('10-20 sets', 'Moderate effort'),
             ('21+ sets', 'Vigorous effort'),
           ])
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
@@ -368,7 +509,7 @@ class _CalorieExplainer extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Each session uses the weight in effect on the day it happened, '
-            'not your newest one — so recording a weight today never changes '
+            'not your newest one, so recording a weight today never changes '
             'a workout you already logged. Actual calories burned vary by '
             'person and effort.',
             style: kTemplateRowSubtitleStyle,
@@ -388,7 +529,7 @@ class _GroupLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 18, bottom: 8),
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Semantics(
         header: true,
         child: Text(label, style: kLandingSectionLabelStyle),
@@ -396,3 +537,8 @@ class _GroupLabel extends StatelessWidget {
     );
   }
 }
+
+const TextStyle _reasonStyle = TextStyle(
+  fontSize: 13,
+  color: AppPalette.textSecondary,
+);

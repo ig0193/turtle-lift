@@ -4,6 +4,9 @@ import '../data/load_type.dart';
 import '../data/session_store.dart';
 import '../data/set_format.dart';
 import '../theme/app_palette.dart';
+import '../theme/app_typography.dart';
+import 'haptics.dart';
+import 'motion.dart';
 import 'stepper_field.dart';
 
 /// One set, in whichever shape its load type calls for.
@@ -28,8 +31,26 @@ class SetRow extends StatefulWidget {
     required this.onChanged,
     required this.onToggleComplete,
     required this.onDelete,
+    this.lastTime,
+    this.onUseLast,
+    this.isPersonalBest = false,
     super.key,
   });
+
+  /// Last time's value for this set, already worded ("Last 62.5kg × 6"), or
+  /// null when last time had no such set. Derived by the caller from history;
+  /// the row only shows it.
+  final String? lastTime;
+
+  /// Copies [lastTime] into the row. Null when there is nothing to copy.
+  final VoidCallback? onUseLast;
+
+  /// Whether this set is the exercise's record right now. Derived on every
+  /// build by the caller (`personalBestSetIndex`), never stored.
+  final bool isPersonalBest;
+
+  /// The key a test taps to copy last time's value into row [index].
+  static Key lastKey(int index) => ValueKey<String>('set-last-$index');
 
   /// Zero-based position, rendered one-based as the set number.
   final int index;
@@ -63,6 +84,9 @@ class SetRow extends StatefulWidget {
 class _SetRowState extends State<SetRow> {
   final FocusNode _requiredFieldFocus = FocusNode();
   late bool _weightExpanded = _hasOptionalWeight;
+
+  /// Swipe-deletes seen by this slot; part of the Dismissible's key.
+  int _dismissals = 0;
 
   bool get _hasOptionalWeight =>
       (widget.entry.addedKg ?? 0) > 0 || (widget.entry.weightKg ?? 0) > 0;
@@ -118,15 +142,25 @@ class _SetRowState extends State<SetRow> {
       _requiredFieldFocus.requestFocus();
       return;
     }
+    // Completing is the event worth feeling; unticking is a correction.
+    if (!widget.entry.completed) AppHaptics.setDone();
     widget.onToggleComplete();
   }
 
   @override
   Widget build(BuildContext context) {
     return Dismissible(
-      key: ValueKey<String>('dismiss-${widget.entry.id}'),
+      // **Not keyed on the entry id.** A prefilled row's id is `ghost-N` until
+      // its first keystroke saves it; a key that changed then rebuilt the
+      // fields mid-typing, dropping focus, so "60" was stored as 6. The key
+      // changes only after a swipe, so the next row that slides into this
+      // slot gets a fresh, undismissed Dismissible.
+      key: ValueKey<String>('dismiss-${widget.index}-$_dismissals'),
       direction: DismissDirection.endToStart,
-      onDismissed: (_) => widget.onDelete(),
+      onDismissed: (_) {
+        setState(() => _dismissals++);
+        widget.onDelete();
+      },
       background: const ColoredBox(color: AppPalette.danger),
       child: GestureDetector(
         // The second way to delete, so removing a set never depends on a swipe
@@ -136,15 +170,20 @@ class _SetRowState extends State<SetRow> {
         child: Padding(
           key: SetRow.rowKey(widget.index),
           padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Row(
             children: <Widget>[
               SizedBox(
-                width: 18,
+                width: 20,
                 child: Text(
                   '${widget.index + 1}',
                   style: const TextStyle(
                     fontSize: 13,
                     color: AppPalette.textMuted,
+                    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
                   ),
                 ),
               ),
@@ -154,6 +193,15 @@ class _SetRowState extends State<SetRow> {
                 completed: widget.entry.completed,
                 onTap: _requestComplete,
               ),
+            ],
+          ),
+              if (widget.lastTime != null || widget.isPersonalBest)
+                _SecondLine(
+                  index: widget.index,
+                  lastTime: widget.lastTime,
+                  onUseLast: widget.onUseLast,
+                  isPersonalBest: widget.isPersonalBest,
+                ),
             ],
           ),
         ),
@@ -171,22 +219,26 @@ class _SetRowState extends State<SetRow> {
             step: 2.5,
             decimals: 1,
             isPrefill: widget.isPrefill,
+            settled: widget.entry.completed,
             semanticsLabel: 'Weight in kilograms',
+            semanticsIdentifier: 'set-${widget.index}-weight',
+            unit: 'kg',
               onChanged: (v) => _emit(_copy(weightKg: v)),
             ),
           ),
-          const _Unit('kg'),
           Expanded(
             child: StepperField(
             focusNode: _requiredFieldFocus,
             value: widget.entry.reps?.toDouble(),
             step: 1,
             isPrefill: widget.isPrefill,
+            settled: widget.entry.completed,
             semanticsLabel: 'Repetitions',
+            semanticsIdentifier: 'set-${widget.index}-reps',
+            unit: 'reps',
               onChanged: (v) => _emit(_copy(reps: v?.round())),
             ),
           ),
-          const _Unit('reps'),
         ];
       case LoadType.assisted:
         return <Widget>[
@@ -196,22 +248,26 @@ class _SetRowState extends State<SetRow> {
             step: 2.5,
             decimals: 1,
             isPrefill: widget.isPrefill,
+            settled: widget.entry.completed,
             semanticsLabel: 'Assistance in kilograms',
+            semanticsIdentifier: 'set-${widget.index}-assist',
+            unit: 'kg assist',
               onChanged: (v) => _emit(_copy(assistKg: v)),
             ),
           ),
-          const _Unit('assist'),
           Expanded(
             child: StepperField(
             focusNode: _requiredFieldFocus,
             value: widget.entry.reps?.toDouble(),
             step: 1,
             isPrefill: widget.isPrefill,
+            settled: widget.entry.completed,
             semanticsLabel: 'Repetitions',
+            semanticsIdentifier: 'set-${widget.index}-reps',
+            unit: 'reps',
               onChanged: (v) => _emit(_copy(reps: v?.round())),
             ),
           ),
-          const _Unit('reps'),
         ];
       case LoadType.bodyweight:
         return <Widget>[
@@ -221,11 +277,13 @@ class _SetRowState extends State<SetRow> {
             value: widget.entry.reps?.toDouble(),
             step: 1,
             isPrefill: widget.isPrefill,
+            settled: widget.entry.completed,
             semanticsLabel: 'Repetitions',
+            semanticsIdentifier: 'set-${widget.index}-reps',
+            unit: 'reps',
               onChanged: (v) => _emit(_copy(reps: v?.round())),
             ),
           ),
-          const _Unit('reps'),
           _optionalWeight(
             value: widget.entry.addedKg,
             onChanged: (v) => _emit(_copy(addedKg: v)),
@@ -239,11 +297,17 @@ class _SetRowState extends State<SetRow> {
             value: widget.entry.durationSec?.toDouble(),
             step: 5,
             isPrefill: widget.isPrefill,
+            settled: widget.entry.completed,
             semanticsLabel: 'Duration in seconds',
+            semanticsIdentifier: 'set-${widget.index}-duration',
+            // "sec" until there is a value, then the value as m:ss -- "0:00"
+            // under an empty field reads as a reading, not a prompt.
+            unit: widget.entry.durationSec == null
+                ? 'sec'
+                : formatDuration(widget.entry.durationSec!),
               onChanged: (v) => _emit(_copy(durationSec: v?.round())),
             ),
           ),
-          _Unit(formatDuration(widget.entry.durationSec ?? 0)),
           _optionalWeight(
             value: widget.entry.weightKg,
             onChanged: (v) => _emit(_copy(weightKg: v)),
@@ -260,8 +324,11 @@ class _SetRowState extends State<SetRow> {
   }) {
     if (!_weightExpanded) {
       return Semantics(
+        container: true,
         button: true,
         label: 'Add weight',
+        identifier: 'set-${widget.index}-add-weight',
+        onTap: () => setState(() => _weightExpanded = true),
         excludeSemantics: true,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -269,10 +336,24 @@ class _SetRowState extends State<SetRow> {
           child: Container(
             constraints: const BoxConstraints(minHeight: 48),
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: const Text(
-              '+ weight',
-              style: TextStyle(fontSize: 12.5, color: AppPalette.textSecondary),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(
+                  Icons.add_rounded,
+                  size: 16,
+                  color: AppPalette.textSecondary,
+                ),
+                SizedBox(width: 4),
+                Text(
+                  'weight',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppPalette.textSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -287,30 +368,17 @@ class _SetRowState extends State<SetRow> {
               step: 2.5,
               decimals: 1,
               isPrefill: widget.isPrefill,
+              settled: widget.entry.completed,
               semanticsLabel: 'Added weight in kilograms',
+              semanticsIdentifier: 'set-${widget.index}-added',
+              unit: 'kg',
               onChanged: onChanged,
             ),
           ),
-          const _Unit('kg'),
         ],
       ),
     );
   }
-}
-
-class _Unit extends StatelessWidget {
-  const _Unit(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(left: 2, right: 5),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: AppPalette.textMuted),
-        ),
-      );
 }
 
 class _CheckButton extends StatelessWidget {
@@ -327,9 +395,12 @@ class _CheckButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       checked: completed,
       label: 'Complete set ${index + 1}',
+      identifier: 'set-$index-check',
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         key: SetRow.checkKey(index),
@@ -339,7 +410,10 @@ class _CheckButton extends StatelessWidget {
           width: 48,
           height: 48,
           child: Center(
-            child: Container(
+            child: AnimatedContainer(
+              duration:
+                  motionDuration(context, const Duration(milliseconds: 150)),
+              curve: Curves.easeOut,
               width: 26,
               height: 26,
               decoration: BoxDecoration(
@@ -348,7 +422,7 @@ class _CheckButton extends StatelessWidget {
                   color:
                       completed ? AppPalette.accentStrong : AppPalette.border,
                 ),
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 Icons.check,
@@ -362,3 +436,80 @@ class _CheckButton extends StatelessWidget {
     );
   }
 }
+
+/// The quiet line under a set: last time's value, which copies into the row
+/// on a tap, and the PB mark when this set is the record.
+///
+/// **In the row, not in a block below.** Rows are filled in from last time,
+/// but once a value is changed the comparison would be gone; Hevy and JEFIT
+/// keep it beside the set for that reason. The Recent block stays below for
+/// the multi-session view.
+class _SecondLine extends StatelessWidget {
+  const _SecondLine({
+    required this.index,
+    required this.lastTime,
+    required this.onUseLast,
+    required this.isPersonalBest,
+  });
+
+  final int index;
+  final String? lastTime;
+  final VoidCallback? onUseLast;
+  final bool isPersonalBest;
+
+  @override
+  Widget build(BuildContext context) {
+    final last = lastTime;
+    return Row(
+      children: <Widget>[
+        // Under the fields, not the set number.
+        const SizedBox(width: 20),
+        Expanded(
+          child: last == null
+              ? const SizedBox(height: 48)
+              : Semantics(
+                  container: true,
+                  button: true,
+                  label: '$last. Use for set ${index + 1}',
+                  onTap: onUseLast,
+                  excludeSemantics: true,
+                  child: GestureDetector(
+                    key: SetRow.lastKey(index),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onUseLast,
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 48),
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.only(left: 12),
+                      child: Text(
+                        last,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppPalette.textMuted,
+                          fontFeatures: <FontFeature>[
+                            FontFeature.tabularFigures(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+        ),
+        if (isPersonalBest)
+          Semantics(
+            label: 'Personal best',
+            excludeSemantics: true,
+            child: const SizedBox(
+              width: 48,
+              child: Center(child: Text('PB', style: kPbMarkStyle)),
+            ),
+          )
+        else
+          const SizedBox(width: 48),
+      ],
+    );
+  }
+}
+

@@ -5,6 +5,7 @@ import 'package:turtle_lift/src/data/body_gender.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/data/generated/muscle_taxonomy.dart';
+import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/body_diagram.dart';
 import 'package:turtle_lift/src/ui/muscle_exercise_list_screen.dart';
@@ -172,7 +173,26 @@ void main() {
       expect(find.byType(MuscleExerciseListScreen), findsNothing,
           reason: 'nothing is opened until the question is answered -- '
               'picking one for the user is the bug this prompt exists to stop');
-      expect(find.text(muscleSegmentSheetTitle(2)), findsOneWidget);
+      expect(find.text('Which shoulder muscle?'), findsOneWidget,
+          reason: 'B3: sentence case, no implementation words');
+      expect(find.textContaining('SEGMENT'), findsNothing);
+
+      // B3: the tapped shoulder stays lit while the sheet asks, well past the
+      // commit flash.
+      await tester.pump(const Duration(seconds: 1));
+      final painter = tester
+          .widgetList<CustomPaint>(find.descendant(
+            of: find.byType(BodyDiagram),
+            matching: find.byType(CustomPaint),
+          ))
+          .map((w) => w.painter)
+          .whereType<BodyDiagramPainter>()
+          .first;
+      final shoulder = painter
+          .segmentPathsFor(const Size(300, 600))
+          .firstWhere((s) => s.id == 'shoulders/front-delt')
+          .subMuscleGroupIds;
+      expect(painter.fill(shoulder), AppPalette.accentStrong);
 
       for (final id in const ['shoulders/front-delt', 'shoulders/side-delt']) {
         expect(find.byKey(muscleSegmentOptionKey(id)), findsOneWidget,

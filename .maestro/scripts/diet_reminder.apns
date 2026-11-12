@@ -1,0 +1,17 @@
+{
+  "Simulator Target Bundle": "dev.indresh.turtleLift",
+  "aps": {
+    "alert": {
+      "title": "Lunch",
+      "body": "Paneer: 9 g protein planned"
+    },
+    "sound": "default"
+  },
+  "NotificationId": 312,
+  "presentAlert": true,
+  "presentSound": true,
+  "presentBadge": true,
+  "presentBanner": true,
+  "presentList": true,
+  "payload": "diet/today"
+}

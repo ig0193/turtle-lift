@@ -16,8 +16,10 @@ import 'session_entry.dart';
 import 'session_overview_body.dart';
 import 'session_summary_screen.dart';
 import 'template_library_screen.dart';
+import 'template_editor_screen.dart' show showTemplateEditor;
 import 'template_preview_sheet.dart';
 import 'template_row.dart';
+import 'week_strip.dart';
 
 /// The Workout tab's body: start a workout, or carry on with the one that is
 /// open.
@@ -84,15 +86,23 @@ class WorkoutLandingBody extends ConsumerStatefulWidget {
 
   /// The heading over the user's own templates.
   @visibleForTesting
-  static const String customGroupLabel = 'MY TEMPLATES';
+  static const String customGroupLabel = 'My templates';
 
   /// The heading over the templates that ship with the app.
   @visibleForTesting
-  static const String predefinedGroupLabel = 'READY-MADE';
+  static const String predefinedGroupLabel = 'Ready-made';
+
+  /// The rail's last tile, which opens an empty template editor.
+  @visibleForTesting
+  static const Key newTemplateKey = ValueKey<String>('landing-new-template');
 
   /// The pinned bar's button.
   @visibleForTesting
   static const Key startWorkoutKey = ValueKey<String>('start-workout');
+
+  /// The row that folds and unfolds the ready-made grid for a returning user.
+  @visibleForTesting
+  static const Key readyMadeToggleKey = ValueKey<String>('ready-made-toggle');
 
   /// The tile for [templateId] — predefined or the user's own.
   @visibleForTesting
@@ -111,6 +121,10 @@ class WorkoutLandingBody extends ConsumerStatefulWidget {
 class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
   final TextEditingController _controller = TextEditingController();
   String _query = '';
+
+  /// Whether a returning user unfolded the ready-made grid. In memory only:
+  /// every visit starts folded again, because the fold is the point.
+  bool _readyMadeOpen = false;
 
   @override
   void dispose() {
@@ -136,6 +150,13 @@ class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
           ),
           children: <Widget>[
             const SizedBox(height: 4),
+            // Where am I, before what do I pick (ADR 0008). Only at the root:
+            // the landing pushed over an open workout is for replacing it.
+            if (!widget.isPushed) ...<Widget>[
+              const WeekStrip(),
+              const LastWorkoutLine(),
+              const SizedBox(height: 4),
+            ],
             MuscleSearchField.editable(
               controller: _controller,
               autofocus: false,
@@ -162,34 +183,62 @@ class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
     BuildContext context,
     ExerciseIndex index,
     List<WorkoutTemplate> custom,
-  ) =>
-      <Widget>[
-        if (custom.isNotEmpty) ...<Widget>[
-          const _GroupLabel(WorkoutLandingBody.customGroupLabel),
-          SizedBox(
-            height: _kTileHeight,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
-              children: <Widget>[
-                for (final template in custom)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: SizedBox(
-                      width: 150,
-                      child: _TemplateTile(
-                        key: WorkoutLandingBody.templateKey(template.id),
-                        template: template,
-                        subtitle: templateSubtitle(template, index),
-                        onTap: () => _openTemplate(context, template),
-                      ),
+  ) {
+    // A returning user -- one with templates of their own or three saved
+    // workouts -- has their own context to lead with, and scrolling past the
+    // same eleven tiles every visit was the landing reading "the same on day 1
+    // and day 100" (research item 11). Derived on read, never stored.
+    final returning =
+        custom.isNotEmpty || ref.watch(savedSessionsProvider).length >= 3;
+    return <Widget>[
+        // Always shown now, with New template at the end of the rail: making
+        // a template from scratch is the first thing a user who wants their
+        // own routine looks for (workout-gaps audit).
+        const _GroupLabel(WorkoutLandingBody.customGroupLabel),
+        // A Row in a scroll view, not a lazy horizontal ListView: the lazy
+        // rail's tiles never reached the iOS accessibility tree, so VoiceOver
+        // and Maestro could not open the user's own templates (audit). The
+        // rail is the user's handful of templates, so there is nothing to
+        // recycle.
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              for (final template in custom)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: SizedBox(
+                    width: 150,
+                    height: _kTileHeight,
+                    child: _TemplateTile(
+                      key: WorkoutLandingBody.templateKey(template.id),
+                      template: template,
+                      subtitle: templateSubtitle(template, index),
+                      onTap: () => _openTemplate(context, template),
                     ),
                   ),
-              ],
-            ),
+                ),
+              SizedBox(
+                width: custom.isEmpty ? 180 : 150,
+                height: _kTileHeight,
+                child: _NewTemplateTile(
+                  onTap: () => showTemplateEditor(context),
+                ),
+              ),
+            ],
           ),
-        ],
-        const _GroupLabel(WorkoutLandingBody.predefinedGroupLabel),
+        ),
+        if (returning)
+          _ReadyMadeToggle(
+            open: _readyMadeOpen,
+            count: kPredefinedTemplates.length,
+            onTap: () => setState(() => _readyMadeOpen = !_readyMadeOpen),
+          )
+        else
+          const _GroupLabel(WorkoutLandingBody.predefinedGroupLabel),
+        if (!returning || _readyMadeOpen)
         GridView(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -218,7 +267,7 @@ class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
         TemplateRow(
           key: WorkoutRoot.manageTemplatesKey,
           title: 'Manage templates',
-          subtitle: 'Duplicate, rename or delete your own',
+          subtitle: 'Edit your templates and exercises',
           background: AppPalette.mutedSurface,
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
@@ -227,6 +276,7 @@ class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
           ),
         ),
       ];
+  }
 
   /// The search results: templates by name, then exercises by name.
   List<Widget> _results(
@@ -257,7 +307,7 @@ class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
 
     return <Widget>[
       if (templates.isNotEmpty) ...<Widget>[
-        const _GroupLabel('TEMPLATES'),
+        const _GroupLabel('Templates'),
         for (final template in templates)
           TemplateRow(
             key: WorkoutLandingBody.templateKey(template.id),
@@ -267,7 +317,7 @@ class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
           ),
       ],
       if (exercises.isNotEmpty) ...<Widget>[
-        const _GroupLabel('EXERCISES · TAP TO START LOGGING'),
+        const _GroupLabel('Exercises · tap to start logging'),
         for (final exercise in exercises)
           KeyedSubtree(
             key: WorkoutLandingBody.exerciseResultKey(exercise.id),
@@ -293,8 +343,13 @@ class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
     BuildContext context,
     WorkoutTemplate template,
   ) async {
-    if (!await showTemplatePreview(context, template)) return;
+    final choice = await showTemplatePreviewChoice(context, template);
     if (!context.mounted) return;
+    if (choice == TemplatePreviewChoice.edit) {
+      await showTemplateEditor(context, existing: template);
+      return;
+    }
+    if (choice != TemplatePreviewChoice.start) return;
     if (!await _closeOpenWorkout(context)) return;
     await ref.read(activeSessionProvider.notifier).startFromTemplate(
           templateId: template.id,
@@ -379,7 +434,7 @@ class _GroupLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 18, bottom: 8),
+        padding: const EdgeInsets.only(top: 16, bottom: 8),
         child: Semantics(
           header: true,
           child: Text(text, style: kLandingSectionLabelStyle),
@@ -405,9 +460,11 @@ class _TemplateTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final count = template.exerciseIds.length;
     return Semantics(
+      container: true,
       button: true,
       label: '${template.name}. $subtitle. $count '
           'exercise${count == 1 ? '' : 's'}',
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -416,7 +473,7 @@ class _TemplateTile extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: AppPalette.surface,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppPalette.border),
           ),
           child: Column(
@@ -426,9 +483,9 @@ class _TemplateTile extends StatelessWidget {
                 template.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: kTemplateRowTitleStyle.copyWith(fontSize: 14),
+                style: kTemplateRowTitleStyle.copyWith(fontSize: 15),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               Expanded(
                 child: Text(
                   subtitle,
@@ -440,7 +497,7 @@ class _TemplateTile extends StatelessWidget {
               Text(
                 '$count exercise${count == 1 ? '' : 's'}',
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   color: AppPalette.textSecondary,
                 ),
               ),
@@ -450,6 +507,61 @@ class _TemplateTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The rail's last tile: build a template from scratch.
+class _NewTemplateTile extends StatelessWidget {
+  const _NewTemplateTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        container: true,
+        button: true,
+        label: 'New template. Pick exercises and their order',
+        onTap: onTap,
+        excludeSemantics: true,
+        child: GestureDetector(
+          key: WorkoutLandingBody.newTemplateKey,
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppPalette.border),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(Icons.add_rounded, size: 22, color: AppPalette.textPrimary),
+                SizedBox(height: 6),
+                Text(
+                  'New template',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppPalette.textPrimary,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Expanded(
+                  child: Text(
+                    'Pick exercises and their order',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppPalette.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
 }
 
 /// The pinned Start workout bar.
@@ -474,12 +586,12 @@ class _StartBar extends StatelessWidget {
             children: <Widget>[
               const Text(
                 'Start workout',
-                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
               Text(
                 'Add exercises as you go',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   color: AppPalette.onAccent.withValues(alpha: 0.75),
                 ),
               ),
@@ -488,3 +600,68 @@ class _StartBar extends StatelessWidget {
         ),
       );
 }
+
+/// The ready-made heading as a row that folds the grid, for a returning user.
+///
+/// It keeps the heading's own words, so the group reads the same open or
+/// closed, with the count on the right and a chevron for the state.
+class _ReadyMadeToggle extends StatelessWidget {
+  const _ReadyMadeToggle({
+    required this.open,
+    required this.count,
+    required this.onTap,
+  });
+
+  final bool open;
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Semantics(
+          container: true,
+          button: true,
+          expanded: open,
+          label: '${WorkoutLandingBody.predefinedGroupLabel}, $count templates',
+          onTap: onTap,
+          excludeSemantics: true,
+          child: GestureDetector(
+            key: WorkoutLandingBody.readyMadeToggleKey,
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 48),
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Row(
+                children: <Widget>[
+                  const Expanded(
+                    child: Text(
+                      WorkoutLandingBody.predefinedGroupLabel,
+                      style: kLandingSectionLabelStyle,
+                    ),
+                  ),
+                  Text(
+                    '$count',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppPalette.textMuted,
+                      fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    open
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                    size: 20,
+                    color: AppPalette.textMuted,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+}
+

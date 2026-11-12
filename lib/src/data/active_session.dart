@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'exercise_index.dart';
 import 'load_type.dart';
 import 'local_date.dart';
+import 'set_format.dart';
 import 'session_store.dart';
 
 /// The session the app was launched with, resolved **before the first frame**.
@@ -114,14 +115,66 @@ class ActiveSession extends Notifier<WorkoutSession?> {
     await _refresh();
   }
 
+  /// Starts a new workout from a past one's exercise list ("Do again").
+  ///
+  /// **The exercises, never the numbers.** Only the exercises [source]
+  /// actually logged, in its order, each under the load type it has now. No set
+  /// is copied: last time's values reach each row as its "last" line and its
+  /// prefill, both derived from history, so nothing here can go stale. It keeps
+  /// the template it came from, if any, so the title resolves the same way;
+  /// the user's own name for that day is not carried over. Dated today.
+  Future<void> startAgain(WorkoutSession source) async {
+    final index = ref.read(exerciseIndexProvider);
+    final exercises = <({String exerciseId, LoadType loadType})>[];
+    for (final e in source.exercises) {
+      if (!e.sets.any((s) => isSetComplete(e.loadType, s))) continue;
+      final loadType =
+          LoadType.fromName(index.byId(e.exerciseId)?.loadType) ?? e.loadType;
+      if (loadType == null) continue;
+      if (exercises.any((x) => x.exerciseId == e.exerciseId)) continue;
+      exercises.add((exerciseId: e.exerciseId, loadType: loadType));
+    }
+    await _store.createSession(
+      templateId: source.templateId,
+      templateName: source.templateName,
+      exercises: exercises,
+    );
+    await _refresh();
+  }
+
   /// Starts an ad-hoc workout. Its title begins empty and may stay that way.
   ///
   /// Called when the first exercise is added, not when the ad-hoc entry is
   /// tapped: creating it on the tap strands a user who backs out of search with
   /// nothing added in an empty session that has replaced the landing.
-  Future<void> startAdHoc() async {
-    await _store.createSession();
+  ///
+  /// [performedOn] backfills a missed day: History's calendar starts a
+  /// workout dated the empty past day the user tapped (ADR 0013). The store
+  /// clamps it to today or earlier like every other date.
+  Future<void> startAdHoc({LocalDate? performedOn}) async {
+    await _store.createSession(performedOn: performedOn);
     await _refresh();
+  }
+
+  /// Adds an exercise to a workout that is already saved, and returns its row
+  /// id (the existing row's when it is already there).
+  ///
+  /// **The saved workout stays saved**: nothing reopens it, so the open
+  /// session and the Workout tab are untouched. Its sets are then logged
+  /// through set logging pointed at the saved session, the same path that
+  /// corrects a set months later (ADR 0013).
+  Future<String?> addSavedExercise({
+    required String sessionId,
+    required String exerciseId,
+    required LoadType loadType,
+  }) async {
+    final id = await _store.addExercise(
+      sessionId: sessionId,
+      exerciseId: exerciseId,
+      loadType: loadType,
+    );
+    await _refreshSaved();
+    return id;
   }
 
   /// Saves the workout in progress, keeping its original date.
@@ -220,6 +273,52 @@ class ActiveSession extends Notifier<WorkoutSession?> {
   Future<void> removeExercise(String sessionExerciseId) async {
     await _store.removeExercise(sessionExerciseId);
     await _refresh();
+  }
+
+  /// Moves the exercise at [from] to [to] in the open workout's list
+  /// (indexes as the list shows them, `to` after removal). The order is the
+  /// user's: it is stored as each row's position, and nothing is derived from
+  /// it except which row is Up next.
+  Future<void> moveExercise(int from, int to) async {
+    final session = state;
+    if (session == null) return;
+    final ids = session.exercises.map((e) => e.id).toList();
+    if (from < 0 || from >= ids.length) return;
+    final target = to.clamp(0, ids.length - 1);
+    if (target == from) return;
+    final moved = ids.removeAt(from);
+    ids.insert(target, moved);
+    await _store.reorderExercises(session.id, ids);
+    await _refresh();
+  }
+
+  /// Swaps the open workout's exercise [sessionExerciseId] for [exerciseId]
+  /// in place. See [SessionStore.swapExercise] for when it is refused.
+  Future<SwapResult> swapExercise({
+    required String sessionExerciseId,
+    required String exerciseId,
+    required LoadType loadType,
+  }) async {
+    final result = await _store.swapExercise(
+      sessionExerciseId: sessionExerciseId,
+      exerciseId: exerciseId,
+      loadType: loadType,
+    );
+    await _refresh();
+    return result;
+  }
+
+  /// Writes the note on one of the open workout's exercises.
+  Future<void> setNote(String sessionExerciseId, String? note) async {
+    await _store.setNote(sessionExerciseId, note);
+    await _refresh();
+  }
+
+  /// Writes the note on an exercise of a saved workout, from the same set
+  /// logging screen that corrects its sets.
+  Future<void> setSavedNote(String sessionExerciseId, String? note) async {
+    await _store.setNote(sessionExerciseId, note);
+    await _refreshSaved();
   }
 
   Future<void> markExerciseDone(String sessionExerciseId, bool done) async {

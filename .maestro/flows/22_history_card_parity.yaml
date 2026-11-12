@@ -1,0 +1,58 @@
+# User story (History audit slice 2): the History detail and the editor show
+# one card with the same figures and labels; the detail can share it; an
+# exercise in the detail log opens that exercise's history, whose rows open
+# the read-only detail again (never the editor).
+appId: dev.indresh.turtleLift
+name: 22 History card parity, share from detail, exercise history links
+tags: [history]
+---
+- launchApp:
+    clearState: true
+- runFlow: ../subflows/log_bench_workout.yaml
+- waitForAnimationToEnd
+- tapOn: "Back"
+- tapOn: "History"
+- tapOn: ".*Today · 1 exercise · 2 sets"
+
+# --- the detail card
+- assertVisible: ".*2\nSets\n1\nExercises\n1\nDay streak.*"
+- assertNotVisible: ".*\nStreak\n.*"
+
+# --- the editor shows the same card, under "Edit workout"
+- scrollUntilVisible:
+    element: "Edit workout"
+    centerElement: true
+- tapOn: "Edit workout"
+- assertVisible: "Edit workout"
+- assertVisible: ".*2\nSets\n1\nExercises\n1\nDay streak.*"
+- assertVisible: "Change date"
+- tapOn: "Back"
+
+# --- share from the detail header opens the system share sheet
+- tapOn: "Share card"
+- extendedWaitUntil:
+    visible: "Close|.*\\.png.*|AirDrop|Save Image|Copy"
+    timeout: 15000
+- takeScreenshot: 22-detail-share-sheet
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn: "Close"
+- runFlow:
+    when:
+      notVisible: "What you did"
+    commands:
+      - swipe:
+          direction: DOWN
+          duration: 400
+
+# --- an exercise in the log opens its history; its row opens the detail
+- scrollUntilVisible:
+    element: "Barbell bench press\n.*"
+    centerElement: true
+- tapOn: "Barbell bench press\n.*"
+- assertVisible: ".*1 session · best 60kg × 8 · first logged .* 20[0-9][0-9]"
+- tapOn: ".*, 60kg × 8 · 60kg × 8"
+- assertVisible: "What you did"
+- assertNotVisible: "Change date"

@@ -6,7 +6,11 @@ Date: 2026-10-24
 
 Accepted. **Amends the "no notifications" rule** in `CLAUDE.md`, `docs/00` §13 and
 `docs/01` §Out of scope, for this feature only. Notifications are decided and
-will be built **after** the Schedule screen ships.
+will be built **after** the Schedule screen ships. **Extended by
+[ADR 0007](0007-diet-in-profile.md)** (proposed) to diet reminders (a morning
+summary and one per meal slot), under the same five rules below, unchanged.
+**Amended by [ADR 0008](0008-the-week-lives-on-the-workout-landing.md)**: a training reminder opens the Workout tab
+(not Profile › Schedule), and the week summary reads on the Workout landing.
 
 ## Context
 
@@ -70,6 +74,7 @@ go"). A day with no session is an empty marker, never "missed".
   reboot.
 - **Rule exception:** the week summary renders on Profile despite being derived.
   Recorded in ADR 0004; the same figure must not also appear on History.
+  *(ADR 0008 moves it to the Workout landing, same condition.)*
 - Schema: the plan table is a new Drift step numbered **above the current
   version**. Pre-launch, so no migration debt, but the "no later step below the
   current version" rule still applies.

@@ -8,7 +8,8 @@
 | `01-app-idea.md` | Scope, data model, muscle taxonomy, palette, and the reasoning behind every rule here. |
 | `02-workout-tab-userflow.md` | Workout tab flow + mockups. |
 | `03-muscle-groups-tab-userflow.md` | Muscle Groups tab flow + mockups. |
-| `04-profile-tab-userflow.md` | Profile flow + mockups. Profile is the fourth tab (Personal | Schedule); history is its own tab. |
+| `04-profile-tab-userflow.md` | Profile flow + mockups. Profile is the fourth tab (Personal | Schedule | Diet — Diet per `docs/adr/0007-diet-in-profile.md`); history is its own tab. |
+| `06-diet-tab-userflow.md` | Diet flow. Placement superseded by ADR 0007: a Profile segment, not a tab. |
 
 Conflict resolution: if this file disagrees with `01`–`04`, **`01`–`04` win** — this is a digest, not a source of truth. Report the conflict.
 
@@ -24,6 +25,8 @@ Conflict resolution: if this file disagrees with `01`–`04`, **`01`–`04` win*
 | `body-diagrams/body-diagram-back-female.svg` | Female back, 9 |
 | `body-diagrams/muscle_taxonomy.dart` / `.json` | Parent groups, sub-groups, labels, segment mapping |
 | `body-diagrams/generate_muscle_taxonomy.py` | Regenerates taxonomy; self-validates against SVGs |
+| `foods/foods.json` | Protein food list for Diet (ADR 0007). Reviewed nutrition copy, every food citing an IFCT 2017 code. Never hand-edit |
+| `foods/food_catalogue.py` + `foods/foods_*.py` + `foods/validate_food_catalogue.py` | Source tables (one module per family) and the validator that emits `foods.json` (and `foods.csv` for review); CI fails on drift. A shipped food id is never removed or reused: `foods/food_ids_ever.csv` is the ledger, changed only by `--update-ledger` |
 
 Re-run the taxonomy generator after any SVG change. It fails loudly on drift.
 
@@ -52,7 +55,7 @@ Male and female assets have different coordinate spaces — never assume a value
 | `loggedAt` | timestamp | Internal only. Tiebreaker when two sessions share `performedOn`. Never shown. |
 | `templateId` | id? | `null` = ad-hoc session. |
 
-**SessionExercise** — `exerciseId`, `order`, `loadType` (snapshotted at add time), and a stored `markedDone` flag.
+**SessionExercise** — `exerciseId`, `order`, `loadType` (snapshotted at add time), a stored `markedDone` flag, and an optional `note` (schema v9, ≤120 chars, `null` when blank; ADR 0011). The "Last time" note hint is derived.
 
 ⚠ **Conflict, resolved.** This line used to give `SessionExercise` a stored `state ∈ not_started | in_progress | done`, which contradicts §3 and `01` §Derived values: delete every set from an `in_progress` exercise and the stored state is simply wrong. Only the user's Mark-exercise-done tap is stored; the tri-state the list renders is derived from that flag and the sets. `loadType` *is* stored, and is the one exception worth stating — it lives in regenerated content, so a set row whose meaning is resolved at read time would be reinterpreted by a later build, and an assisted record read as a maximum is silently backwards.
 **SetEntry** — `completed`, plus fields determined by the exercise's `loadType`:
@@ -77,15 +80,28 @@ All inputs are unsigned positive numbers; the sign is carried by the type. `assi
 
 Average 76 words per exercise across all four. Every entry mentions breathing; 198 of 260 include a specific number. **No `alternatives` field** — the sub-muscle-group exercise list serves that purpose. Source: `exercises/exercises.json`, 260 entries, validated by `validate_exercise_library.py`.
 
+**CustomExercise** (schema v8, `docs/adr/0009-custom-exercises-and-template-editing.md`) — `id` (always `custom-…`), `name`, `equipment`, `loadType`, `primary[]`, `secondary[]` (taxonomy sub-group ids). **No content fields:** its page says it has no form guide; the app never writes one. Read through the same index as the library (`exerciseIndexProvider` = library + custom). A logged one cannot be deleted and its `loadType` is fixed; it can be **hidden from the picker** instead (`hidden`, schema v9, ADR 0011) and stays in History, records, Muscles and export.
+
 **Template** — name, `isPredefined`, and an **ordered list of exercise ids** (`docs/adr/0006-workout-tab-is-exercise-first.md`). Never store muscles: the muscle line on a row is derived from the exercises' primary muscles. Starting one **copies** the list into the session; nothing a session does writes back.
 
 **No muscle-level state exists in the model.** → `01` §Muscle training state.
+
+**Diet** (`docs/adr/0007-diet-in-profile.md`) — schema v6:
+
+| Table | Rules |
+|---|---|
+| `DietPlanVersions` | `effectiveFrom` PK, always a Monday. Copy-on-write: an edit in week W writes only the version at `monday(W)`; no path writes an older version. |
+| `DietPlanItems` | `effectiveFrom` (cascade), `weekday` 0 = Mon … 6 = Sun, `slot` ∈ breakfast · lunch · snack · dinner, `foodId` (asset id, no FK), `servingsHalves` 1–8, `position`. Unique per `(effectiveFrom, weekday, slot, foodId)`. |
+| `MealTicks` | `(date, slot)` composite PK, local calendar date. Presence = eaten; untick is a hard delete. Only today and earlier days of this week. |
+| `Settings.proteinTargetG` | Nullable int, 1–400. Null = never set. Accepting the suggestion stores the number, never a flag. |
+
+`ReminderPrefs` — schema v7, one row: Schedule reminder and diet reminder switches and minutes (0–1439).
 
 ---
 
 ## 3. Derived values — compute on read, never store
 
-`streak` · exercise count · set count · personal bests · **per-session PB count** · calorie estimate · resolved title · a template row's muscle line.
+`streak` · exercise count · set count · personal bests · **per-session PB count** · calorie estimate · resolved title · a template row's muscle line · diet planned / eaten / to-go protein, week meters, the target suggestion and reminder text (ADR 0007).
 
 **No lifted-volume (kg) metric anywhere in V1** — it cannot include bodyweight or timed exercises. Set count is the headline **volume proxy** in its place. → `01` §Derived values. (It stands in for the banned kg figure; it is not an instruction about which stat renders largest.)
 
@@ -114,12 +130,14 @@ Load from `muscle_taxonomy.dart`. **12 parents, 19 sub-groups, 1 mapping excepti
 - **One diagram treatment everywhere: full body, unmodified viewBox.** There is no zoomed or cropped view anywhere in V1. Used on Workout Overview, Muscle Groups landing, Exercise Detail, summary and session cards.
   - **The crop system has been deleted** (`muscle_crops.json`, `muscle_crops.dart`, `generate_muscle_crops.py`). Its last two consumers both stopped needing it: Exercise Detail moved to full body during prototyping, because crops produced unreadable letterbox strips and lost the anatomical context that makes the diagram educational, and the sub-muscle-group selection screen was deleted outright (§10). **Do not reintroduce cropping.** `03`'s exercise-detail mockup note used to call for a zoomed viewBox; it has been corrected.
 - Exercise Detail: **full-body** diagram. If relevant muscles span both views, show **both side by side**, each full body. If one view covers everything, show one, centred.
-- Fill colours: primary `#D85A30`, secondary `#F0997B`, untrained `#241F19`.
+- Exercise Detail opens with an **animated demonstration** above Muscles: an app-drawn figure, primary muscles in accent-strong, plays 3 cycles then rests on a two-position still; play/pause button; Reduce Motion → still, no autoplay. Mapping in `exercises/animation_map.py` (ADR 0010).
+- Fill colours: primary `#FFA53D`, secondary `#93ABCB`, untrained `#222225`. Each segment is outlined in text muted (`#8B8B90`) at 40% so the figure reads against the page.
+- **Planned, not yet worked** (live session map only): a thicker outline in text secondary (`#A3A3A7`), no fill. Never amber (that means worked) and never steel (that means secondary muscle). → `docs/adr/0008-the-week-lives-on-the-workout-landing.md`.
 - **Uniformity rule:** every muscle map comes from these SVGs. No screen gets its own simplified diagram. Mockup SVGs in `02`–`04` are layout references only.
 - **No body figure other than the four traced diagrams.** Workout Summary and Session Detail use the same anatomical diagram as everywhere else — no zone-lit human figure exists and none should be built.
 - **Mascot is a turtle** (`mascot-brief.md`). It is a decorative companion, not a body diagram, and never replaces a muscle map. Four states: resting, lifting, pleased, hidden. Appears on workout overview (52px corner tile), celebration, empty states, app icon. **Not on the share card.** **Never reacts to inactivity** — no decay, no guilt, no notifications, no achievement on the tap easter egg. Not a blocker; build last.
 - **Share card view rule:** show only the view(s) containing trained muscles, side by side when both apply. Same conditional already used on Exercise Detail. Never render an empty second diagram.
-- Label the front shoulder segment **"Shoulder (front)"**, not "Front delt".
+- Label the front shoulder segment **"Front delt"** (user decision 2026-11-09, ADR 0012; matches the taxonomy and the UI).
 
 ---
 
@@ -171,19 +189,22 @@ streakAsOf(date) -> int
 
 **Model:** a session is a list of exercises; a template is a pre-filled list; ad-hoc is an empty one. Muscles describe the list (the live map) and never navigate it. → `docs/adr/0006-workout-tab-is-exercise-first.md`.
 
-**Landing** — a search field (by name, over templates and exercises), **My templates** (a rail; absent when none), **Ready-made** (the eleven predefined, a two-column grid, fixed order), `Manage templates`, and a **pinned Start workout bar** above the tab bar. **No split filter**, nothing stores a split. A template tile shows its name, a derived muscle line and its exercise count; tapping it opens a **preview sheet** (the exercises, `Start workout`, `Cancel`) — two taps to start. A search result for an exercise starts an ad-hoc workout with it.
+**Landing** — at the tab root only, a **this-week strip** (plan day markers, `N of M this week`, what is left; `Pick training days` with no plan; taps to Profile › Schedule) and a **last workout** line that opens it in History (ADR 0008); a search field (by name, over templates and exercises), **My templates** (a rail; absent when none), **Ready-made** (the eleven predefined, a two-column grid, fixed order; for a returning user — a custom template or 3+ saved workouts — folded behind a `Ready-made · 11` row, open state in memory only), `Manage templates`, and a **pinned Start workout bar** above the tab bar. **No split filter**, nothing stores a split. A template tile shows its name, a derived muscle line and its exercise count; tapping it opens a **preview sheet** (the exercises, `Start workout`, `Cancel`) — two taps to start. A search result for an exercise starts an ad-hoc workout with it.
 
 **Start** — opens the session on a **ready view**: map at full size, `N exercises planned` / `Nothing logged yet`, one **Start logging** button, Discard (no Finish). Start logging opens the **exercise picker** (tall sheet: search, muscle chips as a filter, `IN THIS WORKOUT` first). "Started logging" is in-memory only, and is also true once anything is written.
 
 **Session screen** (after Start logging)
 - Pulsing `WORKOUT IN PROGRESS` strip (one pulse, no loop) with the **clock**; editable title (no caption line); editable date, prominent when ≠ today; `N of M done`.
-- **Body map is the hero** and shrinks in steps as the list grows. It fills live: primary `#D85A30`, secondary `#F0997B`; muscles the list plans to train and has not worked are **outlined**.
+- **Body map is the hero** and shrinks in steps as the list grows (196 / 172 / 148 / 124pt). It fills live: primary `#FFA53D`, secondary `#93ABCB`, a newly worked muscle easing in over 300ms (a cut with Reduce Motion); muscles the list plans to train and has not worked are **outlined** in neutral grey (§5).
+- The header shows the **resolved title** (§6) in chalk with a pencil until the user types one; nothing is stored for it.
 - `KEEP LOGGING`: one flat exercise list for both paths, tri-state `To do / In progress / Done` (derived), the first not-done row tagged `UP NEXT`. `+ Add exercise`. Finish (primary) + Discard (secondary, confirm dialog).
 - **No muscle list, no `trained` tick, no template lock.** Any exercise can be added to any session.
 
 **Clock** — display-only elapsed time. **Never stored**; shown nowhere but the live screen (not History, not the summary or share card). Counts from `loggedAt`; shows only when `performedOn` is the day the session started and it is under six hours old.
 
-**Save as template** — on the finished workout's summary: names it, keeps the exercises that have completed sets, in order. The only way a user's own templates are made; rename / duplicate / delete stay on Profile.
+**Save as template** — on the finished workout's summary: names it, keeps the exercises that have completed sets, in order. **New template** (end of the My templates rail, and the template library) builds one from scratch: name, multi-pick exercises (library or custom, with Create exercise), arrows to reorder, remove. A custom template's tile preview and library row open the same editor (ADR 0009).
+
+**Edit list** — on the live session: move up / move down / **swap** / remove per row. Swap (also in the template editor) puts the picked exercise at the same position; refused for a row with a completed set (one-line reason, *Add instead*) and for an exercise already in the workout (ADR 0011). Order is each row's stored position; a new row goes one past the highest.
 
 **Finish** — available any time. **A session with 0 completed sets must not save.**
 
@@ -191,7 +212,13 @@ streakAsOf(date) -> int
 
 **Exercise tap → set logging directly.** Info button in the logging header reaches Exercise Detail. Exception: `timesPerformed == 0` and no sets written yet → land on Exercise Detail first (applies to a row already on the list as well as to one being added).
 
-**Set-logging screen order:** sets → Add set → Mark exercise done → Recent (last 2, all sets shown per session) → See all N sessions.
+**Set-logging screen order:** sets → Add set → Recent (last 2, all sets shown per session) → See all N sessions, with **Mark exercise done pinned in a bottom bar** (thumb reach; absent when correcting a saved workout). Each set row carries **last time's same set** (`Last 62.5kg × 6`, via the shared formatter; tap copies it into the row) and the **PB** mark the moment it is a record (`personalBestSetIndex`, assisted inverted). A completed set fades its steppers. All derived, nothing stored.
+
+**Haptics** (`AppHaptics`, one meaning each): selection click on a ± step, medium impact on completing a set, success on Mark exercise done and on a Finish that saved. Nothing else.
+
+**Do again** (History detail): a new session today with that workout's logged exercises, no set values; asks before replacing an open workout (ADR 0008).
+
+**Live Activity and home-screen widget (iOS)** — ADR 0008 §7. The activity's clock is a system timer from the session start under the live-clock rule; nothing is stored.
 
 → `02`.
 
@@ -199,27 +226,28 @@ streakAsOf(date) -> int
 
 ## 10. Muscle Groups tab
 
-**Pure reference. No logging anywhere in this tab, and nothing in it reads session history.** Every personal figure is **deferred to a later plan** — see `03` §What ships, and what is deferred, which keeps those rules written down. Do not build any of them here.
+**No logging anywhere in this tab.** It reads session history on read, never stored (`docs/adr/0012-muscles-tab-shows-your-training.md`, which lifts the old "pure reference" deferral): this week's training on the map, a per-muscle line, a history line on detail. No recovery % or readiness model.
 
 **Landing** — search field, front/back view control, the full-body map, then **all 19 sub-group rows** as one flat list ordered by parent group, each showing how many exercises name it as a *primary* muscle.
-- **Every segment on the map renders muted.** No fill stands for training. The diagram takes its per-segment fill as a caller-supplied parameter, so the deferred trained/untrained colour is added by the caller, not by reopening the widget.
+- **The map fills this week's training** (Mon–Sun, the Workout week strip's week): accent-strong where a muscle had a completed set as a primary, accent-light where only as a secondary, muted otherwise; a legend under it, or "Nothing trained this week yet. Muscles fill as you log sets." Its height is capped so the figure and hint sit above the tab bar. Taps forgive a 12pt near miss; each segment is a labelled screen-reader button.
+- A muscle's exercise list and the shoulder sheet say "N sets this week · Last trained …" (`muscleTrainingLine`).
 - `shoulders/side-delt` has no artwork; the list is its only route, and its row says so.
 
 **Browse is one tap.** A segment tap and a row tap both open that sub-muscle group's exercise list — **no muscle-group selection screen and no sub-muscle-group selection screen exist.** They were **deleted, not deferred**: of 42 segments exactly one (`shoulders/front-delt`, which also carries `shoulders/side-delt`) is ambiguous, so a picker for all 42 earned nothing.
 - **That one segment opens a two-option bottom sheet** — Front delt / Side delt — and pushes the chosen one. Dismissing opens nothing. Read the ambiguity from the taxonomy; never hard-code the pair.
 
-**Search** — one field over **three vocabularies**: 260 exercise names, 19 sub-group labels, 8 equipment values. Every result is labelled with its kind. Exercise → detail; muscle → that sub-group's exercise list; equipment → **the equipment-filtered list, which is a search destination only — nothing browses to it**. A query matching no exercise name still renders the full muscle list and the full equipment list, each headed. Never an empty result screen.
+**Search** — one field over **three vocabularies**: 260 exercise names, 19 sub-group labels (plus parent groups and synonyms, `lib/src/data/muscle_synonyms.dart`), 8 equipment values. Words match in any order; a query matching nothing tries a one-letter correction and says "Did you mean …". Every result is labelled with its kind. Exercise → detail; muscle → that sub-group's exercise list; equipment → **the equipment-filtered list, which is a search destination only — nothing browses to it**. A query matching no exercise name still renders the full muscle list and the full equipment list, each headed. Never an empty result screen.
 
-**Exercise list** (per sub-muscle group) — vertical list of compact cards: name and equipment chip. Primary involvement only. Not a horizontal carousel: this is a comparison decision ("which of these can I do right now") and it needs every option visible at once. No `alternatives` field — this list is the alternatives. **The derived `Last: 22kg × 8` line is deferred.**
+**Exercise list** (per sub-muscle group) — vertical list of compact cards: name and equipment chip. Primary involvement only. Not a horizontal carousel: this is a comparison decision ("which of these can I do right now") and it needs every option visible at once. No `alternatives` field — this list is the alternatives. Outlined equipment filter chips derived from the list (memory only), and a derived `Last 22kg × 8` hint on rows with history (ADR 0012).
 
 **Exercise detail** — one screen, in this order: equipment + load type, primary/secondary muscle chips, diagram(s), the four reviewed content fields, substitutes.
 - Diagram(s): **full body, read-only**. Both front and back side by side **only** when the relevant muscles span both views — primaries *and* secondaries decide that. Otherwise one, centred.
 - **The four content fields are collapsible rows: Common mistakes first and expanded, then Setup, Posture, Execution, collapsed.** Rendered verbatim — reviewed copy, never rewritten, summarised, truncated or reflowed.
 - **Substitutes rail** — exercises sharing **any** of this one's primary sub-groups, different equipment first, capped at 8. Titled after the muscle only when there is exactly one primary; neutral otherwise.
-- **No history block of any kind** — no Best/Last/Times tiles, no recent log, no PB badge, no `assisted` banner, and **no "You haven't logged this yet" line**. Deferred, all of it.
-- **"Add to current workout" appears whenever a workout is open** (any session — there is no template lock). With none open it is absent.
+- **One history line when logged** — "Last 62.5kg × 6 · 14 times · See history" into Exercise history; nothing when never logged. Still no Best/Last/Times tiles, recent log or PB badge on detail.
+- **"Add to current workout" appears whenever a workout is open** (any session — there is no template lock), and reads "In your workout" once added. With none open, **"Start workout with this"** (ADR 0012).
 
-**Deferred screen:** Exercise history. Unreachable until sessions exist.
+**Exercise history** is built, reached from set logging and from the detail history line.
 
 → `03`.
 
@@ -227,21 +255,28 @@ streakAsOf(date) -> int
 
 ## 11. Profile and History
 
-History and Profile are both tabs (`docs/adr/0003-l0-navigation-variant-a.md`, amended by `docs/adr/0004-profile-returns-as-a-tab.md`). **The split is decided: anything computed from session rows lives on the History tab; anything the user typed lives on the Profile tab. One named exception: the Schedule pane's week summary (ADR 0004). No figure appears in both places.** → `04`, and `docs/plans/2026-09-14-2324-feat-profile-split-plan.md`.
+History and Profile are both tabs (`docs/adr/0003-l0-navigation-variant-a.md`, amended by `docs/adr/0004-profile-returns-as-a-tab.md`). **The split is decided: anything computed from session rows lives on the History tab; anything the user typed lives on the Profile tab. Two named exceptions: the current week and the pointer to the last workout, which live on the **Workout landing** beside Start (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`, moved there from the Schedule pane), and the Diet pane's protein figures (`docs/adr/0007-diet-in-profile.md`); neither renders on History, the summary card or the share card. No figure appears in both places.** Profile › Schedule holds only the plan and reminders; a training reminder opens the Workout tab. → `04`, and `docs/plans/2026-09-14-2324-feat-profile-split-plan.md`.
 
-- Stats: streak, total workouts, total sets. Streak explainer copy sits below the stat. No volume stat. **These are derived, so they live on the History tab — never on the Profile landing.**
+- Stats: streak, total workouts, total sets, as one line at the top of the History tab; the streak explainer opens from it. The calendar shows a total for the month it displays, **never the current week** (ADR 0008). No volume stat. **These are derived, so they live on the History tab — never on the Profile landing.** (ADR 0013.)
+- Exercise history (reached from the History detail log, set logging and Muscles) shows a best-set chart by load type (assisted inverted, no e1RM, text under 3 sessions) and a quiet "Best at" table (1-12 reps). ADR 0013.
+- Dates: day month year everywhere; lists omit the year only in the current year; the share card and "first logged" always carry it (`lib/src/data/date_labels.dart`, ADR 0013).
 - **Per-session PB count** — `pbCountFor(session)`. Rendered as a pill on the hero card **only when >= 1** (never "0 personal bests"). Individual PB exercises are marked in the session's exercise log below the card.
 - PB requires >= 1 prior session of that exercise (no badge on first-ever occurrence) and must be **strictly** greater than the previous best. Counted per exercise, not per set.
 - Compute in one chronological pass with a running per-exercise best. Not O(n^2).
 - Not an achievements system. No milestones, trophies or unlockables in V1.
 - History ordered by `performedOn`, `loggedAt` as tiebreaker. Rows show resolved title.
-- **Session detail is the same component as the live workout card**, not a read-only viewer. Editable: title, `performedOn`, set weight/reps, add/remove set, remove exercise.
-- Delete workout: session detail + history swipe. Confirm dialog. **Hard delete, no tombstone.**
-- Templates: predefined are immutable; duplicate → custom copy. **Duplicate, rename, delete custom**; building one from scratch by muscle-group multi-select is deferred. **Only place templates are authored** — but the Workout tab's picker carries a visible route *to* that surface, since navigation is not authoring.
+- **Session detail and its editor render the same card** (`SessionCard`, ADR 0013). The detail is the read half (Share in the header, exercises open their history); Edit workout opens the editor. Editable: title (saved on blur and on leaving), `performedOn` (Change date), set weight/reps, add/remove set, add or remove an exercise. Removing the only exercise with work offers to delete the workout.
+- Delete workout: session detail + history swipe (VoiceOver: a Delete action on the row). Confirm dialog. **Hard delete, no tombstone.** List rows show a muted "PB" without a count; the amber count is on the card.
+- Backfill: an empty past calendar day offers to start a workout dated that day (ADR 0013).
+- Templates: predefined are immutable; duplicate → custom copy. **Duplicate, rename, edit (exercises and order), delete custom; build one from scratch** (ADR 0009, which supersedes the deferral here). Authored in the template library (reached from Workout and Profile) and from the Workout landing's New template tile.
 - Personal details: bodyweight and gender, both on the Profile tab because the user types them.
+  - **Bodyweight is 20 to 250 kg** (ADR 0014): anything else is refused with an inline reason; Record says what it recorded; today's entry can be replaced until midnight. The weigh-ins show a greys-only trend line from two entries. A weigh-in that moves the protein suggestion away from a stored target offers Update target and never changes the target itself.
   - **Bodyweight is a dated series, not one number** (optional, kg, gates calories). An entry is immutable and takes effect from the day it is recorded: no edit, no delete, no backdating. A correction is a new entry that supersedes the old one going forward. One undated number plus derive-on-read would rewrite the calorie figure on every session already logged. → `04`.
   - `caloriesFor(session)` resolves the weight in effect on that session's `performedOn`. A session predating the earliest entry shows the add-weight prompt and never a figure, permanently — entering a weight later does not backfill it.
   - Gender (Male / Female / Prefer not to say, default male, selects asset pair).
+- Profile shell (ADR 0014): the Personal | Schedule | Diet control is pinned above the pane's scroll view. Personal's rows show their authored values ("74.5 kg · female diagram") and end with About (version, the privacy promise, open-source licences).
+- Reminders never read "on" when nothing will fire: Schedule says to pick a day when Remind me is on with none; the Diet Reminders row reads "None chosen" or "Off in Settings"; the off note has Open Settings. Saves show the new value before the write.
+- Export: one JSON (entered data, now including reminder settings) plus a CSV of completed sets (units in the column names), enabled by any entered data. Delete all data offers Export first.
 
 → `04`.
 
@@ -249,29 +284,37 @@ History and Profile are both tabs (`docs/adr/0003-l0-navigation-variant-a.md`, a
 
 ## 12. Palette
 
+**Chalk & Shell.** Graphite neutrals with no tint, chalk text and a chalk primary button, one warm colour (shell amber) for worked / active / record, steel for the secondary muscle. No gradients. Source: `docs/research/unslop-audit.md`.
+
 | Role | Hex |
 |---|---|
-| Page background | `#17140F` |
-| Card / elevated surface | `#211D18` |
-| Border / divider | `#332C22` |
-| Muted surface / unfilled region | `#241F19` |
-| Text primary | `#F5EFE8` |
-| Text secondary | `#A89C8E` |
-| Text muted | `#6B6156` |
-| Accent strong | `#D85A30` |
-| Accent light | `#F0997B` |
-| Text on accent fill | `#1B0C05` |
-| Destructive action | `#C4553A` |
+| Page background | `#0E0E0F` |
+| Card / elevated surface | `#18181A` |
+| Border / divider | `#2E2E32` |
+| Muted surface / unfilled region | `#222225` |
+| Text primary (chalk; also the primary button fill) | `#EDEDEB` |
+| Text secondary | `#A3A3A7` |
+| Text muted | `#8B8B90` |
+| Accent strong (shell amber) | `#FFA53D` |
+| Accent light (steel) | `#93ABCB` |
+| Text on a filled control | `#0E0E0F` |
+| Destructive action | `#FF7A85` |
 
-`#D85A30` = active / trained / primary action. `#F0997B` = secondary muscle only, never a primary action. `#C4553A` = destructive action only (delete a workout, discard a session) — never a primary action, never a fill behind body text. No other colours.
+**Primary action = a chalk capsule:** `#EDEDEB` fill, `#0E0E0F` label. Exactly one per view. Secondary actions are text, not capsules.
 
-⚠ `#D85A30` must not carry "delete". `01` §Usage rules gives it one meaning, *"same meaning wherever it appears"*, so a delete confirmation painted in it reads as approval. That is why the destructive colour exists; it is not a general-purpose red.
+`#FFA53D` = trained muscle, active tab, selection, personal best. It is **not** the button colour. `#93ABCB` = secondary muscle only — never chrome, never a press state, never a PB or status mark. `#FF7A85` = destructive action only (delete a workout, discard a session) — never a primary action, never a fill behind body text. **No gradients. No other colours.** Overlays (black scrims and shadows, a palette colour at partial alpha) are not new colours.
+
+⚠ `#FFA53D` must not carry "delete". `01` §Usage rules gives it one meaning, *"same meaning wherever it appears"*, so a delete confirmation painted in it reads as approval. That is why the destructive colour exists; it is not a general-purpose red.
+
+**One PB mark everywhere:** the word "PB" (or "2 PB") in amber, semibold, no pill and no icon. A trophy reads as an achievement (§13).
+
+A **planned** muscle on the live map is outlined in text secondary `#A3A3A7` — a neutral, not a new role (ADR 0008).
 
 ---
 
 ## 13. Out of scope for V1
 
-No zone-lit human mascot (dead — see `mascot-brief.md`) · no per-exercise illustrations or silhouettes (V2; equipment glyphs instead) · no login · no cloud sync · no soft delete · no rest timer · no stored workout duration (the live clock is display-only, §9) · no notifications except the opt-in, fixed-schedule reminders in ADR 0005 (built after the Schedule screen) · no wearables · no AI · no premium · no ads · no multi-day splits or weekly rotation · no "today's workout" suggestion · no exercise videos · no social features.
+No zone-lit human mascot (dead — see `mascot-brief.md`) · no login · no cloud sync · no soft delete · no rest timer · no stored workout duration (the live clock is display-only, §9) · no notifications except the opt-in, fixed-schedule reminders in ADR 0005 (built after the Schedule screen) and diet reminders under the same rules (ADR 0007) · no calorie, macro or food-diary tracking (Diet is a protein-only weekly plan with a daily protein total, ADR 0007) · no wearables · no AI · no premium · no ads · no multi-day splits or weekly rotation · no "today's workout" suggestion · no exercise videos or bundled third-party exercise animations (demonstrations are drawn by the app — ADR 0010) · no social features (sharing your own summary card as an image through the system share sheet is not one: no feed, account, link or upload — ADR 0008).
 
 Local storage only. Works fully offline. No onboarding wizard.
 

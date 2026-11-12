@@ -1,0 +1,74 @@
+# User story (ADR 0009): build a template from scratch on the Workout landing
+# (name, pick two exercises at once, reorder), start it, then edit it from its
+# preview (reorder) and see the change; reorder and remove in a live
+# workout with Edit list.
+appId: dev.indresh.turtleLift
+name: 13 Template from scratch - build, reorder, edit, start, Edit list
+tags: [templates]
+---
+- launchApp:
+    clearState: true
+
+# --- Build: New template is the last tile of My templates, even for a new user.
+- assertVisible: "My templates"
+- tapOn: "New template\\..*"
+- assertVisible: "New template"
+- tapOn:
+    id: "template-name"
+- inputText: "QA scratch"
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
+- tapOn: "Add exercises"
+- tapOn: "Search exercises, muscles, equipment"
+- inputText: "bench press"
+- tapOn: "Barbell bench press\\. Barbell"
+- eraseText: 20
+- inputText: "push-up"
+- tapOn: "Push-up\\. Bodyweight"
+- tapOn: "Add 2 exercises"
+- assertVisible: "1\\. Barbell bench press\\. Barbell"
+- assertVisible: "2\\. Push-up\\. Bodyweight"
+- tapOn: "Move Barbell bench press down"
+- assertVisible: "1\\. Push-up\\. Bodyweight"
+- tapOn: "Save template"
+
+# --- Back on the landing: the tile is reachable (it was not, before) and its
+# preview shows the order chosen.
+- assertVisible: "QA scratch\\. .*2 exercises"
+- tapOn: "QA scratch\\. .*"
+- assertVisible: ".*Push-up.*"
+- tapOn: "Edit template"
+- assertVisible: "Edit template"
+- tapOn: "Move Barbell bench press up"
+- assertVisible: "1\\. Barbell bench press\\. Barbell"
+- tapOn: "Save template"
+
+# --- Start it: the plan is in the edited order. Then Edit list in the live
+# workout: move and remove.
+- tapOn: "QA scratch\\. .*"
+- tapOn: "Start workout"
+- assertVisible: "2 exercises planned"
+- tapOn: "Start logging"
+# Close the picker by its barrier; the list is what Start logging leads to.
+- tapOn:
+    point: "50%,10%"
+- assertVisible: "Edit list"
+- tapOn: "Edit list"
+- tapOn: "Move Push-up up"
+- tapOn: "Remove Barbell bench press"
+- tapOn: "Done"
+- assertNotVisible: "Barbell bench press.*"
+- assertVisible: "Push-up.*"
+- scrollUntilVisible:
+    element: "Discard workout"
+    centerElement: true
+- tapOn: "Discard workout"
+- runFlow:
+    when:
+      visible: "Discard"
+    commands:
+      - tapOn: "Discard"
+- assertVisible: "Start workout.*"

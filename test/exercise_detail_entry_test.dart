@@ -92,7 +92,7 @@ void main() {
   }
 
   group('browsed from the Muscles tab', () {
-    testWidgets('offers nothing with no workout open', (tester) async {
+    testWidgets('offers no Add with no workout open', (tester) async {
       await pumpDetail(tester, entry: ExerciseDetailEntry.reference);
 
       expect(find.byKey(ExerciseDetailScreen.addToWorkoutKey), findsNothing);
@@ -137,6 +137,79 @@ void main() {
       final open = await tester.runAsync(() => store.readOpenSession());
       expect(open!.exercises, hasLength(1));
       expect(open.exercises.single.exerciseId, 'bench');
+    });
+  });
+
+  group('start from detail (ADR 0012)', () {
+    testWidgets('with no workout open it offers to start one with this '
+        'exercise', (tester) async {
+      await pumpDetail(tester, entry: ExerciseDetailEntry.reference);
+      expect(find.byKey(ExerciseDetailScreen.startWorkoutKey), findsOneWidget);
+      expect(find.text(kStartWorkoutWithThisLabel), findsOneWidget);
+      expect(find.byKey(ExerciseDetailScreen.addToWorkoutKey), findsNothing);
+    });
+
+    testWidgets('starting opens a session holding it', (tester) async {
+      await pumpDetail(tester, entry: ExerciseDetailEntry.reference);
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(ExerciseDetailScreen.startWorkoutKey));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pump();
+      final open = await tester.runAsync(() => store.readOpenSession());
+      expect(open, isNotNull);
+      expect(open!.exercises.single.exerciseId, 'bench');
+    });
+
+    testWidgets('with a workout open it offers Add, not Start',
+        (tester) async {
+      final session = await openAdHoc(tester);
+      await pumpDetail(tester,
+          entry: ExerciseDetailEntry.reference, session: session);
+      expect(find.byKey(ExerciseDetailScreen.startWorkoutKey), findsNothing);
+      expect(find.byKey(ExerciseDetailScreen.addToWorkoutKey), findsOneWidget);
+    });
+  });
+
+  group('adding twice (B4)', () {
+    testWidgets('once added, the button says so and a second tap does not '
+        'claim to add again', (tester) async {
+      final session = await openAdHoc(tester);
+      await pumpDetail(tester,
+          entry: ExerciseDetailEntry.reference, session: session);
+
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(ExerciseDetailScreen.addToWorkoutKey));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      });
+      await tester.pump();
+      expect(find.text('Barbell bench press added'), findsOneWidget);
+
+      expect(find.byKey(ExerciseDetailScreen.addToWorkoutKey), findsNothing);
+      expect(find.byKey(ExerciseDetailScreen.alreadyInWorkoutKey),
+          findsOneWidget);
+      expect(find.text(kInYourWorkoutLabel), findsOneWidget);
+
+      await tester.tap(find.byKey(ExerciseDetailScreen.alreadyInWorkoutKey));
+      await tester.pump();
+      expect(find.text(kAlreadyInWorkoutMessage), findsOneWidget);
+
+      final open = await tester.runAsync(() => store.readOpenSession());
+      expect(open!.exercises, hasLength(1));
+    });
+
+    testWidgets('the confirmation floats rather than spanning the page',
+        (tester) async {
+      final session = await openAdHoc(tester);
+      await pumpDetail(tester,
+          entry: ExerciseDetailEntry.reference, session: session);
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(ExerciseDetailScreen.addToWorkoutKey));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      });
+      await tester.pump();
+      final bar = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(bar.behavior, SnackBarBehavior.floating);
     });
   });
 

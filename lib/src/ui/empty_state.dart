@@ -46,7 +46,7 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 34, horizontal: 18),
+      padding: const EdgeInsets.symmetric(vertical: 34, horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
@@ -78,7 +78,7 @@ class EmptyState extends StatelessWidget {
               style: kEmptyStateHeadingStyle,
             ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 4),
           Text(body, textAlign: TextAlign.center, style: kEmptyStateBodyStyle),
         ],
       ),
@@ -116,7 +116,7 @@ const TextStyle kEmptyStateHeadingStyle = TextStyle(
 
 /// `.empty p { font-size:12.5px; color:var(--t2); line-height:1.55 }`.
 const TextStyle kEmptyStateBodyStyle = TextStyle(
-  fontSize: 12.5,
+  fontSize: 13,
   height: 1.55,
   color: AppPalette.textSecondary,
 );
@@ -141,6 +141,10 @@ enum EmptyStateGlyph {
   /// A logbook page, from the history empty state's disc:
   /// `M5 5h14v14H5z` + `M9 10h6M9 14h4`.
   logbook,
+
+  /// A steaming bowl, from the Diet empty state's disc in `prototypes/diet.html`:
+  /// `M4 11h16a8 8 0 0 1-16 0z` + `M8 7c0-2 2-2 2-4M12 7c0-2 2-2 2-4`.
+  bowl,
 }
 
 /// Paints one [EmptyStateGlyph] at [size]x[size].
@@ -247,6 +251,20 @@ Path _basePath(EmptyStateGlyph glyph) => _basePaths.putIfAbsent(glyph, () {
             ..lineTo(15, 10)
             ..moveTo(9, 14)
             ..lineTo(13, 14);
+        // 'M4 11h16a8 8 0 0 1-16 0z' + 'M8 7c0-2 2-2 2-4M12 7c0-2 2-2 2-4'
+        case EmptyStateGlyph.bowl:
+          path
+            ..moveTo(4, 11)
+            ..lineTo(20, 11)
+            ..arcToPoint(
+              const Offset(4, 11),
+              radius: const Radius.circular(8),
+            )
+            ..close()
+            ..moveTo(8, 7)
+            ..relativeCubicTo(0, -2, 2, -2, 2, -4)
+            ..moveTo(12, 7)
+            ..relativeCubicTo(0, -2, 2, -2, 2, -4);
       }
       return path;
     });

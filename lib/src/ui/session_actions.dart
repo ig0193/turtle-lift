@@ -5,6 +5,7 @@ import '../data/active_session.dart';
 import '../data/derived.dart';
 import '../theme/app_palette.dart';
 import 'destructive_confirmation.dart';
+import 'haptics.dart';
 
 /// Finish and Discard, the two ways a workout ends.
 ///
@@ -56,25 +57,31 @@ class SessionActions extends ConsumerWidget {
           const SizedBox(height: 8),
         ],
         Semantics(
+          container: true,
           button: true,
           label: 'Discard workout',
+          onTap: () => _discard(context, ref),
           excludeSemantics: true,
           child: GestureDetector(
             key: discardKey,
             behavior: HitTestBehavior.opaque,
             onTap: () => _discard(context, ref),
+            // Text, not a second capsule under Finish: one filled action per
+            // view, and the destructive one should not look like an equal
+            // choice. The confirmation dialog carries the danger colour.
             child: Container(
               constraints: const BoxConstraints(minHeight: 48),
               alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppPalette.surface,
-                border: Border.all(color: AppPalette.border),
-                borderRadius: BorderRadius.circular(10),
-              ),
+              // Quieter than any other action on the screen (research item
+              // 8): it sat at nearly the weight of Start logging, right under
+              // it. Still a full 48pt target.
               child: const Text(
                 'Discard workout',
-                style:
-                    TextStyle(fontSize: 14, color: AppPalette.textSecondary),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppPalette.textMuted,
+                ),
               ),
             ),
           ),
@@ -106,6 +113,7 @@ class SessionActions extends ConsumerWidget {
     }
 
     await ref.read(activeSessionProvider.notifier).finish();
+    AppHaptics.success();
     onFinished(sessionId);
   }
 

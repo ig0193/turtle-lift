@@ -19,9 +19,11 @@
 | Row | What it is |
 |---|---|
 | Pinned header | `Workout`. Outside the scroll body — it never moves. |
+| This-week strip | Plan day markers, `N of M this week` and what is left; `Pick training days` with no plan. Taps to Profile › Schedule. Tab root only (ADR 0008). |
+| Last workout | `Yesterday · Push day · 14 sets`, opening that workout's History detail. Absent with no history. |
 | Search field | Filters by name, across **templates and exercises**. See below. |
-| `MY TEMPLATES` | The user's own templates, as a horizontal rail of tiles. **Absent entirely when they have none** — not a heading over nothing. |
-| `READY-MADE` | The eleven predefined templates, as a two-column grid of tiles, in a fixed order. |
+| `MY TEMPLATES` | The user's own templates, as a horizontal rail of tiles, **always shown** and ending in a `New template` tile — with none yet, the tile alone shows a new user how to make one (ADR 0009, confirmed in ADR 0011). |
+| `READY-MADE` | The eleven predefined templates, as a two-column grid of tiles, in a fixed order. Folded behind a `Ready-made · 11` row once the user has a template of their own or three saved workouts. |
 | `Manage templates` | A quiet row below the grid: the visible route to the template library on the Profile tab. Navigation, not authoring. |
 | **Start workout** bar | **Pinned above the tab bar**, not scrolled with the list: `Start workout` over `Add exercises as you go`. |
 | Floating tab bar | Over the content, as on every L0 root. |
@@ -52,14 +54,14 @@ Starts an **empty** workout, in place, on the ready view (Step 2). It creates th
 
 ### Custom templates
 
-Created by **Save as template** on a finished workout's summary (Step 6). **Renaming, duplicating and deleting happen on the Profile tab**, never here. A custom template is the same kind of thing as a predefined one, so its tile is identical: only the `MY TEMPLATES` label sets it apart.
+Created by **Save as template** on a finished workout's summary (Step 6), or **from scratch** with the `New template` tile at the end of the `MY TEMPLATES` rail (always shown now, so a new user sees how to make one): name, pick exercises (several at once, library or your own), order them with arrows, save. A custom template's preview sheet has `Edit template`. Renaming, duplicating and deleting also live in the template library (ADR 0009). A custom template is the same kind of thing as a predefined one, so its tile is identical: only the `MY TEMPLATES` label sets it apart.
 
 ### What this screen deliberately does not have
 
 - **No empty state.**
 - **No Resume card, and no in-progress session UI.** An open session replaces this tab root entirely — see Step 2c.
-- **No streak, no last-session recall, no body diagram, no muscle-coverage chips.**
-- **No suggestion of any kind.** Nothing here states or implies a schedule, a rotation, or a recommended workout.
+- **No streak, no body diagram, no muscle-coverage chips.** The week strip and the last-workout line are the landing's only history (ADR 0008).
+- **No suggestion of any kind.** The strip states the user's own plan days and counts; nothing here names a workout to do, a rotation, or a recommended workout.
 
 ---
 
@@ -69,9 +71,9 @@ Created by **Save as template** on a finished workout's summary (Step 6). **Rena
 
 - The pulsing "Workout in progress" strip is **not** shown yet: the workout is being set up.
 - The **body map at its largest**. A template shows the muscles its exercises train as **outlines** (see the map, Step 2a).
-- One line — `N exercises planned` for a template, `Nothing logged yet` for an empty start.
+- One line — `N exercises planned` for a template, `Nothing logged yet` for an empty start — then **the planned exercises by name** (up to six, then `+N more`).
 - One primary button: **Start logging**.
-- `Discard workout` (no `Finish` — there is nothing to finish yet).
+- `Discard workout` as a quiet text action (no `Finish` — there is nothing to finish yet).
 
 **Start logging** opens the **exercise picker** (Step 3) as a tall sheet over the map. The map stays visible behind it, so choosing an exercise reads as something done *in* the workout. Dismissing the sheet leaves the user on the **list**, not back on a button they have already pressed.
 
@@ -83,14 +85,14 @@ Once logging has started, the screen is, top to bottom:
 
 1. **The live strip** — a pulsing accent dot (one pulse as it appears, not a loop), `WORKOUT IN PROGRESS`, and the **clock** on the right. See below.
 2. **The date control and progress** — the session date on the left, `N of M done` on the right.
-3. **The body map** — front and back, the hero of the screen. It **shrinks in steps as the list grows** (3 or fewer exercises 176pt, 4–5 152pt, 6–7 128pt, 8 or more 108pt) so the next exercise stays on screen.
+3. **The body map** — front and back, the hero of the screen. It **shrinks in steps as the list grows** (3 or fewer exercises 196pt, 4–5 172pt, 6–7 148pt, 8 or more 124pt) so the next exercise stays on screen.
 4. **`KEEP LOGGING`** — the exercise list, in the order it was built, with the **first exercise that is not done tagged `UP NEXT` and outlined in the accent**.
 5. `+ Add exercise`, then **Finish workout** and **Discard workout**.
 
 - **Session date control.** The header shows the date this session will be saved under, defaulting to **today**. Tapping it opens a date picker so the user can log a workout they did earlier in the week — retrospective logging is first-class (see `01-app-idea.md`). **Clamped to today or earlier.** Applies to both paths. Stored as `performedOn`, a local calendar date. When it is anything other than today it is shown prominently (`Mon 28 Jul`) so the user can't backdate by accident and not notice.
-- **Session title.** The pinned header shows an editable session title, **capped at 40 characters** — it is the hero text on a share card. **Template path:** prefilled with the template name. **Ad-hoc path:** starts **empty**; the user is never blocked on naming anything. A blank title is always resolved for display via the fallback chain in `01-app-idea.md`.
+- **Session title.** The pinned header shows an editable session title, **capped at 40 characters** — it is the hero text on a share card. **Template path:** prefilled with the template name. **Ad-hoc path:** starts **empty**; the user is never blocked on naming anything. A blank title is always resolved for display via the fallback chain in `01-app-idea.md` — the header shows that resolved title in chalk with a pencil, never a grey placeholder.
 - **The list rows.** Each row is the exercise name, its logged sets (`60x10 · 60x8`), and a progress tag: `To do` / `In progress` / `Done`, **derived** from the sets and the one stored `markedDone` flag. Tapping a row opens that exercise (Step 3). Swipe or long-press removes it (asking first if it has completed sets).
-- **The map.** It starts uncoloured and heats up live: **every time an exercise gets a completed set or is marked done, the muscles it trains fill in** — primary at accent-strong (`#D85A30`), secondary at accent-light (`#F0997B`). A muscle the workout *plans* to train but has not worked is **outlined** in the accent (primary muscles of every exercise on the list); an outline never sits on a filled muscle. Resolve diagram regions via the `segments` list in `muscle_taxonomy.dart`, not by string-matching.
+- **The map.** It starts uncoloured and heats up live: **every time an exercise gets a completed set or is marked done, the muscles it trains fill in** — primary at accent-strong (`#D85A30`), secondary at accent-light (`#F0997B`). A muscle the workout *plans* to train but has not worked is **outlined in neutral grey** (primary muscles of every exercise on the list; ADR 0008 — amber means worked); an outline never sits on a filled muscle. A newly worked muscle eases into its fill. Resolve diagram regions via the `segments` list in `muscle_taxonomy.dart`, not by string-matching.
 - **There is no muscle list and no `trained` tick.** The map is the one place muscles appear on this screen.
 
 ### The clock
@@ -120,7 +122,8 @@ There is one way to choose an exercise from a list, and every list ends there (`
   - **One exception: if the user has never logged this exercise (`timesPerformed == 0`), land on exercise detail first**, whether it is on the list already or is being added. They cannot know a lift they have never done. A primary action there starts logging. On a fresh install every exercise in a template is new, so the first session takes this extra tap per exercise: the rule working as designed. **An exercise that already has sets written never goes back through it.**
 - An exercise already in the workout **opens rather than being added twice**, which would split its sets across two prefill chains.
 - **Adding is never restricted by muscle.** A template is a starting list, not a contract: the user can add any exercise to a template session, which removes the old "finish Push day with curls" workaround of two history entries for one gym visit.
-- **Swap and reorder** (replace an exercise with one that trains the same muscle when a machine is taken; drag to reorder) are not built yet. The exercise's page already offers substitutes.
+- **Reorder and remove**: `Edit list` beside `KEEP LOGGING` turns each row into move up / move down / remove (ADR 0009), plus **swap**: the picker's choice takes the row's position (ADR 0011). A row with a completed set is never swapped — the app says why in one line and offers *Add instead*. The template editor has the same swap.
+- **Your own exercises**: the picker's first row is `Create an exercise` (`Create "…"` with the search text). A custom exercise has name, equipment, load type and muscles, no form guide, and skips the first-time detail page. The picker search matches names, muscles and equipment.
 - **Add to current workout** on an exercise's page (reached from the Muscles tab) works in **any** open session.
 
 ## Step 4 — Log sets
@@ -134,7 +137,9 @@ There is one way to choose an exercise from a list, and every list ends there (`
 - Previous session's values for the chosen exercise prefill the fields and render muted (`#6B6156`) until touched, so guessed values stay visually distinct from entered ones.
 - Minimal-typing input: steppers or number pad. Duration uses quick-fill chips (`30s` `45s` `60s` `90s`); no live stopwatch in V1.
 - **A set completes when the checkmark is tapped AND its required field is > 0.** Tapping the checkmark on an empty required field focuses it rather than completing the set. This is the same "completed set" that gates the streak and feeds the calorie MET tier.
-- **Screen order is: sets → Add set → Mark exercise done → Recent history → See all.** The set rows are the first thing on screen; reference material sits below the actions. An earlier draft put a "Last time" line above the sets and it pushed the actual inputs down for information the ghosted prefills already convey inline.
+- **Each set row shows last time's same set** (`Last 62.5kg × 6`), derived from history; tapping it copies those values in. A completed set fades its steppers, and the row that is a record shows `PB` at once (assisted inverted).
+- **Mark exercise done is pinned in a bottom bar**, in thumb reach.
+- **Screen order is: sets → Add set → Recent history → See all**, with Mark exercise done pinned below. The set rows are the first thing on screen; reference material sits below the actions. An earlier draft put a "Last time" line above the sets and it pushed the actual inputs down for information the ghosted prefills already convey inline.
 - **Recent history shows the last 2 sessions**, each with all of that session's sets (`60x10 · 60x8 · 55x10`), followed by **"See all N sessions"**, which opens the Exercise history screen described in `03-muscle-groups-tab-userflow.md`.
 - **Info button (i) in the header** opens exercise detail for form cues, without leaving the session.
 - Mark set complete → mark exercise complete → return to workout overview.
@@ -184,7 +189,8 @@ Note: duplicating, renaming and deleting a custom template is a separate flow th
 - **No rest timer**, so no rest-timer countdown or ring.
 - **No stored workout duration.** The live clock above is display-only.
 - Keep the workout-saved celebration small and brief — no confetti, badges, sound effects, or full-screen takeovers.
-- **Not built yet:** reorder and swap on a session row; an "Add weight" chip for bodyweight and timed exercises; quick-fill duration chips.
+- **Notes** (ADR 0011): one optional note per exercise per workout ("seat 4"), typed in set logging under Add set, with last time's note shown beneath it as `Last time: …` (derived). Shown under the exercise in History detail; in export.
+- **Not built yet:** an "Add weight" chip for bodyweight and timed exercises; quick-fill duration chips.
 
 ---
 

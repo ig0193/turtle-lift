@@ -1,0 +1,34 @@
+# User story (History audit slice 4): three bench sessions with a rising top
+# weight; from the History detail, the exercise's history shows the trend of
+# the best set (read out as one sentence) and the quiet "Best at" table.
+appId: dev.indresh.turtleLift
+name: 24 Exercise progress chart and Best at
+tags: [history]
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    file: ../subflows/log_bench_at.yaml
+    env: { WEIGHT: "60" }
+- runFlow:
+    file: ../subflows/log_bench_at.yaml
+    env: { WEIGHT: "65" }
+- runFlow:
+    file: ../subflows/log_bench_at.yaml
+    env: { WEIGHT: "70" }
+
+- tapOn: "History"
+- tapOn: "Barbell bench press, quick log, Today · 1 exercise · 1 set"
+- scrollUntilVisible:
+    element: "Barbell bench press\n.*"
+    centerElement: true
+- tapOn: "Barbell bench press\n.*"
+- assertVisible: "Progress"
+- assertVisible: "Best set rose from 60 to 70 kg over 3 sessions"
+- assertVisible: "All"
+- assertVisible: "3 months"
+- scrollUntilVisible:
+    element: "Best at"
+    centerElement: true
+- assertVisible: "8 reps, 70kg"
+- takeScreenshot: 24-exercise-progress

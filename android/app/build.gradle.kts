@@ -6,10 +6,15 @@ plugins {
 
 android {
     namespace = "dev.indresh.turtle_lift"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_local_notifications 23 compiles against API 37 and requires its
+    // consumers to do the same. targetSdk is unchanged.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // flutter_local_notifications needs core-library desugaring for its
+        // java.time scheduling on older Android versions.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -46,4 +51,8 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

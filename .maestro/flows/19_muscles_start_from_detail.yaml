@@ -1,0 +1,39 @@
+# User story (ADR 0012): browsing Muscles with no workout open, I find an
+# exercise and start a workout with it straight from its page. Once it is in
+# the workout the page says so instead of adding it again.
+appId: dev.indresh.turtleLift
+name: 19 Muscles detail - start workout with this, already in workout
+tags: [muscles]
+---
+- launchApp:
+    clearState: true
+- tapOn: "Muscles"
+- tapOn: "Search exercises, muscles, equipment"
+- inputText: "barbell curl"
+- tapOn: "Barbell curl\\. Exercise\\..*"
+- assertVisible: "Start workout with this"
+- tapOn: "Start workout with this"
+- assertVisible: "Add set"
+# Logging replaced the page, so Back returns to the search results.
+- tapOn: "Back"
+
+# The open workout now holds it: the reference page says so.
+- tapOn: "Barbell curl\\. Exercise\\..*"
+- assertVisible: "In your workout"
+- tapOn: "In your workout"
+- assertVisible: "Already in your workout"
+- tapOn: "Back"
+- tapOn: "Back"
+- assertVisible: "Body map, front view"
+
+- tapOn: "Workout"
+- scrollUntilVisible:
+    element: "Discard workout"
+    centerElement: true
+- tapOn: "Discard workout"
+- runFlow:
+    when:
+      visible: "Discard"
+    commands:
+      - tapOn: "Discard"
+- assertVisible: "Start workout.*"

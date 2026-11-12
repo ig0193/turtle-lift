@@ -1,0 +1,37 @@
+# User story (History audit slice 5): the History root opens with the stats
+# line (streak, workouts, sets) and a calendar whose month carries a total;
+# each day reads in full to VoiceOver; paging away offers "This month".
+appId: dev.indresh.turtleLift
+name: 25 History stats line and calendar
+tags: [history]
+---
+- launchApp:
+    clearState: true
+- runFlow: ../subflows/log_bench_workout.yaml
+- waitForAnimationToEnd
+- tapOn: "Back"
+- tapOn: "History"
+
+# --- the stats line, and its explainer
+- assertVisible: "1 day streak, 1 workout, 2 sets"
+- tapOn: "How your streak works"
+- assertVisible: "How your streak works"
+- tapOn: "Got it"
+
+# --- the month total, and today's cell named in full
+- assertVisible: ".*1 workout · 2 sets"
+- assertVisible: ".*, today, 1 workout"
+- assertNotVisible: ".*this week.*"
+
+# --- open the day, then page back three months and return
+- tapOn: ".*, today, 1 workout"
+- assertVisible: ".*, today, 1 workout, open"
+- tapOn: "Previous month"
+- tapOn: "Previous month"
+- tapOn: "Previous month"
+- assertVisible: ".*No workouts"
+- tapOn: "Back to this month"
+- waitForAnimationToEnd
+- assertVisible: ".*1 workout · 2 sets"
+- assertNotVisible: "Back to this month"
+- takeScreenshot: 25-history-calendar

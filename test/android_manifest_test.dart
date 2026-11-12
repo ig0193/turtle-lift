@@ -31,4 +31,58 @@ void main() {
           'test catches its removal',
     );
   });
+
+  group('scheduled reminders (KTD14, ADR 0005)', () {
+    late String live;
+
+    setUp(() {
+      live = File('android/app/src/main/AndroidManifest.xml')
+          .readAsStringSync()
+          .replaceAll(RegExp(r'<!--[\s\S]*?-->'), '');
+    });
+
+    Iterable<String> permissions() => RegExp(
+          r'<uses-permission\s+android:name="([^"]+)"',
+        ).allMatches(live).map((m) => m.group(1)!);
+
+    String? receiver(String name) => RegExp(
+          '<receiver\\b[^>]*android:name="${RegExp.escape(name)}"'
+          r'[^>]*?(?:/>|>[\s\S]*?</receiver>)',
+        ).firstMatch(live)?.group(0);
+
+    test('declares the notification and boot permissions', () {
+      expect(
+        permissions(),
+        containsAll(<String>[
+          'android.permission.POST_NOTIFICATIONS',
+          'android.permission.RECEIVE_BOOT_COMPLETED',
+        ]),
+        reason: 'Android 13+ needs POST_NOTIFICATIONS to show anything, and '
+            'reminders must survive a reboot',
+      );
+    });
+
+    test('requests no exact-alarm permission', () {
+      expect(
+        permissions(),
+        isNot(anyOf(
+          contains('android.permission.SCHEDULE_EXACT_ALARM'),
+          contains('android.permission.USE_EXACT_ALARM'),
+        )),
+        reason: 'reminders are inexact by design (ADR 0005 Consequences)',
+      );
+    });
+
+    test('registers the plugin receivers, the boot one listening for boot',
+        () {
+      const prefix = 'com.dexterous.flutterlocalnotifications.';
+      expect(receiver('${prefix}ScheduledNotificationReceiver'), isNotNull,
+          reason: 'without it a scheduled notification never shows');
+      final boot = receiver('${prefix}ScheduledNotificationBootReceiver');
+      expect(boot, isNotNull);
+      expect(boot, contains('android.intent.action.BOOT_COMPLETED'));
+      expect(boot, contains('android.intent.action.MY_PACKAGE_REPLACED'));
+      expect(boot, contains('android:exported="false"'));
+    });
+  });
 }

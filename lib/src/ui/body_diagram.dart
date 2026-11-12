@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show setEquals;
@@ -8,6 +9,7 @@ import '../data/body_gender.dart';
 import '../data/generated/body_paths.dart';
 import '../data/generated/muscle_taxonomy.dart';
 import '../theme/app_palette.dart';
+import 'haptics.dart';
 
 /// Returns the colour one segment is filled with, given **every** sub-muscle
 /// group that segment stands for.
@@ -26,7 +28,27 @@ typedef BodySegmentFill = Color Function(Set<String> subMuscleGroupIds);
 /// The widget deliberately does not resolve a two-group tap. R7 wants the
 /// front-delt tap to *ask* which delt was meant, and a disambiguation prompt is
 /// a screen decision, not a painter's.
-typedef BodySegmentTapped = void Function(Set<String> subMuscleGroupIds);
+///
+/// It may return a future: the chosen muscle stays lit until it completes (or
+/// for the commit hold, whichever is longer). The landing returns the
+/// disambiguation sheet's future, so the shoulder stays lit while the sheet
+/// asks which delt was meant (audit B3).
+typedef BodySegmentTapped = FutureOr<void> Function(
+  Set<String> subMuscleGroupIds,
+);
+
+/// What a screen reader says for the whole map (audit B2): which side is
+/// showing, because the Front/Back control's state is otherwise only visual.
+String bodyMapSemanticsLabel(BodyView view) =>
+    'Body map, ${view == BodyView.front ? 'front' : 'back'} view';
+
+/// What a screen reader says for one tappable segment: its muscle, or both
+/// muscles for the shared front-delt polygon.
+String bodySegmentSemanticsLabel(Set<String> subMuscleGroupIds) =>
+    <String>[
+      for (final id in kSubMuscleGroups.keys)
+        if (subMuscleGroupIds.contains(id)) kSubMuscleGroups[id]!.label,
+    ].join(' or ');
 
 /// The fill R2 asks for: every segment in the muted surface colour, saying
 /// nothing about the user.
@@ -107,11 +129,16 @@ class BodyDiagram extends ConsumerStatefulWidget {
     required this.fill,
     this.planned = const <String>{},
     this.onSegmentTap,
+    this.segmentValue,
     super.key,
   });
 
   final BodyView view;
   final BodySegmentFill fill;
+
+  /// What a screen reader says after a segment's name — the landing passes its
+  /// training line, so the fill is not colour-only information.
+  final String Function(Set<String> subMuscleGroupIds)? segmentValue;
 
   /// Sub-muscle groups to **outline** rather than fill: what a workout intends
   /// to train and has not yet. A segment is outlined when any group it stands
@@ -139,11 +166,13 @@ class _BodyDiagramState extends ConsumerState<BodyDiagram> {
 
   /// True once the finger lifts, for the moment before the muscle opens.
   ///
-  /// **Hold and commit are different colours because they answer different
-  /// questions.** Holding asks "which one is this?" and gets the light accent —
-  /// the prototype's hover. Lifting answers "this one", and gets the full
-  /// accent, §12's "active", so the choice is visibly made before the screen
-  /// changes under it.
+  /// **Hold and commit look different because they answer different
+  /// questions.** Holding asks "which one is this?" and gets a chalk outline —
+  /// the prototype's hover, without claiming anything about the muscle's fill.
+  /// Lifting answers "this one", and gets the full accent, §12's "active", so
+  /// the choice is visibly made before the screen changes under it. The
+  /// secondary-muscle colour is never used for either: it means "secondary
+  /// muscle" and nothing else.
   bool _committed = false;
 
   void _clear() {
@@ -174,21 +203,26 @@ class _BodyDiagramState extends ConsumerState<BodyDiagram> {
       view: widget.view,
       gender: ref.watch(bodyGenderProvider),
       planned: widget.planned,
-      // The muscle under the finger is painted over whatever the caller asked
-      // for: the light accent while held, the full accent once chosen. Both are
-      // owned by the touch and gone when it ends, so neither ever claims
-      // anything about training.
-      fill: pressedIds == null
+      // The muscle under the finger: outlined in chalk while held, filled with
+      // the full accent once chosen. Both are owned by the touch and gone when
+      // it ends, so neither ever claims anything about training.
+      pressed: _committed ? null : pressedIds,
+      fill: pressedIds == null || !_committed
           ? widget.fill
           : (ids) => identical(ids, pressedIds)
-              ? (_committed ? AppPalette.accentStrong : AppPalette.accentLight)
+              ? AppPalette.accentStrong
               : widget.fill(ids),
     );
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = bodyDiagramSize(constraints, painter.asset.viewBox);
-        return GestureDetector(
+        return Semantics(
+          container: true,
+          label: bodyMapSemanticsLabel(widget.view),
+          explicitChildNodes: interactive,
+          excludeSemantics: !interactive,
+          child: GestureDetector(
           // Opaque, not deferToChild: a `CustomPaint` with no child has no hit
           // region of its own, so taps would fall through to whatever is
           // behind the diagram.
@@ -197,8 +231,10 @@ class _BodyDiagramState extends ConsumerState<BodyDiagram> {
               ? null
               : (details) {
                   final segment =
-                      painter.segmentAt(details.localPosition, size);
+                      painter.segmentNear(details.localPosition, size);
                   if (segment == null) return;
+                  // A tick under the finger: the muscle answered.
+                  AppHaptics.step();
                   setState(() {
                     _pressed = segment;
                     _pressedAt = details.localPosition;
@@ -207,24 +243,14 @@ class _BodyDiagramState extends ConsumerState<BodyDiagram> {
           onTapCancel: !interactive ? null : _clear,
           onTapUp: !interactive
               ? null
-              : (details) async {
+              : (details) {
                   final segment =
-                      painter.segmentAt(details.localPosition, size);
+                      painter.segmentNear(details.localPosition, size);
                   if (segment == null) {
                     _clear();
                     return;
                   }
-                  setState(() {
-                    _pressed = segment;
-                    // The name has served its purpose the moment the choice is
-                    // made, and the next screen is already coming — leaving it
-                    // would park a label over the transition.
-                    _pressedAt = null;
-                    _committed = true;
-                  });
-                  widget.onSegmentTap!(segment.subMuscleGroupIds);
-                  await Future<void>.delayed(_commitHold);
-                  if (mounted) _clear();
+                  _commit(segment);
                 },
           child: SizedBox.fromSize(
             size: size,
@@ -232,6 +258,22 @@ class _BodyDiagramState extends ConsumerState<BodyDiagram> {
               clipBehavior: Clip.none,
               children: <Widget>[
                 CustomPaint(painter: painter, size: size),
+                if (interactive)
+                  for (final (segment, rect)
+                      in _semanticSegments(painter, size))
+                    Positioned.fromRect(
+                      rect: rect,
+                      child: Semantics(
+                        button: true,
+                        label: bodySegmentSemanticsLabel(
+                          segment.subMuscleGroupIds,
+                        ),
+                        value: widget.segmentValue
+                            ?.call(segment.subMuscleGroupIds),
+                        onTap: () => _commit(segment),
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
                 if (pressedIds != null && _pressedAt != null)
                   _MuscleNameLabel(
                     ids: pressedIds,
@@ -241,9 +283,73 @@ class _BodyDiagramState extends ConsumerState<BodyDiagram> {
               ],
             ),
           ),
+          ),
         );
       },
     );
+  }
+
+  /// Opens [segment]: from a finger lifting on it, or from a screen reader's
+  /// activate action on its semantics node.
+  Future<void> _commit(BodyDiagramSegment segment) async {
+    setState(() {
+      _pressed = segment;
+      // The name has served its purpose the moment the choice is made, and the
+      // next screen is already coming — leaving it would park a label over the
+      // transition.
+      _pressedAt = null;
+      _committed = true;
+    });
+    final result = widget.onSegmentTap!(segment.subMuscleGroupIds);
+    await Future.wait<void>(<Future<void>>[
+      Future<void>.delayed(_commitHold),
+      if (result is Future<void>) result,
+    ]);
+    if (mounted) _clear();
+  }
+
+  /// One node per tappable segment, top to bottom, so swiping through the map
+  /// reads head to toe.
+  static List<(BodyDiagramSegment, Rect)> _semanticSegments(
+    BodyDiagramPainter painter,
+    Size size,
+  ) {
+    // Each node covers ONE polygon of its segment (the largest), not the
+    // union: a left-plus-right union's centre falls between the two sides,
+    // often on another muscle, and touch exploration taps the centre.
+    final scale = painter.scaleFor(size);
+    final origin = painter.originFor(size);
+    final segments = painter.segmentPathsFor(size);
+    final nodes = <(BodyDiagramSegment, Rect)>[];
+    for (var i = 0; i < segments.length; i++) {
+      if (segments[i].subMuscleGroupIds.isEmpty) continue;
+      Rect? best;
+      for (final outline in painter.asset.segments[i].outlines) {
+        var left = double.infinity, top = double.infinity;
+        var right = -double.infinity, bottom = -double.infinity;
+        for (var k = 0; k + 1 < outline.length; k += 2) {
+          left = math.min(left, outline[k]);
+          right = math.max(right, outline[k]);
+          top = math.min(top, outline[k + 1]);
+          bottom = math.max(bottom, outline[k + 1]);
+        }
+        if (left > right) continue;
+        final rect = Rect.fromLTRB(left, top, right, bottom);
+        if (best == null ||
+            rect.width * rect.height > best.width * best.height) {
+          best = rect;
+        }
+      }
+      if (best == null) continue;
+      nodes.add((
+        segments[i],
+        Rect.fromLTRB(best.left * scale, best.top * scale, best.right * scale,
+                best.bottom * scale)
+            .shift(origin),
+      ));
+    }
+    nodes.sort((a, b) => a.$2.top.compareTo(b.$2.top));
+    return nodes;
   }
 }
 
@@ -294,7 +400,7 @@ class _MuscleNameLabel extends StatelessWidget {
                   labelFor(ids),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: AppPalette.textPrimary,
                   ),
@@ -337,8 +443,18 @@ Size bodyDiagramSize(BoxConstraints constraints, Size viewBox) {
 /// renders a perfectly plausible body, and a hit-test that scales differently
 /// from the paint still returns *a* muscle for most taps. Neither failure is
 /// visible, so both are asserted against what actually reaches the canvas.
+/// How far outside a muscle a tap may land and still open it, in logical
+/// pixels (audit B6). About a quarter of a fingertip.
+const double kBodyTapTolerance = 12;
+
 /// How thick the line between two muscles is, in logical pixels.
 const double kBodySegmentSeparatorWidth = 2.5;
+
+/// The separator's colour: [AppPalette.textMuted] at 40%, an overlay of a
+/// palette grey rather than a new colour. See
+/// [BodyDiagramPainter.buildSeparatorPaint].
+final Color kBodySegmentSeparatorColor =
+    AppPalette.textMuted.withValues(alpha: 0.4);
 
 /// How thick the outline on a planned muscle is, in logical pixels. Thicker than
 /// the separator it is drawn over, so it reads as an outline and not as a seam.
@@ -350,6 +466,7 @@ class BodyDiagramPainter extends CustomPainter {
     required this.gender,
     required this.fill,
     this.planned = const <String>{},
+    this.pressed,
   });
 
   final BodyView view;
@@ -358,6 +475,10 @@ class BodyDiagramPainter extends CustomPainter {
 
   /// See [BodyDiagram.planned].
   final Set<String> planned;
+
+  /// The ids of the segment under the finger, outlined in chalk over its own
+  /// fill. Matched by identity: it is the very set [segmentAt] handed back.
+  final Set<String>? pressed;
 
   /// The `kBodyAssets` key these two fields name. The join lives in
   /// `body_gender.dart`; this is the only thing that asks for it.
@@ -415,11 +536,13 @@ class BodyDiagramPainter extends CustomPainter {
   /// (`prototypes/muscles-tab-variants.html`), and `CLAUDE.md` gives the
   /// prototype authority over how a screen looks.
   ///
-  /// [AppPalette.border] is the palette's own divider colour and is lighter
-  /// than the muted fill, so each muscle reads as an outlined region the way an
-  /// anatomical drawing does. A darker line was tried first and cut the body
-  /// into gaps instead of drawing it; §12 ends "No other colours", so a third
-  /// option was never available.
+  /// [AppPalette.textMuted] at partial opacity is lighter than the muted fill,
+  /// so each muscle reads as an outlined region the way an anatomical drawing
+  /// does. A darker line was tried first and cut the body into gaps instead of
+  /// drawing it. The plain divider colour ([AppPalette.border]) was tried
+  /// next and was too close to both the fill and the page: the whole figure
+  /// read as a shadow. §12 ends "No other colours", so the line is a palette
+  /// grey with alpha rather than a new value.
   ///
   /// The width is in logical pixels and is deliberately **not** scaled with the
   /// geometry — the same rule `stroke_glyph.dart` follows, so the separation
@@ -427,21 +550,32 @@ class BodyDiagramPainter extends CustomPainter {
   Paint buildSeparatorPaint() => Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = kBodySegmentSeparatorWidth
-    ..color = AppPalette.border
+    ..color = kBodySegmentSeparatorColor
     ..isAntiAlias = true
     ..strokeJoin = StrokeJoin.round;
 
   /// The line that marks a muscle a workout plans to train.
   ///
-  /// **Drawn over the separator, in the accent, and thicker.** A planned muscle
-  /// has no fill to say so — the fill is the record of what has been *worked*,
-  /// and planning must not look like having done it. The accent at partial
-  /// opacity reads as "this is coming" next to the full-strength fill that means
-  /// "this is done", without introducing a colour outside the palette.
+  /// **Drawn over the separator, neutral, and thicker.** A planned muscle has
+  /// no fill to say so -- the fill is the record of what has been *worked*, and
+  /// planning must not look like having done it. So the outline is not the
+  /// accent either: amber means "worked" wherever it appears, and an amber
+  /// outline before the first set read as partly done. Steel is the secondary
+  /// muscle and nothing else. Secondary text grey is the one neutral that reads
+  /// against the muted fill without claiming anything
+  /// (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`).
   Paint buildPlannedPaint() => Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = kBodyPlannedOutlineWidth
-    ..color = AppPalette.accentStrong.withValues(alpha: 0.75)
+    ..color = AppPalette.textSecondary
+    ..isAntiAlias = true
+    ..strokeJoin = StrokeJoin.round;
+
+  /// The chalk outline on the segment under the finger.
+  Paint buildPressedPaint() => Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = kBodyPlannedOutlineWidth
+    ..color = AppPalette.textPrimary
     ..isAntiAlias = true
     ..strokeJoin = StrokeJoin.round;
 
@@ -463,6 +597,61 @@ class BodyDiagramPainter extends CustomPainter {
       if (segment.path.contains(local)) return segment;
     }
     return null;
+  }
+
+  /// [segmentAt], forgiving a near miss (audit B6).
+  ///
+  /// Several muscles are thinner than a fingertip — the chest bands are about
+  /// 21pt tall, the front traps 19pt — and the forearms run on a diagonal. An
+  /// exact hit-test that misses by a hair does nothing and says nothing, so a
+  /// miss falls back to the segment whose edge is nearest, if that edge is
+  /// within [tolerance] logical pixels. The head and neck are not segments, so
+  /// a tap there still opens nothing unless a muscle edge is that close.
+  BodyDiagramSegment? segmentNear(
+    Offset position,
+    Size size, {
+    double tolerance = kBodyTapTolerance,
+  }) {
+    final exact = segmentAt(position, size);
+    if (exact != null) return exact;
+    final scale = scaleFor(size);
+    if (scale <= 0) return null;
+    // Measured in the asset's own units, then scaled back: cheaper than
+    // scaling every vertex of all eleven segments.
+    final local = (position - originFor(size)) / scale;
+    final segments = segmentPathsFor(size);
+    BodyDiagramSegment? best;
+    var bestDistance = tolerance / scale;
+    for (var i = 0; i < segments.length; i++) {
+      if (segments[i].subMuscleGroupIds.isEmpty) continue;
+      for (final outline in asset.segments[i].outlines) {
+        final distance = _distanceToOutline(local, outline);
+        if (distance <= bestDistance) {
+          bestDistance = distance;
+          best = segments[i];
+        }
+      }
+    }
+    return best;
+  }
+
+  static double _distanceToOutline(Offset p, List<double> outline) {
+    var best = double.infinity;
+    final n = outline.length ~/ 2;
+    for (var i = 0; i < n; i++) {
+      final a = Offset(outline[2 * i], outline[2 * i + 1]);
+      final j = (i + 1) % n;
+      final b = Offset(outline[2 * j], outline[2 * j + 1]);
+      final ab = b - a;
+      final lengthSquared = ab.distanceSquared;
+      final t = lengthSquared == 0
+          ? 0.0
+          : (((p - a).dx * ab.dx + (p - a).dy * ab.dy) / lengthSquared)
+              .clamp(0.0, 1.0);
+      final d = (p - (a + ab * t)).distance;
+      if (d < best) best = d;
+    }
+    return best;
   }
 
   @override
@@ -492,6 +681,15 @@ class BodyDiagramPainter extends CustomPainter {
         }
       }
     }
+    final pressedIds = pressed;
+    if (pressedIds != null) {
+      final outline = buildPressedPaint();
+      for (final segment in segments) {
+        if (identical(segment.subMuscleGroupIds, pressedIds)) {
+          canvas.drawPath(segment.path, outline);
+        }
+      }
+    }
     canvas.restore();
   }
 
@@ -500,6 +698,7 @@ class BodyDiagramPainter extends CustomPainter {
       oldDelegate.view != view ||
       oldDelegate.gender != gender ||
       oldDelegate.fill != fill ||
+      !identical(oldDelegate.pressed, pressed) ||
       !setEquals(oldDelegate.planned, planned);
 
   /// [view] is handed over rather than left to be read back out of

@@ -142,9 +142,10 @@ void main() {
       host(AppScreen.pushed(title: 'Lower chest', body: longList())),
     );
     final pushed = tester.widget<Text>(find.text('Lower chest')).style!;
-    expect(pushed.fontSize, 16, reason: 'pushed title size');
+    expect(pushed.fontSize, 17, reason: 'pushed title size');
     expect(pushed.fontWeight, FontWeight.w600, reason: 'pushed title weight');
-    expect(pushed.letterSpacing, -0.16, reason: 'pushed title tracking');
+    expect(pushed.letterSpacing, isNull,
+        reason: 'no tracking below the display size');
   });
 
   testWidgets('the title is announced as a header', (tester) async {
@@ -209,6 +210,24 @@ void main() {
 
     expect(bottomInset, 72,
         reason: 'the body must read the floating bar height as a bottom inset');
+  });
+
+  // QA: VoiceOver read every plain title twice ("Workout, Workout"): the
+  // header Semantics carried the title as its label and merged the Text
+  // child's own label beneath it. Maestro's hierarchy showed "Workout\nWorkout".
+  testWidgets('a plain title is announced once, as a header', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      host(AppScreen.pushed(title: 'Lower chest', body: longList())),
+    );
+    expect(
+      find.bySemanticsLabel(RegExp(r'^Lower chest$')),
+      findsOneWidget,
+      reason: 'the header label is the title, once',
+    );
+    expect(find.bySemanticsLabel(RegExp('Lower chest\nLower chest')),
+        findsNothing);
+    handle.dispose();
   });
 
   testWidgets('screenScrollPadding adds the gutter to every safe-area edge',

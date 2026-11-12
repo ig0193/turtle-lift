@@ -153,7 +153,7 @@ void main() {
           findsOneWidget);
       expect(find.byKey(ExercisePickerSheet.rowKey('bench-press')),
           findsOneWidget);
-      expect(find.text('EXERCISES'), findsOneWidget,
+      expect(find.text('Exercises'), findsOneWidget,
           reason: 'with nothing in the workout there is no planned section');
     });
 
@@ -191,7 +191,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'zzz');
       await tester.pump();
 
-      expect(find.text('No exercise matches.'), findsOneWidget);
+      expect(find.textContaining('No exercise called'), findsOneWidget);
     });
 
     testWidgets("the workout's own exercises come first, under their own label",
@@ -210,8 +210,8 @@ void main() {
       await pumpHost(tester, session: session);
       await openPicker(tester);
 
-      expect(find.text('IN THIS WORKOUT'), findsOneWidget);
-      expect(find.text('ADD ANOTHER'), findsOneWidget);
+      expect(find.text('In this workout'), findsOneWidget);
+      expect(find.text('Add another'), findsOneWidget);
       final planned = tester.getTopLeft(
           find.byKey(ExercisePickerSheet.rowKey('hammer-curl')));
       final other = tester.getTopLeft(
@@ -404,6 +404,61 @@ void main() {
 
       expect(find.byType(SetLoggingScreen), findsOneWidget,
           reason: 'a user mid-set is not a user who needs the form cues');
+    });
+  });
+
+  // Research item 12: retrieval over search for the habitual lifter.
+  group('the Recent group', () {
+    double topOf(WidgetTester tester, String id) =>
+        tester.getTopLeft(find.byKey(ExercisePickerSheet.rowKey(id))).dy;
+
+    testWidgets('lists what was logged lately, above everything else',
+        (tester) async {
+      final saved = await savedWith(tester, 'hammer-curl');
+      await pumpHost(tester, saved: saved);
+      await openPicker(tester);
+
+      expect(find.text('Recent'), findsOneWidget);
+      expect(topOf(tester, 'hammer-curl'),
+          lessThan(topOf(tester, 'barbell-curl')));
+      expect(find.byKey(ExercisePickerSheet.rowKey('hammer-curl')),
+          findsOneWidget, reason: 'listed once, not again under Exercises');
+    });
+
+    testWidgets('is absent with no history', (tester) async {
+      await pumpHost(tester);
+      await openPicker(tester);
+      expect(find.text('Recent'), findsNothing);
+    });
+
+    testWidgets('leaves out what is already in this workout', (tester) async {
+      final saved = await savedWith(tester, 'hammer-curl');
+      late WorkoutSession open;
+      await tester.runAsync(() async {
+        final session = await store.createSession();
+        await store.addExercise(
+            sessionId: session.id,
+            exerciseId: 'hammer-curl',
+            loadType: LoadType.weighted);
+        open = (await store.readOpenSession())!;
+      });
+      await pumpHost(tester, session: open, saved: saved);
+      await openPicker(tester);
+
+      expect(find.text('In this workout'), findsOneWidget);
+      expect(find.text('Recent'), findsNothing);
+    });
+
+    testWidgets('follows the muscle filter', (tester) async {
+      final saved = await savedWith(tester, 'hammer-curl');
+      await pumpHost(tester, saved: saved);
+      await openPicker(tester);
+
+      await tester.tap(find.byKey(ExercisePickerSheet.chipKey('chest')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Recent'), findsNothing);
+      expect(find.byKey(ExercisePickerSheet.rowKey('hammer-curl')), findsNothing);
     });
   });
 }

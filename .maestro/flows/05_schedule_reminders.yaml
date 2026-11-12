@@ -1,0 +1,85 @@
+# User story: Profile -> Schedule: pick training days, turn on Remind me,
+# read the explain-first sheet, accept the iOS permission prompt, and find
+# everything still set after a kill and relaunch.
+# tool/maestro_run.sh resets notification permission before every flow, so
+# the system prompt always appears here.
+appId: dev.indresh.turtleLift
+name: 05 Schedule - training days and reminders with permission prompt
+tags: [profile, notifications]
+---
+- launchApp:
+    clearState: true
+# The week lives on the Workout landing (ADR 0008): with no plan, one quiet
+# line that opens Profile -> Schedule.
+- assertVisible: "Pick training days"
+- tapOn: "Pick training days"
+- assertVisible:
+    text: "Schedule"
+    selected: true
+- assertVisible:
+    text: "Monday"
+    selected: false
+- assertVisible:
+    text: "Remind me\\. Notification on training days"
+    checked: false
+- tapOn: "Monday"
+- tapOn: "Wednesday"
+- tapOn: "Friday"
+- assertVisible:
+    text: "Monday"
+    selected: true
+# The pane holds only the plan; the week now reads on the Workout landing.
+- assertNotVisible: ".*of 3 plan days.*"
+- tapOn: "Workout"
+- assertVisible: "This week: [0-3] of 3 plan days.*Edit training days"
+- tapOn: "This week: .*"
+- assertVisible:
+    text: "Schedule"
+    selected: true
+
+# --- Opt in: explain first, then the OS prompt.
+- tapOn: "Remind me.*"
+- assertVisible: "Remind you on training days\\?"
+- assertVisible: ".*Mon, Wed, Fri.*"
+- tapOn: "Allow reminders"
+# The iOS permission prompt. Maestro's iOS driver may accept a system
+# alert on its own before this step sees it, so the tap is conditional and
+# the proof is the state that follows (the switch only stays on once iOS
+# grants permission).
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn:
+          text: "Allow"
+          optional: true
+- assertVisible:
+    text: "Remind me\\. Notification on training days"
+    checked: true
+- takeScreenshot: 05-schedule-on
+
+# --- persists
+- stopApp
+- launchApp
+- tapOn: "Profile"
+# Profile opens on Personal on every cold start (ADR 0007 §2).
+- assertVisible:
+    text: "Personal"
+    selected: true
+- tapOn: "Schedule"
+- assertVisible:
+    text: "Wednesday"
+    selected: true
+- assertVisible:
+    text: "Tuesday"
+    selected: false
+- assertVisible:
+    text: "Remind me\\. Notification on training days"
+    checked: true
+- assertVisible: "Reminder time\\. 6:30 PM"
+
+# --- Turning it off asks nothing further.
+- tapOn: "Remind me.*"
+- assertVisible:
+    text: "Remind me\\. Notification on training days"
+    checked: false

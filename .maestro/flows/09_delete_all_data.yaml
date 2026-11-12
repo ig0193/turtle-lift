@@ -1,0 +1,97 @@
+# User story: Delete all data. Cancel changes nothing; confirming wipes every
+# table, the app reboots, and every tab is back to its empty state (AE8:
+# Profile on Personal, Diet first-time). Debug builds do not re-seed.
+appId: dev.indresh.turtleLift
+name: 09 Delete all data - cancel, confirm, every tab empty
+tags: [data]
+---
+- launchApp:
+    clearState: true
+# Some data on every surface: a workout, a template, a bodyweight, a schedule
+# day and a diet target.
+- runFlow: ../subflows/log_bench_workout.yaml
+- scrollUntilVisible:
+    element: "Save as template"
+    centerElement: true
+- tapOn: "Save as template"
+- tapOn: "Save"
+- tapOn: "Back"
+- tapOn: "Profile"
+- tapOn: "Personal details.*"
+- tapOn: { id: "bodyweight-field" }
+- inputText: "80"
+- tapOn: { id: "record-weight" }
+- tapOn: "Back"
+- tapOn: "Schedule"
+- tapOn: "Thursday"
+- tapOn: "Diet"
+- tapOn: "Set a daily target"
+- tapOn: "Suggested .*"
+- tapOn: "Save"
+- assertVisible: "0 of 130 g planned.*"
+- tapOn: "Personal"
+
+# --- cancel
+- scrollUntilVisible:
+    element: "Delete all data"
+    centerElement: true
+- tapOn: "Delete all data"
+# The screen's header carries the same words; the button is the second match.
+- tapOn:
+    text: "Delete all data"
+    index: 1
+- assertVisible: "Delete all data\\?"
+- tapOn: "Cancel"
+- tapOn: "Back"
+- tapOn: "History"
+- assertVisible: ".*Today · 1 exercise · 2 sets"
+
+# --- confirm
+- tapOn: "Profile"
+- tapOn: "Diet"
+- tapOn: "Personal"
+- scrollUntilVisible:
+    element: "Delete all data"
+    centerElement: true
+- tapOn: "Delete all data"
+# The screen's header carries the same words; the button is the second match.
+- tapOn:
+    text: "Delete all data"
+    index: 1
+- tapOn: "Delete all"
+- extendedWaitUntil:
+    visible: "Start workout.*|Personal"
+    timeout: 15000
+
+# --- every tab empty
+- tapOn: "Workout"
+- assertVisible: "Start workout.*"
+# My templates always shows (ADR 0011), holding only the New template tile.
+- assertVisible: "Pick training days"
+- assertNotVisible: "Last workout.*"
+- tapOn: "History"
+- assertVisible: "No workouts yet.*"
+- tapOn: "Profile"
+- assertVisible:
+    text: "Personal"
+    selected: true
+- assertVisible: "My workout templates\\. 11 predefined.*"
+- assertNotVisible: ".*1 custom.*"
+- tapOn: "Personal details.*"
+- assertVisible: "Add your weight to see calorie estimates.*"
+- tapOn: "Back"
+- tapOn: "Schedule"
+- assertVisible:
+    text: "Monday"
+    selected: false
+- tapOn: "Diet"
+- assertVisible: "Plan your week's protein.*"
+- tapOn: "Personal"
+- tapOn: "Export everything"
+- assertVisible: "Nothing to export yet.*"
+
+# --- and it stays empty across a relaunch (no debug re-seed)
+- stopApp
+- launchApp
+- tapOn: "History"
+- assertVisible: "No workouts yet.*"

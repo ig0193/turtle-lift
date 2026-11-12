@@ -1,0 +1,83 @@
+# User story: start a ready-made template (preview first, two taps to start),
+# save a finished workout as my own template, start it from "My templates",
+# and manage it (duplicate, rename, delete) from Profile.
+appId: dev.indresh.turtleLift
+name: 03 Templates - ready-made, save as template, manage
+tags: [templates]
+---
+- launchApp:
+    clearState: true
+
+# --- Ready-made: a tile opens a preview; nothing starts until Start workout.
+- assertVisible: "Ready-made"
+- tapOn: "Push day\\..*"
+- assertVisible: ".*Barbell bench press.*"
+- tapOn: "Cancel"
+- assertVisible: "Start workout.*"
+- tapOn: "Push day\\..*"
+- tapOn: "Start workout"
+- assertVisible: "6 exercises planned"
+- assertVisible: "Start logging"
+# Discard: the confirmation, then the landing again.
+- scrollUntilVisible:
+    element: "Discard workout"
+    centerElement: true
+- tapOn: "Discard workout"
+- runFlow:
+    when:
+      visible: "Discard"
+    commands:
+      - tapOn: "Discard"
+- assertVisible: "Start workout.*"
+
+# --- Save a finished workout as a template.
+- runFlow: ../subflows/log_bench_workout.yaml
+- scrollUntilVisible:
+    element: "Save as template"
+    centerElement: true
+- tapOn: "Save as template"
+- eraseText: 40
+- inputText: "QA bench"
+- tapOn: "Save"
+- tapOn: "Back"
+- assertVisible: "My templates"
+- assertVisible: "QA bench.*"
+
+# --- Start it from My templates: it copies its exercises into the session.
+- tapOn: "QA bench.*"
+- tapOn: "Start workout"
+- assertVisible: "1 exercise planned"
+- scrollUntilVisible:
+    element: "Discard workout"
+    centerElement: true
+- tapOn: "Discard workout"
+- runFlow:
+    when:
+      visible: "Discard"
+    commands:
+      - tapOn: "Discard"
+
+# --- Manage on Profile: duplicate a predefined one, rename, delete.
+- tapOn: "Profile"
+- assertVisible: "My workout templates\\. 11 predefined · 1 custom"
+- tapOn: "My workout templates.*"
+- tapOn: "Duplicate Push day"
+# Custom rows sit under the eleven predefined ones.
+- scrollUntilVisible:
+    element: "Rename Push day.*"
+    centerElement: true
+- scrollUntilVisible:
+    element: "Rename QA bench"
+    centerElement: true
+- tapOn: "Rename QA bench"
+- eraseText: 40
+- inputText: "QA bench renamed"
+- tapOn: "Save"
+- scrollUntilVisible:
+    element: "Delete QA bench renamed"
+    centerElement: true
+- tapOn: "Delete QA bench renamed"
+- tapOn: "Delete"
+- assertNotVisible: ".*QA bench renamed.*"
+- tapOn: "Back"
+- assertVisible: "My workout templates\\. 11 predefined · 1 custom"

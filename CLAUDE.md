@@ -22,11 +22,12 @@ screen looks, follow the prototype. Where they differ on a rule, follow the docs
 | `assets/body-diagrams/*.svg` | 4 traced body diagrams (male/female × front/back) |
 | `assets/body-diagrams/muscle_taxonomy.dart` | 12 parent groups, 19 sub-muscle groups, segment mapping |
 | `assets/body-diagrams/body_paths.dart` | The 4 diagrams as point lists — 42 segments, ready to render and hit-test |
-| `assets/exercises/exercises.json` | 260 exercises with content |
+| `assets/exercises/exercises.json` | 260 exercises with content, plus each one's demonstration pattern and gear (`animation_map.py`) |
+| `assets/foods/foods.json` | Protein food list for Diet, IFCT 2017 values — reviewed nutrition copy (`docs/adr/0007-diet-in-profile.md`) |
 
-Both have generators and validators alongside them. If a muscle id or exercise
+Each has a generator and validator alongside it. If a muscle id, exercise or food
 needs changing, edit the generator source and re-run it — then the validator
-proves nothing drifted. **Wire both validators into CI.** They already catch
+proves nothing drifted. **Wire every validator into CI.** They already catch
 orphan segments, unknown muscle ids, and missing content.
 
 ## Non-obvious things that will bite
@@ -88,6 +89,11 @@ are reviewed copy.
 8. Profile tab — fourth tab, Personal | Schedule
    (`docs/adr/0004-profile-returns-as-a-tab.md`), then the Schedule screen and
    reminders (`docs/adr/0005-schedule-and-opt-in-notifications.md`, notifications last).
+9. Diet — third Profile segment, a protein-only weekly plan
+   (`docs/adr/0007-diet-in-profile.md`, plan in
+   `docs/plans/2026-11-08-1702-feat-diet-weekly-protein-plan.md`). After
+   Profile/Schedule, before the mascot; diet reminders only after the ADR 0005
+   notification infrastructure exists.
 
 ## Decided in session 1
 
@@ -131,7 +137,18 @@ are reviewed copy.
 - **The live clock is display-only.** `sessionClockElapsed` derives it from
   `loggedAt`; it is never stored and is shown nowhere but the live screen, and
   only for a session dated the day it started and under six hours old.
-- **Schema is at version 5.** Step 5 gives a custom template its `exercise_ids`;
+- **Schema is at version 9.** Step 9 adds `custom_exercises.hidden` (Hide from
+  picker, for a logged custom exercise that cannot be deleted) and
+  `session_exercises.note` (one note per exercise per workout; the "Last time"
+  hint is derived) — `docs/adr/0011-combined-build-decisions.md`, which also
+  records swap in place and the deferred kg/lb, warm-up sets and supersets.
+  Step 8 is `custom_exercises`, the user's own
+  exercises (`docs/adr/0009-custom-exercises-and-template-editing.md`): ids always
+  `custom-…`, no content fields ever, one merged index (`exerciseIndexProvider`;
+  the boot override is `libraryIndexProvider`).
+  Previously: schema version 7. Step 6 adds the diet tables (`DietPlanVersions`,
+  `DietPlanItems`, `MealTicks`, `Settings.proteinTargetG`); step 7 adds
+  `ReminderPrefs` (ADR 0007). Step 5 gives a custom template its `exercise_ids`;
   the old `group_ids` columns on `custom_templates` and `sessions` stay, unwritten
   and unread, because SQLite cannot drop them without rebuilding a table that
   holds user data. The drift output (`app_database.g.dart`) is committed; re-run
@@ -144,10 +161,76 @@ are reviewed copy.
 - **A muscle fills on the map on a completed set as well as on Mark exercise
   done.** A user who logs three sets and walks to the next machine has trained
   it. (There is no tick list any more — see above.)
-- **Destructive actions use `#C4553A`,** the eleventh palette colour (`00` §12,
-  `01` §Usage rules). `#D85A30` could not carry "delete": it means "active / this
+- **Palette is Chalk & Shell** (`docs/research/unslop-audit.md`): graphite neutrals
+  (`#0E0E0F` page), shell amber `#FFA53D` for trained / active / selection / PB, steel
+  `#93ABCB` for the secondary muscle only. **The primary button is a chalk capsule**
+  (`#EDEDEB` fill, dark label), one per view; secondary actions are text. **No
+  gradients.** One PB mark everywhere: the word "PB" in amber, no pill, no trophy.
+  Role names in `AppPalette` are unchanged from the earlier palettes.
+- **Taste pass (turtle-taste skill, `.claude/skills/turtle-taste/`).** Labels
+  are sentence case, never tracked capitals; no text under 12pt; `textMuted` is
+  `#8B8B90` (4.5:1 or better on every surface); one type scale (12 / 13 / 15 /
+  17 / 20 / 24, `AppTypeScale`), no tracking below 16pt; one radius scale (16
+  cards and fields, capsule buttons and chips; tags and statuses are text, not
+  pills); selection controls are outlined, only the primary action is filled. System text size is honoured up
+  to 1.3x (`main.dart`); the set-logging number ignores it and fits its box.
+  `tool/taste_shots.sh` screenshots every screen on a small and a large iPhone.
+- **Export and Delete all data are built** (`lib/src/ui/data_screens.dart`).
+  Export writes entered data only (nothing derived) as JSON and opens the
+  share sheet via `share_plus` + `path_provider` (both ship `Package.swift`).
+  Delete wipes every table in one transaction, then re-runs boot through
+  `appRestartProvider` so no notifier keeps deleted state; the debug sample
+  seed is not re-run after a wipe.
+- **Destructive actions use `#FF7A85`,** the eleventh palette colour (`00` §12,
+  `01` §Usage rules). The accent `#FFA53D` could not carry "delete": it means "active / this
   has been worked" *"wherever it appears"*, so a delete confirmation painted in it
   reads as approval. `test/theme_palette_test.dart` fails on any colour outside §12.
+- **The week lives on the Workout landing** (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`,
+  amends 0004 and 0005). Profile › Schedule holds only the plan (days, reminder);
+  the derived "this week" strip and a "last workout" line sit above the landing's
+  search, and a training reminder opens the Workout tab (payload string still
+  `schedule`). Planned muscles are outlined in `textSecondary`, never amber or
+  steel. Sharing the summary card as an image (system share sheet), "Do again",
+  the folding Ready-made grid, haptics (`AppHaptics`), the pinned Mark exercise
+  done bar, last time in each set row and the live PB mark are all in 0008.
+- **iOS Live Activity + home-screen widget** (ADR 0008 §7): one method channel
+  (`glance_bridge.dart` ↔ `ios/Runner/GlanceChannel.swift`) and the
+  `ios/TurtleLiftWidgets` extension target (iOS 17+, App Group
+  `group.dev.indresh.turtleLift`). No plugin. The activity's clock is a system
+  timer from the session start; nothing is stored.
+- **Profile has three segments: Personal | Schedule | Diet**
+  (`docs/adr/0007-diet-in-profile.md`, proposed). Diet is a segment, not a fifth
+  tab — four tabs stays the ceiling (ADR 0004). The selected segment lives in an
+  in-memory `profileSegmentProvider`, never stored: Profile opens on Personal on
+  cold start and after Delete all data; a diet reminder tap selects Diet; a
+  training reminder tap opens the Workout tab (ADR 0008).
+
+- **Exercise demonstrations are drawn by the app** (`docs/adr/0010-exercise-demonstrations-are-drawn-not-bundled.md`),
+  reversing the old "no per-exercise illustrations" scope line at the user's request. An original keyframed
+  figure (`lib/src/demo/`) for all 260 exercises, mapped in `assets/exercises/animation_map.py`. **Never bundle
+  third-party exercise GIFs/videos** (openGym's are licensed Gym Visual stock; ExerciseDB forbids storage).
+  Review the figures with `DEMO_SHEET_DIR=… flutter test tool/demo_sheet_test.dart`.
+- **History is also the progress surface** (`docs/adr/0013-history-is-also-the-progress-surface.md`).
+  A stats line (day streak, workouts, sets) and a month total on the calendar,
+  never the current week; a per-exercise best-set chart (assisted inverted, no
+  e1RM) and a quiet "Best at" table on exercise history; streak runs drawn on the
+  calendar by `streakChains`. History detail and the editor share one
+  `SessionCard`; records come from one cached pass (`personalBestProjection`); the
+  title chain is `titleFromParts`; every date goes through `date_labels.dart`
+  (year only when not this year in lists, always on the share card). Rows swipe to
+  delete; a saved workout can change date and take another exercise; an empty past
+  calendar day backfills a workout.
+- **Profile: honest inputs, honest reminders, complete export**
+  (`docs/adr/0014-profile-production-pass.md`). Bodyweight is 20 to 250 kg
+  (`parseBodyweight`), with an inline reason, a recorded status line and a greys-only
+  trend line; a weigh-in that moves the protein suggestion offers Update target but
+  never changes the stored target. The segment control is pinned above the pane.
+  Reminders never read "on" when nothing will fire (no-days note, "None chosen",
+  "Off in Settings" from `notificationPermissionProvider`, Open Settings over the
+  `dev.indresh.turtleLift/system` channel). Export also shares a sets CSV and the
+  reminder settings; Delete all data offers Export first. Personal ends with About
+  (version from `lib/src/app_info.dart`, checked against the pubspec; privacy note;
+  licences). kg only and no import: both left for the user.
 
 ## Still undecided — ask, don't guess
 - Typeface. The prototypes use Inter; the app currently uses the platform default.
@@ -157,9 +240,13 @@ are reviewed copy.
 ## Out of scope for V1 — do not build
 
 No login · no cloud sync · no soft delete · no rest timer · no stored workout duration (the live clock is display-only) ·
-no notifications (except the opt-in reminders in ADR 0005, built after Schedule) · no wearables · no AI features · no premium tier · no ads ·
-no multi-day splits · no per-exercise illustrations ·
-no achievements, badges or level-ups.
+no notifications (except the opt-in reminders in ADR 0005, built after Schedule, and diet reminders under the same rules, ADR 0007) · no wearables · no AI features · no premium tier · no ads ·
+no multi-day splits ·
+no achievements, badges or level-ups ·
+no calorie, macro or food-diary tracking (no calories, carbs or fat, no free-form food logging, no custom foods).
+
+Diet is a protein-only weekly plan with a daily protein total, and nothing wider
+(`docs/adr/0007-diet-in-profile.md`).
 
 The turtle mascot (`docs/05-mascot-brief.md`) is **the last thing to build** — decorative only,
 never a body diagram, and it must never react to inactivity. Orientation per surface

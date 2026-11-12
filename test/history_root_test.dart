@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:turtle_lift/src/data/generated/muscle_taxonomy.dart';
+import 'package:turtle_lift/src/data/active_session.dart';
+import 'package:turtle_lift/src/data/exercise.dart';
+import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/history_preview_data.dart';
+import 'package:turtle_lift/src/data/load_type.dart';
+import 'package:turtle_lift/src/data/local_date.dart';
+import 'package:turtle_lift/src/data/session_store.dart';
+import 'package:turtle_lift/src/data/personal_details_store.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/all_sessions_screen.dart';
 import 'package:turtle_lift/src/ui/history_calendar_card.dart';
@@ -47,7 +53,6 @@ void main() {
         ),
       );
 
-  group('the detail screen muscle map', _detailTests);
 
   group('the projection', () {
     test('the first time an exercise is done is never a personal best', () {
@@ -274,21 +279,42 @@ void main() {
       ];
       await tester.pumpWidget(host(sessions));
 
-      expect(find.text('See all ${sessions.length} sessions ›'), findsOneWidget);
+      expect(find.text('See all ${sessions.length} workouts'), findsOneWidget);
     });
 
-    testWidgets('a single total session reads "1 session", not "1 sessions"',
+    testWidgets('a single workout has no "See all": nothing is behind it (B14)',
         (tester) async {
       growViewport(tester);
       await tester.pumpWidget(host(<HistorySession>[session('a', 0)]));
 
-      expect(find.text('See all 1 session ›'), findsOneWidget);
+      expect(find.byKey(HistoryRoot.seeAllKey), findsNothing);
+      expect(find.textContaining('See all 1'), findsNothing);
+    });
+
+    // QA (Maestro): a workout edited down to one set read "1 sets" on its row.
+    testWidgets('a row with one set reads "1 set", not "1 sets"',
+        (tester) async {
+      growViewport(tester);
+      await tester.pumpWidget(host(<HistorySession>[
+        session('a', 0, title: 'Bench', exercises: const <HistoryExercise>[
+          HistoryExercise(
+            name: 'Bench',
+            primaryGroupIds: <String>['chest'],
+            setScores: <double>[60],
+          ),
+        ]),
+      ]));
+
+      expect(find.textContaining('1 exercise · 1 set'), findsOneWidget);
+      expect(find.textContaining('1 sets'), findsNothing);
     });
 
     testWidgets('"See all" opens the full chronological list', (tester) async {
       growViewport(tester);
       await tester.pumpWidget(host(<HistorySession>[
         session('a', 0, title: 'Today'),
+        for (var i = 1; i < HistoryRoot.recentCount; i++)
+          session('f$i', i, title: 'Filler $i'),
         session('b', 40, title: 'Last month'),
       ]));
 
@@ -314,43 +340,75 @@ void main() {
 
       expect(find.byType(HistorySessionDetailScreen), findsOneWidget);
     });
-  });
-}
 
-/// The detail screen's muscle map, and the trap it was built over.
-///
-/// `kMuscleTaxonomy` stores **bare** sub-names while the diagram's fill
-/// callback speaks in **qualified** ones, so joining them naively paints a
-/// correctly shaped, entirely unfilled body — a failure that looks like a
-/// styling choice rather than a bug. These tests are the reason it cannot come
-/// back quietly.
-void _detailTests() {
-  test('parent groups resolve to qualified sub-group ids', () {
-    expect(
-      subMuscleGroupIdsFor(const <String>['chest']),
-      <String>{'chest/upper', 'chest/mid', 'chest/lower'},
-      reason: 'bare names like "upper" match nothing the diagram asks about',
-    );
-  });
+    testWidgets('with a bodyweight in effect the detail shows kcal and lays '
+        'out without a framework error', (tester) async {
+      // The detail reads the saved workout itself now (one card, audit B3),
+      // so this hands it one rather than a bare History row.
+      final today = LocalDate.today();
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          exerciseIndexProvider.overrideWithValue(ExerciseIndex(<Exercise>[
+            const Exercise(
+              id: 'bench',
+              name: 'Bench',
+              equipment: 'barbell',
+              loadType: 'weighted',
+              primary: <String>['chest/mid'],
+              secondary: <String>[],
+              setup: '',
+              posture: '',
+              execution: '',
+              commonMistakes: '',
+            ),
+          ])),
+          initialSavedSessionsProvider.overrideWithValue(<WorkoutSession>[
+            WorkoutSession(
+              id: 'a',
+              title: 'Push day',
+              performedOn: today,
+              loggedAt: today.toDateTime(),
+              templateId: null,
+              templateName: null,
+              isOpen: false,
+              exercises: <SessionExercise>[
+                SessionExercise(
+                  id: 'a-bench',
+                  exerciseId: 'bench',
+                  position: 0,
+                  loadType: LoadType.weighted,
+                  markedDone: false,
+                  sets: <SetEntry>[
+                    for (var i = 0; i < 3; i++)
+                      SetEntry(
+                        id: 'a-$i',
+                        position: i,
+                        completed: true,
+                        weightKg: 60,
+                        reps: 8,
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ]),
+          initialBodyweightLogProvider.overrideWithValue(<BodyweightEntry>[
+            BodyweightEntry(date: day(30), weightKg: 72),
+          ]),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(body: HistoryRoot()),
+        ),
+      ));
 
-  test('every id it produces is one the taxonomy actually knows', () {
-    // The whole set, not a sample: a typo in one group would otherwise only
-    // show up as that one muscle never filling.
-    final ids = subMuscleGroupIdsFor(kMuscleTaxonomy.keys);
-    expect(ids, isNotEmpty);
-    for (final id in ids) {
-      expect(
-        kSubMuscleGroups.containsKey(id),
-        isTrue,
-        reason: '$id is not a sub-muscle group; the diagram would ignore it',
-      );
-    }
-  });
+      await tester.tap(find.byKey(HistoryRoot.recentRowKey('a')));
+      await tester.pumpAndSettle();
 
-  test('it covers every sub-group, so no muscle is unfillable', () {
-    expect(
-      subMuscleGroupIdsFor(kMuscleTaxonomy.keys),
-      kSubMuscleGroups.keys.toSet(),
-    );
+      expect(tester.takeException(), isNull,
+          reason: 'the kcal figure must not nest one Expanded in another');
+      expect(find.text('kcal'), findsOneWidget);
+      expect(find.byKey(HistorySessionDetailScreen.calorieKey), findsOneWidget);
+    });
   });
 }

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
@@ -105,16 +106,20 @@ void main() {
       }
     });
 
-    testWidgets('offers no way to create a template from scratch',
+    testWidgets('offers New template, above the ready-made group',
         (tester) async {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
-      // KD4 defers the muscle-group builder. If someone adds it later this
-      // fails, which is the prompt to update docs/04 in the same change rather
-      // than leaving the docs claiming less than the app does.
-      expect(find.textContaining('Create'), findsNothing);
-      expect(find.textContaining('New template'), findsNothing);
+      // Building from scratch shipped with ADR 0009 (it was deferred under
+      // KD4, and docs/04 now says so). The user's own group leads.
+      expect(find.byKey(TemplateLibraryScreen.newTemplateKey), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(TemplateLibraryScreen.newTemplateKey)).dy,
+        lessThan(tester
+            .getTopLeft(find.text(TemplateLibraryScreen.predefinedGroupLabel))
+            .dy),
+      );
     });
 
     testWidgets('says what the empty custom group is for', (tester) async {
@@ -379,5 +384,24 @@ void main() {
         'Push day (mine) 2',
       );
     });
+  });
+
+  // QA (Maestro flow 03): the Duplicate / Rename / Delete glyphs merged into
+  // their row's label ("Push day, Chest, shoulders, triceps, Duplicate Push
+  // day"), so VoiceOver had no separate control to activate.
+  testWidgets('each row action is its own button with a tap action',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+
+    final first = kPredefinedTemplates.first;
+    expect(find.bySemanticsLabel(RegExp('^Duplicate ${first.name}\$')),
+        findsOneWidget);
+    final node = tester.getSemantics(
+        find.byKey(TemplateLibraryScreen.duplicateKey(first.id)));
+    expect(node.label, 'Duplicate ${first.name}');
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    handle.dispose();
   });
 }

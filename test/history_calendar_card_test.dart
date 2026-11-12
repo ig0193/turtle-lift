@@ -109,7 +109,7 @@ void main() {
 
     expect(find.text('Shoulders day'), findsOneWidget);
     expect(find.text('Barbell curl'), findsOneWidget);
-    expect(find.textContaining('· 2 sessions'), findsOneWidget);
+    expect(find.textContaining('· 2 workouts'), findsOneWidget);
   });
 
   testWidgets('swiping to a different month closes the open day detail',

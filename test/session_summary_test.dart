@@ -15,9 +15,13 @@ import 'package:turtle_lift/src/data/personal_details_store.dart'
 import 'package:turtle_lift/src/data/session_store.dart';
 import 'package:turtle_lift/src/data/settings_store.dart'
     show appDatabaseProvider;
+import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/body_diagram.dart';
 import 'package:turtle_lift/src/ui/destructive_confirmation.dart';
+import 'package:turtle_lift/src/ui/history_root.dart';
+import 'package:turtle_lift/src/ui/history_session_detail_screen.dart';
+import 'package:turtle_lift/src/ui/history_session_row.dart';
 import 'package:turtle_lift/src/ui/session_summary_screen.dart';
 import 'package:turtle_lift/src/ui/set_logging_screen.dart';
 
@@ -151,7 +155,7 @@ void main() {
 
       await pump(tester, id);
 
-      expect(find.text('60kg × 8'), findsOneWidget);
+      expect(find.text('60kg\u00A0×\u00A08'), findsOneWidget);
     });
   });
 
@@ -205,8 +209,33 @@ void main() {
       await pump(tester, id);
 
       expect(find.byKey(SessionSummaryScreen.pbPillKey), findsOneWidget);
-      expect(find.text('1 personal best'), findsOneWidget);
-      expect(find.text('★ PB'), findsOneWidget);
+      // The count is a figure on the card, in the PB colour.
+      expect(
+        find.descendant(
+          of: find.byKey(SessionSummaryScreen.pbPillKey),
+          matching: find.text('1'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<Text>(find.descendant(
+              of: find.byKey(SessionSummaryScreen.pbPillKey),
+              matching: find.text('1'),
+            ))
+            .style!
+            .color,
+        AppPalette.accentStrong,
+      );
+      // And the exercise that set it is marked in the log.
+      expect(
+        find.descendant(
+          of: find.byKey(SessionSummaryScreen.pbPillKey),
+          matching: find.text('PB'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('PB'), findsNWidgets(2));
     });
 
     testWidgets('an assisted record says what kind of record it is',
@@ -224,7 +253,7 @@ void main() {
       await pump(tester, id);
 
       expect(
-        find.text('★ PB · lightest assist'),
+        find.text('PB · lightest assist'),
         findsOneWidget,
         reason: 'a badge beside a smaller number would otherwise read as a bug '
             'weeks later, and the logging screen\'s banner is not on this page',
@@ -260,6 +289,78 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('standard exercise-science averages'),
           findsOneWidget);
+    });
+  });
+
+  // ADR 0008: the card can be shared as an image through the system share
+  // sheet, and on a record day the PB count takes the kcal slot.
+  group('sharing the card', () {
+    testWidgets('a PB day shows the count instead of kcal', (tester) async {
+      await saveWorkout(tester,
+          exerciseId: 'bench',
+          loadType: LoadType.weighted,
+          weightKg: 60,
+          on: LocalDate.today().addDays(-3));
+      final id = await saveWorkout(tester,
+          exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 65);
+
+      await pump(tester, id, weights: <BodyweightEntry>[
+        BodyweightEntry(
+            date: LocalDate.today().addDays(-30).toDateTime(), weightKg: 78),
+      ]);
+
+      expect(find.byKey(SessionSummaryScreen.pbPillKey), findsOneWidget);
+      expect(find.text('kcal'), findsNothing);
+      expect(find.byKey(SessionSummaryScreen.addWeightKey), findsNothing);
+    });
+
+    testWidgets('Share card renders the card to a PNG and hands it to the '
+        'share sheet', (tester) async {
+      final id = await saveWorkout(tester,
+          exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 60);
+      final shared = <List<int>>[];
+      tester.view.physicalSize = const Size(1200, 3400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final saved = await tester.runAsync(() => store.readSavedSessions());
+      await tester.pumpWidget(ProviderScope(
+        key: UniqueKey(),
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          exerciseIndexProvider.overrideWithValue(index),
+          initialSavedSessionsProvider.overrideWithValue(saved!),
+          initialBodyweightLogProvider.overrideWithValue(const []),
+          cardImageSharerProvider.overrideWithValue(
+              (png, {required fileName, origin}) async => shared.add(png)),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          home: SessionSummaryScreen(sessionId: id),
+        ),
+      ));
+      await tester.pump();
+
+      final share = find.byKey(SessionSummaryScreen.shareKey);
+      expect(share, findsOneWidget);
+      expect(
+        tester.getTopLeft(share).dy,
+        lessThan(tester
+            .getTopLeft(find.byKey(SessionSummaryScreen.saveAsTemplateKey))
+            .dy),
+        reason: 'under the card, before the record actions',
+      );
+
+      await tester.runAsync(() async {
+        await tester.tap(share);
+        for (var i = 0; i < 20 && shared.isEmpty; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await tester.pump();
+        }
+      });
+
+      expect(shared, hasLength(1));
+      expect(shared.single.take(4), <int>[0x89, 0x50, 0x4E, 0x47],
+          reason: 'a PNG');
     });
   });
 
@@ -437,6 +538,55 @@ void main() {
       expect(await tester.runAsync(() => store.readSavedSessions()), isEmpty);
     });
 
+    // QA (Maestro flow 02): History -> workout -> Edit workout -> Delete
+    // popped only the summary, leaving the user on a dead-end "This workout is
+    // no longer in your history" screen titled "Workout".
+    testWidgets('from History, a delete lands back on History, not on a '
+        'screen for the deleted workout', (tester) async {
+      final id = await saveWorkout(tester,
+          exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 60);
+      tester.view.physicalSize = const Size(1200, 3400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final saved = await tester.runAsync(() => store.readSavedSessions());
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(database),
+            exerciseIndexProvider.overrideWithValue(index),
+            initialSavedSessionsProvider.overrideWithValue(saved!),
+            initialBodyweightLogProvider
+                .overrideWithValue(const <BodyweightEntry>[]),
+          ],
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            home: const Scaffold(body: HistoryRoot()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(HistorySessionRow));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(HistorySessionDetailScreen.editKey));
+      await tester.pumpAndSettle();
+      expect(find.byType(SessionSummaryScreen), findsOneWidget);
+      expect(id, isNotEmpty);
+
+      await tester.tap(find.byKey(SessionSummaryScreen.deleteKey));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(confirmDestructiveKey));
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HistorySessionDetailScreen), findsNothing,
+          reason: 'the detail screen of a deleted workout is a dead end');
+      expect(find.byType(SessionSummaryScreen), findsNothing);
+      expect(find.text('No workouts yet'), findsOneWidget);
+    });
+
     testWidgets('the delete label is painted in the destructive colour',
         (tester) async {
       final id = await saveWorkout(tester,
@@ -449,7 +599,7 @@ void main() {
           matching: find.byType(Text),
         ),
       );
-      expect(label.style!.color, const Color(0xFFC4553A));
+      expect(label.style!.color, AppPalette.danger);
     });
   });
 
@@ -489,7 +639,7 @@ void main() {
           exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 60);
       await pump(tester, id);
 
-      await tester.tap(find.text('60kg × 8'));
+      await tester.tap(find.text('60kg\u00A0×\u00A08'));
       await tester.pumpAndSettle();
 
       expect(
@@ -505,7 +655,7 @@ void main() {
           exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 60);
       await pump(tester, id);
 
-      await tester.tap(find.text('60kg × 8'));
+      await tester.tap(find.text('60kg\u00A0×\u00A08'));
       await tester.pumpAndSettle();
       await tester.runAsync(() async {
         await tester.enterText(find.byType(TextField).first, '65');
@@ -523,21 +673,22 @@ void main() {
           exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 60);
       await pump(tester, id);
 
-      await tester.tap(find.text('60kg × 8'));
+      await tester.tap(find.text('60kg\u00A0×\u00A08'));
       await tester.pumpAndSettle();
 
       expect(find.byKey(SetLoggingScreen.markDoneKey), findsNothing);
     });
 
-    testWidgets('long-pressing an exercise offers to remove it',
+    testWidgets('long-pressing the only exercise offers to delete the workout '
+        '(B6: no ghost workout)',
         (tester) async {
       final id = await saveWorkout(tester,
           exerciseId: 'bench', loadType: LoadType.weighted, weightKg: 60);
       await pump(tester, id);
 
-      await tester.longPress(find.text('60kg × 8'));
+      await tester.longPress(find.text('60kg\u00A0×\u00A08'));
       await tester.pumpAndSettle();
-      expect(find.text('Remove Barbell bench press?'), findsOneWidget);
+      expect(find.text('Delete this workout?'), findsOneWidget);
 
       await tester.runAsync(() async {
         await tester.tap(find.byKey(confirmDestructiveKey));
@@ -546,7 +697,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final saved = await tester.runAsync(() => store.readSavedSessions());
-      expect(saved!.single.exercises, isEmpty);
+      expect(saved, isEmpty);
     });
   });
 }

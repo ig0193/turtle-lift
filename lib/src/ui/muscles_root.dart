@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/body_gender.dart';
 import '../data/exercise_index.dart';
-import '../data/generated/muscle_taxonomy.dart';
+import '../data/muscle_training.dart';
+import '../data/training_plan.dart' show planTodayProvider;
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'app_screen.dart';
@@ -72,7 +73,7 @@ class MusclesRoot extends ConsumerWidget {
   /// The label over the sub-group list, counted from the taxonomy rather than
   /// typed. A regenerated taxonomy with a twentieth group would otherwise leave
   /// a heading that lies about the list directly beneath it.
-  static String get listLabel => 'ALL ${kSubMuscleGroups.length} SUB-GROUPS';
+  static String get listLabel => 'Muscles';
 
   /// The line under the map. It is what tells a user the rows below are the
   /// same destinations as the polygons above, rather than a second, different
@@ -83,9 +84,14 @@ class MusclesRoot extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final view = ref.watch(musclesBodyViewProvider);
     final index = ref.watch(exerciseIndexProvider);
+    final training = ref.watch(muscleTrainingProvider);
+    final today = ref.watch(planTodayProvider);
+    final anyThisWeek = training.values.any((t) => t.workedThisWeek);
 
+    return LayoutBuilder(builder: (context, constraints) {
+    final padding = screenScrollPadding(context);
     return ListView(
-      padding: screenScrollPadding(context),
+      padding: padding,
       children: <Widget>[
         MuscleSearchField.tappable(
           onTap: () => Navigator.of(context).push(
@@ -105,23 +111,39 @@ class MusclesRoot extends ConsumerWidget {
               ref.read(musclesBodyViewProvider.notifier).select(chosen),
         ),
         const SizedBox(height: 12),
-        BodyDiagram(
+        _CappedMap(
+          maxHeight: musclesMapMaxHeight(context, constraints, padding),
+          child: BodyDiagram(
           view: view,
-          fill: mutedBodyFill,
+          fill: trainingFill(training),
+          segmentValue: (ids) => <String>[
+            for (final id in orderedSubMuscleGroups(ids))
+              muscleTrainingLine(training[id] ?? MuscleTraining.none, today),
+          ].join('; '),
           // The diagram reports every sub-group the tapped segment stands
           // for and deliberately resolves none of them (R7): which of two
           // delts was meant is a screen's question, not a painter's.
           onSegmentTap: (subMuscleGroupIds) =>
               openTappedBodySegment(context, subMuscleGroupIds),
         ),
+        ),
         const SizedBox(height: 10),
+        if (anyThisWeek)
+          const _TrainingLegend()
+        else
+          const Text(
+            kMusclesEmptyWeekNote,
+            style: kMusclesMapHintStyle,
+            textAlign: TextAlign.center,
+          ),
+        const SizedBox(height: 6),
         Text(mapHint, style: kMusclesMapHintStyle, textAlign: TextAlign.center),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
         Semantics(
           header: true,
           child: Text(listLabel, style: kLandingSectionLabelStyle),
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 8),
         ...subGroupRows(
           index: index,
           // The same destination a segment tap reaches (R8) — and the only
@@ -132,7 +154,105 @@ class MusclesRoot extends ConsumerWidget {
         ),
       ],
     );
+    });
   }
+}
+
+/// The tallest the landing map may be: what is left of the viewport once the
+/// search field, the Front/Back control, the hint and the tab bar clearance
+/// are taken out (audit B5). Without a cap the map was sized from the width
+/// alone — 670pt on a 17e — and the calves sat under the floating tab bar.
+double musclesMapMaxHeight(
+  BuildContext context,
+  BoxConstraints constraints,
+  EdgeInsets padding,
+) {
+  if (!constraints.hasBoundedHeight) return double.infinity;
+  final textScale = MediaQuery.textScalerOf(context).scale(12) / 12;
+  // Search field 48 + 14, Front/Back 48 + 12, gap 10 above the hint, the hint
+  // itself, and a little air so the first list heading can peek.
+  final above = 48.0 + 14 + kBodyViewButtonHeight + 12;
+  final below = 10.0 + 2 * 18 * textScale + 6 + 30;
+  return (constraints.maxHeight - padding.vertical - above - below)
+      .clamp(280.0, double.infinity);
+}
+
+/// The landing map's fill: what the log says about this week (ADR 0012).
+///
+/// The accent where any of the segment's muscles was trained directly this
+/// week, the secondary-muscle colour where one was only worked as a secondary
+/// muscle, muted otherwise. The same two colours, with the same meanings, as
+/// the exercise page's diagram.
+BodySegmentFill trainingFill(Map<String, MuscleTraining> training) {
+  if (training.isEmpty) return mutedBodyFill;
+  return (ids) {
+    var secondary = false;
+    for (final id in ids) {
+      final t = training[id];
+      if (t == null) continue;
+      if (t.trainedThisWeek) return AppPalette.accentStrong;
+      if (t.secondarySets > 0) secondary = true;
+    }
+    return secondary ? AppPalette.accentLight : AppPalette.mutedSurface;
+  };
+}
+
+/// Under the map when nothing has been trained this week.
+const String kMusclesEmptyWeekNote =
+    'Nothing trained this week yet. Muscles fill as you log sets.';
+
+/// The legend's two entries.
+const String kMusclesLegendWorked = 'Worked this week';
+const String kMusclesLegendSecondary = 'Secondary';
+
+class _TrainingLegend extends StatelessWidget {
+  const _TrainingLegend();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget entry(Color color, String label) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Text(label, style: kMusclesMapHintStyle),
+          ],
+        );
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 16,
+      runSpacing: 4,
+      children: <Widget>[
+        entry(AppPalette.accentStrong, kMusclesLegendWorked),
+        entry(AppPalette.accentLight, kMusclesLegendSecondary),
+      ],
+    );
+  }
+}
+
+/// Bounds the map's height and centres it, so the figure keeps its aspect
+/// ratio inside a box narrower than the screen when the height is the limit.
+class _CappedMap extends StatelessWidget {
+  const _CappedMap({required this.maxHeight, required this.child});
+
+  final double maxHeight;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          // The tallest of the four assets is 700×1324; sizing from it keeps
+          // every asset inside the box.
+          final natural = width * 1324 / 700;
+          final height = natural < maxHeight ? natural : maxHeight;
+          return SizedBox(width: width, height: height, child: child);
+        },
+      );
 }
 
 /// The front / back switch above the map.
@@ -158,7 +278,7 @@ class _BodyViewControl extends StatelessWidget {
     return Row(
       children: <Widget>[
         for (final view in BodyView.values) ...<Widget>[
-          if (view != BodyView.values.first) const SizedBox(width: 7),
+          if (view != BodyView.values.first) const SizedBox(width: 8),
           Expanded(
             child: _BodyViewButton(
               view: view,
@@ -198,10 +318,12 @@ class _BodyViewButton extends StatelessWidget {
     final label = selected ? AppPalette.textPrimary : AppPalette.textSecondary;
 
     return Semantics(
+      container: true,
       button: true,
       inMutuallyExclusiveGroup: true,
       selected: selected,
       label: bodyViewLabel(view),
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         key: bodyViewButtonKey(view),
@@ -212,7 +334,7 @@ class _BodyViewButton extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected ? AppPalette.mutedSurface : AppPalette.surface,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(999),
             border: Border.all(color: border),
           ),
           child: Text(
@@ -247,12 +369,11 @@ const double kBodyViewButtonHeight = 48;
 const TextStyle kBodyViewButtonStyle = TextStyle(
   fontSize: 13,
   fontWeight: FontWeight.w600,
-  letterSpacing: -0.1,
 );
 
 /// The centred line under the map — quieter than a row's own copy, because it
 /// explains the screen rather than being part of it.
 const TextStyle kMusclesMapHintStyle = TextStyle(
-  fontSize: 11.5,
+  fontSize: 12,
   color: AppPalette.textMuted,
 );

@@ -1,0 +1,52 @@
+# User story (History audit slice 6): a missed day is logged from the
+# calendar. Tapping an empty past day offers "Log a workout for ...", which
+# opens the ordinary workout flow on the Workout tab dated that day; the
+# finished workout files under it and the streak counts it.
+appId: dev.indresh.turtleLift
+name: 27 History backfill a past day from the calendar
+tags: [history]
+---
+- launchApp:
+    clearState: true
+- runFlow: ../subflows/log_bench_workout.yaml
+- waitForAnimationToEnd
+- tapOn: "Back"
+- tapOn: "History"
+- evalScript: "${(function () {
+    var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var short = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var now = new Date();
+    var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    output.spoken = days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    output.short = days[d.getDay()].substring(0, 3) + ' ' + d.getDate() + ' ' + short[d.getMonth()] + (d.getFullYear() == now.getFullYear() ? '' : ' ' + d.getFullYear());
+    output.prev = (d.getMonth() != now.getMonth()) ? 'yes' : 'no';
+    return output.spoken;
+  })()}"
+- runFlow:
+    when:
+      true: ${output.prev == 'yes'}
+    commands:
+      - tapOn: "Previous month"
+- tapOn: "${output.spoken}, no workout"
+- assertVisible: "Log a workout for ${output.short}\\?"
+- tapOn: "Log a workout"
+- waitForAnimationToEnd
+- assertVisible: "Workout date, ${output.short}"
+- tapOn: "Start logging"
+- runFlow:
+    file: ../subflows/add_exercise.yaml
+    env:
+      QUERY: "barbell bench"
+      ROW: "Barbell bench press. Barbell.*"
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-weight", VALUE: "55" }
+- tapOn:
+    id: "set-0-check"
+- tapOn: "Back"
+- runFlow: ../subflows/finish_workout.yaml
+- tapOn: "Back"
+- tapOn: "History"
+- assertVisible: "Barbell bench press, quick log, Yesterday · 1 exercise · .*"
+- assertVisible: "2 day streak, 2 workouts, .*"

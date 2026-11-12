@@ -1,0 +1,25 @@
+# From the Workout landing: logs one barbell bench press set of WEIGHT kg x 8
+# and finishes, then goes back to the landing. No env defaults here on
+# purpose: a subflow's own `env` overrides what the caller passes.
+appId: dev.indresh.turtleLift
+---
+- tapOn: "Start workout.*"
+- waitForAnimationToEnd
+- tapOn: "Start logging"
+- runFlow:
+    file: add_exercise.yaml
+    env:
+      QUERY: "barbell bench"
+      ROW: "Barbell bench press. Barbell.*"
+- runFlow:
+    file: type_into.yaml
+    env: { FIELD: "set-0-weight", VALUE: "${WEIGHT}" }
+- runFlow:
+    file: type_into.yaml
+    env: { FIELD: "set-0-reps", VALUE: "8" }
+- tapOn:
+    id: "set-0-check"
+- tapOn: "Back"
+- runFlow: finish_workout.yaml
+- waitForAnimationToEnd
+- tapOn: "Back"

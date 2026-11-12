@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/active_session.dart';
+import '../data/derived.dart';
+import '../data/exercise_index.dart';
 import '../data/session_store.dart';
 import '../theme/app_palette.dart';
 
@@ -22,9 +24,11 @@ import '../theme/app_palette.dart';
 class SessionTitleField extends ConsumerStatefulWidget {
   const SessionTitleField({super.key});
 
-  /// What an unnamed ad-hoc workout shows until the user names it, which they
-  /// never have to.
-  static const String placeholder = 'Name this workout';
+  // An unnamed workout shows its resolved title (`docs/00` §6) as the hint,
+  // in the same chalk as a typed name: "Name this workout" in grey read as an
+  // unfinished screen. The pencil says it can be renamed. Nothing is written
+  // until the user types, so the title stays derived and keeps following the
+  // work (research item 7).
 
   /// The most a title can be.
   static const int maxLength = 40;
@@ -88,7 +92,14 @@ class _SessionTitleFieldState extends ConsumerState<SessionTitleField> {
 
   @override
   Widget build(BuildContext context) {
-    _syncTo(ref.watch(activeSessionProvider));
+    final session = ref.watch(activeSessionProvider);
+    _syncTo(session);
+    // Only when there is no stored name: a named workout shows the name in the
+    // field itself, and a hint under it would be a second copy.
+    final named = session?.title?.trim().isNotEmpty ?? false;
+    final derived = session == null || named
+        ? null
+        : resolvedTitle(session, ref.watch(exerciseIndexProvider));
 
     return Semantics(
       textField: true,
@@ -103,11 +114,11 @@ class _SessionTitleFieldState extends ConsumerState<SessionTitleField> {
         onSubmitted: (_) => _commit(),
         onTapOutside: (_) => _focusNode.unfocus(),
         style: const TextStyle(
-          fontSize: 19,
+          fontSize: 20,
           fontWeight: FontWeight.w600,
           color: AppPalette.textPrimary,
         ),
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           counterText: '',
           filled: false,
           isDense: true,
@@ -115,12 +126,23 @@ class _SessionTitleFieldState extends ConsumerState<SessionTitleField> {
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
-          hintText: SessionTitleField.placeholder,
-          hintStyle: TextStyle(
-            fontSize: 19,
+          hintText: derived,
+          hintStyle: const TextStyle(
+            fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: AppPalette.textMuted,
+            color: AppPalette.textPrimary,
           ),
+          hintMaxLines: 1,
+          suffixIcon: const Padding(
+            padding: EdgeInsets.only(left: 8),
+            child: Icon(
+              Icons.edit_outlined,
+              size: 16,
+              color: AppPalette.textMuted,
+            ),
+          ),
+          suffixIconConstraints:
+              const BoxConstraints(minWidth: 24, minHeight: 16),
         ),
       ),
     );

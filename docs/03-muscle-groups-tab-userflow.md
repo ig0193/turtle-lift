@@ -8,6 +8,8 @@
 
 ## What ships, and what is deferred
 
+> **Amended 2026-11-09 by `docs/adr/0012-muscles-tab-shows-your-training.md`.** The tab now reads the log, on read and never stored: the landing map fills muscles trained this week (Mon–Sun; amber = primary, steel = secondary only) with a legend or a "Nothing trained this week yet" line; a muscle's exercise list and the shoulder sheet say "N sets this week · Last trained …"; exercise lists carry equipment filter chips and a derived "Last …" hint per row; exercise detail shows "Last … · N times · See history" into the Exercise history screen (built, no longer deferred) and offers **Start workout with this** when no workout is open. Search matches parent groups and synonyms, any word order, with a "Did you mean …" correction. Where the text below says "deferred" or "every segment muted" for these items, the ADR wins. Still deferred: the Best / Last / Times tiles and the recent-log block on detail; no recovery % model.
+
 The tab ships as **pure reference**: browse by body map or by list, search across exercises, muscles and equipment, and read the reviewed how-to content for any of the 260 exercises. Nothing in it reads or writes a user's training history.
 
 **Every personal figure this document describes is deferred to a later plan, not dropped.** The `Session` / `SessionExercise` / `SetEntry` tables do not exist yet, and there is no set-logging screen — so a user could not produce that history even if the tables did exist, and every derived surface would render an empty state on device. The rules stay written down, marked **Deferred**, because they are what that plan builds against:
@@ -95,12 +97,13 @@ Not built. Full record for a single exercise, reached from exercise detail and f
 
 - The user can freely visit the Muscle Groups tab while a workout session is active — for example, to check an alternative exercise's form cues or muscles worked before deciding what to do next. This doesn't disrupt or pause the active session.
 
-**"Add to current workout" is built.** The exercise detail screen now decides what it offers from how it was reached: browsing this tab with no workout open it offers nothing, browsing during **any** workout it offers Add to current workout, reached as the first-time gate inside the workout flow it offers Start logging, and opened from the logging screen's info button it offers neither. The rules below are what it does. **The Best / Last / Times tiles and the history block remain deferred.**
+**"Add to current workout" is built.** The exercise detail screen now decides what it offers from how it was reached: browsing this tab with no workout open it offers **Start workout with this** (ADR 0012), browsing during **any** workout it offers Add to current workout, reached as the first-time gate inside the workout flow it offers Start logging, and opened from the logging screen's info button it offers neither. The rules below are what it does. **The Best / Last / Times tiles and the history block remain deferred.**
 
 - **When any session is active**, the exercise detail screen shows one additional contextual action: **Add to current workout** — this adds the exercise to the active session's exercise list as not-started, the same as if it had been found via search from inside the Workout tab. It does not log sets from here; the user logs it back in the active workout flow, consistent with logging always happening in one place.
 - **A template session takes it too.** A template is a starting list, not a muscle lock (`docs/adr/0006-workout-tab-is-exercise-first.md`), so finishing Push day with curls from here is ordinary.
-- When no session is active, the exercise detail screen shows no action beyond the reference content — there's nothing to add it to yet.
-- **Summary of when the button renders:** any session active → yes. No session → no.
+- When no session is active, the exercise detail screen offers **Start workout with this**: it opens a new workout holding the exercise and goes to its logging screen (ADR 0012).
+- Once the exercise is in the open workout the button reads **In your workout** (outlined), and tapping it says "Already in your workout" rather than adding again.
+- **Summary:** any session active → Add (or In your workout). No session → Start workout with this.
 
 ---
 
@@ -108,14 +111,14 @@ Not built. Full record for a single exercise, reached from exercise detail and f
 
 Four screens ship:
 
-1. **Muscle Groups tab landing** — search field, front/back view control, the full-body map with **every segment muted**, and all 19 sub-group rows with their primary-exercise counts. No fill on the map stands for training; that colour is deferred, and the diagram takes its fill as a caller-supplied parameter so adding it later does not reopen the screen.
+1. **Muscle Groups tab landing** — search field, front/back view control, the full-body map filled with this week's training (ADR 0012: amber primary, steel secondary only, muted untrained; a legend, or "Nothing trained this week yet"), sized so the whole figure and its hint sit above the tab bar, and all 19 sub-group rows under the heading "Muscles" with their primary-exercise counts.
 2. **Search** — one field over the three vocabularies, every result labelled by kind, routing by kind. Never an empty result screen.
-3. **Exercise list** (for one sub-muscle group) — vertical list of compact rows: name and equipment chip. The derived `Last: 22kg × 8` line is deferred.
-4. **Exercise detail** (shared screen — equipment and load type, muscle chips, full-body diagram(s), the four content fields as collapsible rows, substitutes rail). No history block; no "Add to current workout".
+3. **Exercise list** (for one sub-muscle group) — the muscle's training line ("N sets this week · Last trained …"), outlined equipment filter chips derived from the list (held in memory only), then compact rows: name, equipment and a derived `Last 22kg × 8` hint when logged ("Yours" on a custom exercise).
+4. **Exercise detail** (shared screen — equipment and load type, muscle chips, full-body diagram(s), the four content fields as collapsible rows, substitutes rail). A one-line history link when the exercise has been logged ("Last … · N times · See history"); Start workout with this / Add to current workout / In your workout as above. No Best/Last/Times tiles.
 
 **The equipment-filtered exercise list is a search destination, not a browse screen.** Nothing navigates to it except an equipment search result, so it gets no entry of its own above. It is the sub-group list's sibling — same screen shape, same rows, same destination for a tap — differing only in which query fills it.
 
-**Deferred screen:** Exercise history (full record for one exercise; PB badges; reached from exercise detail and from set logging). It has no reachable entry point until sessions exist.
+**Exercise history is built** (full record for one exercise; PB badges), reached from set logging and from the history line on exercise detail (ADR 0012).
 
 ### Two screens were deleted, not deferred
 
@@ -131,7 +134,7 @@ Four screens ship:
 - **Muscle map highlight** — one reusable full-body component used on every screen. Interactive on the landing, read-only on exercise detail. No cropped or zoomed variant exists.
 - **No accordion in this tab.** There is no accordion anywhere in the app: the Workout tab's nested muscle list, the only place it was used, was removed with `docs/adr/0006`, and the screens that used it here were deleted earlier. Exercise detail's four content fields are disclosure rows, not that accordion: each opens independently, and Common mistakes starts open.
 - **Search-to-result transition** — fast, minimal-motion transition from typing a query to landing on exercise detail, since speed is the main value of search over browsing.
-- **Add-to-workout confirmation — deferred**, with the action it confirms. When a session is active and the user taps "Add to current workout," a brief, lightweight confirmation (e.g. a small toast or button state change) confirms the exercise was added to the session — not a full logging interaction, since no sets are entered here.
+- **Add-to-workout confirmation — built**: a floating snackbar ("X added") and the button turns to In your workout. When a session is active and the user taps "Add to current workout," a brief, lightweight confirmation (e.g. a small toast or button state change) confirms the exercise was added to the session — not a full logging interaction, since no sets are entered here.
 
 ## Explicitly out of scope for V1
 
@@ -249,4 +252,4 @@ The mockup also predates the shipped screen below the diagrams: the Best/Last/Ti
 </div>
 ```
 
-Note: the "Add to current workout" button is deferred and renders nowhere today. It renders **whenever a session is active**, template or ad-hoc. With no session the screen shows no button — pure reference.
+Note: the "Add to current workout" button is built (and "Start workout with this" when no workout is open, ADR 0012). It renders **whenever a session is active**, template or ad-hoc. With no session the screen shows no button — pure reference.

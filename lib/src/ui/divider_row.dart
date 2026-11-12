@@ -61,8 +61,10 @@ class DividerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       label: semanticsLabel,
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

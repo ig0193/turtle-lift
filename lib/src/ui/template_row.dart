@@ -49,19 +49,21 @@ class TemplateRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       label: '$title. $subtitle',
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
           constraints: const BoxConstraints(minHeight: minHeight),
-          margin: const EdgeInsets.only(bottom: 9),
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
           decoration: BoxDecoration(
             color: background,
-            borderRadius: BorderRadius.circular(13),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppPalette.border),
           ),
           child: Row(
@@ -72,7 +74,7 @@ class TemplateRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Text(title, style: kTemplateRowTitleStyle),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: kTemplateRowSubtitleStyle,
@@ -100,19 +102,18 @@ class TemplateRow extends StatelessWidget {
 const TextStyle kTemplateRowTitleStyle = TextStyle(
   fontSize: 15,
   fontWeight: FontWeight.w600,
-  letterSpacing: -0.1,
   color: AppPalette.textPrimary,
 );
 
 /// The muscle-group line. Muted rather than secondary: it is supporting detail
 /// under a name the eye lands on first.
 const TextStyle kTemplateRowSubtitleStyle = TextStyle(
-  fontSize: 11.5,
+  fontSize: 12,
   color: AppPalette.textMuted,
 );
 
 /// The count line under the filter control.
 const TextStyle kLandingCountStyle = TextStyle(
-  fontSize: 11.5,
+  fontSize: 12,
   color: AppPalette.textMuted,
 );

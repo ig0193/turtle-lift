@@ -261,14 +261,23 @@ class TrainingPlanLog extends Notifier<List<TrainingPlanEntry>> {
     // applies to can never disagree about what day it is.
     final weekStart = startOfWeek(ref.read(planTodayProvider));
     final entry = TrainingPlanEntry(effectiveFrom: weekStart, weekdays: weekdays);
-    await ref
-        .read(trainingPlanStoreProvider)
-        .replaceFromWeek(weekStart.encode(), entry.mask);
-
+    // Shown before the write (profile audit B5): a second quick tap reads
+    // this state, so waiting for the database first lost the first tap's
+    // day. Drift runs the writes in call order; a refused write puts back
+    // what was there.
+    final previous = state;
     state = <TrainingPlanEntry>[
       ...state.where((e) => e.effectiveFrom < weekStart),
       entry,
     ];
+    try {
+      await ref
+          .read(trainingPlanStoreProvider)
+          .replaceFromWeek(weekStart.encode(), entry.mask);
+    } catch (_) {
+      state = previous;
+      rethrow;
+    }
   }
 }
 
@@ -279,13 +288,27 @@ final trainingPlanLogProvider =
 
 // --- Derived ---------------------------------------------------------------
 
-/// The clock. A provider so a test can pin "today"; the shipped value reads
-/// the device once per read of the providers below.
+/// Where "today" comes from. The device clock, unless a test swaps it to
+/// walk a fake clock across midnight.
+final planClockProvider = Provider<LocalDate Function()>(
+  (ref) => LocalDate.today,
+);
+
+/// Today, read from [planClockProvider]. A provider so a test can pin it.
 ///
-/// **Known limit:** an app left open across midnight keeps yesterday's value
-/// until something invalidates it. Acceptable pre-launch; a lifecycle listener
-/// that invalidates this provider on resume is the fix.
-final planTodayProvider = Provider<LocalDate>((ref) => LocalDate.today());
+/// **Refreshed on resume** (KTD13). The value is cached until something
+/// invalidates it, so an app left open across midnight would otherwise keep
+/// showing yesterday as today. `RefreshTodayOnResume` in `main.dart`
+/// invalidates it whenever the app comes back to the foreground, and every
+/// provider that watches it -- the week summaries here, every Diet figure --
+/// recomputes from the new date. An invalidation that finds the same date
+/// changes nothing downstream, because [LocalDate] compares by value.
+///
+/// Stores never read this for "this week": a write can happen in the moment
+/// before a resume refresh, so `DietPlanStore` and `MealTickStore` read their
+/// own clock at write time.
+final planTodayProvider =
+    Provider<LocalDate>((ref) => ref.watch(planClockProvider)());
 
 /// The dates with a saved session. Derived from the history projection, so an
 /// edit or delete moves the week summary with no refresh path to forget.

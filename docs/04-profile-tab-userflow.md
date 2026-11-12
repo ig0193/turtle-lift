@@ -1,13 +1,13 @@
 # Profile — user flow
 
-> Profile is the fourth tab, split into **Personal** and **Schedule** by a segmented
-> control; workout history is its own tab. See `docs/adr/0004-profile-returns-as-a-tab.md`
+> Profile is the fourth tab, split into **Personal**, **Schedule** and **Diet** by a segmented
+> control (Diet added by `docs/adr/0007-diet-in-profile.md`); workout history is its own tab. See `docs/adr/0004-profile-returns-as-a-tab.md`
 > and `docs/adr/0005-schedule-and-opt-in-notifications.md`. Visual reference:
 > `prototypes/schedule-options.html`. **The mockups below that show an avatar entry are superseded.**
 
 **Purpose:** a single place to see everything the app remembers on the user's behalf — history and stats, with no manual tracking required.
 
-**Entry point:** the Profile tab in the L0 bar. **Workout history is now its own tab**, so the history list below belongs to the History tab; derived figures stay on History (one exception, the Schedule week summary).
+**Entry point:** the Profile tab in the L0 bar. **Workout history is now its own tab**, so the history list below belongs to the History tab; derived figures stay on History (the current week moved to the Workout landing, `docs/adr/0008-the-week-lives-on-the-workout-landing.md`).
 
 ---
 
@@ -31,7 +31,7 @@
 - Includes sessions from both Workout tab entry paths (template-based and ad-hoc).
 - **Exercises that set a personal best are marked in the session's exercise log.** The hero card shows the count; the scrollable log below it shows *which* — a small trophy marker beside the exercise name, and the specific set that set the record highlighted in accent. This is the reason to scroll past the card: the card is the shareable summary, the log is the detail. Same `pbCountFor` derivation as the card, so the two can never disagree. Definition in `01-app-idea.md` §Progress tracking.
 
-**Session detail is editable, and is the same component as the live workout card** — not a separate read-only viewer. Editable here: the session title, `performedOn`, the weight and reps of any set, adding or removing sets, and removing an exercise. Every edit saves immediately and all derived figures recompute on read. Being able to correct `performedOn` here is what makes the streak promise below true for past mistakes, not just for new sessions.
+**Session detail is editable, and shows the same card as the workout summary** (`SessionCard`, ADR 0013): the detail is the read half, with Share in its header and each exercise opening its own history, and Edit workout opens the editor on the same card. Editable there: the session title, `performedOn` (Change date), the weight and reps of any set, adding or removing sets, and adding or removing an exercise. Every edit saves immediately and all derived figures recompute on read. Being able to correct `performedOn` here is what makes the streak promise below true for past mistakes, not just for new sessions.
 
 **The streak on a past session's card is `streakAsOf(session.performedOn)`** — the streak as it stood on that day, recomputed on every view rather than frozen at save time. It can therefore change if the user later backdates an earlier session, which is correct: the card stays historically accurate. **Session detail uses the same screenshot-friendly composition as the workout summary screen** — the same hero card (muscle map + sets/exercises/streak/calories) appears at the top, so revisiting an old workout is just as shareable as the moment it was first saved, not a one-time thing that only exists right after finishing. This card uses the standard anatomical muscle map, identical to every other screen — the mascot figure originally specced here is deferred to V2. See `01-app-idea.md`. The full exercise-by-exercise log (sets, reps, weight) is available by scrolling below the card, for the cases where the user actually wants to review what they did rather than share it.
 
@@ -57,12 +57,13 @@
 
 ### Schedule (segment of the Profile tab)
 
-Top to bottom: **week summary** (this week as a compact hero — count, a dot per plan day, one line of what is left — plus a one-row "last week"), **training-day chips** (Mon–Sun, weekly pattern), **Remind me** switch and one **time**. Prototype: `prototypes/schedule-options.html`. Rules and rationale: `docs/adr/0005-schedule-and-opt-in-notifications.md`.
+Top to bottom: **training-day chips** (Mon–Sun, weekly pattern), **Remind me** switch and one **time**. The week summary that used to head this pane is on the Workout landing now (ADR 0008), so this pane is authored data only; a training reminder opens the Workout tab. Prototype: `prototypes/schedule-options.html`. Rules and rationale: `docs/adr/0005-schedule-and-opt-in-notifications.md`.
 
 - No plan chosen → the summary becomes one line prompting for days. Never "0 of 0".
 - Copy states counts, never verdicts: "2 of 3 this week · 1 more to go — next is Friday"; after the week, "2 of 3 plan days". No "missed".
 - "N more to go" appears only while plan days remain; today counts as remaining until it has a session.
 - The plan is a dated series. A saved plan takes effect from the Monday of the current week and replaces anything saved this week; past weeks are immutable and resolve against the plan in force then. Hit/not-hit is derived on read, never stored.
+- Remind me on with no training days says "Pick at least one training day above to get a reminder." When notifications are off in iOS Settings the note offers **Open Settings** (ADR 0014).
 - Turning **Remind me** on shows an explain-first sheet, then the system permission. Denied: days and summary still work. Notifications are built after this screen; until then the Remind me row is **visible but inert** — the switch and explain-first sheet work, but nothing is scheduled and no system permission is requested. Week starts Monday.
 
 ### Personal details (bodyweight + gender)
@@ -70,6 +71,7 @@ Top to bottom: **week summary** (this week as a compact hero — count, a dot pe
 - **Bodyweight**: skippable, and recorded as a **dated series rather than one number**. Each entry is immutable and takes effect from the day it is recorded — no edit, no delete, no backdating; a correction is a new entry that supersedes the old one going forward. One undated number would silently rewrite the calorie figure on every session already logged, because calories are derived on read. `caloriesFor(session)` resolves the weight in effect on that session's `performedOn`.
 - Until a weight is entered, the calorie estimate doesn't appear anywhere in the app (workout summary card, session detail, etc.) — that slot shows a lightweight "add weight to see calories" prompt instead, linking here. A session predating the earliest entry keeps that prompt **permanently**: entering a weight later does not backfill it, because no weight was ever in effect on that day.
 - Directly below the bodyweight field, a short explanation of how the calorie estimate works: the MET-tier table (sets logged → light/moderate/vigorous → MET value) and a one-line honesty note that actual calories burned vary by person and effort. This is the fuller version of the same explanation available via the (i) icon on the calorie stat itself.
+- **Valid range 20 to 250 kg** (ADR 0014). Anything else is refused with "Between 20 and 250 kg" under the field. Record confirms what it recorded; the screen says today's entry can be replaced until midnight and stays after that. From two weigh-ins a quiet trend line (greys only) sits above the log, and the log's dates are day-month like the rest of the app. If a protein target is set and the weigh-in moves the 1.6 g/kg suggestion, the confirmation says so and offers Update target (the target screen, pre-filled; nothing changes until Save).
 - No units toggle complexity needed for V1 — pick one unit (kg, matching the rest of the app's weight inputs) and keep it simple.
 - **Gender**: determines which body diagram asset set is used everywhere in the app — male or female (see the body diagram requirement in `01-app-idea.md`). Options: Male / Female / Prefer not to say. Skippable, with a sensible default (the male asset set) if left unset — unlike bodyweight, gender doesn't gate any feature, it only changes which diagram renders.
 - Changing gender later in Profile immediately switches the diagram set app-wide — no separate setting per screen, consistent with the uniformity rule.
@@ -78,7 +80,7 @@ Top to bottom: **week summary** (this week as a compact hero — count, a dot pe
 
 ## Screen list
 
-1. Profile landing (entry into My workout templates, personal details, and the data actions). **No stats summary** — streak, totals and every other derived figure live on the History tab, per the split resolved in `docs/adr/0003-l0-navigation-variant-a.md`. The history list moved to the History tab too.
+1. Profile landing (entry into My workout templates, personal details, and the data actions; ADR 0014 adds the current weight and diagram on the Personal details row, and an About block: version, "Your data stays on this phone", open-source licences. The segment control is pinned above the scroll view. Export shares a JSON of everything entered plus a CSV of completed sets; Delete all data offers Export first). **No stats summary** — streak, totals and every other derived figure live on the History tab, per the split resolved in `docs/adr/0003-l0-navigation-variant-a.md`. The history list moved to the History tab too.
 2. My workout templates list (predefined + custom, with a duplicate action on predefined templates)
 3. Template editor (muscle group multi-select, naming) — **deferred**; the first build ships duplicate, rename and delete only.
 4. Session detail (shareable hero card + full scrollable, **editable** log, for a past workout or ad-hoc entry; includes Delete workout)

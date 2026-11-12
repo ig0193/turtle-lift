@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +16,8 @@ import 'package:turtle_lift/src/data/settings_store.dart'
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/set_logging_screen.dart';
 import 'package:turtle_lift/src/ui/set_row.dart';
+
+import 'support/haptic_log.dart';
 
 /// Proves the screen the app is used on most.
 void main() {
@@ -200,6 +203,57 @@ void main() {
       expect(open.exercises.single.sets.single.completed, isFalse);
     });
 
+    // QA (Maestro): typing "60" into the first, unsaved row stored 6. The first
+    // keystroke wrote the row, its id moved from `ghost-0` to the stored id,
+    // and the Dismissible keyed on that id rebuilt the fields: the focus and
+    // the keyboard's target were lost, so the "0" went nowhere.
+    testWidgets('typing digit by digit into a fresh row keeps every digit',
+        (tester) async {
+      await pumpLogging(
+          tester, exerciseId: 'bench', loadType: LoadType.weighted);
+
+      final weight = find.byType(TextField).first;
+      await tester.showKeyboard(weight);
+      await act(tester, () async => tester.testTextInput.enterText('6'));
+      await tester.pump();
+
+      final field = tester.widget<TextField>(find.byType(TextField).first);
+      expect(field.focusNode!.hasFocus, isTrue,
+          reason: 'the field being typed in must keep focus after the first '
+              'keystroke saves the row');
+
+      await act(tester, () async => tester.testTextInput.enterText('60'));
+      final open = await tester.runAsync(() => store.readOpenSession());
+      expect(open!.exercises.single.sets.single.weightKg, 60);
+    });
+
+    // QA (Maestro, iPhone 17e): the iOS number pad has no return key, and a
+    // tap anywhere off the field left it up, covering Recent and See all.
+    testWidgets('a tap outside the field puts the number pad away',
+        (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        await pumpLogging(
+            tester, exerciseId: 'bench', loadType: LoadType.weighted);
+        await tester.showKeyboard(find.byType(TextField).first);
+        await tester.pump();
+        expect(tester.testTextInput.isVisible, isTrue);
+
+        // Empty space just under Add set, above the note field. (Mark
+        // exercise done is pinned to the bottom edge now, so "below it" is
+        // off screen.)
+        await tester.tapAt(tester
+            .getBottomLeft(find.byKey(SetLoggingScreen.addSetKey))
+            .translate(10, 6));
+        await tester.pump();
+        final field = tester.widget<TextField>(find.byType(TextField).first);
+        expect(field.focusNode!.hasFocus, isFalse);
+        expect(tester.testTextInput.isVisible, isFalse);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
     testWidgets('ticking a filled row completes the set', (tester) async {
       await pumpLogging(
           tester, exerciseId: 'pull-up', loadType: LoadType.bodyweight);
@@ -275,6 +329,22 @@ void main() {
         isTrue,
       );
     });
+
+    testWidgets('ticks with one impact and ends with one success haptic',
+        (tester) async {
+      final haptics = recordHaptics(tester);
+      await pumpLogging(
+          tester, exerciseId: 'pull-up', loadType: LoadType.bodyweight);
+
+      await act(tester,
+          () => tester.enterText(find.byType(TextField).first, '9'));
+      await act(tester, () => tester.tap(find.byKey(SetRow.checkKey(0))));
+      expect(haptics, <String>[kHapticSetDone]);
+
+      await act(
+          tester, () => tester.tap(find.byKey(SetLoggingScreen.markDoneKey)));
+      expect(haptics, <String>[kHapticSetDone, kHapticSuccess]);
+    });
   });
 
   group('the recent block', () {
@@ -284,7 +354,7 @@ void main() {
           tester, exerciseId: 'bench', loadType: LoadType.weighted);
 
       expect(
-        find.text('RECENT'),
+        find.text('Recent'),
         findsNothing,
         reason: 'an empty group is no group rather than a heading over nothing',
       );
@@ -320,7 +390,7 @@ void main() {
       await pumpLogging(
           tester, exerciseId: 'bench', loadType: LoadType.weighted);
 
-      expect(find.text('RECENT'), findsOneWidget);
+      expect(find.text('Recent'), findsOneWidget);
       expect(find.text('60kg × 10 · 60kg × 8'), findsOneWidget);
       expect(find.byKey(SetLoggingScreen.seeAllKey), findsOneWidget);
     });
@@ -351,6 +421,161 @@ void main() {
 
       expect(find.byKey(SetRow.rowKey(2)), findsOneWidget);
       expect(find.byKey(SetRow.rowKey(3)), findsNothing);
+    });
+  });
+
+  /// Saves a finished session three days ago holding [sets] of [exerciseId].
+  Future<void> savePast(
+    WidgetTester tester, {
+    required String exerciseId,
+    required LoadType loadType,
+    required List<({double? weightKg, int? reps, double? assistKg})> sets,
+  }) async {
+    await tester.runAsync(() async {
+      final past =
+          await store.createSession(performedOn: LocalDate.today().addDays(-3));
+      final row = await store.addExercise(
+          sessionId: past.id, exerciseId: exerciseId, loadType: loadType);
+      for (final (i, set) in sets.indexed) {
+        await store.writeSet(
+            sessionExerciseId: row,
+            position: i,
+            weightKg: set.weightKg,
+            reps: set.reps,
+            assistKg: set.assistKg,
+            completed: true);
+      }
+      await store.saveOpenSession();
+    });
+  }
+
+  group('last time, in the row (research item 3)', () {
+    testWidgets('each row shows the same set from last time', (tester) async {
+      await savePast(tester, exerciseId: 'bench', loadType: LoadType.weighted,
+          sets: [
+            (weightKg: 60, reps: 8, assistKg: null),
+            (weightKg: 62.5, reps: 6, assistKg: null),
+          ]);
+      await pumpLogging(
+          tester, exerciseId: 'bench', loadType: LoadType.weighted);
+
+      expect(find.text('Last 60kg × 8'), findsOneWidget);
+      expect(find.text('Last 62.5kg × 6'), findsOneWidget);
+    });
+
+    testWidgets('a tap on it copies last time into the row', (tester) async {
+      await savePast(tester, exerciseId: 'bench', loadType: LoadType.weighted,
+          sets: [(weightKg: 62.5, reps: 6, assistKg: null)]);
+      final rowId = await pumpLogging(
+          tester, exerciseId: 'bench', loadType: LoadType.weighted);
+
+      await act(tester,
+          () => tester.enterText(find.byType(TextField).first, '40'));
+      await act(tester, () => tester.tap(find.byKey(SetRow.lastKey(0))));
+
+      final open = await tester.runAsync(() => store.readOpenSession());
+      final set = open!.exercises.firstWhere((e) => e.id == rowId).sets.single;
+      expect(set.weightKg, 62.5);
+      expect(set.reps, 6);
+      expect(set.completed, isFalse, reason: 'copying is not ticking');
+    });
+  });
+
+  group('the PB mark (research item 5)', () {
+    testWidgets('appears the moment a ticked set beats the record',
+        (tester) async {
+      await savePast(tester, exerciseId: 'bench', loadType: LoadType.weighted,
+          sets: [(weightKg: 60, reps: 8, assistKg: null)]);
+      await pumpLogging(
+          tester, exerciseId: 'bench', loadType: LoadType.weighted);
+
+      await act(tester,
+          () => tester.enterText(find.byType(TextField).first, '65'));
+      expect(find.text('PB'), findsNothing, reason: 'not ticked yet');
+
+      await act(tester, () => tester.tap(find.byKey(SetRow.checkKey(0))));
+      expect(find.text('PB'), findsOneWidget);
+
+      await act(tester, () => tester.tap(find.byKey(SetRow.checkKey(0))));
+      expect(find.text('PB'), findsNothing,
+          reason: 'derived, never stored: unticking takes it away');
+    });
+
+    testWidgets('assisted: lighter assistance is the PB, heavier is not',
+        (tester) async {
+      await savePast(tester,
+          exerciseId: 'assisted-pull-up',
+          loadType: LoadType.assisted,
+          sets: [(weightKg: null, reps: 8, assistKg: 20)]);
+      await pumpLogging(tester,
+          exerciseId: 'assisted-pull-up', loadType: LoadType.assisted);
+
+      await act(tester,
+          () => tester.enterText(find.byType(TextField).first, '25'));
+      await act(tester, () => tester.tap(find.byKey(SetRow.checkKey(0))));
+      expect(find.text('PB'), findsNothing,
+          reason: 'more assistance than last time is not a record');
+
+      await act(tester,
+          () => tester.enterText(find.byType(TextField).first, '15'));
+      expect(find.text('PB'), findsOneWidget,
+          reason: 'less assistance is the record');
+    });
+  });
+
+  group('Mark exercise done is pinned (research item 2)', () {
+    testWidgets('it sits in a bar at the bottom, outside the scroll',
+        (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await pumpLogging(
+          tester, exerciseId: 'bench', loadType: LoadType.weighted);
+
+      final done = find.byKey(SetLoggingScreen.markDoneKey);
+      expect(
+          find.ancestor(of: done, matching: find.byType(Scrollable)),
+          findsNothing,
+          reason: 'pinned, so it never scrolls out of thumb reach');
+      expect(tester.getBottomLeft(done).dy, greaterThan(844 * 0.8));
+      expect(find.byKey(SetLoggingScreen.markDoneBarKey), findsOneWidget);
+    });
+
+    testWidgets('the scroll keeps its last row clear of the bar',
+        (tester) async {
+      await pumpLogging(
+          tester, exerciseId: 'bench', loadType: LoadType.weighted);
+      final bar = tester.getRect(find.byKey(SetLoggingScreen.markDoneBarKey));
+      final list = tester.getRect(find.byType(ListView));
+      expect(list.bottom, lessThanOrEqualTo(bar.top));
+    });
+
+    testWidgets('no bar when correcting a saved workout', (tester) async {
+      await savePast(tester, exerciseId: 'bench', loadType: LoadType.weighted,
+          sets: [(weightKg: 60, reps: 8, assistKg: null)]);
+      late WorkoutSession saved;
+      await tester.runAsync(() async {
+        saved = (await store.readSavedSessions()).single;
+      });
+      await tester.pumpWidget(ProviderScope(
+        key: UniqueKey(),
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          exerciseIndexProvider.overrideWithValue(index),
+          initialSavedSessionsProvider.overrideWithValue(<WorkoutSession>[saved]),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          home: SetLoggingScreen(
+            sessionExerciseId: saved.exercises.single.id,
+            savedSessionId: saved.id,
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      expect(find.byKey(SetLoggingScreen.markDoneBarKey), findsNothing);
+      expect(find.byKey(SetLoggingScreen.markDoneKey), findsNothing);
     });
   });
 }

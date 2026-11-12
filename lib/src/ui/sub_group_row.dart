@@ -32,7 +32,7 @@ class SubGroupRow extends StatelessWidget {
   /// it" rather than "what touches it".
   final int exerciseCount;
 
-  /// An extra clause on the second line — today, only "no map artwork".
+  /// An extra clause on the second line — today, only [kNoArtworkNote].
   final String? note;
 
   final VoidCallback onTap;
@@ -112,7 +112,7 @@ List<Widget> subGroupRows({
 /// answering the disambiguation sheet (R7), which nobody finds by looking. The
 /// line exists so that a user who went looking for it on the diagram and failed
 /// learns why, rather than concluding the app is missing a muscle.
-const String kNoArtworkNote = 'no map artwork';
+const String kNoArtworkNote = 'on the map under front delt';
 
 /// Whether [subGroupId] has a segment of its own on any body view.
 ///
@@ -131,14 +131,13 @@ bool hasOwnArtwork(String subGroupId) =>
 /// The row's name. A shade larger than the template row's subtitle and a shade
 /// smaller than its title: this is a list of 19, read by scanning.
 const TextStyle kSubGroupRowLabelStyle = TextStyle(
-  fontSize: 13.5,
+  fontSize: 13,
   fontWeight: FontWeight.w600,
-  letterSpacing: -0.1,
   color: AppPalette.textPrimary,
 );
 
 /// The count line beneath it.
 const TextStyle kSubGroupRowCountStyle = TextStyle(
-  fontSize: 11,
+  fontSize: 12,
   color: AppPalette.textMuted,
 );

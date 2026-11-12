@@ -13,18 +13,19 @@ ThemeData buildAppTheme() {
   const scheme = ColorScheme(
     brightness: Brightness.dark,
 
-    // Primary = the one action colour. §12: "#D85A30 = active / trained /
-    // primary action."
-    primary: AppPalette.accentStrong,
+    // Primary = the one action colour, and the primary action is a chalk
+    // capsule (§12). Amber is not here: it means "worked / active / record",
+    // and Material paints `primary` onto every default control it builds.
+    primary: AppPalette.textPrimary,
     onPrimary: AppPalette.onAccent,
-    primaryContainer: AppPalette.accentStrong,
+    primaryContainer: AppPalette.textPrimary,
     onPrimaryContainer: AppPalette.onAccent,
-    primaryFixed: AppPalette.accentStrong,
-    primaryFixedDim: AppPalette.accentStrong,
+    primaryFixed: AppPalette.textPrimary,
+    primaryFixedDim: AppPalette.textPrimary,
     onPrimaryFixed: AppPalette.onAccent,
     onPrimaryFixedVariant: AppPalette.onAccent,
 
-    // accentLight (#F0997B) is deliberately absent from this scheme. §12:
+    // accentLight (steel) is deliberately absent from this scheme. §12:
     // "secondary muscle only, never a primary action" -- and `secondary` is
     // exactly the slot Material paints interactive chrome from. It belongs to
     // the diagram painter, nowhere else.
@@ -112,7 +113,7 @@ ThemeData buildAppTheme() {
       color: AppPalette.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppPalette.border),
       ),
     ),
@@ -122,17 +123,26 @@ ThemeData buildAppTheme() {
       space: 1,
     ),
     filledButtonTheme: FilledButtonThemeData(
+      // The primary action: a chalk capsule with a graphite label (§12). No
+      // gradient, no accent: amber is kept for "worked / active / record".
       style: FilledButton.styleFrom(
-        backgroundColor: AppPalette.accentStrong,
+        backgroundColor: AppPalette.textPrimary,
         foregroundColor: AppPalette.onAccent,
+        disabledBackgroundColor: AppPalette.mutedSurface,
+        disabledForegroundColor: AppPalette.textMuted,
         minimumSize: const Size.fromHeight(48),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        shape: const StadiumBorder(),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: AppPalette.accentStrong),
+      // A secondary action is chalk text, not amber: amber means "worked /
+      // active / record", and a text button is none of those.
+      style: TextButton.styleFrom(
+        foregroundColor: AppPalette.textPrimary,
+        minimumSize: const Size(48, 48),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+      ),
     ),
     // The app's first text input is the Muscles search field, and Material's
     // default decoration is the one place a palette this strict leaks: an
@@ -148,12 +158,11 @@ ThemeData buildAppTheme() {
       filled: true,
       fillColor: AppPalette.surface,
       // Dense, because the height comes from the content padding below rather
-      // than from Material's 48pt minimum -- the prototype's field is 11px of
-      // padding around a 13.5px line.
+      // than from Material's 48pt minimum: 12pt of padding around a 15pt line.
       isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       hintStyle: const TextStyle(
-        fontSize: 13.5,
+        fontSize: 15,
         color: AppPalette.textMuted,
       ),
       prefixIconColor: AppPalette.textMuted,
@@ -170,15 +179,17 @@ ThemeData buildAppTheme() {
       focusedBorder: _inputBorder(AppPalette.accentStrong),
       errorBorder: _inputBorder(AppPalette.danger),
       focusedErrorBorder: _inputBorder(AppPalette.danger),
-      errorStyle: const TextStyle(fontSize: 11.5, color: AppPalette.danger),
+      errorStyle: const TextStyle(fontSize: 12, color: AppPalette.danger),
     ),
     // The caret and the selection band. Left unset they come from
     // `colorScheme.primary`, which happens to be on-palette today and would
     // stop being so the moment that role moved; naming them keeps the input's
     // colours in one place with the rest of its decoration.
-    textSelectionTheme: const TextSelectionThemeData(
+    textSelectionTheme: TextSelectionThemeData(
       cursorColor: AppPalette.accentStrong,
-      selectionColor: AppPalette.accentLight,
+      // The accent at low alpha: an opaque band of a light colour behind light
+      // text would erase the text it is selecting.
+      selectionColor: AppPalette.accentStrong.withValues(alpha: 0.35),
       selectionHandleColor: AppPalette.accentStrong,
     ),
     // No bottomNavigationBarTheme: that themes Material 2's BottomNavigationBar,
@@ -194,6 +205,6 @@ ThemeData buildAppTheme() {
 /// differ only in that colour -- and a state that drifted to a different radius
 /// would look like a rendering bug rather than a theme edit.
 OutlineInputBorder _inputBorder(Color color) => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       borderSide: BorderSide(color: color),
     );

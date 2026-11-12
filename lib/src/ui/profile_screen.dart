@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app_info.dart';
+import '../data/body_gender.dart';
 import '../data/custom_templates.dart';
+import '../data/personal_details_store.dart';
+import '../data/set_format.dart';
 import '../data/workout_templates.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
-import 'app_screen.dart';
+import 'data_screens.dart';
 import 'divider_row.dart';
 import 'personal_details_screen.dart';
 import 'template_library_screen.dart';
-import 'empty_state.dart';
 
 /// Where the "My workout templates" row goes.
 ///
@@ -34,7 +37,7 @@ import 'empty_state.dart';
 /// without that regression.
 ///
 /// **To wire a real screen in, replace this provider's default body** — one
-/// line, here, where the placeholder is. Tests override it by value:
+/// line, here. Tests override it by value:
 /// `profileTemplatesDestinationProvider.overrideWithValue((_) => const Foo())`.
 final profileTemplatesDestinationProvider = Provider<WidgetBuilder>(
   (ref) => (_) => const TemplateLibraryScreen(),
@@ -49,7 +52,7 @@ final profilePersonalDetailsDestinationProvider = Provider<WidgetBuilder>(
 /// Where the "Export everything" row goes. See
 /// [profileTemplatesDestinationProvider] for the shape and how to wire it.
 final profileExportDestinationProvider = Provider<WidgetBuilder>(
-  (ref) => (_) => const _UnbuiltDestination(title: exportRowTitle),
+  (ref) => (_) => const ExportScreen(),
 );
 
 /// Where the "Delete all data" row goes. See
@@ -58,7 +61,16 @@ final profileExportDestinationProvider = Provider<WidgetBuilder>(
 /// destination's: replacing the builder does not change how the row is
 /// painted.
 final profileDeleteAllDestinationProvider = Provider<WidgetBuilder>(
-  (ref) => (_) => const _UnbuiltDestination(title: deleteAllRowTitle),
+  (ref) => (_) => const DeleteAllDataScreen(),
+);
+
+/// Where the "Open-source licences" row goes: Flutter's own licence page,
+/// which lists every package compiled into the app.
+final profileLicencesDestinationProvider = Provider<WidgetBuilder>(
+  (ref) => (_) => const LicensePage(
+        applicationName: 'TurtleLift',
+        applicationVersion: '$kAppVersion ($kAppBuild)',
+      ),
 );
 
 /// The first row: the user's template library, predefined and custom together.
@@ -91,10 +103,23 @@ const String deleteAllRowTitle = 'Delete all data';
 String templateCountLabel({required int predefined, required int custom}) =>
     '$predefined predefined · $custom custom';
 
-/// The second line under [personalDetailsRowTitle]. Names the two things that
-/// screen holds, because "Personal details" alone does not say whether that is
-/// a weight, a name or an account — and this app has no account.
-const String personalDetailsRowSubtitle = 'Weight log · gender';
+/// The second line under [personalDetailsRowTitle]: the two values that
+/// screen holds, so the row is a glance rather than a door (profile audit B12,
+/// ADR 0014). Both are **authored** -- the latest weigh-in the user typed and
+/// the diagram they chose -- so they may show on Profile (ADR 0004).
+String personalDetailsSubtitle(double? latestKg, BodyGender gender) {
+  final weight =
+      latestKg == null ? 'No weight yet' : '${formatWeight(latestKg)} kg';
+  final diagram = switch (gender) {
+    BodyGender.male => 'male diagram',
+    BodyGender.female => 'female diagram',
+    BodyGender.preferNotToSay => 'default diagram',
+  };
+  return '$weight · $diagram';
+}
+
+/// The About block's licences row.
+const String licencesRowTitle = 'Open-source licences';
 
 /// The Personal pane of the Profile tab: everything the app remembers because
 /// the user *told* it, and the two ways out of it.
@@ -123,14 +148,22 @@ class ProfilePersonalPane extends ConsumerWidget {
 
   /// The heading over the two rows that lead to the user's own content.
   @visibleForTesting
-  static const String yoursGroupLabel = 'YOURS';
+  static const String yoursGroupLabel = 'Yours';
 
   /// The heading over the two data actions. Separate from [yoursGroupLabel]
   /// because these two do not open your things -- they hand all of them over or
   /// destroy all of them, and a row that erases everything should not sit in
   /// the same block as a row that renames a template.
   @visibleForTesting
-  static const String dataGroupLabel = 'DATA';
+  static const String dataGroupLabel = 'Data';
+
+  /// The heading over the version, the privacy note and the licences.
+  static const String aboutGroupLabel = 'About';
+
+  /// The app's biggest promise, said once where a user looks for it.
+  static const String privacyNote =
+      'Your data stays on this phone. TurtleLift has no account and sends '
+      'nothing anywhere. Reminders are scheduled on the phone itself.';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -138,6 +171,9 @@ class ProfilePersonalPane extends ConsumerWidget {
     // data: templates the user saved. Watched rather than read, so adding a
     // template and coming back shows the new count.
     final customCount = ref.watch(customTemplatesProvider).length;
+    // Authored too: the newest weigh-in and the chosen diagram (B12).
+    final weights = ref.watch(bodyweightLogProvider);
+    final gender = ref.watch(bodyGenderProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -155,7 +191,10 @@ class ProfilePersonalPane extends ConsumerWidget {
         _ProfileRow(
           id: 'personal-details',
           title: personalDetailsRowTitle,
-          subtitle: personalDetailsRowSubtitle,
+          subtitle: personalDetailsSubtitle(
+            weights.isEmpty ? null : weights.last.weightKg,
+            gender,
+          ),
           destination: profilePersonalDetailsDestinationProvider,
         ),
         const _GroupLabel(ProfilePersonalPane.dataGroupLabel),
@@ -169,6 +208,33 @@ class ProfilePersonalPane extends ConsumerWidget {
           title: deleteAllRowTitle,
           destructive: true,
           destination: profileDeleteAllDestinationProvider,
+        ),
+        const _GroupLabel(ProfilePersonalPane.aboutGroupLabel),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(2, 0, 2, 4),
+          child: Semantics(
+            container: true,
+            child: Text(appVersionLabel(), style: kProfileRowTitleStyle),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(2, 2, 2, 8),
+          child: Semantics(
+            container: true,
+            child: const Text(
+            ProfilePersonalPane.privacyNote,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.5,
+              color: AppPalette.textSecondary,
+            ),
+          ),
+          ),
+        ),
+        _ProfileRow(
+          id: 'licences',
+          title: licencesRowTitle,
+          destination: profileLicencesDestinationProvider,
         ),
       ],
     );
@@ -188,7 +254,7 @@ class _GroupLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 18, 2, 6),
+      padding: const EdgeInsets.fromLTRB(2, 16, 2, 6),
       child: Semantics(
         header: true,
         child: Text(label, style: kLandingSectionLabelStyle),
@@ -280,35 +346,6 @@ class _ProfileRow extends ConsumerWidget {
 @visibleForTesting
 Key profileRowKey(String id) => ValueKey<String>('profile-row-$id');
 
-/// What is behind a destination that has not been built yet.
-///
-/// **A real screen rather than a no-op tap.** A row that does nothing when
-/// tapped is indistinguishable from a bug, and this app's own rule is that a
-/// push must be an [AppScreen.pushed] on an opaque route (see `L0Shell`) — so
-/// the placeholder is the same shape as the thing that replaces it, and
-/// swapping one in changes a builder rather than a navigation model.
-///
-/// Delete this class when the last of the four seams points at a real screen.
-class _UnbuiltDestination extends StatelessWidget {
-  const _UnbuiltDestination({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppScreen.pushed(
-      title: title,
-      body: ListView(
-        padding: screenScrollPadding(context),
-        children: const <Widget>[
-          SizedBox(height: 24),
-          Text('Not built yet.', style: kEmptyStateBodyStyle),
-        ],
-      ),
-    );
-  }
-}
-
 /// The row's name.
 ///
 /// **Half a point larger than `kSubGroupRowLabelStyle`'s 13.5**, which is the
@@ -316,9 +353,8 @@ class _UnbuiltDestination extends StatelessWidget {
 /// once, at the top of the screen you reach from the avatar, and `docs/04`'s
 /// mockup sets it at 14. The pair below moves with it.
 const TextStyle kProfileRowTitleStyle = TextStyle(
-  fontSize: 14,
+  fontSize: 15,
   fontWeight: FontWeight.w600,
-  letterSpacing: -0.1,
   color: AppPalette.textPrimary,
 );
 
@@ -326,9 +362,8 @@ const TextStyle kProfileRowTitleStyle = TextStyle(
 /// rather than a `copyWith` at the call site so the one place the app spends
 /// [AppPalette.danger] is greppable.
 const TextStyle kProfileRowDestructiveTitleStyle = TextStyle(
-  fontSize: 14,
+  fontSize: 15,
   fontWeight: FontWeight.w600,
-  letterSpacing: -0.1,
   color: AppPalette.danger,
 );
 

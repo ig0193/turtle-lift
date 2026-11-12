@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prototype: Diet in Profile</title>
+<!--
+  Diet, the third Profile segment (Personal | Schedule | Diet).
+  Decision: docs/adr/0007-diet-in-profile.md. Plan:
+  docs/plans/2026-11-08-1702-feat-diet-weekly-protein-plan.md (U2).
+  Flow detail: docs/06-diet-tab-userflow.md (placement superseded by ADR 0007).
+
+  Rules this file follows, so it stays a correct layout reference:
+  - Platform font only (no web font; the app is offline and Inter is undecided).
+  - No text under 12px. Sentence case. No tracked capitals.
+  - Every colour is a CSS variable named after an AppPalette role
+    (lib/src/theme/app_palette.dart). No colour literal appears outside :root.
+    Glass and scrim tints are role colours mixed with transparency, not new colours.
+  - Selection controls (tick, chips, day chips, segments) are outlined.
+    One filled (liquid) button per view.
+  - Diet controls live in the pane (Target and Reminders rows), never the header,
+    because header actions are per tab and would show on Personal and Schedule too.
+
+  Protein values below are SAMPLE values for layout only. The real food list is
+  generated from IFCT 2017 and reviewed (assets/foods/).
+-->
+<style>
+:root{
+  /* AppPalette roles. Values mirror the current palette; usages go through the role. */
+  --pageBackground:#07080A;
+  --surface:#15171C;
+  --border:#2A2D34;
+  --mutedSurface:#1D2027;
+  --textPrimary:#F2F4F7;
+  --textSecondary:#9EA3AE;
+  --textMuted:#838A94;
+  --accentStrong:#A9D8FF;
+  --accentLight:#C9B6FF; /* secondary muscle only: unused on Diet (KTD20) */
+  --onAccent:#07080A;
+  --danger:#FF8A8A;
+  /* AppGradients.liquid: primary buttons only. */
+  --liquid:linear-gradient(135deg,#E8ECF2,var(--accentStrong),var(--accentLight),#F4E3FF);
+
+  /* Derived treatments of the roles above (GlassTabBar), not new colours. */
+  --glassFill:color-mix(in srgb,var(--surface) 72%,transparent);
+  --glassRing:color-mix(in srgb,var(--textPrimary) 10%,transparent);
+  --glassTop:color-mix(in srgb,var(--textPrimary) 6%,transparent);
+  --glassCap:color-mix(in srgb,var(--textPrimary) 9%,transparent);
+  --glassShadow:color-mix(in srgb,var(--pageBackground) 42%,transparent);
+  --scrim:color-mix(in srgb,var(--pageBackground) 62%,transparent);
+  --notifFill:color-mix(in srgb,var(--mutedSurface) 88%,transparent);
+
+  --r:16px;      /* cards */
+  --pill:999px;  /* buttons, chips, segments */
+  --font:-apple-system,BlinkMacSystemFont,system-ui,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--pageBackground);font-family:var(--font);color:var(--textPrimary);
+     -webkit-font-smoothing:antialiased;padding:24px 16px 60px}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600}
+
+/* ---- harness ---- */
+.harness{max-width:1180px;margin:0 auto}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:22px;
+     background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px}
+.bar h1{font-size:14px;font-weight:600;color:var(--textSecondary);margin-right:6px}
+.note{font-size:12px;color:var(--textMuted);line-height:1.5}
+.grid{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+figure{margin:0}
+figcaption{font-size:12px;color:var(--textMuted);margin-top:8px;text-align:center}
+.tg{display:flex;gap:4px}
+.tg button{background:none;border:1px solid var(--border);color:var(--textMuted);font:inherit;font-size:12px;
+           font-weight:500;padding:6px 12px;cursor:pointer;border-radius:var(--pill)}
+.tg button[aria-pressed=true]{border-color:var(--accentStrong);color:var(--accentStrong)}
+
+/* ---- phone ---- */
+.phone{width:330px;height:660px;background:var(--pageBackground);border-radius:30px;overflow:hidden;
+       position:relative;border:1px solid var(--border);display:flex;flex-direction:column}
+.status{height:28px;display:flex;align-items:center;justify-content:space-between;
+        padding:0 18px;font-size:12px;color:var(--textMuted);flex-shrink:0}
+.body{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 16px 16px}
+.body.l0{padding-bottom:104px} /* room to scroll the last card out from under the floating bar */
+.body::-webkit-scrollbar{width:0}
+
+/* ---- glass tab bar (GlassTabBar; shown at L0 only) ---- */
+.barwrap{position:absolute;left:0;right:0;bottom:0;padding:0 16px 14px;pointer-events:none;z-index:30}
+.gbar{position:relative;display:flex;padding:5px;border-radius:var(--pill);pointer-events:auto;
+      background:var(--glassFill);
+      -webkit-backdrop-filter:blur(22px) saturate(1.6);backdrop-filter:blur(22px) saturate(1.6);
+      box-shadow:0 0 0 .5px var(--glassRing) inset,0 1px 0 var(--glassTop) inset,0 10px 28px var(--glassShadow)}
+.gbar .cap{position:absolute;top:5px;bottom:5px;left:5px;width:calc((100% - 10px)/4);
+      border-radius:var(--pill);background:var(--glassCap);transform:translateX(calc(var(--i,0) * 100%))}
+.gbar button{position:relative;flex:1;min-width:0;background:none;border:0;display:flex;flex-direction:column;
+      align-items:center;gap:3px;padding:8px 0 7px;color:var(--textSecondary);font:inherit;cursor:pointer}
+.gbar button[aria-current=page]{color:var(--accentStrong)}
+.gbar span{font-size:12px;font-weight:600}
+.gbar svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.gbar button[aria-current=page] svg{stroke-width:2.2}
+
+/* ---- headers (pinned: Scaffold.appBar in the app, sticky here) ---- */
+.l0h{display:flex;align-items:center;position:sticky;top:0;z-index:20;background:var(--pageBackground);
+     margin:0 -16px 12px;padding:12px 16px 8px}
+.l0h h2{font-size:24px;font-weight:600;letter-spacing:-.02em;flex:1}
+.hdr{display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:20;background:var(--pageBackground);
+     margin:0 -16px 10px;padding:12px 16px 8px}
+.hdr h3{font-size:16px;font-weight:600;letter-spacing:-.01em;flex:1}
+.back{background:none;border:0;color:var(--textSecondary);font-size:24px;line-height:1;cursor:pointer;
+      min-width:32px;min-height:32px;text-align:left}
+
+/* ---- Profile segmented control (scrolls with the body) ---- */
+.seg{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:var(--pill);
+     padding:3px;margin-bottom:14px}
+.seg button{flex:1;height:42px;background:none;border:1px solid transparent;border-radius:var(--pill);
+     color:var(--textMuted);font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed=true]{background:var(--mutedSurface);border-color:var(--border);color:var(--accentStrong)}
+.placeholder{font-size:13px;color:var(--textMuted);line-height:1.55;padding:24px 4px}
+
+/* ---- week strip ---- */
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px}
+.wd{background:none;border:1px solid transparent;border-radius:12px;padding:6px 0 8px;cursor:pointer;
+    color:var(--textMuted);font:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px}
+.wd b{font-size:12px;font-weight:500}
+.wd i{font-style:normal;font-size:14px;font-weight:600;color:var(--textSecondary)}
+.wd .meter{width:18px;height:3px;border-radius:2px;background:var(--mutedSurface);overflow:hidden}
+.wd .meter span{display:block;height:100%;background:var(--textMuted)}
+.wd.today b{color:var(--accentStrong)}
+.wd[aria-pressed=true]{border-color:var(--accentStrong)}
+.wd[aria-pressed=true] i{color:var(--textPrimary)}
+
+/* ---- day card ---- */
+.daycard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:14px}
+.daycard .top{display:flex;align-items:baseline;gap:6px}
+.daycard .big{font-size:28px}
+.daycard .of{font-size:13px;color:var(--textSecondary)}
+.daycard .sub{font-size:12px;color:var(--textMuted);margin-top:4px}
+.pbar{position:relative;height:7px;border-radius:4px;background:var(--mutedSurface);margin:10px 0 8px;overflow:hidden}
+.pbar .pl{position:absolute;left:0;top:0;bottom:0;background:var(--textMuted);border-radius:4px}
+.pbar .ea{position:absolute;left:0;top:0;bottom:0;background:var(--accentStrong);border-radius:4px}
+.legend{display:flex;gap:12px;font-size:12px;color:var(--textMuted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend span::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--textMuted)}
+.legend span.e::before{background:var(--accentStrong)}
+.link{display:inline-block;margin-top:8px;font-size:13px;color:var(--accentStrong);background:none;border:0;
+      font:inherit;cursor:pointer;padding:6px 0}
+
+/* ---- slots ---- */
+.slot{border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.sh{display:flex;align-items:center;gap:10px;padding:10px 12px 8px;min-height:48px}
+.sh .nm{font-size:14px;font-weight:600}
+.sh .tm{font-size:12px;color:var(--textMuted)}
+.sh .tot{margin-left:auto;font-size:14px}
+.sh .tot small{font-size:12px;color:var(--textMuted);font-weight:500}
+.tickbtn{width:32px;height:32px;border-radius:50%;background:none;border:1.5px solid var(--border);
+         color:transparent;font-size:14px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.tickbtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.tickbtn.on{border-color:var(--accentStrong);color:var(--accentStrong)}
+.food{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--border);cursor:pointer;min-height:48px}
+.food p{font-size:14px}
+.food small{font-size:12px;color:var(--textMuted);display:block;margin-top:1px}
+.food .g{margin-left:auto;font-size:13px;color:var(--textSecondary)}
+.addfood{width:100%;background:none;border:0;border-top:1px solid var(--border);color:var(--textSecondary);font:inherit;
+         font-size:13px;text-align:left;padding:12px;cursor:pointer;min-height:44px}
+.addfood:hover{color:var(--accentStrong)}
+.slot.empty .addfood{border-top:0}
+
+/* in-pane rows: Target and Reminders (KTD4) */
+.lbl{font-size:13px;font-weight:600;color:var(--textSecondary);margin:18px 0 8px}
+.prow{display:flex;align-items:center;gap:10px;padding:12px 2px;min-height:56px;border-bottom:1px solid var(--border);cursor:pointer}
+.prow:first-of-type{border-top:1px solid var(--border)}
+.prow p{font-size:14px}
+.prow small{font-size:12px;color:var(--textMuted);display:block;margin-top:2px}
+.prow .val{margin-left:auto;font-size:13px;color:var(--textSecondary)}
+.chev{color:var(--textMuted);font-size:18px}
+
+/* diet-type marker: shape plus word, never colour (palette has no green or red) */
+.dt{width:14px;height:14px;flex-shrink:0}
+.dt rect{fill:none;stroke:var(--textSecondary);stroke-width:1.4}
+.dt .m{fill:var(--textSecondary)}
+
+/* ---- food picker ---- */
+.search{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--pill);
+        padding:11px 16px;color:var(--textPrimary);font:inherit;font-size:14px;margin-bottom:10px}
+.search::placeholder{color:var(--textMuted)}
+.chips{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;color:var(--textSecondary);background:none;
+      border:1px solid var(--border);border-radius:var(--pill);padding:0 12px;min-height:36px;cursor:pointer}
+.chip[aria-pressed=true]{border-color:var(--accentStrong);color:var(--accentStrong)}
+.chip[aria-pressed=true] .dt rect{stroke:var(--accentStrong)} .chip[aria-pressed=true] .dt .m{fill:var(--accentStrong)}
+.caption{font-size:12px;color:var(--textMuted);margin:4px 0 4px}
+.frow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;min-height:56px}
+.frow p{font-size:14px}
+.frow small{font-size:12px;color:var(--textMuted);display:block;margin-top:2px}
+.frow .g{margin-left:auto;text-align:right;font-size:16px;white-space:nowrap}
+.frow .g small{font-size:12px;font-weight:500;color:var(--textMuted)}
+
+/* ---- sheet ---- */
+.scrim{position:absolute;inset:0;background:var(--scrim);z-index:40;display:flex;align-items:flex-end}
+.sheet{width:100%;background:var(--surface);border-top:1px solid var(--border);border-radius:24px 24px 0 0;padding:10px 16px 20px}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 12px}
+.sheet h4{font-size:16px;font-weight:600}
+.sheet .meta{font-size:12px;color:var(--textMuted);margin-top:2px}
+.stepper{display:flex;align-items:center;justify-content:space-between;background:var(--mutedSurface);border:1px solid var(--border);
+         border-radius:var(--r);padding:8px;margin:14px 0 6px}
+.stepper button{width:44px;height:44px;border-radius:50%;background:none;border:1px solid var(--border);
+                color:var(--textPrimary);font-size:20px;cursor:pointer}
+.stepper button[disabled]{color:var(--textMuted);cursor:default}
+.stepper .val{text-align:center}
+.stepper .val .num{font-size:22px}
+.stepper .val small{display:block;font-size:12px;color:var(--textMuted)}
+.stepper .val b{color:var(--textPrimary)}
+.days{display:flex;justify-content:space-between}
+.days button{width:38px;height:38px;border-radius:50%;background:none;border:1px solid var(--border);color:var(--textSecondary);
+             font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.days button[aria-pressed=true]{border-color:var(--accentStrong);color:var(--accentStrong);font-weight:600}
+.hint{font-size:12px;color:var(--textMuted);margin-top:8px}
+.cta{width:100%;background:var(--liquid);color:var(--onAccent);border:0;border-radius:var(--pill);
+     padding:14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;margin-top:16px;min-height:48px}
+.cta[disabled]{background:var(--mutedSurface);color:var(--textMuted);cursor:default}
+.ghost{width:100%;background:none;color:var(--textPrimary);border:1px solid var(--border);border-radius:var(--pill);
+       padding:13px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;margin-top:8px;min-height:48px}
+.textbtn{width:100%;background:none;border:0;font:inherit;font-size:14px;font-weight:500;cursor:pointer;
+         margin-top:8px;min-height:44px;color:var(--textSecondary)}
+.textbtn.danger{color:var(--danger)}
+
+/* ---- target ---- */
+.tfield{display:flex;align-items:baseline;gap:8px;background:var(--surface);border:1px solid var(--border);
+        border-radius:var(--r);padding:14px;margin-bottom:10px}
+.tfield input{background:none;border:0;color:var(--textPrimary);font:inherit;font-size:30px;font-weight:600;width:110px;
+              font-variant-numeric:tabular-nums;outline:none}
+.tfield input::placeholder{color:var(--textMuted)}
+.tfield span{font-size:14px;color:var(--textMuted)}
+.suggest{width:100%;text-align:left;background:none;border:1px solid var(--accentStrong);border-radius:var(--r);
+         padding:12px 14px;font:inherit;cursor:pointer;margin-bottom:12px}
+.suggest b{display:block;font-size:14px;color:var(--accentStrong);font-weight:600}
+.suggest small{font-size:12px;color:var(--textSecondary)}
+.nobw{border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:12px}
+.nobw p{font-size:13px;color:var(--textSecondary);line-height:1.5}
+.nobw .link{margin-top:2px}
+.helper{font-size:12px;color:var(--textMuted);line-height:1.55;margin-bottom:12px}
+
+/* ---- reminders ---- */
+.rrow{display:flex;align-items:center;gap:10px;padding:10px 2px;min-height:56px;border-bottom:1px solid var(--border)}
+.rrow p{font-size:14px}
+.rrow small{font-size:12px;color:var(--textMuted);display:block;margin-top:2px}
+.time{margin-left:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--pill);
+      color:var(--textPrimary);font:inherit;font-size:13px;padding:6px 10px;font-variant-numeric:tabular-nums}
+.time.off{color:var(--textMuted)}
+.sw{width:42px;height:25px;border-radius:var(--pill);background:var(--border);position:relative;cursor:pointer;flex-shrink:0}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;
+           background:var(--textSecondary);transition:transform .15s ease}
+.sw.on{background:var(--accentStrong)}
+.sw.on::after{transform:translateX(17px);background:var(--onAccent)}
+.dim{opacity:.4;pointer-events:none}
+
+/* ---- empty ---- */
+.empty{text-align:center;padding:28px 6px 0}
+.empty .ico{width:52px;height:52px;margin:0 auto 14px;border-radius:50%;background:var(--surface);border:1px solid var(--border);
+            display:flex;align-items:center;justify-content:center}
+.empty .ico svg{width:24px;height:24px;stroke:var(--textSecondary);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.empty h3{font-size:17px;font-weight:600;margin-bottom:6px}
+.empty p{font-size:13px;color:var(--textSecondary);line-height:1.55;margin-bottom:18px}
+
+/* ---- lock screen ---- */
+.lock{flex:1;padding:30px 12px 0;background:linear-gradient(var(--surface),var(--pageBackground))}
+.clock{text-align:center;font-size:56px;font-weight:300;letter-spacing:-.02em;color:var(--textPrimary)}
+.ldate{text-align:center;font-size:14px;color:var(--textSecondary);margin-bottom:26px}
+.notif{background:var(--notifFill);border-radius:var(--r);padding:10px 12px;margin-bottom:9px}
+.notif .nh{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--textSecondary);margin-bottom:4px}
+.notif .nh .ap{width:16px;height:16px;border-radius:4px;background:var(--accentStrong)}
+.notif .nh time{margin-left:auto}
+.notif b{display:block;font-size:14px;font-weight:600;margin-bottom:2px}
+.notif p{font-size:13px;color:var(--textSecondary);line-height:1.45}
+.lock .cap{font-size:12px;color:var(--textMuted);text-align:center;margin-top:14px;line-height:1.5}
+.hidden{display:none!important}
+</style></head>
+<body>
+<div class="harness">
+  <div class="bar">
+    <h1>Diet in Profile · draft</h1>
+    <div class="tg" id="jump">
+      <button data-go="today" aria-pressed="true">Diet pane</button>
+      <button data-go="add">Add food</button>
+      <button data-go="target">Target</button>
+      <button data-go="remind">Reminders</button>
+    </div>
+    <div class="tg">
+      <button data-bw aria-pressed="true" id="bwtoggle">Bodyweight recorded</button>
+    </div>
+    <span class="note">The left phone is live: tap days, ticks, foods, Add food, and the Target and Reminders rows. Today is Tuesday. Protein values are samples, not reviewed.</span>
+  </div>
+
+  <div class="grid">
+    <figure><div class="phone" id="app">
+      <div class="status"><span>9:41</span><span>●●●</span></div>
+      <div class="body" id="screen"></div>
+      <div id="tabslot"></div>
+      <div id="sheetslot"></div>
+    </div><figcaption>D1 to D4 · interactive</figcaption></figure>
+
+    <figure><div class="phone">
+      <div class="status"><span>9:41</span><span>●●●</span></div>
+      <div class="body l0">
+        <div class="l0h"><h2>Profile</h2></div>
+        <div class="seg-static"></div>
+        <div class="empty">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 11h16a8 8 0 0 1-16 0zM8 7c0-2 2-2 2-4M12 7c0-2 2-2 2-4"/></svg></div>
+          <h3>Plan your week's protein</h3>
+          <p>Pick protein foods for each meal once. The plan repeats every week, and each day shows how much protein it plans.</p>
+          <button class="cta" style="margin-top:0">Plan Monday</button>
+          <button class="ghost">Set a daily target</button>
+        </div>
+      </div>
+      <div class="tabslot-static"></div>
+    </div><figcaption>D1 · first-time empty state</figcaption></figure>
+
+    <figure><div class="phone">
+      <div class="status"><span></span><span>●●●</span></div>
+      <div class="lock">
+        <div class="clock">13:00</div>
+        <div class="ldate">Tuesday, 27 October</div>
+        <div class="notif">
+          <div class="nh"><span class="ap"></span>TurtleLift<time>now</time></div>
+          <b>Lunch · 24 g protein planned</b>
+          <p>Rajma, 1 katori (13 g) · Curd, 1 katori (5 g) · Roti × 2 (6 g)</p>
+        </div>
+        <div class="notif">
+          <div class="nh"><span class="ap"></span>TurtleLift<time>07:30</time></div>
+          <b>Today · 89 g protein planned</b>
+          <p>Breakfast: Paneer bhurji, Milk · Lunch: Rajma, Curd, Roti · Snack: Roasted chana, Peanuts · Dinner: Chicken curry</p>
+        </div>
+        <p class="cap">Fixed templates filled from the plan.<br>Never mentions what was or was not eaten.</p>
+      </div>
+    </div><figcaption>Notifications · morning summary and meal</figcaption></figure>
+  </div>
+</div>
+
+<script>
+/* ---------- data (SAMPLE values, layout only) ---------- */
+const FOODS = [
+  {id:'paneer-bhurji',n:'Paneer bhurji',t:'veg',s:'1 katori',gr:150,p:18},
+  {id:'soya',n:'Soya chunks',t:'veg',s:'50 g dry',gr:50,p:26},
+  {id:'rajma',n:'Rajma',t:'veg',s:'1 katori',gr:150,p:13},
+  {id:'chole',n:'Chole',t:'veg',s:'1 katori',gr:150,p:13},
+  {id:'hung-curd',n:'Hung curd',t:'veg',s:'1 katori',gr:100,p:10},
+  {id:'moong',n:'Moong dal',t:'veg',s:'1 katori',gr:150,p:9},
+  {id:'milk',n:'Milk',t:'veg',s:'1 glass',gr:250,p:8},
+  {id:'peanuts',n:'Peanuts',t:'veg',s:'1 handful',gr:30,p:7},
+  {id:'chana',n:'Roasted chana',t:'veg',s:'1 handful',gr:30,p:7},
+  {id:'roti',n:'Roti',t:'veg',s:'2 pieces',gr:80,p:6},
+  {id:'curd',n:'Curd',t:'veg',s:'1 katori',gr:150,p:5},
+  {id:'omelette',n:'Omelette',t:'egg',s:'2 eggs',gr:120,p:12},
+  {id:'egg-bhurji',n:'Egg bhurji',t:'egg',s:'2 eggs',gr:120,p:12},
+  {id:'egg-whites',n:'Egg whites',t:'egg',s:'3 whites',gr:100,p:11},
+  {id:'boiled-egg',n:'Boiled egg',t:'egg',s:'1 piece',gr:50,p:6},
+  {id:'chicken-breast',n:'Chicken breast',t:'nonVeg',s:'100 g cooked',gr:100,p:31},
+  {id:'tuna',n:'Tuna',t:'nonVeg',s:'100 g',gr:100,p:26},
+  {id:'chicken-curry',n:'Chicken curry',t:'nonVeg',s:'1 katori',gr:150,p:25},
+  {id:'prawns',n:'Prawns',t:'nonVeg',s:'100 g cooked',gr:100,p:24},
+  {id:'mutton-curry',n:'Mutton curry',t:'nonVeg',s:'1 katori',gr:150,p:20},
+  {id:'fish-curry',n:'Fish curry',t:'nonVeg',s:'1 katori',gr:150,p:19},
+];
+const F = Object.fromEntries(FOODS.map(f=>[f.id,f]));
+const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAY_LONG=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const DATES=[26,27,28,29,30,31,1];
+const TODAY=1; // Tue 27 Oct 2026
+const SLOTS=[['breakfast','Breakfast'],['lunch','Lunch'],['snack','Snack'],['dinner','Dinner']];
+
+const base = ()=>({
+  breakfast:[['paneer-bhurji',1],['milk',1]],
+  lunch:[['rajma',1],['curd',1],['roti',1]],
+  snack:[['chana',1],['peanuts',1]],
+  dinner:[['chicken-curry',1]],
+});
+const S = {
+  plan:[
+    {breakfast:[['omelette',1],['milk',1]],lunch:[['chole',1],['roti',1]],snack:[['hung-curd',1]],dinner:[['fish-curry',1],['roti',1]]},
+    base(),
+    {breakfast:[['egg-bhurji',1]],lunch:[['moong',1],['curd',1],['roti',1]],snack:[['peanuts',1]],dinner:[['chicken-breast',1]]},
+    base(),
+    {breakfast:[['paneer-bhurji',1]],lunch:[['soya',1],['roti',1]],snack:[['chana',1]],dinner:[['mutton-curry',1]]},
+    {breakfast:[['boiled-egg',2]],lunch:[],snack:[],dinner:[['prawns',1]]},
+    {breakfast:[],lunch:[],snack:[],dinner:[]},
+  ],
+  eaten:{'0:breakfast':1,'0:lunch':1,'0:snack':1,'0:dinner':1,'1:breakfast':1,'1:lunch':1},
+  target:120, bodyweight:72, day:TODAY, screen:'today', seg:'diet', filter:'all', q:'', slot:'lunch',
+  remind:{on:true,summary:['07:30',true],breakfast:['08:00',true],lunch:['13:00',true],snack:['17:00',false],dinner:['20:30',true]},
+  sheet:null,
+};
+
+/* ---------- derived (never stored) ---------- */
+const itemP = ([id,n])=>F[id].p*n;
+const slotP = (d,s)=>S.plan[d][s].reduce((a,i)=>a+itemP(i),0);
+const plannedP = d=>SLOTS.reduce((a,[s])=>a+slotP(d,s),0);
+const eatenP = d=>SLOTS.reduce((a,[s])=>a+(S.eaten[d+':'+s]?slotP(d,s):0),0);
+const fmt = n=>Number.isInteger(n)?n:n.toFixed(1);
+const near5 = x=>Math.floor(x/5+0.5)*5; // halves round up
+const slotName = k=>SLOTS.find(s=>s[0]===k)[1];
+const reminderCount = ()=>!S.remind.on?0:['summary',...SLOTS.map(s=>s[0])].filter(k=>S.remind[k][1]).length;
+
+/* ---------- glyphs ---------- */
+const DT = t => t==='veg'
+  ? '<svg class="dt" viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="1" width="12" height="12" rx="2"/><circle class="m" cx="7" cy="7" r="3"/></svg>'
+  : t==='egg'
+  ? '<svg class="dt" viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="1" width="12" height="12" rx="2"/><ellipse class="m" cx="7" cy="7.4" rx="2.4" ry="3.2"/></svg>'
+  : '<svg class="dt" viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="1" width="12" height="12" rx="2"/><path class="m" d="M7 3.6l3.4 6H3.6z"/></svg>';
+const DT_WORD = {veg:'Veg',egg:'Egg',nonVeg:'Non-veg'};
+const TICK = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+/* Four-tab glass bar, Profile selected (index 3). Glyphs from lib/src/ui/tab_glyph.dart. */
+const TABS = `<div class="barwrap"><nav class="gbar" style="--i:3" aria-label="Tabs"><span class="cap"></span>
+ <button><svg viewBox="0 0 24 24"><path d="M4 12h16M7 8v8M17 8v8"/></svg><span>Workout</span></button>
+ <button><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M12 15l-3 6M12 15l3 6M7 10h10"/></svg><span>Muscles</span></button>
+ <button><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg><span>History</span></button>
+ <button aria-current="page"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg><span>Profile</span></button>
+</nav></div>`;
+const SEG = sel => `<div class="seg" role="group" aria-label="Profile section">${
+  [['personal','Personal'],['schedule','Schedule'],['diet','Diet']]
+    .map(([k,l])=>`<button data-seg="${k}" aria-pressed="${sel===k}">${l}</button>`).join('')}</div>`;
+document.querySelector('.tabslot-static').outerHTML = TABS;
+document.querySelector('.seg-static').outerHTML = SEG('diet');
+
+/* ---------- screens ---------- */
+function today(){
+  const head = `<div class="l0h"><h2>Profile</h2></div>${SEG(S.seg)}`;
+  if(S.seg!=='diet') return head + `<p class="placeholder">${S.seg==='personal'?'Personal':'Schedule'} pane. See screens.html and schedule-options.html. Tap Diet.</p>`;
+  const d=S.day, pl=plannedP(d), ea=eatenP(d), t=S.target;
+  const tickable = d<=TODAY; // today and earlier days this week; future days have no tick at all
+  const pct=x=>Math.min(100,t?x/t*100:0);
+  const week = DAYS.map((n,i)=>`<button class="wd ${i===TODAY?'today':''}" data-day="${i}" aria-pressed="${i===d}" aria-label="${DAY_LONG[i]} ${DATES[i]}${i===TODAY?', today':''}">
+      <b>${n}</b><i>${DATES[i]}</i><span class="meter"><span style="width:${t?pct(plannedP(i)):0}%"></span></span></button>`).join('');
+  const togo = Math.max(0,t-pl);
+  const eatenLine = tickable&&ea?`${fmt(ea)} g eaten`:'';
+  const card = !t
+    ? `<div class="daycard"><div class="top"><span class="big num">${fmt(pl)}</span><span class="of">g planned</span></div>
+        ${eatenLine?`<div class="sub">${eatenLine}</div>`:''}
+        <button class="link" data-go="target">Set a daily target</button></div>`
+    : `<div class="daycard">
+        <div class="top"><span class="big num">${fmt(pl)}</span><span class="of">of ${t} g planned</span></div>
+        ${togo||eatenLine?`<div class="sub">${[togo?fmt(togo)+' g to go':'',eatenLine].filter(Boolean).join(' · ')}</div>`:''}
+        <div class="pbar"><span class="pl" style="width:${pct(pl)}%"></span>${tickable?`<span class="ea" style="width:${pct(ea)}%"></span>`:''}</div>
+        <div class="legend"><span>Planned</span>${tickable?'<span class="e">Eaten</span>':''}</div></div>`;
+  const slots = SLOTS.map(([k,name])=>{
+    const items=S.plan[d][k], on=!!S.eaten[d+':'+k], empty=!items.length;
+    const time = S.remind.on&&S.remind[k][1]?`<div class="tm">${S.remind[k][0]}</div>`:''; // no time unless that reminder is on
+    return `<div class="slot ${empty?'empty':''}">
+      <div class="sh">
+        <div><div class="nm">${name}</div>${time}</div>
+        ${empty?'':`<span class="tot num">${fmt(slotP(d,k))} <small>g</small></span>
+        ${tickable?`<button class="tickbtn ${on?'on':''}" data-tick="${k}" role="checkbox" aria-checked="${on}" aria-label="${name} eaten">${TICK}</button>`:''}`}
+      </div>
+      ${items.map(([id,n],ix)=>`<div class="food" data-edit="${k}:${ix}">${DT(F[id].t)}
+          <div><p>${F[id].n}</p><small>${n===1?F[id].s:'× '+fmt(n)+' · '+F[id].s}</small></div>
+          <span class="g num">${fmt(F[id].p*n)} g</span></div>`).join('')}
+      <button class="addfood" data-add="${k}">+ Add food</button></div>`;
+  }).join('');
+  const rc = reminderCount();
+  const rows = `<p class="lbl">Plan settings</p>
+    <div class="prow" data-go="target"><div><p>Target</p><small>Daily protein, measured against every day's plan</small></div>
+      <span class="val">${t?t+' g a day':'Not set'}</span><span class="chev">›</span></div>
+    <div class="prow" data-go="remind"><div><p>Reminders</p><small>Morning summary and meal times</small></div>
+      <span class="val">${rc?rc+' a day':'Off'}</span><span class="chev">›</span></div>`;
+  return head + `<div class="week">${week}</div>${card}${slots}${rows}`;
+}
+
+function addFood(){
+  const rows=FOODS.filter(f=>(S.filter==='all'||f.t===S.filter||(S.filter==='egg'&&f.t==='veg'))&&f.n.toLowerCase().includes(S.q.toLowerCase()))
+    .sort((a,b)=>b.p-a.p||a.n.localeCompare(b.n))
+    .map(f=>`<div class="frow" data-pick="${f.id}">${DT(f.t)}<div><p>${f.n}</p><small>${DT_WORD[f.t]} · ${f.s} · ${f.gr} g</small></div>
+      <span class="g num">${f.p}<small> g</small></span></div>`).join('');
+  const chip=(k,l,g='')=>`<button class="chip" data-filter="${k}" aria-pressed="${S.filter===k}">${g}${l}</button>`;
+  const cap = S.filter==='egg'?'Veg and egg foods · protein per serving, highest first':'Protein per serving, highest first';
+  return `<div class="hdr"><button class="back" data-go="today" aria-label="Back">‹</button><h3>Add to ${slotName(S.slot)} · ${DAYS[S.day]}</h3></div>
+    <input class="search" id="q" placeholder="Search foods" value="${S.q}">
+    <div class="chips">${chip('all','All')}${chip('veg','Veg',DT('veg'))}${chip('egg','Egg',DT('egg'))}${chip('nonVeg','Non-veg',DT('nonVeg'))}</div>
+    <p class="caption">${cap}</p>${rows||'<p class="helper" style="margin-top:14px">No foods match. Try another name.</p>'}`;
+}
+
+function target(){
+  const bw=S.bodyweight;
+  const sug = bw?`<button class="suggest" data-suggest="${near5(1.6*bw)}"><b>Suggested ${near5(1.6*bw)} g</b>
+      <small>1.6 g × ${bw} kg, your current bodyweight, to the nearest 5 g. A common starting point.</small></button>`
+    : `<div class="nobw"><p>Add your bodyweight to see a suggested target.</p><button class="link">Add your bodyweight</button></div>`;
+  return `<div class="hdr"><button class="back" data-go="today" aria-label="Back">‹</button><h3>Daily protein target</h3></div>
+    <div class="tfield"><input id="tgt" inputmode="numeric" value="${S.target||''}" placeholder="0" aria-label="Grams a day"><span>g a day</span></div>
+    ${sug}
+    <p class="helper">Every day's plan is measured against this number. Change it any time. Whole grams, 1 to 400.</p>
+    <p class="helper">Source: Morton et al. 2018 (Br J Sports Med) and the ISSN position stand, Jäger et al. 2017, which gives 1.4 to 2.0 g per kg a day for most people who exercise.</p>
+    <p class="helper">A guide, not medical advice. If you have a health condition, talk to a doctor before changing your diet.</p>
+    <button class="cta" data-save-target>Save</button>
+    ${S.target?'<button class="textbtn" data-clear-target>Clear target</button>':''}`;
+}
+
+function remind(){
+  const R=S.remind;
+  const row=(k,name,sub)=>`<div class="rrow"><div><p>${name}</p>${sub?`<small>${sub}</small>`:''}</div>
+     <input class="time ${R[k][1]?'':'off'}" type="time" value="${R[k][0]}" data-time="${k}" aria-label="${name} time">
+     <span class="sw ${R[k][1]?'on':''}" data-sw="${k}" role="switch" aria-checked="${R[k][1]}" aria-label="${name}"></span></div>`;
+  return `<div class="hdr"><button class="back" data-go="today" aria-label="Back">‹</button><h3>Meal reminders</h3></div>
+    <div class="rrow" style="border-top:1px solid var(--border)"><div><p>Remind me</p><small>Local notifications. Nothing leaves your phone.</small></div>
+      <span class="sw ${R.on?'on':''}" data-master role="switch" aria-checked="${R.on}" aria-label="Remind me" style="margin-left:auto"></span></div>
+    <div class="${R.on?'':'dim'}">
+      <p class="lbl">Every day</p>
+      ${row('summary','Morning summary','What you planned today and its protein')}
+      <p class="lbl">At each meal</p>
+      ${SLOTS.map(([k,n])=>row(k,n,'')).join('')}
+      <p class="helper" style="margin-top:12px">A meal with nothing planned that day sends nothing. Reminders follow your plan only. Ticks never change them.</p>
+    </div>`;
+}
+
+/* ---------- sheets ---------- */
+function sheet(){
+  const sh=S.sheet; if(!sh) return '';
+  if(sh.kind==='explain') return `<div class="scrim" data-close><div class="sheet"><div class="grab"></div>
+      <h4>Meal reminders</h4><p class="helper" style="margin-top:8px">TurtleLift can send a summary each morning and a note at each meal time with what you planned and the protein it gives. They are scheduled on your phone, with no account and no server. You can switch any of them off here.</p>
+      <button class="cta" data-allow>Continue</button><button class="ghost" data-close>Not now</button></div></div>`;
+  const f=F[sh.id], n=sh.n;
+  const days = DAYS.map((d,i)=>`<button data-rep="${i}" aria-pressed="${sh.days.includes(i)}" aria-label="${DAY_LONG[i]}">${d[0]}</button>`).join('');
+  const none = sh.kind==='add'&&!sh.days.length;
+  return `<div class="scrim" data-close><div class="sheet"><div class="grab"></div>
+    <div style="display:flex;gap:10px;align-items:center">${DT(f.t)}<div><h4>${f.n}</h4><p class="meta">${DT_WORD[f.t]} · ${f.s} · ${f.gr} g · ${f.p} g protein</p></div></div>
+    <div class="stepper"><button data-step="-0.5" aria-label="Fewer servings" ${n<=.5?'disabled':''}>−</button>
+      <div class="val"><span class="num">${fmt(n)}</span><small>${f.s} · <b>${fmt(f.p*n)} g protein</b></small></div>
+      <button data-step="0.5" aria-label="More servings" ${n>=4?'disabled':''}>+</button></div>
+    ${sh.kind==='add'?`<p class="lbl">Repeat on</p><div class="days">${days}</div>
+      ${none?'<p class="hint">Pick at least one day.</p>':''}
+      <button class="cta" data-commit ${none?'disabled':''}>Add to ${slotName(S.slot)}</button>`
+    :`<button class="cta" data-commit>Save</button><button class="textbtn danger" data-remove>Remove from ${slotName(sh.slot)}</button>`}
+    </div></div>`;
+}
+
+/* ---------- render + events ---------- */
+const $=s=>document.querySelector(s);
+function render(){
+  const l0 = S.screen==='today';
+  $('#screen').className = 'body'+(l0?' l0':'');
+  $('#screen').innerHTML = {today,add:addFood,target,remind}[S.screen]();
+  $('#tabslot').innerHTML = l0?TABS:''; // the bar shows at L0 only
+  $('#sheetslot').innerHTML = sheet();
+  document.querySelectorAll('#jump button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.go===S.screen));
+  $('#bwtoggle').setAttribute('aria-pressed',!!S.bodyweight);
+  const q=$('#q'); if(q){q.oninput=e=>{S.q=e.target.value;const p=e.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(p,p);};}
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-go],[data-seg],[data-bw],[data-day],[data-tick],[data-add],[data-edit],[data-filter],[data-pick],[data-step],[data-rep],[data-commit],[data-remove],[data-close],[data-sw],[data-master],[data-allow],[data-suggest],[data-save-target],[data-clear-target]');
+  if(!t) return; const d=t.dataset;
+  if(t.closest('.phone')&&!t.closest('#app')) return; // static phones are not live
+  if(d.go){S.screen=d.go;S.sheet=null;if(d.go==='today')S.seg='diet';}
+  else if(d.seg){S.seg=d.seg;}
+  else if(d.bw!==undefined){S.bodyweight=S.bodyweight?0:72;}
+  else if(d.day!==undefined){S.day=+d.day;}
+  else if(d.tick){const k=S.day+':'+d.tick;S.eaten[k]?delete S.eaten[k]:S.eaten[k]=1;}
+  else if(d.add){S.slot=d.add;S.q='';S.screen='add';}
+  else if(d.filter){S.filter=d.filter;}
+  else if(d.pick){S.sheet={kind:'add',id:d.pick,n:1,days:[S.day]};}
+  else if(d.edit){const [k,ix]=d.edit.split(':');const [id,n]=S.plan[S.day][k][+ix];S.sheet={kind:'edit',id,n,slot:k,ix:+ix};}
+  else if(d.step){S.sheet.n=Math.max(.5,Math.min(4,S.sheet.n+ +d.step));}
+  else if(d.rep!==undefined){const i=+d.rep,a=S.sheet.days;a.includes(i)?a.splice(a.indexOf(i),1):a.push(i);}
+  else if(d.commit!==undefined){const sh=S.sheet;
+    if(sh.kind==='add'){if(!sh.days.length)return;sh.days.forEach(i=>{const arr=S.plan[i][S.slot];const ex=arr.find(x=>x[0]===sh.id);ex?ex[1]=sh.n:arr.push([sh.id,sh.n]);});S.screen='today';}
+    else S.plan[S.day][sh.slot][sh.ix][1]=sh.n;
+    S.sheet=null;}
+  else if(d.remove!==undefined){S.plan[S.day][S.sheet.slot].splice(S.sheet.ix,1);S.sheet=null;}
+  else if(d.close!==undefined){if(e.target===t||t.tagName==='BUTTON')S.sheet=null;else return;}
+  else if(d.master!==undefined){if(S.remind.on)S.remind.on=false;else S.sheet={kind:'explain'};}
+  else if(d.allow!==undefined){S.remind.on=true;S.sheet=null;}
+  else if(d.sw){S.remind[d.sw][1]=!S.remind[d.sw][1];}
+  else if(d.suggest){$('#tgt').value=d.suggest;return;} // fills the field; nothing is saved until Save
+  else if(d.saveTarget!==undefined){const v=Math.round(+$('#tgt').value);S.target=v>=1&&v<=400?v:S.target;S.screen='today';}
+  else if(d.clearTarget!==undefined){S.target=0;S.screen='today';}
+  render();
+});
+document.addEventListener('change',e=>{if(e.target.dataset.time){S.remind[e.target.dataset.time][0]=e.target.value;}});
+render();
+</script>
+</body></html>

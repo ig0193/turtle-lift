@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:turtle_lift/main.dart' as app;
+import 'package:turtle_lift/src/data/meal_slot.dart';
 import 'package:turtle_lift/src/ui/destructive_confirmation.dart';
+import 'package:turtle_lift/src/ui/diet_slot_card.dart';
 import 'package:turtle_lift/src/ui/exercise_picker_sheet.dart';
+import 'package:turtle_lift/src/ui/food_picker_screen.dart';
+import 'package:turtle_lift/src/ui/food_serving_sheet.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
 import 'package:turtle_lift/src/ui/l0_shell.dart';
+import 'package:turtle_lift/src/ui/profile_root.dart';
 import 'package:turtle_lift/src/ui/session_actions.dart';
 import 'package:turtle_lift/src/ui/session_overview_body.dart';
 import 'package:turtle_lift/src/ui/session_summary_screen.dart';
@@ -46,10 +51,30 @@ void main() {
     await settle(tester);
   }
 
+  /// A returning user (the debug seed has plenty of workouts) sees the
+  /// ready-made grid folded behind one row (research item 11). Unfolds it.
+  Future<void> unfoldReadyMade(WidgetTester tester) async {
+    final toggle = find.byKey(WorkoutLandingBody.readyMadeToggleKey);
+    if (toggle.evaluate().isEmpty) return;
+    if (find.byKey(WorkoutLandingBody.templateKey('push')).evaluate().isNotEmpty) {
+      return;
+    }
+    await tester.scrollUntilVisible(
+      toggle,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -150));
+    await settle(tester);
+    await tester.tap(toggle);
+    await settle(tester);
+  }
+
   /// Scrolls the landing until [id]'s tile is clear of the pinned Start bar and
   /// the tab bar, then taps it. Tiles lower in the grid start off screen or
   /// behind the bars, where a tap lands on the wrong thing.
   Future<void> tapTemplate(WidgetTester tester, String id) async {
+    await unfoldReadyMade(tester);
     final tile = find.byKey(WorkoutLandingBody.templateKey(id));
     await tester.scrollUntilVisible(
       tile,
@@ -105,6 +130,7 @@ void main() {
 
     expect(find.byKey(WorkoutLandingBody.startWorkoutKey), findsOneWidget,
         reason: 'the pinned Start workout bar is on the landing');
+    await unfoldReadyMade(tester);
     expect(find.byKey(WorkoutLandingBody.templateKey('chest-triceps')),
         findsOneWidget);
 
@@ -120,21 +146,21 @@ void main() {
     expect(find.byKey(SessionOverviewBody.startLoggingKey), findsOneWidget);
     expect(find.text('6 exercises planned'), findsOneWidget);
     expect(find.text('Today'), findsOneWidget);
-    expect(find.text('WORKOUT IN PROGRESS'), findsNothing,
+    expect(find.text('Workout in progress'), findsNothing,
         reason: 'nothing has started yet');
 
     // Start logging opens the picker over the map, planned exercises first.
     await tester.tap(find.byKey(SessionOverviewBody.startLoggingKey));
     await settle(tester);
     expect(find.text('What are you starting with?'), findsOneWidget);
-    expect(find.text('IN THIS WORKOUT'), findsOneWidget);
+    expect(find.text('In this workout'), findsOneWidget);
 
     // Dismissing it leaves the list, with the live strip.
     await tester.tapAt(const Offset(10, 10));
     await settle(tester);
     expect(find.text(SessionOverviewBody.keepLoggingLabel), findsOneWidget);
-    expect(find.text('WORKOUT IN PROGRESS'), findsOneWidget);
-    expect(find.text('UP NEXT'), findsOneWidget);
+    expect(find.text('Workout in progress'), findsOneWidget);
+    expect(find.text('Up next'), findsOneWidget);
 
     // Finish with nothing logged: the workout is dropped, never saved.
     await tester.tap(find.byKey(SessionActions.finishKey));
@@ -180,11 +206,17 @@ void main() {
 
     // Back at the list, with the work recorded and the live strip showing.
     expect(find.byType(SessionOverviewBody), findsOneWidget);
-    expect(find.text('Barbell curl'), findsOneWidget);
+    // In the list, not the header: the header now shows the resolved title,
+    // which for a one-exercise workout is that exercise's name (ADR 0008).
+    expect(
+        find.descendant(
+            of: find.byType(SessionOverviewBody),
+            matching: find.text('Barbell curl')),
+        findsOneWidget);
     expect(find.text('30kg × 10'), findsOneWidget,
         reason: 'the set renders through the one shared formatter');
     expect(find.text('Done'), findsOneWidget);
-    expect(find.text('WORKOUT IN PROGRESS'), findsOneWidget);
+    expect(find.text('Workout in progress'), findsOneWidget);
 
     // Finishing saves it and lands on the card.
     await tester.tap(find.byKey(SessionActions.finishKey));
@@ -221,6 +253,84 @@ void main() {
     await settle(tester);
     expect(find.text(WorkoutLandingBody.customGroupLabel), findsOneWidget);
     expect(find.text('Curl day'), findsWidgets);
+  });
+
+  testWidgets('an open workout survives a Profile, Diet round trip that '
+      'adds a food (U18)', (tester) async {
+    await bootToLanding(tester);
+
+    // An empty workout with one completed set.
+    await tester.tap(find.byKey(WorkoutLandingBody.startWorkoutKey));
+    await settle(tester);
+    await tester.tap(find.byKey(SessionOverviewBody.startLoggingKey));
+    await settle(tester);
+    await tester.enterText(pickerField(), 'barbell curl');
+    await settle(tester);
+    await tester.tap(find.byKey(ExercisePickerSheet.rowKey('barbell-curl')));
+    await settle(tester);
+    if (find.text('Start logging').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Start logging'));
+      await settle(tester);
+    }
+    await tester.enterText(find.byType(TextField).first, '30');
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).at(1), '10');
+    await settle(tester);
+    await tester.tap(find.byKey(SetRow.checkKey(0)));
+    await settle(tester);
+    await tester.tap(find.byKey(SetLoggingScreen.markDoneKey));
+    await settle(tester);
+    expect(find.text('30kg × 10'), findsOneWidget);
+
+    // Profile, Diet: add soya bean to today's lunch through the picker and
+    // the serving sheet. No seeded plan uses it, so the row is new.
+    await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
+    await settle(tester);
+    await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.diet)));
+    await settle(tester);
+    final addLunch = find.byKey(DietSlotCard.addFoodKey(MealSlot.lunch));
+    await tester.scrollUntilVisible(addLunch, 300,
+        scrollable: find.byType(Scrollable).first);
+    await settle(tester);
+    await tester.tap(addLunch);
+    await settle(tester);
+    await tester.enterText(find.byKey(FoodPickerScreen.searchKey), 'soya');
+    await settle(tester);
+    await tester.tap(find.byKey(FoodPickerScreen.rowKey('soya-bean')));
+    await settle(tester);
+    await tester.tap(find.byKey(FoodServingSheet.commitKey));
+    await settle(tester);
+    final row = find.byKey(DietSlotCard.rowKey(MealSlot.lunch, 'soya-bean'));
+    expect(row, findsOneWidget, reason: 'the food landed in the slot');
+
+    // Back to Workout: the session and its set are untouched.
+    await tester.tap(find.byKey(GlassTabBar.itemKey(0)));
+    await settle(tester);
+    expect(find.byType(SessionOverviewBody), findsOneWidget,
+        reason: 'the open workout still owns the Workout tab');
+    // In the list, not the header: the header now shows the resolved title,
+    // which for a one-exercise workout is that exercise's name (ADR 0008).
+    expect(
+        find.descendant(
+            of: find.byType(SessionOverviewBody),
+            matching: find.text('Barbell curl')),
+        findsOneWidget);
+    expect(find.text('30kg × 10'), findsOneWidget,
+        reason: 'the completed set survived the trip to Diet');
+
+    // Leave no data behind: remove the food, discard the workout.
+    await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
+    await settle(tester);
+    await tester.scrollUntilVisible(row, 300,
+        scrollable: find.byType(Scrollable).first);
+    await settle(tester);
+    await tester.tap(row);
+    await settle(tester);
+    await tester.tap(find.byKey(FoodServingSheet.removeKey));
+    await settle(tester);
+    await tester.tap(find.byKey(GlassTabBar.itemKey(0)));
+    await settle(tester);
+    await endOpenWorkout(tester);
   });
 
   testWidgets('an open workout survives a restart', (tester) async {

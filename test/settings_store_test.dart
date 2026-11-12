@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
+import 'package:turtle_lift/src/data/personal_details_store.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
 
 /// Proves the provider seam a widget test needs actually works.
@@ -34,6 +35,48 @@ void main() {
   group('the settings row', () {
     test('a fresh database has no settings row at all', () async {
       expect(await store.rowCount(), 0);
+    });
+  });
+
+  group('the protein target', () {
+    test('is null on a fresh database', () async {
+      expect(await store.readProteinTarget(), isNull);
+    });
+
+    test('round-trips a value and keeps one settings row', () async {
+      await store.writeProteinTarget(120);
+      await store.writeProteinTarget(140);
+      expect(await store.readProteinTarget(), 140);
+      expect(await store.rowCount(), 1);
+    });
+
+    test('the bounds 1 and 400 are accepted', () async {
+      await store.writeProteinTarget(1);
+      expect(await store.readProteinTarget(), 1);
+      await store.writeProteinTarget(400);
+      expect(await store.readProteinTarget(), 400);
+    });
+
+    for (final grams in <int>[0, 401, -5]) {
+      test('$grams throws and leaves the stored value alone', () async {
+        await store.writeProteinTarget(100);
+        await expectLater(store.writeProteinTarget(grams), throwsArgumentError);
+        expect(await store.readProteinTarget(), 100);
+      });
+    }
+
+    test('null clears it', () async {
+      await store.writeProteinTarget(120);
+      await store.writeProteinTarget(null);
+      expect(await store.readProteinTarget(), isNull);
+    });
+
+    test('writing it leaves the body gender on the same row alone', () async {
+      final details = PersonalDetailsStore(database);
+      await details.writeBodyGender('female');
+      await store.writeProteinTarget(120);
+      await store.writeProteinTarget(null);
+      expect(await details.readBodyGender(), 'female');
     });
   });
 

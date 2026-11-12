@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/history_preview_data.dart';
+import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/all_sessions_screen.dart';
 
@@ -83,7 +84,10 @@ void main() {
       ]),
     ]));
 
-    expect(find.text('1 PB'), findsOneWidget);
+    // Quiet on rows (ADR 0013): the word, no count, no amber.
+    expect(find.text('PB'), findsOneWidget);
+    expect(tester.widget<Text>(find.text('PB')).style?.color,
+        AppPalette.textMuted);
     expect(
       find.textContaining('0 PB'),
       findsNothing,

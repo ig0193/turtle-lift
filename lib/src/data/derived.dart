@@ -1,6 +1,7 @@
 import 'bodyweight_resolution.dart';
 import 'exercise_index.dart';
 import 'generated/muscle_taxonomy.dart';
+import 'load_type.dart';
 import 'local_date.dart';
 import 'personal_details_store.dart' show BodyweightEntry;
 import 'session_store.dart';
@@ -143,12 +144,31 @@ Set<String> plannedSubGroups(WorkoutSession session, ExerciseIndex index) {
 /// If the last workout was five days ago, `streakAsOf(today)` is 0 even though
 /// nothing in storage changed — which is the difference between a live streak
 /// and the "app said 12, opened it a week later, still says 12" bug.
-int streakAsOf(LocalDate date, List<WorkoutSession> savedSessions) {
+int streakAsOf(LocalDate date, List<WorkoutSession> savedSessions) =>
+    streakFromDays(<LocalDate>[
+      for (final session in savedSessions)
+        if (setCountOf(session) > 0) session.performedOn,
+    ], date);
+
+/// The streak tolerance: at most this many days between workout days.
+const int kStreakGapDays = 3;
+
+/// Whether two workout days chain: the later is at most [kStreakGapDays]
+/// after the earlier. **The one statement of the rule**, read by the streak
+/// figure and by the calendar's streak runs, so the two cannot disagree.
+bool streakChains(LocalDate earlier, LocalDate later) =>
+    later.daysAfter(earlier) <= kStreakGapDays;
+
+/// The streak as of [date] over a set of workout days.
+///
+/// The core of [streakAsOf], over plain dates, so History's stats line (which
+/// reads History rows) and the summary card (which reads saved sessions)
+/// count with the same code.
+int streakFromDays(Iterable<LocalDate> trainedDays, LocalDate date) {
   final days = <int, LocalDate>{};
-  for (final session in savedSessions) {
-    if (setCountOf(session) == 0) continue;
-    if (session.performedOn.isAfter(date)) continue;
-    days[session.performedOn.epochDay] = session.performedOn;
+  for (final day in trainedDays) {
+    if (day.isAfter(date)) continue;
+    days[day.epochDay] = day;
   }
   if (days.isEmpty) return 0;
 
@@ -157,15 +177,37 @@ int streakAsOf(LocalDate date, List<WorkoutSession> savedSessions) {
 
   // The chain has to reach the date being asked about, or it has already
   // lapsed and the answer is zero rather than the old number.
-  if (date.daysAfter(ordered.first) > 3) return 0;
+  if (!streakChains(ordered.first, date)) return 0;
 
   var streak = 1;
   for (var i = 1; i < ordered.length; i++) {
-    final gap = ordered[i - 1].daysAfter(ordered[i]);
-    if (gap > 3) break;
+    if (!streakChains(ordered[i], ordered[i - 1])) break;
     streak++;
   }
   return streak;
+}
+
+/// Every day that is linked to the next day by a streak chain.
+///
+/// Between two consecutive workout days that chain ([streakChains]), every
+/// day from the earlier up to the day before the later is linked to its next
+/// day. The calendar draws a connector across exactly those, so the run you
+/// see is the rule the streak counts by (ADR 0013).
+Set<LocalDate> streakLinkedDays(Iterable<LocalDate> trainedDays) {
+  final ordered = <int, LocalDate>{
+    for (final d in trainedDays) d.epochDay: d,
+  }.values.toList()
+    ..sort();
+  final linked = <LocalDate>{};
+  for (var i = 1; i < ordered.length; i++) {
+    final earlier = ordered[i - 1];
+    final later = ordered[i];
+    if (!streakChains(earlier, later)) continue;
+    for (var d = earlier; d.isBefore(later); d = d.addDays(1)) {
+      linked.add(d);
+    }
+  }
+  return linked;
 }
 
 /// The name to show for a session, never empty.
@@ -176,36 +218,52 @@ int streakAsOf(LocalDate date, List<WorkoutSession> savedSessions) {
 /// logging the log time is not the workout time, so "Evening workout" would be
 /// wrong on any backdated session.
 String resolvedTitle(WorkoutSession session, ExerciseIndex index) {
-  final own = session.title;
-  if (own != null && own.trim().isNotEmpty) return own.trim();
-
-  final template = session.templateName;
-  if (template != null && template.trim().isNotEmpty) return template.trim();
-
   final logged = session.exercises.where(countsAsTrained).toList();
-  if (logged.length == 1) {
-    final library = index.byId(logged.single.exerciseId);
-    if (library != null) return library.name;
-  }
-
-  final parents = <String>[];
+  final parents = <String>{};
   for (final subGroupId in trainedSubGroups(session, index)) {
     final parent = kSubMuscleGroups[subGroupId]?.group;
-    if (parent != null && !parents.contains(parent)) parents.add(parent);
+    if (parent != null) parents.add(parent);
   }
-  if (parents.isNotEmpty) {
-    // Taxonomy order, so two sessions naming the same groups read the same.
-    final ordered = kMuscleTaxonomy.keys.where(parents.contains);
-    final labels = ordered
-        .map((id) => kMuscleGroupLabels[id] ?? id)
-        .toList(growable: false);
-    return <String>[
-      labels.first,
-      ...labels.skip(1).map((l) => l.toLowerCase()),
-    ].join(', ');
-  }
+  return titleFromParts(
+    title: session.title,
+    templateName: session.templateName,
+    singleExerciseName: logged.length == 1
+        ? index.byId(logged.single.exerciseId)?.name
+        : null,
+    trainedGroupIds: parents,
+  );
+}
 
-  return 'Workout';
+/// **The** title chain, the one place it is written (audit B7).
+///
+/// History rows, the detail, the editor and the share card all reach it, so a
+/// cleared title can no longer read as the template name in one place and as
+/// "Chest, shoulders, triceps" in another. In order: the user's own title,
+/// the template name, the single logged exercise, the parent muscle groups in
+/// taxonomy order, then "Workout".
+String titleFromParts({
+  required String? title,
+  required String? templateName,
+  required String? singleExerciseName,
+  required Iterable<String> trainedGroupIds,
+}) {
+  if (title != null && title.trim().isNotEmpty) return title.trim();
+  if (templateName != null && templateName.trim().isNotEmpty) {
+    return templateName.trim();
+  }
+  if (singleExerciseName != null) return singleExerciseName;
+
+  final trained = trainedGroupIds.toSet();
+  // Taxonomy order, so two sessions naming the same groups read the same.
+  final labels = <String>[
+    for (final id in kMuscleTaxonomy.keys)
+      if (trained.contains(id)) kMuscleGroupLabels[id] ?? id,
+  ];
+  if (labels.isEmpty) return 'Workout';
+  return <String>[
+    labels.first,
+    ...labels.skip(1).map((l) => l.toLowerCase()),
+  ].join(', ');
 }
 
 /// How many saved sessions the user has completed at least one set of
@@ -267,6 +325,102 @@ SetEntry? prefillFor(
   if (completed.isEmpty) return null;
   if (index < completed.length) return completed[index];
   return completed.last;
+}
+
+/// One set from the last time an exercise was logged, for the line inside a
+/// set row: "Last 62.5kg × 6".
+class LastTimeSet {
+  const LastTimeSet(this.loadType, this.set);
+
+  /// The load type it was logged under, which is how it must be read back:
+  /// an assisted set stays assistance.
+  final LoadType? loadType;
+  final SetEntry set;
+
+  /// The line, through the one formatter every screen uses ([formatSet]).
+  String get label => 'Last ${formatSet(loadType, set)}';
+}
+
+/// Set [index] of the most recent saved session of [exerciseId], or null.
+///
+/// **The same index, and nothing past it.** Prefill repeats the last set for
+/// extra rows because a guess has to be something; a comparison does not, and
+/// "last 60kg × 8" under a fourth set nobody did last time would be invented.
+///
+/// [before], when given, keeps only sessions on an earlier day: correcting a
+/// saved session compares it with what came before it, never with itself.
+/// Derived on read like everything else here, so editing that older session
+/// moves the line.
+LastTimeSet? lastTimeSetAt(
+  String exerciseId,
+  int index,
+  List<WorkoutSession> savedSessions, {
+  LocalDate? before,
+}) {
+  final pool = before == null
+      ? savedSessions
+      : savedSessions.where((s) => s.performedOn.isBefore(before)).toList();
+  final last = lastSessionOf(exerciseId, pool);
+  if (last == null) return null;
+  final exercise =
+      last.exercises.firstWhere((e) => e.exerciseId == exerciseId);
+  final completed = exercise.sets
+      .where((s) => isSetComplete(exercise.loadType, s))
+      .toList(growable: false);
+  if (index >= completed.length) return null;
+  return LastTimeSet(exercise.loadType, completed[index]);
+}
+
+/// "Last 62.5kg × 6": the last completed set of the last saved session that
+/// logged [exerciseId], in its load type's own format, or null when never.
+///
+/// Used by the picker rows, the Muscles exercise lists and exercise detail,
+/// so all three say the same thing about the same lift.
+String? lastSetLine(String exerciseId, List<WorkoutSession> savedSessions) {
+  final last = lastSessionOf(exerciseId, savedSessions);
+  if (last == null) return null;
+  final logged = last.exercises.firstWhere((e) => e.exerciseId == exerciseId);
+  final completed = logged.sets
+      .where((s) => isSetComplete(logged.loadType, s))
+      .toList(growable: false);
+  if (completed.isEmpty) return null;
+  return 'Last ${formatSet(logged.loadType, completed.last)}';
+}
+
+/// How many saved sessions logged at least one completed set of [exerciseId].
+int timesLogged(String exerciseId, List<WorkoutSession> savedSessions) =>
+    savedSessions
+        .where((session) => session.exercises.any((e) =>
+            e.exerciseId == exerciseId &&
+            e.sets.any((s) => isSetComplete(e.loadType, s))))
+        .length;
+
+/// The exercises logged most recently, newest first, each once, at most
+/// [limit]: the picker's Recent group.
+///
+/// Retrieval beats search for a lifter who does the same ten lifts. Derived
+/// from saved sessions on read, so deleting a workout drops its exercises from
+/// the group with nothing to clean up.
+List<String> recentExerciseIds(
+  List<WorkoutSession> savedSessions, {
+  int limit = 6,
+}) {
+  final ordered = <WorkoutSession>[...savedSessions]..sort((a, b) {
+      final byDay = b.performedOn.compareTo(a.performedOn);
+      return byDay != 0 ? byDay : b.loggedAt.compareTo(a.loggedAt);
+    });
+  final ids = <String>[];
+  for (final session in ordered) {
+    for (final exercise in session.exercises) {
+      if (ids.length >= limit) return ids;
+      if (ids.contains(exercise.exerciseId)) continue;
+      if (!exercise.sets.any((s) => isSetComplete(exercise.loadType, s))) {
+        continue;
+      }
+      ids.add(exercise.exerciseId);
+    }
+  }
+  return ids;
 }
 
 /// How many set rows an exercise opens with: as many as its last saved session

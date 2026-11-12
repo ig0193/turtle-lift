@@ -147,9 +147,8 @@ class AppScreen extends StatelessWidget {
             color: AppPalette.textPrimary,
           )
         : const TextStyle(
-            fontSize: 16,
+            fontSize: 17,
             fontWeight: FontWeight.w600,
-            letterSpacing: -0.16,
             color: AppPalette.textPrimary,
           );
 
@@ -171,6 +170,10 @@ class AppScreen extends StatelessWidget {
         title: Semantics(
           header: true,
           label: title,
+          // A plain title's Text would add its own label under this one, and
+          // VoiceOver would read the title twice. A custom titleWidget (the
+          // editable session title) keeps its semantics: it is interactive.
+          excludeSemantics: titleWidget == null,
           child: titleWidget ??
               Text(title, style: titleStyle, overflow: TextOverflow.ellipsis),
         ),

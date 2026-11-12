@@ -1,0 +1,11 @@
+# Types VALUE into the set-row field with accessibility id FIELD, replacing
+# whatever is there, then taps the screen's caption line to put the number
+# pad away (it has no return key; a tap off the field dismisses it).
+appId: dev.indresh.turtleLift
+---
+- tapOn:
+    id: ${FIELD}
+- eraseText: 8
+- inputText: ${VALUE}
+- tapOn:
+    point: "50%,13%"

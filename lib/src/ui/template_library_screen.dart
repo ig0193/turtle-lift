@@ -1,22 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/custom_exercises.dart';
 import '../data/custom_templates.dart';
 import '../data/exercise_index.dart';
 import '../data/workout_templates.dart';
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
+import 'custom_exercise_screens.dart' show MyExercisesScreen;
+import 'ghost_button.dart';
+import 'template_editor_screen.dart' show showTemplateEditor;
 import 'template_row.dart';
 
 /// The only place templates are authored (`docs/00-build-spec.md` §11).
 ///
-/// **Three verbs here, and a fourth that lives elsewhere.** A predefined
-/// template can be duplicated; the copy can be renamed and deleted. A template
-/// is also made from a finished workout ("Save as template" on its summary), and
-/// there is still no way to edit which exercises a copy contains from this
-/// screen — so a duplicate currently differs from its original only in its name.
-/// That is a real limitation and `docs/04` records it rather than implying
-/// otherwise.
+/// **The user's own come first**, with New template above them: this screen is
+/// "My workout templates", and the eleven ready-made rows used to bury the
+/// user's own group (and the only way to make one) under a screen and a half of
+/// scrolling (workout-gaps audit). A custom row opens the template editor
+/// (`template_editor_screen.dart`): name, exercises, order, delete. A
+/// predefined one can be duplicated into an editable copy. A template is also
+/// made from a finished workout ("Save as template" on its summary). The user's
+/// own exercises are reached from the foot of the screen.
 ///
 /// **Predefined templates are immutable and the screen never offers to change
 /// one.** They are the reliable reference a user compares their own against; a
@@ -28,11 +33,11 @@ class TemplateLibraryScreen extends ConsumerWidget {
 
   /// The heading over the eleven templates that ship with the app.
   @visibleForTesting
-  static const String predefinedGroupLabel = 'PREDEFINED';
+  static const String predefinedGroupLabel = 'Ready-made';
 
   /// The heading over the user's own copies.
   @visibleForTesting
-  static const String customGroupLabel = 'YOURS';
+  static const String customGroupLabel = 'Yours';
 
   /// What the custom group says before the user has duplicated anything.
   ///
@@ -41,7 +46,15 @@ class TemplateLibraryScreen extends ConsumerWidget {
   /// muted line naming the action that fills the group.
   @visibleForTesting
   static const String noCustomTemplatesLabel =
-      'Duplicate one above to make it yours.';
+      'Build one from scratch, or duplicate a ready-made one below.';
+
+  /// The button that opens an empty template editor.
+  @visibleForTesting
+  static const Key newTemplateKey = ValueKey<String>('library-new-template');
+
+  /// The row that opens the user's own exercises.
+  @visibleForTesting
+  static const Key myExercisesKey = ValueKey<String>('library-my-exercises');
 
   /// Finds a row by the template id it renders. Ids are stable across renames,
   /// which is exactly what a test needs to hold on to.
@@ -72,6 +85,44 @@ class TemplateLibraryScreen extends ConsumerWidget {
       body: ListView(
         padding: screenScrollPadding(context),
         children: <Widget>[
+          const _GroupLabel(customGroupLabel),
+          if (custom.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 10),
+              child: Text(
+                noCustomTemplatesLabel,
+                style: kTemplateRowSubtitleStyle,
+              ),
+            )
+          else
+            for (final template in custom)
+              _LibraryRow(
+                key: rowKey(template.id),
+                template: template,
+                onTap: () => showTemplateEditor(context, existing: template),
+                actions: <Widget>[
+                  _RowAction(
+                    key: renameKey(template.id),
+                    icon: Icons.drive_file_rename_outline_rounded,
+                    semanticsLabel: 'Rename ${template.name}',
+                    onTap: () => _rename(context, ref, template),
+                  ),
+                  _RowAction(
+                    key: deleteKey(template.id),
+                    icon: Icons.delete_outline_rounded,
+                    semanticsLabel: 'Delete ${template.name}',
+                    destructive: true,
+                    onTap: () => _confirmDelete(context, ref, template),
+                  ),
+                ],
+              ),
+          const SizedBox(height: 10),
+          GhostButton(
+            buttonKey: newTemplateKey,
+            label: 'New template',
+            leadingIcon: Icons.add_rounded,
+            onTap: () => showTemplateEditor(context),
+          ),
           const _GroupLabel(predefinedGroupLabel),
           for (final template in kPredefinedTemplates)
             _LibraryRow(
@@ -86,40 +137,28 @@ class TemplateLibraryScreen extends ConsumerWidget {
                 ),
               ],
             ),
-          const _GroupLabel(customGroupLabel),
-          if (custom.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                noCustomTemplatesLabel,
-                style: kTemplateRowSubtitleStyle,
+          const SizedBox(height: 20),
+          TemplateRow(
+            key: myExercisesKey,
+            title: 'My exercises',
+            subtitle: _exercisesSubtitle(
+              ref.watch(customExerciseListProvider).length,
+            ),
+            background: AppPalette.mutedSurface,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const MyExercisesScreen(),
               ),
-            )
-          else
-            for (final template in custom)
-              _LibraryRow(
-                key: rowKey(template.id),
-                template: template,
-                actions: <Widget>[
-                  _RowAction(
-                    key: renameKey(template.id),
-                    icon: Icons.edit_outlined,
-                    semanticsLabel: 'Rename ${template.name}',
-                    onTap: () => _rename(context, ref, template),
-                  ),
-                  _RowAction(
-                    key: deleteKey(template.id),
-                    icon: Icons.delete_outline_rounded,
-                    semanticsLabel: 'Delete ${template.name}',
-                    destructive: true,
-                    onTap: () => _confirmDelete(context, ref, template),
-                  ),
-                ],
-              ),
+            ),
+          ),
         ],
       ),
     );
   }
+
+  static String _exercisesSubtitle(int count) => count == 0
+      ? 'Make one the library does not have'
+      : '$count of your own';
 
   Future<void> _duplicate(
     BuildContext context,
@@ -207,11 +246,16 @@ class _LibraryRow extends ConsumerWidget {
   const _LibraryRow({
     required this.template,
     required this.actions,
+    this.onTap,
     super.key,
   });
 
   final WorkoutTemplate template;
   final List<Widget> actions;
+
+  /// Opens the editor, on the user's own rows. Null on a ready-made row,
+  /// which is immutable.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -226,19 +270,46 @@ class _LibraryRow extends ConsumerWidget {
       child: Row(
         children: <Widget>[
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text(template.name, style: kTemplateRowTitleStyle),
-                const SizedBox(height: 2),
-                Text(subtitle, style: kTemplateRowSubtitleStyle),
-              ],
+            child: _tappable(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(template.name, style: kTemplateRowTitleStyle),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$subtitle · ${template.exerciseIds.length} '
+                    'exercise${template.exerciseIds.length == 1 ? '' : 's'}',
+                    style: kTemplateRowSubtitleStyle,
+                  ),
+                ],
+              ),
+              subtitle,
             ),
           ),
           const SizedBox(width: 10),
           ...actions,
         ],
+      ),
+    );
+  }
+}
+
+extension on _LibraryRow {
+  /// The row's text as one button that opens the editor, when it has one.
+  Widget _tappable(Widget child, String subtitle) {
+    final tap = onTap;
+    if (tap == null) return child;
+    return Semantics(
+      container: true,
+      button: true,
+      label: 'Edit ${template.name}. $subtitle',
+      onTap: tap,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: tap,
+        child: child,
       ),
     );
   }
@@ -270,8 +341,12 @@ class _RowAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      // Its own node with its own tap: without these the label merged into
+      // the row and VoiceOver could not reach the action (QA, Maestro).
+      container: true,
       button: true,
       label: semanticsLabel,
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -299,7 +374,7 @@ class _GroupLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 18, bottom: 8),
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Semantics(
         header: true,
         child: Text(label, style: kLandingSectionLabelStyle),
@@ -431,11 +506,11 @@ class _PaletteDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: AppPalette.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppPalette.border),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(19),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -483,8 +558,10 @@ class _DialogButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       label: label,
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

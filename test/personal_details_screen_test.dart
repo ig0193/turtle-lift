@@ -232,7 +232,7 @@ void main() {
 
       expect(find.text(PersonalDetailsScreen.noWeightLabel), findsOneWidget);
       expect(
-        find.text('0 kg'),
+        find.text('0kg'),
         findsNothing,
         reason: 'docs/01 chose a prompt over a wrong number everywhere the '
             'calorie stat is gated',
@@ -256,8 +256,8 @@ void main() {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
-      expect(find.text('1–9 sets'), findsOneWidget);
-      expect(find.text('10–20 sets'), findsOneWidget);
+      expect(find.text('1-9 sets'), findsOneWidget);
+      expect(find.text('10-20 sets'), findsOneWidget);
       expect(find.text('21+ sets'), findsOneWidget);
       expect(find.textContaining('vary by person'), findsOneWidget);
     });
@@ -274,5 +274,19 @@ void main() {
             'and the user should be told it where they set the weight',
       );
     });
+  });
+
+  // QA (Maestro): the iOS decimal pad has no return key; a tap off the field
+  // must put it away.
+  testWidgets('a tap outside the weight field puts the keypad away',
+      (tester) async {
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+    await tester.showKeyboard(find.byKey(PersonalDetailsScreen.weightFieldKey));
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isTrue);
+    await tester.tapAt(const Offset(400, 590));
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isFalse);
   });
 }

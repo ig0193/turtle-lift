@@ -7,7 +7,11 @@ Date: 2026-10-24
 Accepted. **Supersedes the Profile half of
 [ADR 0003](0003-l0-navigation-variant-a.md)** (Profile behind a header avatar).
 The rest of 0003 — History as a tab, the bar showing only at L0, an open session
-sitting at stack depth zero — stands unchanged.
+sitting at stack depth zero — stands unchanged. **Amended by
+[ADR 0007](0007-diet-in-profile.md)** (proposed): Profile gains a third segment,
+Diet, and the placement rule a second named exception. Still four tabs.
+**Amended by [ADR 0008](0008-the-week-lives-on-the-workout-landing.md)**: the Schedule pane's week summary moves to the
+Workout landing; the Schedule segment keeps only the plan and reminders.
 
 ## Context
 
@@ -50,14 +54,21 @@ contents, not its reach.
   the tab; authored lives behind the avatar" becomes "derived lives on History;
   authored lives on Profile". The test is the same one-sentence test, and
   `app_database.dart`'s preference-vs-derived axis still agrees with it.
-- **One named exception to that rule.** The Schedule pane's week summary is
+- **One named exception to that rule** *(moved by ADR 0008 to the Workout
+  landing, under the same condition)*. The Schedule pane's week summary is
   computed from sessions yet lives on Profile. It is the feedback loop for the
   plan the user has just typed, not a stat. Condition: the same figure must
   never also render on History. If a History calendar is added later, it must
   either own the summary or leave it here. (As built, the History calendar is a
   plain month view of trained days with no plan overlay or weekly count, so there
   is no overlap today.)
-- **Four tabs is the ceiling for a bar this size.** A fifth needs a new ADR.
+- **A second named exception (ADR 0007).** The Diet pane's protein figures are
+  derived yet live on Profile, as the feedback loop for the plan the user typed.
+  Same condition: they never render on History (nor on the summary or share card).
+- **A third segment (ADR 0007): Personal | Schedule | Diet.** The segment is held
+  in memory, never stored; Profile opens on Personal.
+- **Four tabs is the ceiling for a bar this size.** A fifth needs a new ADR. Diet
+  went into Profile rather than a fifth tab for this reason (ADR 0007).
 - **Cost still carried from 0003:** the five-screen Muscles browse chain. A
   fourth tab does not make it worse.
 - Existing avatar code (`ProfileAvatarButton`, its geometry tests, the Workout

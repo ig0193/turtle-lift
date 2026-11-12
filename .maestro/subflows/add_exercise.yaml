@@ -1,0 +1,21 @@
+# Adds an exercise from the open picker (or opens it with "Add exercise"),
+# passes the first-time Exercise Detail gate, and lands on set logging.
+#   env: QUERY  text typed into the picker search
+#        ROW    the picker row's label, e.g. "Push-up. Bodyweight"
+appId: dev.indresh.turtleLift
+---
+- runFlow:
+    when:
+      visible: "Add exercise"
+    commands:
+      - tapOn: "Add exercise"
+- tapOn: "Search exercises, muscles, equipment"
+- inputText: ${QUERY}
+- tapOn: ${ROW}
+# A never-logged exercise opens on Exercise Detail first (docs/00 §9).
+- runFlow:
+    when:
+      visible: "Common mistakes.*"
+    commands:
+      - tapOn: "Start logging"
+- assertVisible: "Add set"

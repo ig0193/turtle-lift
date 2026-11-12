@@ -6,12 +6,18 @@ and emits exercises.json + exercises.csv + a coverage report.
 Fails the build on: unknown muscle id, duplicate name, duplicate slug,
 empty/oversized primary list, a muscle in both primary and secondary,
 unknown equipment, or a sub-muscle group with no exercises.
+
+Also fails on a missing or broken demonstration mapping (animation_map.py):
+an exercise with no entry, an entry naming no exercise, an unknown pattern or
+gear, an `other`-equipment exercise with no explicit gear, or a pattern that
+no exercise uses.
 """
 import csv, json, re, sys
 from collections import defaultdict
 from pathlib import Path
 from exercise_library import EXERCISES, EQUIPMENT, LOAD_TYPES
 import content_chest, content_back, content_shoulders_biceps, content_arms_core, content_legs
+from animation_map import MAP as ANIMATION_MAP, ANIMATION_PATTERNS, GEARS, EQUIPMENT_GEAR
 
 CONTENT = {}
 for _m in (content_chest, content_back, content_shoulders_biceps, content_arms_core, content_legs):
@@ -74,9 +80,23 @@ def main(src=".", out="."):
                 errors.append(f"{name}: empty {fname}")
             elif len(text.split()) > 60:
                 warnings.append(f"{name}: {fname} is {len(text.split())} words (target <= 60)")
+        anim, gear = ANIMATION_MAP.get(name), None
+        if anim is None:
+            errors.append(f"{name}: no animation_map entry")
+        elif isinstance(anim, tuple):
+            anim, gear = anim
+        if gear is None:
+            gear = EQUIPMENT_GEAR.get(equip)
+            if gear is None and anim is not None:
+                errors.append(f"{name}: equipment {equip!r} has no default gear; name one in animation_map")
+        if anim is not None and anim not in ANIMATION_PATTERNS:
+            errors.append(f"{name}: unknown animation pattern {anim!r}")
+        if gear is not None and gear not in GEARS:
+            errors.append(f"{name}: unknown animation gear {gear!r}")
         rows.append({"id": s, "name": name, "equipment": equip, "loadType": load,
                      "primary": prim, "secondary": sec,
-                     **dict(zip(CONTENT_FIELDS, c))})
+                     **dict(zip(CONTENT_FIELDS, c)),
+                     "animation": anim, "animationGear": gear})
 
     by_prim, equip_by_prim = defaultdict(list), defaultdict(set)
     for r in rows:
@@ -97,6 +117,16 @@ def main(src=".", out="."):
         if cname not in seen_name:
             errors.append(f"content entry {cname!r} matches no exercise")
 
+    for aname in ANIMATION_MAP:
+        if aname not in seen_name:
+            errors.append(f"animation_map entry {aname!r} matches no exercise")
+    if len(set(ANIMATION_PATTERNS)) != len(ANIMATION_PATTERNS):
+        errors.append("ANIMATION_PATTERNS lists a pattern twice")
+    used = {r["animation"] for r in rows}
+    for pat in ANIMATION_PATTERNS:
+        if pat not in used:
+            errors.append(f"animation pattern {pat!r} is used by no exercise")
+
     if errors:
         print("VALIDATION FAILED\n  " + "\n  ".join(errors)); sys.exit(1)
 
@@ -104,16 +134,20 @@ def main(src=".", out="."):
     with open(Path(out, "exercises.csv"), "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["id", "name", "equipment", "loadType", "primary", "secondary",
-                    "setup", "posture", "execution", "commonMistakes"])
+                    "setup", "posture", "execution", "commonMistakes",
+                    "animation", "animationGear"])
         for r in rows:
             w.writerow([r["id"], r["name"], r["equipment"], r["loadType"],
                         "; ".join(r["primary"]), "; ".join(r["secondary"]),
-                        r["setup"], r["posture"], r["execution"], r["commonMistakes"]])
+                        r["setup"], r["posture"], r["execution"], r["commonMistakes"],
+                        r["animation"], r["animationGear"]])
 
     from collections import Counter as _C
     lt = _C(r["loadType"] for r in rows)
     print(f"OK  {len(rows)} exercises, 0 errors, {len(warnings)} warnings")
-    print(f"    loadType: " + ", ".join(f"{k}={lt[k]}" for k in LOAD_TYPES) + "\n")
+    print(f"    loadType: " + ", ".join(f"{k}={lt[k]}" for k in LOAD_TYPES))
+    print(f"    demonstrations: {len(rows)} of {len(rows)} mapped to "
+          f"{len(set(r['animation'] for r in rows))} patterns\n")
     if warnings:
         print("warnings:\n  " + "\n  ".join(warnings) + "\n")
     print(f"{'sub-muscle group':<26}{'as primary':>11}{'equip':>7}   {'as secondary':>12}")

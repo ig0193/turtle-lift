@@ -1,0 +1,7 @@
+# Moves the app off Diet and kills it, so the next banner tap is a cold start.
+appId: dev.indresh.turtleLift
+---
+- tapOn: "Workout"
+- assertVisible: "Start workout.*"
+- stopApp
+- pressKey: home

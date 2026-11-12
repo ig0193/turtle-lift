@@ -134,12 +134,16 @@ void main() {
 
       await pump(tester, 'bench');
 
-      expect(find.text('60kg × 8'), findsNWidgets(2));
-      expect(find.text('57.5kg × 8'), findsOneWidget);
-      expect(find.text('55kg × 8'), findsNWidgets(2));
+      // One line per session, each set kept whole with non-breaking spaces
+      // so it never wraps mid-set (audit B12).
+      final newestLine =
+          find.text('60kg × 8 · 60kg × 8 · 57.5kg × 8');
+      final oldestLine = find.text('55kg × 8 · 55kg × 8');
+      expect(newestLine, findsOneWidget);
+      expect(oldestLine, findsOneWidget);
 
-      final newest = tester.getTopLeft(find.text('57.5kg × 8')).dy;
-      final oldest = tester.getTopLeft(find.text('55kg × 8').first).dy;
+      final newest = tester.getTopLeft(newestLine).dy;
+      final oldest = tester.getTopLeft(oldestLine).dy;
       expect(newest, lessThan(oldest));
     });
 
@@ -175,7 +179,7 @@ void main() {
 
       await pump(tester, 'bench');
 
-      expect(find.text('★ PB'), findsOneWidget);
+      expect(find.text('PB'), findsOneWidget);
     });
 
     testWidgets('an assisted record names what kind of record it is',
@@ -194,7 +198,7 @@ void main() {
       await pump(tester, 'assisted-pull-up');
 
       expect(
-        find.text('★ PB · lightest assist'),
+        find.text('PB · lightest assist'),
         findsOneWidget,
         reason: 'without it, a badge beside 22.5 next to a row showing 30 '
             'reads as a bug',

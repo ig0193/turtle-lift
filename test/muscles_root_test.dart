@@ -345,23 +345,22 @@ void main() {
       );
     });
 
-    testWidgets('nothing on the landing is derived from training history',
+    testWidgets('with no history the landing invents nothing (ADR 0012)',
         (tester) async {
       useTallScreen(tester);
       await tester.pumpWidget(host());
       await tester.pump();
 
-      // KD1: no session table exists, so any of these would be fabricated.
+      // The map shows training derived from the log; with an empty log it
+      // must say so plainly and claim no sets, dates or streaks.
+      expect(find.text(kMusclesEmptyWeekNote), findsOneWidget);
       for (final forbidden in const <String>[
-        'sets',
-        'Last done',
-        'last trained',
-        'this week',
+        'sets this week',
+        'Last trained',
         'streak',
       ]) {
         expect(find.textContaining(forbidden, findRichText: true), findsNothing,
-            reason: 'the landing must say nothing about the user: "$forbidden" '
-                'implies a history this slice cannot have');
+            reason: '"$forbidden" implies a history that does not exist');
       }
     });
   });

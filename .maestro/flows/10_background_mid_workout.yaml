@@ -1,0 +1,51 @@
+# User story: a workout in progress survives going home and coming back, and
+# survives the app being killed (docs/00 §9: an active session persists
+# indefinitely and replaces the landing; no Resume card).
+appId: dev.indresh.turtleLift
+name: 10 Backgrounding and killing mid-workout keeps the session
+tags: [workout]
+---
+- launchApp:
+    clearState: true
+- tapOn: "Start workout.*"
+- tapOn: "Start logging"
+- runFlow:
+    file: ../subflows/add_exercise.yaml
+    env: { QUERY: "barbell bench", ROW: "Barbell bench press. Barbell" }
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-weight", VALUE: "50" }
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-reps", VALUE: "10" }
+- tapOn: { id: "set-0-check" }
+
+# --- home and back: same screen, same values
+- pressKey: home
+# stopApp: false brings the running app forward (launchApp kills it first by
+# default, which is the cold case below).
+- launchApp:
+    stopApp: false
+- assertVisible: "Barbell bench press"
+- assertVisible:
+    id: "set-0-check"
+    checked: true
+- assertVisible: "50"
+- tapOn: "Back"
+- assertVisible: "Barbell bench press\\. In progress.*"
+- assertVisible: "Workout in progress\nElapsed time"
+
+# --- killed: the session comes back in place of the landing
+- stopApp
+- launchApp
+- assertNotVisible: "Start workout\nAdd exercises as you go"
+- assertVisible: ".*Barbell bench press.*"
+- assertVisible: ".*0 of 1 done.*|1 exercise planned"
+- runFlow:
+    when:
+      visible: "Start logging"
+    commands:
+      - tapOn: "Start logging"
+      - tapOn: { point: "50%, 5%" }
+- runFlow: ../subflows/finish_workout.yaml
+- assertVisible: "Barbell bench press\n50kg × 10"

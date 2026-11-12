@@ -36,6 +36,7 @@ class HistorySession {
     required this.performedOn,
     required this.exercises,
     this.title,
+    this.templateName,
     this.isQuickLog = false,
   });
 
@@ -50,6 +51,11 @@ class HistorySession {
   /// resolution chain in [resolvedTitle].
   final String? title;
 
+  /// The template it was started from, which is the second link of the title
+  /// chain (`docs/00` §6). Ignoring it named a cleared template workout
+  /// "Chest, shoulders, triceps" here and "Push day" on its card (B7).
+  final String? templateName;
+
   /// A single-exercise session logged on its own. It counts for the streak on
   /// exactly the same terms as a full session.
   final bool isQuickLog;
@@ -61,6 +67,7 @@ class HistoryExercise {
     required this.name,
     required this.primaryGroupIds,
     required this.setScores,
+    this.note,
   });
 
   final String name;
@@ -79,6 +86,10 @@ class HistoryExercise {
   /// this fixture contains no assisted exercise, and that is a gap the real
   /// version must close rather than inherit.
   final List<double> setScores;
+
+  /// The user's note for this exercise in this workout, which All workouts
+  /// searches along with the title and the exercise names.
+  final String? note;
 }
 
 /// The derived figures one session carries, computed rather than stored.
@@ -160,21 +171,14 @@ Map<String, HistoryRowFigures> buildHistoryProjection(
 /// `docs/00-build-spec.md`'s fallback chain: the title the user gave it, else
 /// the single exercise's name for a quick log, else the muscle groups trained.
 /// **A row is never blank.**
-String resolvedTitle(HistorySession session, HistoryRowFigures figures) {
-  final title = session.title;
-  if (title != null && title.isNotEmpty) return title;
-  if (session.exercises.length == 1) return session.exercises.single.name;
-
-  final labels = <String>[
-    for (final id in figures.trainedGroupIds)
-      if (kMuscleGroupLabels[id] != null) kMuscleGroupLabels[id]!,
-  ];
-  if (labels.isEmpty) return 'Workout';
-  return <String>[
-    labels.first,
-    ...labels.skip(1).map((label) => label.toLowerCase()),
-  ].join(', ');
-}
+String resolvedTitle(HistorySession session, HistoryRowFigures figures) =>
+    titleFromParts(
+      title: session.title,
+      templateName: session.templateName,
+      singleExerciseName:
+          session.exercises.length == 1 ? session.exercises.single.name : null,
+      trainedGroupIds: figures.trainedGroupIds,
+    );
 
 /// The sessions the History tab renders: the user's real saved workouts.
 ///
@@ -183,8 +187,13 @@ String resolvedTitle(HistorySession session, HistoryRowFigures figures) {
 final historySessionsProvider = Provider<List<HistorySession>>((ref) {
   final saved = ref.watch(savedSessionsProvider);
   final index = ref.watch(exerciseIndexProvider);
+  // A saved workout with no completed set is not a trained day: the streak
+  // already ignores it, so History must not list it or dot the calendar for
+  // it either (audit B6). Editing now offers to delete such a workout; this
+  // is the defensive half for one that exists anyway.
   return <HistorySession>[
-    for (final session in saved) historySessionFrom(session, index),
+    for (final session in saved)
+      if (setCountOf(session) > 0) historySessionFrom(session, index),
   ];
 });
 
@@ -210,6 +219,7 @@ HistorySession historySessionFrom(WorkoutSession session, ExerciseIndex index) {
           for (final set in completed)
             metricFor(exercise.loadType, set).primary,
         ],
+        note: exercise.note,
       ),
     );
   }
@@ -219,9 +229,27 @@ HistorySession historySessionFrom(WorkoutSession session, ExerciseIndex index) {
     performedOn: session.performedOn.toDateTime(),
     exercises: exercises,
     title: session.title,
-    isQuickLog: exercises.length == 1,
+    templateName: session.templateName,
+    // A quick log is one exercise logged on its own. One finished exercise
+    // of a template is a short template workout, not a quick log (B7).
+    isQuickLog: exercises.length == 1 &&
+        (session.templateName ?? '').trim().isEmpty,
   );
 }
+
+/// Every saved workout's records, projected once and cached (audit B5).
+///
+/// The History rows, the detail log, the editor, the share card and exercise
+/// history all read this, so the PB count and the marked set can never
+/// disagree, and editing a past workout reprojects once rather than once per
+/// row.
+final sessionRecordsProvider = Provider<Map<String, SessionRecords>>(
+  (ref) => personalBestProjection(ref.watch(savedSessionsProvider)),
+);
+
+/// The records of one saved workout, or none.
+SessionRecords recordsOf(Ref ref, String sessionId) =>
+    ref.watch(sessionRecordsProvider)[sessionId] ?? SessionRecords.none;
 
 /// The projection over the saved workouts, with the personal-best count taken
 /// from the one derivation the summary card also uses.
@@ -230,6 +258,7 @@ final historyProjectionProvider = Provider<Map<String, HistoryRowFigures>>(
     final rows = buildHistoryProjection(ref.watch(historySessionsProvider));
     final saved = ref.watch(savedSessionsProvider);
     if (saved.isEmpty) return rows;
+    final records = ref.watch(sessionRecordsProvider);
 
     return <String, HistoryRowFigures>{
       for (final session in saved)
@@ -237,7 +266,7 @@ final historyProjectionProvider = Provider<Map<String, HistoryRowFigures>>(
           session.id: HistoryRowFigures(
             setCount: setCountOf(session),
             exerciseCount: exerciseCountOf(session),
-            pbCount: pbCountFor(session, saved),
+            pbCount: records[session.id]?.count ?? 0,
             trainedGroupIds: row.trainedGroupIds,
           ),
     };
@@ -250,8 +279,21 @@ final historyProjectionProvider = Provider<Map<String, HistoryRowFigures>>(
 /// it was typed in — so a backdated session slots into its real place rather
 /// than jumping to the top.
 final historySessionsNewestFirstProvider = Provider<List<HistorySession>>(
-  (ref) => <HistorySession>[...ref.watch(historySessionsProvider)]
-    ..sort((a, b) => b.performedOn.compareTo(a.performedOn)),
+  (ref) {
+    // Sorted with the incoming position as the tiebreak, because Dart's
+    // `List.sort` is only stable up to 32 elements. Saved sessions arrive
+    // newest first by performedOn and then loggedAt (docs/00 §11); without
+    // the tiebreak, two workouts on one day swapped order once the history
+    // grew past 32 rows.
+    final sessions = ref.watch(historySessionsProvider);
+    final order = <int>[for (var i = 0; i < sessions.length; i++) i]
+      ..sort((a, b) {
+        final byDate =
+            sessions[b].performedOn.compareTo(sessions[a].performedOn);
+        return byDate != 0 ? byDate : a.compareTo(b);
+      });
+    return <HistorySession>[for (final i in order) sessions[i]];
+  },
 );
 
 /// "September 2026" for the date a session happened on.
@@ -488,60 +530,3 @@ final List<HistorySession> kPreviewSessions = <HistorySession>[
     ],
   ),
 ];
-
-/// The streak as it stood **on [asOf]**, not today.
-///
-/// `docs/01`: the count of workout days in a row where the user never went more
-/// than **3 days** without training. The tolerance is what makes a Mon/Wed/Fri
-/// split survive, and a Friday-to-Monday gap is three days — so a tighter rule
-/// would break almost everyone.
-///
-/// **Computed on read against a date, never stored.** A session's own card
-/// shows the streak as it was that day, which is why this takes a parameter
-/// rather than assuming today: a card revisited months later stays historically
-/// accurate instead of showing a number from a different week. It also means a
-/// backdated session recalculates every card that follows it, for free.
-int streakAsOf(List<HistorySession> sessions, DateTime asOf) {
-  final days = <DateTime>{
-    for (final session in sessions)
-      if (!session.performedOn.isAfter(asOf)) session.performedOn,
-  }.toList()
-    ..sort((a, b) => b.compareTo(a));
-
-  if (days.isEmpty) return 0;
-  // Decays against the reference date: a streak you have already let lapse is
-  // zero when you look at it, not the number it stopped at.
-  if (asOf.difference(days.first).inDays > 3) return 0;
-
-  var count = 1;
-  for (var i = 1; i < days.length; i++) {
-    if (days[i - 1].difference(days[i]).inDays > 3) break;
-    count++;
-  }
-  return count;
-}
-
-/// The MET tier a session's set count puts it in (`docs/00` §calories).
-double _metFor(int setCount) {
-  if (setCount <= 9) return 3.5;
-  if (setCount <= 20) return 5;
-  return 6;
-}
-
-/// The calorie estimate for a session, or null when no weight was in effect.
-///
-/// `kcal = (MET × 3.5 × bodyweightKg / 200) × minutes`, where
-/// `minutes = totalSets × 42.5 / 60`. Duration is not tracked in V1, so the set
-/// count stands in for it — a deliberate middle ground that still responds to
-/// how much work was logged.
-///
-/// **Null is a real answer, and the screen must render it as a prompt.**
-/// [weightKg] is the weight in effect on the session's own date, not the newest
-/// on record — so a session logged before the user ever weighed in has no
-/// figure, permanently (KD3). Showing a number derived from today's weight is
-/// exactly the retroactive rewrite the dated series exists to prevent.
-int? caloriesFor({required int setCount, required double? weightKg}) {
-  if (weightKg == null || setCount == 0) return null;
-  final minutes = setCount * 42.5 / 60;
-  return ((_metFor(setCount) * 3.5 * weightKg / 200) * minutes).round();
-}

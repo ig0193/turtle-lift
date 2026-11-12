@@ -5,10 +5,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:turtle_lift/main.dart' as app;
+import 'package:turtle_lift/src/data/food_index.dart';
+import 'package:turtle_lift/src/data/meal_slot.dart';
 import 'package:turtle_lift/src/ui/destructive_confirmation.dart';
+import 'package:turtle_lift/src/ui/diet_pane.dart';
+import 'package:turtle_lift/src/ui/diet_slot_card.dart';
 import 'package:turtle_lift/src/ui/exercise_picker_sheet.dart';
+import 'package:turtle_lift/src/ui/food_picker_screen.dart';
+import 'package:turtle_lift/src/ui/food_serving_sheet.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
 import 'package:turtle_lift/src/ui/l0_shell.dart';
+import 'package:turtle_lift/src/ui/profile_root.dart';
 import 'package:turtle_lift/src/ui/session_actions.dart';
 import 'package:turtle_lift/src/ui/session_overview_body.dart';
 import 'package:turtle_lift/src/ui/set_logging_screen.dart';
@@ -50,10 +57,30 @@ void main() {
     await settle(tester);
   }
 
+  /// A returning user (the debug seed has plenty of workouts) sees the
+  /// ready-made grid folded behind one row (research item 11). Unfolds it.
+  Future<void> unfoldReadyMade(WidgetTester tester) async {
+    final toggle = find.byKey(WorkoutLandingBody.readyMadeToggleKey);
+    if (toggle.evaluate().isEmpty) return;
+    if (find.byKey(WorkoutLandingBody.templateKey('push')).evaluate().isNotEmpty) {
+      return;
+    }
+    await tester.scrollUntilVisible(
+      toggle,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -150));
+    await settle(tester);
+    await tester.tap(toggle);
+    await settle(tester);
+  }
+
   /// Scrolls the landing until [id]'s tile is clear of the pinned Start bar and
   /// the tab bar, then taps it. Tiles lower in the grid start off screen or
   /// behind the bars, where a tap lands on the wrong thing.
   Future<void> tapTemplate(WidgetTester tester, String id) async {
+    await unfoldReadyMade(tester);
     final tile = find.byKey(WorkoutLandingBody.templateKey(id));
     await tester.scrollUntilVisible(
       tile,
@@ -151,7 +178,15 @@ void main() {
       // A second set, and the optional weight chip.
       await tester.tap(find.byKey(SetLoggingScreen.addSetKey));
       await settle(tester);
-      await tapText(tester, '+ weight');
+      // The chip reads "weight" beside a plus icon (its semantics label is
+      // "Add weight"); the old '+ weight' matched nothing, so tapText quietly
+      // skipped the optional-weight path.
+      final chips = find.text('weight').evaluate().length;
+      expect(chips, greaterThan(0), reason: 'every timed row offers the chip');
+      await tester.tap(find.text('weight').last);
+      await settle(tester);
+      expect(find.text('weight').evaluate().length, chips - 1,
+          reason: 'the chip expands into the optional weight field');
       await tester.tap(find.byKey(SetLoggingScreen.markDoneKey));
       await settle(tester);
     }
@@ -193,6 +228,69 @@ void main() {
 
     // --- History, which now reads the workout just finished.
     await tester.tap(find.byKey(GlassTabBar.itemKey(2)));
+    await settle(tester);
+
+    // --- Profile, Diet: every day, the picker and its filters, the add and
+    // edit sheets, the undo, the target and reminders screens. The food it
+    // adds it removes again.
+    Future<void> scrollToAndTap(Finder finder) async {
+      await tester.scrollUntilVisible(finder, 300,
+          scrollable: find.byType(Scrollable).first);
+      await settle(tester);
+      await tester.tap(finder);
+      await settle(tester);
+    }
+
+    await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
+    await settle(tester);
+    await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.diet)));
+    await settle(tester);
+    expect(find.byType(DietPane), findsOneWidget);
+    for (var weekday = 0; weekday < 7; weekday++) {
+      await tester.tap(find.byKey(DietPane.weekDayKey(weekday)));
+      await settle(tester);
+    }
+    await tester.tap(
+        find.byKey(DietPane.weekDayKey(DateTime.now().weekday - 1)));
+    await settle(tester);
+
+    await scrollToAndTap(find.byKey(DietSlotCard.addFoodKey(MealSlot.snack)));
+    // Every chip, then back to All: the choice lasts for the run (A15).
+    for (final filter in <DietFilter>[...DietFilter.values, DietFilter.all]) {
+      await tester.tap(find.byKey(FoodPickerScreen.chipKey(filter)));
+      await settle(tester);
+    }
+    await tester.enterText(find.byKey(FoodPickerScreen.searchKey), 'zzzz');
+    await settle(tester);
+    await tester.enterText(find.byKey(FoodPickerScreen.searchKey), 'soya');
+    await settle(tester);
+    await tester.tap(find.byKey(FoodPickerScreen.rowKey('soya-bean')));
+    await settle(tester);
+    await tester.tap(find.byKey(FoodServingSheet.commitKey));
+    await settle(tester);
+    await scrollToAndTap(
+        find.byKey(DietSlotCard.rowKey(MealSlot.snack, 'soya-bean')));
+    await tester.tap(find.byKey(FoodServingSheet.removeKey));
+    await settle(tester);
+    await tester.pump(FoodServingSheet.undoDuration);
+    await settle(tester);
+
+    await scrollToAndTap(find.byKey(DietPane.targetRowKey));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -1200));
+    await settle(tester);
+    await tester.pageBack();
+    await settle(tester);
+    if (find.byKey(DietPane.remindersRowKey).evaluate().isNotEmpty) {
+      await scrollToAndTap(find.byKey(DietPane.remindersRowKey));
+      await tester.pageBack();
+      await settle(tester);
+    }
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -3000));
+    await settle(tester);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 3000));
+    await settle(tester);
+    await tester.tap(
+        find.byKey(ProfileRoot.segmentKey(ProfileSegment.personal)));
     await settle(tester);
 
     expect(

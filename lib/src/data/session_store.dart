@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import 'app_database.dart';
+import 'exercise_notes.dart' show normaliseNote;
 import 'load_type.dart';
 import 'local_date.dart';
 import 'settings_store.dart' show appDatabaseProvider;
@@ -69,9 +70,25 @@ class SessionStore {
             (s) => OrderingTerm.desc(s.loggedAt),
           ]))
         .get();
-    return <WorkoutSession>[
-      for (final row in rows) await _hydrate(row),
-    ];
+    if (rows.isEmpty) return const <WorkoutSession>[];
+    // **Three queries, whatever the history's size** (QA second pass): one
+    // per session and one per exercise was about 2,100 queries for two years
+    // of training, on every refresh. Every saved session is read, so the
+    // exercise and set tables are read whole and grouped here; the open
+    // session's few rows come along and are simply not looked up.
+    return _assemble(
+      rows,
+      await (_db.select(_db.sessionExercises)
+            ..orderBy(<OrderClauseGenerator<$SessionExercisesTable>>[
+              (e) => OrderingTerm.asc(e.position),
+            ]))
+          .get(),
+      await (_db.select(_db.setEntries)
+            ..orderBy(<OrderClauseGenerator<$SetEntriesTable>>[
+              (s) => OrderingTerm.asc(s.position),
+            ]))
+          .get(),
+    );
   }
 
   Future<WorkoutSession> _hydrate(SessionRow row) async {
@@ -81,51 +98,69 @@ class SessionStore {
             (e) => OrderingTerm.asc(e.position),
           ]))
         .get();
+    final setRows = exerciseRows.isEmpty
+        ? const <SetEntryRow>[]
+        : await (_db.select(_db.setEntries)
+              ..where((s) => s.sessionExerciseId
+                  .isIn(exerciseRows.map((e) => e.id)))
+              ..orderBy(<OrderClauseGenerator<$SetEntriesTable>>[
+                (s) => OrderingTerm.asc(s.position),
+              ]))
+            .get();
+    return _assemble(<SessionRow>[row], exerciseRows, setRows).single;
+  }
 
-    final exercises = <SessionExercise>[];
-    for (final exerciseRow in exerciseRows) {
-      final setRows = await (_db.select(_db.setEntries)
-            ..where((s) => s.sessionExerciseId.equals(exerciseRow.id))
-            ..orderBy(<OrderClauseGenerator<$SetEntriesTable>>[
-              (s) => OrderingTerm.asc(s.position),
-            ]))
-          .get();
-      exercises.add(
-        SessionExercise(
-          id: exerciseRow.id,
-          exerciseId: exerciseRow.exerciseId,
-          position: exerciseRow.position,
-          // A row whose stored load type this build does not recognise still
-          // renders its sets; it just cannot claim a type it does not know.
-          loadType: LoadType.fromName(exerciseRow.loadType),
-          markedDone: exerciseRow.markedDone,
-          sets: <SetEntry>[
-            for (final s in setRows)
-              SetEntry(
-                id: s.id,
-                position: s.position,
-                completed: s.completed,
-                weightKg: s.weightKg,
-                reps: s.reps,
-                addedKg: s.addedKg,
-                assistKg: s.assistKg,
-                durationSec: s.durationSec,
-              ),
-          ],
+  /// Builds sessions from their rows. [exerciseRows] and [setRows] arrive in
+  /// position order and may hold rows of other sessions, which are ignored.
+  List<WorkoutSession> _assemble(
+    List<SessionRow> sessionRows,
+    List<SessionExerciseRow> exerciseRows,
+    List<SetEntryRow> setRows,
+  ) {
+    final setsByExercise = <String, List<SetEntry>>{};
+    for (final s in setRows) {
+      (setsByExercise[s.sessionExerciseId] ??= <SetEntry>[]).add(
+        SetEntry(
+          id: s.id,
+          position: s.position,
+          completed: s.completed,
+          weightKg: s.weightKg,
+          reps: s.reps,
+          addedKg: s.addedKg,
+          assistKg: s.assistKg,
+          durationSec: s.durationSec,
         ),
       );
     }
-
-    return WorkoutSession(
-      id: row.id,
-      title: row.title,
-      performedOn: row.performedOn,
-      loggedAt: row.loggedAt,
-      templateId: row.templateId,
-      templateName: row.templateName,
-      isOpen: row.openMarker != null,
-      exercises: exercises,
-    );
+    final exercisesBySession = <String, List<SessionExercise>>{};
+    for (final e in exerciseRows) {
+      (exercisesBySession[e.sessionId] ??= <SessionExercise>[]).add(
+        SessionExercise(
+          id: e.id,
+          exerciseId: e.exerciseId,
+          position: e.position,
+          // A row whose stored load type this build does not recognise still
+          // renders its sets; it just cannot claim a type it does not know.
+          loadType: LoadType.fromName(e.loadType),
+          markedDone: e.markedDone,
+          sets: setsByExercise[e.id] ?? const <SetEntry>[],
+          note: e.note,
+        ),
+      );
+    }
+    return <WorkoutSession>[
+      for (final row in sessionRows)
+        WorkoutSession(
+          id: row.id,
+          title: row.title,
+          performedOn: row.performedOn,
+          loggedAt: row.loggedAt,
+          templateId: row.templateId,
+          templateName: row.templateName,
+          isOpen: row.openMarker != null,
+          exercises: exercisesBySession[row.id] ?? const <SessionExercise>[],
+        ),
+    ];
   }
 
   /// Starts a session and returns it.
@@ -261,7 +296,12 @@ class SessionStore {
                 id: id,
                 sessionId: sessionId,
                 exerciseId: exerciseId,
-                position: used.length,
+                // One past the highest, not the row count: after a removal
+                // the count can equal a position still in use, and two rows
+                // sharing one leave the list order undefined.
+                position: used.fold<int>(
+                        -1, (high, e) => e.position > high ? e.position : high) +
+                    1,
                 loadType: loadType.name,
               ),
             );
@@ -274,6 +314,93 @@ class SessionStore {
         await (_db.delete(_db.sessionExercises)
               ..where((e) => e.id.equals(sessionExerciseId)))
             .go();
+      });
+
+  /// Puts [sessionId]'s exercises in the order of [orderedIds] (session
+  /// exercise row ids), in one transaction. Rows not named keep their relative
+  /// order after the named ones, so a stale list can never drop a row.
+  Future<void> reorderExercises(String sessionId, List<String> orderedIds) =>
+      _serialized(() async {
+        await _db.transaction(() async {
+          final rows = await (_db.select(_db.sessionExercises)
+                ..where((e) => e.sessionId.equals(sessionId))
+                ..orderBy(<OrderClauseGenerator<$SessionExercisesTable>>[
+                  (e) => OrderingTerm.asc(e.position),
+                ]))
+              .get();
+          final known = rows.map((r) => r.id).toSet();
+          final order = <String>[
+            for (final id in orderedIds)
+              if (known.contains(id)) id,
+            for (final row in rows)
+              if (!orderedIds.contains(row.id)) row.id,
+          ];
+          for (final (position, id) in order.indexed) {
+            await (_db.update(_db.sessionExercises)
+                  ..where((e) => e.id.equals(id)))
+                .write(SessionExercisesCompanion(position: Value<int>(position)));
+          }
+        });
+      });
+
+  /// Puts [exerciseId] where [sessionExerciseId]'s exercise was: same row,
+  /// same position (`docs/adr/0011-combined-build-decisions.md`).
+  ///
+  /// **Only an exercise with no completed set can be swapped.** A completed
+  /// set is a record of the old lift; re-labelling it as another exercise
+  /// would put its numbers in the wrong history and the wrong records, and
+  /// silently dropping it loses work. The UI offers Add instead.
+  ///
+  /// Untouched half-typed sets of the old exercise are dropped, and its note
+  /// and done tick cleared, because they describe the old lift. The load type
+  /// is snapshotted for the new one, as [addExercise] does.
+  Future<SwapResult> swapExercise({
+    required String sessionExerciseId,
+    required String exerciseId,
+    required LoadType loadType,
+  }) =>
+      _serialized(() => _db.transaction(() async {
+            final row = await (_db.select(_db.sessionExercises)
+                  ..where((e) => e.id.equals(sessionExerciseId)))
+                .getSingleOrNull();
+            if (row == null) return SwapResult.notFound;
+            if (row.exerciseId == exerciseId) return SwapResult.swapped;
+            final clash = await (_db.select(_db.sessionExercises)
+                  ..where((e) =>
+                      e.sessionId.equals(row.sessionId) &
+                      e.exerciseId.equals(exerciseId)))
+                .getSingleOrNull();
+            if (clash != null) return SwapResult.alreadyInWorkout;
+            final completed = await (_db.select(_db.setEntries)
+                  ..where((s) =>
+                      s.sessionExerciseId.equals(sessionExerciseId) &
+                      s.completed.equals(true))
+                  ..limit(1))
+                .getSingleOrNull();
+            if (completed != null) return SwapResult.hasCompletedSets;
+            await (_db.delete(_db.setEntries)
+                  ..where((s) => s.sessionExerciseId.equals(sessionExerciseId)))
+                .go();
+            await (_db.update(_db.sessionExercises)
+                  ..where((e) => e.id.equals(sessionExerciseId)))
+                .write(SessionExercisesCompanion(
+              exerciseId: Value<String>(exerciseId),
+              loadType: Value<String>(loadType.name),
+              markedDone: const Value<bool>(false),
+              note: const Value<String?>(null),
+            ));
+            return SwapResult.swapped;
+          }));
+
+  /// Writes the exercise's note, normalised by [normaliseNote]: trimmed,
+  /// capped, and `null` for a blank one.
+  Future<void> setNote(String sessionExerciseId, String? note) =>
+      _serialized(() async {
+        await (_db.update(_db.sessionExercises)
+              ..where((e) => e.id.equals(sessionExerciseId)))
+            .write(SessionExercisesCompanion(
+          note: Value<String?>(normaliseNote(note)),
+        ));
       });
 
   /// Records whether the user tapped "Mark exercise done".
@@ -382,6 +509,20 @@ class SetEntry {
   final int? durationSec;
 }
 
+/// What [SessionStore.swapExercise] did.
+enum SwapResult {
+  swapped,
+
+  /// The exercise has a completed set, so it is left alone.
+  hasCompletedSets,
+
+  /// The replacement is already in this workout; one exercise is one row.
+  alreadyInWorkout,
+
+  /// The row is gone (the workout ended underneath the picker).
+  notFound,
+}
+
 /// One exercise within a session.
 @immutable
 class SessionExercise {
@@ -392,6 +533,7 @@ class SessionExercise {
     required this.loadType,
     required this.markedDone,
     required this.sets,
+    this.note,
   });
 
   final String id;
@@ -406,6 +548,10 @@ class SessionExercise {
   final bool markedDone;
 
   final List<SetEntry> sets;
+
+  /// The user's note for this exercise in this session, or null. Entered
+  /// data (schema step 9), never derived.
+  final String? note;
 
   /// Sets that count: ticked, with their required field above zero.
   Iterable<SetEntry> get completedSets => sets.where((s) => s.completed);

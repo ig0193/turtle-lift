@@ -1,0 +1,58 @@
+# User story (History audit slice 3): a workout backdated to last year reads
+# as last year everywhere a date is printed short. The live date chip, the
+# History row and the share card all carry the year; "first logged" always
+# does.
+appId: dev.indresh.turtleLift
+name: 23 History dates carry the year
+tags: [history]
+---
+- launchApp:
+    clearState: true
+- tapOn: "Start workout.*"
+- tapOn: "Start logging"
+- runFlow:
+    file: ../subflows/add_exercise.yaml
+    env:
+      QUERY: "barbell bench"
+      ROW: "Barbell bench press. Barbell"
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-weight", VALUE: "50" }
+- runFlow:
+    file: ../subflows/type_into.yaml
+    env: { FIELD: "set-0-reps", VALUE: "5" }
+- tapOn:
+    id: "set-0-check"
+- tapOn: "Back"
+
+# --- backdate the live workout to 15 December last year
+- evalScript: "${(function () {
+    var now = new Date();
+    output.lastYear = String(now.getFullYear() - 1);
+    output.monthsBack = now.getMonth() + 1;
+    return output.lastYear;
+  })()}"
+- tapOn: "Workout date, today"
+- repeat:
+    times: ${output.monthsBack}
+    commands:
+      - tapOn: "Previous month"
+- tapOn: "15, .*"
+- tapOn: "OK"
+- waitForAnimationToEnd
+- assertVisible: "Workout date, .* 15 Dec ${output.lastYear}"
+- runFlow: ../subflows/finish_workout.yaml
+
+# --- the share card always carries the year
+- assertVisible: ".*15 December ${output.lastYear}.*"
+- tapOn: "Back"
+- tapOn: "History"
+- assertVisible: "Barbell bench press, quick log, 15 Dec ${output.lastYear} · 1 exercise · 1 set"
+
+# --- the detail's exercise history: first logged with its year
+- tapOn: "Barbell bench press, quick log, 15 Dec.*"
+- scrollUntilVisible:
+    element: "Barbell bench press\n.*"
+    centerElement: true
+- tapOn: "Barbell bench press\n.*"
+- assertVisible: ".*first logged 15 Dec ${output.lastYear}"

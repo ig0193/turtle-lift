@@ -5,10 +5,15 @@ import '../data/active_session.dart';
 import '../data/derived.dart';
 import '../data/exercise.dart';
 import '../data/load_type.dart';
+import '../data/local_date.dart';
 import '../data/session_progress.dart';
+import '../data/session_store.dart';
+import 'destructive_confirmation.dart';
 import 'exercise_detail_screen.dart';
 import 'exercise_picker_sheet.dart';
 import 'set_logging_screen.dart';
+import 'tab_index.dart';
+import 'tab_routes.dart';
 
 /// Opens [exercise] for logging in the open workout, starting an ad-hoc one when
 /// none is open.
@@ -51,7 +56,9 @@ Future<void> openExerciseForLogging(
   final existing =
       session.exercises.where((e) => e.exerciseId == exercise.id).firstOrNull;
   final hasWrittenSets = existing != null && existing.sets.isNotEmpty;
-  final neverDone =
+  // A custom exercise has no form guide to read first, so it never takes
+  // the detour (ADR 0009).
+  final neverDone = !exercise.isCustom &&
       timesPerformed(exercise.id, ref.read(savedSessionsProvider)) == 0;
 
   if (neverDone && !hasWrittenSets) {
@@ -87,3 +94,72 @@ Future<void> pickAndOpenExercise(
   if (chosen == null || !context.mounted) return;
   await openExerciseForLogging(context, ref, chosen);
 }
+
+/// Closes the workout in progress the way starting any new one does, asking
+/// first when it holds anything. False when the user keeps it.
+Future<bool> _closeOpenWorkout(BuildContext context, WidgetRef ref) async {
+  final notifier = ref.read(activeSessionProvider.notifier);
+  final open = ref.read(activeSessionProvider);
+  if (open == null) return true;
+  final completed = setCountOf(open) > 0;
+  if (completed || open.hasAnyWrittenSets) {
+    final confirmed = await confirmDestructive(
+      context,
+      title: 'Replace the workout in progress?',
+      message: completed
+          ? 'It is saved first, on its own day, then this one starts.'
+          : 'It has nothing ticked, so it is discarded.',
+      confirmLabel: 'Replace',
+    );
+    if (!confirmed) return false;
+  }
+  if (completed) {
+    await notifier.finish();
+  } else {
+    await notifier.discard();
+  }
+  return true;
+}
+
+/// Backfill: starts an empty workout dated [day] and shows it on the Workout
+/// tab, from an empty past day on History's calendar (ADR 0013).
+///
+/// **The existing flow, with the date already chosen.** It is the same
+/// ad-hoc workout the Workout tab starts, carrying [day] in its date chip, so
+/// the user adds exercises and logs sets exactly as they would today. A
+/// workout already open is never replaced silently.
+Future<void> startBackfill(
+  BuildContext context,
+  WidgetRef ref,
+  LocalDate day,
+) async {
+  if (!await _closeOpenWorkout(context, ref)) return;
+  await ref.read(activeSessionProvider.notifier).startAdHoc(performedOn: day);
+  if (!context.mounted) return;
+  Navigator.of(context).popUntil((route) => route.isFirst);
+  ref.read(tabIndexProvider.notifier).select(kWorkoutTabIndex);
+}
+
+/// "Do again": starts a new workout with [source]'s exercises and shows it on
+/// the Workout tab.
+///
+/// **User-initiated, never suggested.** It is a button on a past workout the
+/// user opened; nothing in the app proposes which one to repeat, so ADR 0005's
+/// "no today's workout" holds.
+///
+/// **A workout already open is never replaced silently.** The user is asked,
+/// and on a yes it is closed exactly as starting any new workout closes it:
+/// saved on its own day when it has a completed set, dropped otherwise. An
+/// untouched empty one is just dropped, as the landing does.
+Future<void> doAgain(
+  BuildContext context,
+  WidgetRef ref,
+  WorkoutSession source,
+) async {
+  if (!await _closeOpenWorkout(context, ref)) return;
+  await ref.read(activeSessionProvider.notifier).startAgain(source);
+  if (!context.mounted) return;
+  Navigator.of(context).popUntil((route) => route.isFirst);
+  ref.read(tabIndexProvider.notifier).select(kWorkoutTabIndex);
+}
+

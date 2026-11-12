@@ -324,4 +324,99 @@ void main() {
       expect(pbCountFor(second, <WorkoutSession>[first, second]), 2);
     });
   });
+
+  // The live PB mark on a set row (research item 5): the same rule as
+  // pbCountFor and isPersonalBest, pointed at one set.
+  group('personalBestSetIndex', () {
+    final monday = LocalDate(2026, 10, 19);
+    final wednesday = LocalDate(2026, 10, 21);
+
+    test('no earlier session of the exercise: no PB, however heavy', () {
+      final live = exercise(LoadType.weighted, [set(weightKg: 200, reps: 1)]);
+      expect(personalBestSetIndex(live, wednesday, const []), isNull);
+    });
+
+    test('marks the set that beats the previous best', () {
+      final past = session(monday, [
+        exercise(LoadType.weighted, [set(weightKg: 60, reps: 8)]),
+      ]);
+      final live = exercise(LoadType.weighted, [
+        set(weightKg: 60, reps: 8),
+        set(weightKg: 62.5, reps: 6),
+      ]);
+      expect(personalBestSetIndex(live, wednesday, [past]), 1);
+    });
+
+    test('equal to the record is not a record (strictly greater)', () {
+      final past = session(monday, [
+        exercise(LoadType.weighted, [set(weightKg: 60, reps: 8)]),
+      ]);
+      final live = exercise(LoadType.weighted, [set(weightKg: 60, reps: 8)]);
+      expect(personalBestSetIndex(live, wednesday, [past]), isNull);
+    });
+
+    test('an unticked set never claims it', () {
+      final past = session(monday, [
+        exercise(LoadType.weighted, [set(weightKg: 60, reps: 8)]),
+      ]);
+      final live = exercise(LoadType.weighted, [
+        set(weightKg: 100, reps: 8, completed: false),
+      ]);
+      expect(personalBestSetIndex(live, wednesday, [past]), isNull);
+    });
+
+    test('one mark per exercise: on its best set', () {
+      final past = session(monday, [
+        exercise(LoadType.weighted, [set(weightKg: 60, reps: 8)]),
+      ]);
+      final live = exercise(LoadType.weighted, [
+        set(weightKg: 65, reps: 8),
+        set(weightKg: 70, reps: 5),
+        set(weightKg: 65, reps: 8),
+      ]);
+      expect(personalBestSetIndex(live, wednesday, [past]), 1);
+    });
+
+    test('assisted: less assistance is the PB', () {
+      final past = session(monday, [
+        exercise(LoadType.assisted, [set(assistKg: 20, reps: 8)]),
+      ]);
+      expect(
+        personalBestSetIndex(
+          exercise(LoadType.assisted, [set(assistKg: 15, reps: 8)]),
+          wednesday,
+          [past],
+        ),
+        0,
+        reason: 'lighter assist beats the record',
+      );
+      expect(
+        personalBestSetIndex(
+          exercise(LoadType.assisted, [set(assistKg: 25, reps: 8)]),
+          wednesday,
+          [past],
+        ),
+        isNull,
+        reason: 'heavier assist is never a record -- the backwards bug',
+      );
+    });
+
+    test('a session on the same day is not "earlier"', () {
+      final sameDay = session(wednesday, [
+        exercise(LoadType.weighted, [set(weightKg: 60, reps: 8)]),
+      ]);
+      final live = exercise(LoadType.weighted, [set(weightKg: 80, reps: 8)]);
+      expect(personalBestSetIndex(live, wednesday, [sameDay]), isNull);
+    });
+
+    test('agrees with isPersonalBest', () {
+      final past = session(monday, [
+        exercise(LoadType.timed, [set(durationSec: 45)]),
+      ]);
+      final live = exercise(LoadType.timed, [set(durationSec: 60)]);
+      final now = session(wednesday, [live]);
+      expect(isPersonalBest(live, now, [past]), isTrue);
+      expect(personalBestSetIndex(live, wednesday, [past]), 0);
+    });
+  });
 }
