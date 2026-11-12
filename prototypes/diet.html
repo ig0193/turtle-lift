@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prototype — Diet tab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  Diet tab — DRAFT. Rules: docs/06-diet-tab-userflow.md. Requirements:
+  .claude/prds/diet-plan.prd.md. Protein values below are SAMPLE values for
+  layout only; the real catalogue is generated from IFCT 2017 and reviewed.
+-->
+<style>
+:root{
+  --bg:#17140F; --card:#211D18; --line:#332C22; --off:#241F19;
+  --t1:#F5EFE8; --t2:#A89C8E; --t3:#6B6156;
+  --acc:#D85A30; --acc2:#F0997B; --on-acc:#1B0C05;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0C0A07;font-family:Inter,system-ui,sans-serif;color:var(--t1);
+     -webkit-font-smoothing:antialiased;padding:24px 16px 60px}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600}
+
+/* ---- harness ---- */
+.harness{max-width:1180px;margin:0 auto}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:22px;
+     background:#141109;border:1px solid #241F19;border-radius:12px;padding:10px 12px}
+.bar h1{font-size:13px;font-weight:600;color:var(--t2);margin-right:6px}
+.note{font-size:11px;color:var(--t3)}
+.grid{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+figure{margin:0}
+figcaption{font-size:11px;color:var(--t3);margin-top:8px;text-align:center;letter-spacing:.04em;
+           text-transform:uppercase}
+.tg{display:flex;background:#0C0A07;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.tg button{background:none;border:0;color:var(--t3);font:inherit;font-size:11px;font-weight:500;
+           padding:6px 12px;cursor:pointer}
+.tg button[aria-pressed=true]{background:var(--acc);color:var(--on-acc)}
+
+/* ---- phone ---- */
+.phone{width:330px;height:660px;background:var(--bg);border-radius:30px;overflow:hidden;
+       position:relative;border:1px solid #2A241C;display:flex;flex-direction:column}
+.status{height:26px;display:flex;align-items:center;justify-content:space-between;
+        padding:0 18px;font-size:10px;color:var(--t3);flex-shrink:0}
+.body{flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 16px 16px}
+.body::-webkit-scrollbar{width:0}
+.tabs{display:flex;border-top:1px solid var(--line);flex-shrink:0;background:var(--bg)}
+.tabs button{flex:1;background:none;border:0;padding:9px 0 11px;cursor:pointer;color:var(--t3);
+             font:inherit;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabs button[aria-current=page]{color:var(--acc)}
+.tabs span{font-size:9.5px;font-weight:500}
+.tabs svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;
+          stroke-linecap:round;stroke-linejoin:round}
+
+/* ---- headers (pinned) ---- */
+.l0h{display:flex;align-items:center;position:sticky;top:0;z-index:20;background:var(--bg);
+     margin:0 -16px 12px;padding:14px 16px 6px}
+.l0h h2{font-size:23px;font-weight:600;letter-spacing:-.02em;flex:1}
+.hdr{display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:20;background:var(--bg);
+     margin:0 -16px 10px;padding:12px 16px 8px}
+.hdr h3{font-size:16px;font-weight:600;letter-spacing:-.01em;flex:1}
+.back{background:none;border:0;color:var(--t2);font-size:22px;line-height:1;cursor:pointer;padding:0 2px}
+.iconbtn{width:32px;height:32px;border-radius:50%;background:var(--card);border:1px solid var(--line);
+         display:flex;align-items:center;justify-content:center;cursor:pointer}
+.iconbtn svg{width:16px;height:16px;stroke:var(--t2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---- week strip ---- */
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px}
+.wd{background:none;border:1px solid transparent;border-radius:9px;padding:6px 0 7px;cursor:pointer;
+    color:var(--t3);font:inherit;display:flex;flex-direction:column;align-items:center;gap:5px}
+.wd b{font-size:10px;font-weight:500;letter-spacing:.04em}
+.wd i{font-style:normal;font-size:13px;font-weight:600;color:var(--t2)}
+.wd .meter{width:18px;height:3px;border-radius:2px;background:var(--off);overflow:hidden}
+.wd .meter span{display:block;height:100%;background:var(--t3)}
+.wd.today i{color:var(--acc)}
+.wd[aria-pressed=true]{background:var(--card);border-color:var(--line)}
+.wd[aria-pressed=true] i{color:var(--t1)}
+.wd.today[aria-pressed=true] i{color:var(--acc)}
+
+/* ---- day card ---- */
+.daycard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:13px 13px 12px;margin-bottom:14px;cursor:default}
+.daycard .top{display:flex;align-items:baseline;gap:6px}
+.daycard .big{font-size:26px}
+.daycard .of{font-size:12.5px;color:var(--t2)}
+.daycard .sub{font-size:11.5px;color:var(--t3);margin-top:3px}
+.pbar{position:relative;height:7px;border-radius:4px;background:var(--off);margin:10px 0 8px;overflow:hidden}
+.pbar .pl{position:absolute;left:0;top:0;bottom:0;background:var(--t3);border-radius:4px}
+.pbar .ea{position:absolute;left:0;top:0;bottom:0;background:var(--acc);border-radius:4px}
+.legend{display:flex;gap:12px;font-size:10.5px;color:var(--t3)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend span::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--t3)}
+.legend span.e::before{background:var(--acc)}
+.settarget{display:block;margin-top:8px;font-size:12px;color:var(--acc2);background:none;border:0;font:inherit;cursor:pointer;padding:0}
+
+/* ---- slots ---- */
+.slot{border:1px solid var(--line);border-radius:var(--r);margin-bottom:9px;overflow:hidden}
+.slot.eaten{border-color:#3E3226}
+.sh{display:flex;align-items:center;gap:9px;padding:10px 11px 8px}
+.sh .nm{font-size:13.5px;font-weight:600}
+.sh .tm{font-size:11px;color:var(--t3)}
+.sh .tot{margin-left:auto;font-size:13px}
+.sh .tot small{font-size:10.5px;color:var(--t3);font-weight:500}
+.tickbtn{width:26px;height:26px;border-radius:7px;background:#191510;border:1px solid var(--line);
+         color:var(--t3);font-size:13px;cursor:pointer;flex-shrink:0}
+.tickbtn.on{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
+.tickbtn[disabled]{opacity:.35;cursor:default}
+.food{display:flex;align-items:center;gap:9px;padding:7px 11px;border-top:1px solid #201B15;cursor:pointer}
+.food p{font-size:13px}
+.food small{font-size:11px;color:var(--t3);display:block;margin-top:1px}
+.food .g{margin-left:auto;font-size:12.5px;color:var(--t2)}
+.addfood{width:100%;background:none;border:0;border-top:1px solid #201B15;color:var(--t3);font:inherit;
+         font-size:12px;text-align:left;padding:8px 11px 9px;cursor:pointer}
+.addfood:hover{color:var(--acc2)}
+.slot.empty .addfood{border-top:0}
+
+/* diet-type glyph: shape, not colour (palette has no green/red) */
+.dt{width:14px;height:14px;flex-shrink:0}
+.dt rect{fill:none;stroke:var(--t2);stroke-width:1.4}
+.dt .m{fill:var(--t2)}
+
+/* ---- food list ---- */
+.search{width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+        padding:10px 12px;color:var(--t1);font:inherit;font-size:13px;margin-bottom:10px}
+.search::placeholder{color:var(--t3)}
+.chips{display:flex;gap:6px;margin-bottom:8px}
+.chip{display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:12px;color:var(--t2);background:var(--card);
+      border:1px solid var(--line);border-radius:99px;padding:6px 11px;cursor:pointer}
+.chip[aria-pressed=true]{background:#33221A;border-color:var(--acc);color:var(--acc2)}
+.chip[aria-pressed=true] .dt rect{stroke:var(--acc2)} .chip[aria-pressed=true] .dt .m{fill:var(--acc2)}
+.frow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.frow p{font-size:13.5px}
+.frow small{font-size:11px;color:var(--t3);display:block;margin-top:2px}
+.frow .g{margin-left:auto;text-align:right;font-size:15px;white-space:nowrap}
+.frow .g small{font-size:10px;font-weight:500}
+.caption{font-size:10.5px;color:var(--t3);margin:2px 0 4px}
+
+/* ---- sheet ---- */
+.scrim{position:absolute;inset:0;background:rgba(8,6,4,.62);z-index:40;display:flex;align-items:flex-end}
+.sheet{width:100%;background:var(--card);border-top:1px solid var(--line);border-radius:18px 18px 0 0;padding:10px 16px 18px}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
+.sheet h4{font-size:16px;font-weight:600}
+.sheet .meta{font-size:11.5px;color:var(--t3);margin-top:2px}
+.stepper{display:flex;align-items:center;justify-content:space-between;background:#191510;border:1px solid var(--line);
+         border-radius:var(--r);padding:8px;margin:14px 0 6px}
+.stepper button{width:36px;height:36px;border-radius:8px;background:var(--card);border:1px solid var(--line);
+                color:var(--t1);font-size:18px;cursor:pointer}
+.stepper .val{text-align:center}
+.stepper .val .num{font-size:20px}
+.stepper .val small{display:block;font-size:11px;color:var(--t3)}
+.lbl{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 8px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.days button{background:#191510;border:1px solid var(--line);color:var(--t2);border-radius:8px;font:inherit;
+             font-size:11.5px;padding:8px 0;cursor:pointer}
+.days button[aria-pressed=true]{background:#33221A;border-color:var(--acc);color:var(--acc2)}
+.cta{width:100%;background:var(--acc);color:var(--on-acc);border:0;border-radius:var(--r);
+     padding:13px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;margin-top:16px}
+.ghost{width:100%;background:none;color:var(--t2);border:1px solid var(--line);border-radius:var(--r);
+       padding:12px;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer;margin-top:8px}
+.danger{color:#C4553A;border-color:#3E2A22}
+
+/* ---- target / reminders ---- */
+.tfield{display:flex;align-items:baseline;gap:8px;background:var(--card);border:1px solid var(--line);
+        border-radius:var(--r);padding:14px;margin-bottom:10px}
+.tfield input{background:none;border:0;color:var(--t1);font:inherit;font-size:30px;font-weight:600;width:110px;
+              font-variant-numeric:tabular-nums;outline:none}
+.tfield span{font-size:13px;color:var(--t3)}
+.suggest{width:100%;text-align:left;background:#33221A;border:1px solid var(--acc);border-radius:var(--r);
+         padding:10px 12px;font:inherit;cursor:pointer;margin-bottom:12px}
+.suggest b{display:block;font-size:13px;color:var(--acc2);font-weight:600}
+.suggest small{font-size:11px;color:var(--acc2);opacity:.85}
+.helper{font-size:11.5px;color:var(--t3);line-height:1.55;margin-bottom:12px}
+.rrow{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.rrow p{font-size:14px}
+.rrow small{font-size:11px;color:var(--t3);display:block;margin-top:2px}
+.time{margin-left:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;
+      color:var(--t1);font:inherit;font-size:13px;padding:5px 9px;font-variant-numeric:tabular-nums}
+.time.off{color:var(--t3)}
+.sw{width:40px;height:24px;border-radius:12px;background:var(--off);border:1px solid var(--line);
+    position:relative;cursor:pointer;flex-shrink:0}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+           background:var(--t3);transition:transform .15s ease}
+.sw.on{background:var(--acc);border-color:var(--acc)}
+.sw.on::after{transform:translateX(16px);background:var(--on-acc)}
+.dim{opacity:.4;pointer-events:none}
+
+/* ---- empty ---- */
+.empty{text-align:center;padding:40px 14px 0}
+.empty .ico{width:52px;height:52px;margin:0 auto 14px;border-radius:50%;background:var(--card);
+            display:flex;align-items:center;justify-content:center}
+.empty .ico svg{width:24px;height:24px;stroke:var(--t2);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.empty h3{font-size:16px;font-weight:600;margin-bottom:6px}
+.empty p{font-size:12.5px;color:var(--t2);line-height:1.55;margin-bottom:18px}
+
+/* ---- lock screen ---- */
+.lock{flex:1;padding:30px 12px 0;background:linear-gradient(#1D1913,#0F0C08)}
+.clock{text-align:center;font-size:56px;font-weight:300;letter-spacing:-.02em;color:var(--t1)}
+.ldate{text-align:center;font-size:13px;color:var(--t2);margin-bottom:26px}
+.notif{background:rgba(54,46,36,.86);border-radius:16px;padding:10px 12px;margin-bottom:9px}
+.notif .nh{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--t2);margin-bottom:4px}
+.notif .nh .ap{width:16px;height:16px;border-radius:4px;background:var(--acc)}
+.notif .nh time{margin-left:auto}
+.notif b{display:block;font-size:13px;font-weight:600;margin-bottom:2px}
+.notif p{font-size:12px;color:var(--t1);opacity:.85;line-height:1.45}
+.lock .cap{font-size:10.5px;color:var(--t3);text-align:center;margin-top:14px;line-height:1.5}
+.hidden{display:none!important}
+</style></head>
+<body>
+<div class="harness">
+  <div class="bar">
+    <h1>Diet tab · draft</h1>
+    <div class="tg" id="jump">
+      <button data-go="today" aria-pressed="true">Today</button>
+      <button data-go="add">Add food</button>
+      <button data-go="target">Target</button>
+      <button data-go="remind">Reminders</button>
+    </div>
+    <span class="note">Left phone is live: tap days, ticks, foods, + Add food, the bell. Protein values are sample values, not reviewed.</span>
+  </div>
+
+  <div class="grid">
+    <figure><div class="phone" id="app">
+      <div class="status"><span>9:41</span><span>●●●</span></div>
+      <div class="body" id="screen"></div>
+      <div id="tabslot"></div>
+      <div id="sheetslot"></div>
+    </div><figcaption>D1–D4 · interactive</figcaption></figure>
+
+    <figure><div class="phone">
+      <div class="status"><span>9:41</span><span>●●●</span></div>
+      <div class="body">
+        <div class="l0h"><h2>Diet</h2></div>
+        <div class="empty">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 11h16a8 8 0 0 1-16 0zM8 7c0-2 2-2 2-4M12 7c0-2 2-2 2-4"/></svg></div>
+          <h3>Plan your week's protein</h3>
+          <p>Pick high-protein foods for each meal once. The plan repeats every week, and each day shows how close it gets to your target.</p>
+          <button class="cta" style="margin-top:0">Plan Monday</button>
+          <button class="ghost">Set a daily target first</button>
+        </div>
+      </div>
+      <div class="tabslot-static"></div>
+    </div><figcaption>D1 · empty state</figcaption></figure>
+
+    <figure><div class="phone">
+      <div class="status"><span></span><span>●●●</span></div>
+      <div class="lock">
+        <div class="clock">13:00</div>
+        <div class="ldate">Tuesday, 27 October</div>
+        <div class="notif">
+          <div class="nh"><span class="ap"></span>TURTLELIFT<time>now</time></div>
+          <b>Lunch · 24 g protein</b>
+          <p>Rajma, 1 katori (13 g) · Curd, 1 katori (5 g) · Roti × 2 (6 g)</p>
+        </div>
+        <div class="notif">
+          <div class="nh"><span class="ap"></span>TURTLELIFT<time>07:30</time></div>
+          <b>Today · 106 g protein planned</b>
+          <p>Breakfast: Paneer bhurji, Milk · Lunch: Rajma, Curd, Roti · Snack: Roasted chana, Whey · Dinner: Chicken curry</p>
+        </div>
+        <p class="cap">Fixed templates filled from the plan.<br>Never mentions what was or wasn't eaten.</p>
+      </div>
+    </div><figcaption>Notifications · morning + meal</figcaption></figure>
+  </div>
+</div>
+
+<script>
+/* ---------- data (SAMPLE values — layout only) ---------- */
+const FOODS = [
+  {id:'paneer-bhurji',n:'Paneer bhurji',t:'veg',s:'1 katori',gr:150,p:18},
+  {id:'soya',n:'Soya chunks',t:'veg',s:'50 g dry',gr:50,p:26},
+  {id:'whey',n:'Whey protein',t:'veg',s:'1 scoop',gr:30,p:24},
+  {id:'rajma',n:'Rajma',t:'veg',s:'1 katori',gr:150,p:13},
+  {id:'chole',n:'Chole',t:'veg',s:'1 katori',gr:150,p:13},
+  {id:'hung-curd',n:'Hung curd',t:'veg',s:'1 katori',gr:100,p:10},
+  {id:'moong',n:'Moong dal',t:'veg',s:'1 katori',gr:150,p:9},
+  {id:'milk',n:'Milk',t:'veg',s:'1 glass',gr:250,p:8},
+  {id:'peanuts',n:'Peanuts',t:'veg',s:'1 handful',gr:30,p:7},
+  {id:'chana',n:'Roasted chana',t:'veg',s:'1 handful',gr:30,p:7},
+  {id:'roti',n:'Roti',t:'veg',s:'2 pieces',gr:80,p:6},
+  {id:'curd',n:'Curd',t:'veg',s:'1 katori',gr:150,p:5},
+  {id:'omelette',n:'Omelette',t:'egg',s:'2 eggs',gr:120,p:12},
+  {id:'egg-bhurji',n:'Egg bhurji',t:'egg',s:'2 eggs',gr:120,p:12},
+  {id:'egg-whites',n:'Egg whites',t:'egg',s:'3 whites',gr:100,p:11},
+  {id:'boiled-egg',n:'Boiled egg',t:'egg',s:'1 piece',gr:50,p:6},
+  {id:'chicken-breast',n:'Chicken breast',t:'nonVeg',s:'100 g cooked',gr:100,p:31},
+  {id:'tuna',n:'Tuna',t:'nonVeg',s:'100 g',gr:100,p:26},
+  {id:'chicken-curry',n:'Chicken curry',t:'nonVeg',s:'1 katori',gr:150,p:25},
+  {id:'prawns',n:'Prawns',t:'nonVeg',s:'100 g cooked',gr:100,p:24},
+  {id:'mutton-curry',n:'Mutton curry',t:'nonVeg',s:'1 katori',gr:150,p:20},
+  {id:'fish-curry',n:'Fish curry',t:'nonVeg',s:'1 katori',gr:150,p:19},
+];
+const F = Object.fromEntries(FOODS.map(f=>[f.id,f]));
+const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DATES=[26,27,28,29,30,31,1];
+const TODAY=1; // Tue 27 Oct 2026
+const SLOTS=[['breakfast','Breakfast','08:00'],['lunch','Lunch','13:00'],['snack','Snack','17:00'],['dinner','Dinner','20:30']];
+
+const base = ()=>({
+  breakfast:[['paneer-bhurji',1],['milk',1]],
+  lunch:[['rajma',1],['curd',1],['roti',1]],
+  snack:[['chana',1],['whey',1]],
+  dinner:[['chicken-curry',1]],
+});
+const S = {
+  plan:[
+    {breakfast:[['omelette',1],['milk',1]],lunch:[['chole',1],['roti',1]],snack:[['whey',1]],dinner:[['fish-curry',1],['roti',1]]},
+    base(),
+    {breakfast:[['egg-bhurji',1]],lunch:[['moong',1],['curd',1],['roti',1]],snack:[['peanuts',1]],dinner:[['chicken-breast',1]]},
+    base(),
+    {breakfast:[['paneer-bhurji',1]],lunch:[['soya',1],['roti',1]],snack:[['whey',1]],dinner:[['mutton-curry',1]]},
+    {breakfast:[['boiled-egg',2]],lunch:[],snack:[],dinner:[['prawns',1]]},
+    {breakfast:[],lunch:[],snack:[],dinner:[]},
+  ],
+  eaten:{'0:breakfast':1,'0:lunch':1,'0:snack':1,'0:dinner':1,'1:breakfast':1,'1:lunch':1},
+  target:120, day:TODAY, screen:'today', filter:'all', q:'', slot:'lunch',
+  remind:{on:true,summary:['07:30',true],breakfast:['08:00',true],lunch:['13:00',true],snack:['17:00',false],dinner:['20:30',true]},
+  sheet:null,
+};
+
+/* ---------- derived (never stored) ---------- */
+const itemP = ([id,n])=>F[id].p*n;
+const slotP = (d,s)=>S.plan[d][s].reduce((a,i)=>a+itemP(i),0);
+const plannedP = d=>SLOTS.reduce((a,[s])=>a+slotP(d,s),0);
+const eatenP = d=>SLOTS.reduce((a,[s])=>a+(S.eaten[d+':'+s]?slotP(d,s):0),0);
+const fmt = n=>Number.isInteger(n)?n:n.toFixed(1);
+
+/* ---------- glyphs ---------- */
+const DT = t => t==='veg'
+  ? '<svg class="dt" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" rx="2"/><circle class="m" cx="7" cy="7" r="3"/></svg>'
+  : t==='egg'
+  ? '<svg class="dt" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" rx="2"/><ellipse class="m" cx="7" cy="7.4" rx="2.4" ry="3.2"/></svg>'
+  : '<svg class="dt" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" rx="2"/><path class="m" d="M7 3.6l3.4 6H3.6z"/></svg>';
+const BELL='<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg>';
+const TABS = `<nav class="tabs">
+ <button><svg viewBox="0 0 24 24"><path d="M4 12h16M7 8v8M17 8v8"/></svg><span>Workout</span></button>
+ <button><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M12 15l-3 6M12 15l3 6M7 10h10"/></svg><span>Muscles</span></button>
+ <button><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>History</span></button>
+ <button aria-current="page"><svg viewBox="0 0 24 24"><path d="M4 11h16a8 8 0 0 1-16 0zM8 7c0-2 2-2 2-4M12 7c0-2 2-2 2-4"/></svg><span>Diet</span></button>
+ <button><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg><span>Profile</span></button>
+</nav>`;
+document.querySelector('.tabslot-static').outerHTML = TABS;
+
+/* ---------- screens ---------- */
+function today(){
+  const d=S.day, pl=plannedP(d), ea=eatenP(d), t=S.target;
+  const tickable = d<=TODAY;
+  const pct=x=>Math.min(100,t?x/t*100:0);
+  const week = DAYS.map((n,i)=>`<button class="wd ${i===TODAY?'today':''}" data-day="${i}" aria-pressed="${i===d}">
+      <b>${n.toUpperCase()}</b><i>${DATES[i]}</i><span class="meter"><span style="width:${pct(plannedP(i))}%"></span></span></button>`).join('');
+  const togo = Math.max(0,t-pl);
+  const card = !t
+    ? `<div class="daycard"><div class="top"><span class="big num">${fmt(pl)}</span><span class="of">g planned</span></div>
+        <button class="settarget" data-go="target">Set a daily target →</button></div>`
+    : `<div class="daycard" data-go="target" style="cursor:pointer">
+        <div class="top"><span class="big num">${fmt(pl)}</span><span class="of">of ${t} g planned</span></div>
+        <div class="sub">${togo?fmt(togo)+' g to go':'Target reached in the plan'}${tickable&&ea?` · ${fmt(ea)} g eaten`:''}</div>
+        <div class="pbar"><span class="pl" style="width:${pct(pl)}%"></span>${tickable?`<span class="ea" style="width:${pct(ea)}%"></span>`:''}</div>
+        <div class="legend"><span>Planned</span>${tickable?'<span class="e">Eaten</span>':''}</div></div>`;
+  const slots = SLOTS.map(([k,name,tm])=>{
+    const items=S.plan[d][k], on=!!S.eaten[d+':'+k], empty=!items.length;
+    return `<div class="slot ${on?'eaten':''} ${empty?'empty':''}">
+      <div class="sh">
+        <div><div class="nm">${name}</div><div class="tm">${S.remind[k][1]&&S.remind.on?S.remind[k][0]:'No reminder'}</div></div>
+        ${empty?'':`<span class="tot num">${fmt(slotP(d,k))} <small>g</small></span>
+        <button class="tickbtn ${on?'on':''}" data-tick="${k}" ${tickable?'':'disabled title="Future days can\'t be ticked"'} aria-label="Mark ${name} eaten">✓</button>`}
+      </div>
+      ${items.map(([id,n],ix)=>`<div class="food" data-edit="${k}:${ix}">${DT(F[id].t)}
+          <div><p>${F[id].n}</p><small>${n===1?F[id].s:'× '+fmt(n)+' · '+F[id].s}</small></div>
+          <span class="g num">${fmt(F[id].p*n)} g</span></div>`).join('')}
+      <button class="addfood" data-add="${k}">+ Add food</button></div>`;
+  }).join('');
+  return `<div class="l0h"><h2>Diet</h2><button class="iconbtn" data-go="remind" aria-label="Meal reminders">${BELL}</button></div>
+    <div class="week">${week}</div>${card}${slots}`;
+}
+
+function addFood(){
+  const name=SLOTS.find(s=>s[0]===S.slot)[1];
+  const rows=FOODS.filter(f=>(S.filter==='all'||f.t===S.filter)&&f.n.toLowerCase().includes(S.q.toLowerCase()))
+    .sort((a,b)=>b.p-a.p)
+    .map(f=>`<div class="frow" data-pick="${f.id}">${DT(f.t)}<div><p>${f.n}</p><small>${f.s} · ${f.gr} g</small></div>
+      <span class="g num">${f.p}<small> g</small></span></div>`).join('');
+  const chip=(k,l,g='')=>`<button class="chip" data-filter="${k}" aria-pressed="${S.filter===k}">${g}${l}</button>`;
+  return `<div class="hdr"><button class="back" data-go="today">‹</button><h3>Add to ${name} · ${DAYS[S.day]}</h3></div>
+    <input class="search" id="q" placeholder="Search foods" value="${S.q}">
+    <div class="chips">${chip('all','All')}${chip('veg','Veg',DT('veg'))}${chip('egg','Egg',DT('egg'))}${chip('nonVeg','Non-veg',DT('nonVeg'))}</div>
+    <p class="caption">Protein per serving · highest first</p>${rows||'<p class="helper" style="margin-top:14px">No foods match.</p>'}`;
+}
+
+function target(){
+  return `<div class="hdr"><button class="back" data-go="today">‹</button><h3>Daily protein target</h3></div>
+    <div class="tfield"><input id="tgt" inputmode="numeric" value="${S.target||''}" placeholder="0"><span>g / day</span></div>
+    <button class="suggest" data-suggest="115"><b>Suggested 115 g</b><small>1.6 g × 72 kg — your current bodyweight</small></button>
+    <p class="helper">Every day's plan is measured against this number. Change it any time — it never rewrites what you ticked.</p>
+    <p class="helper">A guide, not medical advice. If you have a health condition, talk to a doctor before changing your diet.</p>
+    <button class="cta" data-save-target>Save</button>`;
+}
+
+function remind(){
+  const R=S.remind;
+  const row=(k,name,sub)=>`<div class="rrow"><div><p>${name}</p>${sub?`<small>${sub}</small>`:''}</div>
+     <input class="time ${R[k][1]?'':'off'}" type="time" value="${R[k][0]}" data-time="${k}">
+     <span class="sw ${R[k][1]?'on':''}" data-sw="${k}" role="switch" aria-checked="${R[k][1]}"></span></div>`;
+  return `<div class="hdr"><button class="back" data-go="today">‹</button><h3>Meal reminders</h3></div>
+    <div class="rrow" style="border-top:1px solid var(--line)"><div><p>Remind me</p><small>Local notifications. Nothing leaves your phone.</small></div>
+      <span class="sw ${R.on?'on':''}" data-master role="switch" aria-checked="${R.on}" style="margin-left:auto"></span></div>
+    <div class="${R.on?'':'dim'}">
+      <p class="lbl">Every day</p>
+      ${row('summary','Morning summary','What to eat today and total protein')}
+      <p class="lbl">At each meal</p>
+      ${SLOTS.map(([k,n])=>row(k,n,'')).join('')}
+      <p class="helper" style="margin-top:12px">A meal with nothing planned that day sends nothing. Reminders follow your plan only — they never change based on what you ticked.</p>
+    </div>`;
+}
+
+/* ---------- sheets ---------- */
+function sheet(){
+  const sh=S.sheet; if(!sh) return '';
+  if(sh.kind==='explain') return `<div class="scrim" data-close><div class="sheet"><div class="grab"></div>
+      <h4>Meal reminders</h4><p class="helper" style="margin-top:8px">TurtleLift will send a summary each morning and a note at each meal time with what you planned and the protein it gives. They're scheduled on your phone — no account, no server. You can switch any of them off here.</p>
+      <button class="cta" data-allow>Continue</button><button class="ghost" data-close>Not now</button></div></div>`;
+  const f=F[sh.id], n=sh.n;
+  const days = DAYS.map((d,i)=>`<button data-rep="${i}" aria-pressed="${sh.days.includes(i)}">${d[0]}${d[1]}</button>`).join('');
+  return `<div class="scrim" data-close><div class="sheet"><div class="grab"></div>
+    <div style="display:flex;gap:9px;align-items:center">${DT(f.t)}<div><h4>${f.n}</h4><p class="meta">${f.s} · ${f.gr} g · ${f.p} g protein</p></div></div>
+    <div class="stepper"><button data-step="-0.5">−</button>
+      <div class="val"><span class="num">${fmt(n)}</span><small>${f.s} · <b style="color:var(--t1)">${fmt(f.p*n)} g protein</b></small></div>
+      <button data-step="0.5">+</button></div>
+    ${sh.kind==='add'?`<p class="lbl">Repeat on</p><div class="days">${days}</div>
+      <button class="cta" data-commit>Add to ${SLOTS.find(s=>s[0]===S.slot)[1]}</button>`
+    :`<button class="cta" data-commit>Save</button><button class="ghost danger" data-remove>Remove from ${SLOTS.find(s=>s[0]===sh.slot)[1]}</button>`}
+    </div></div>`;
+}
+
+/* ---------- render + events ---------- */
+const $=s=>document.querySelector(s);
+function render(){
+  $('#screen').innerHTML = {today,add:addFood,target,remind}[S.screen]();
+  $('#tabslot').innerHTML = S.screen==='today'?TABS:'';
+  $('#sheetslot').innerHTML = sheet();
+  document.querySelectorAll('#jump button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.go===S.screen));
+  const q=$('#q'); if(q){q.oninput=e=>{S.q=e.target.value;const p=e.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(p,p);};}
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-go],[data-day],[data-tick],[data-add],[data-edit],[data-filter],[data-pick],[data-step],[data-rep],[data-commit],[data-remove],[data-close],[data-sw],[data-master],[data-allow],[data-suggest],[data-save-target]');
+  if(!t) return; const d=t.dataset;
+  if(d.go){S.screen=d.go;S.sheet=null;if(d.go==='add'&&!S.slot)S.slot='lunch';}
+  else if(d.day!==undefined){S.day=+d.day;}
+  else if(d.tick){const k=S.day+':'+d.tick;S.eaten[k]?delete S.eaten[k]:S.eaten[k]=1;}
+  else if(d.add){S.slot=d.add;S.q='';S.screen='add';}
+  else if(d.filter){S.filter=d.filter;}
+  else if(d.pick){S.sheet={kind:'add',id:d.pick,n:1,days:[S.day]};}
+  else if(d.edit){const [k,ix]=d.edit.split(':');const [id,n]=S.plan[S.day][k][+ix];S.sheet={kind:'edit',id,n,slot:k,ix:+ix};}
+  else if(d.step){S.sheet.n=Math.max(.5,Math.min(4,S.sheet.n+ +d.step));}
+  else if(d.rep!==undefined){const i=+d.rep,a=S.sheet.days;a.includes(i)?a.splice(a.indexOf(i),1):a.push(i);}
+  else if(d.commit!==undefined){const sh=S.sheet;
+    if(sh.kind==='add'){sh.days.forEach(i=>{const arr=S.plan[i][S.slot];const ex=arr.find(x=>x[0]===sh.id);ex?ex[1]=sh.n:arr.push([sh.id,sh.n]);});S.screen='today';}
+    else S.plan[S.day][sh.slot][sh.ix][1]=sh.n;
+    S.sheet=null;}
+  else if(d.remove!==undefined){S.plan[S.day][S.sheet.slot].splice(S.sheet.ix,1);S.sheet=null;}
+  else if(d.close!==undefined){if(e.target===t||t.tagName==='BUTTON')S.sheet=null;else return;}
+  else if(d.master!==undefined){if(S.remind.on)S.remind.on=false;else S.sheet={kind:'explain'};}
+  else if(d.allow!==undefined){S.remind.on=true;S.sheet=null;}
+  else if(d.sw){S.remind[d.sw][1]=!S.remind[d.sw][1];}
+  else if(d.suggest){$('#tgt').value=d.suggest;return;}
+  else if(d.saveTarget!==undefined){S.target=+$('#tgt').value||0;S.screen='today';}
+  render();
+});
+document.addEventListener('change',e=>{if(e.target.dataset.time){S.remind[e.target.dataset.time][0]=e.target.value;}});
+render();
+</script>
+</body></html>
