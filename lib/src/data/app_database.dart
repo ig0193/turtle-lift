@@ -161,7 +161,7 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(dietPlanVersions);
             await m.createTable(dietPlanItems);
             await m.createTable(mealTicks);
-            await m.addColumn(settings, settings.proteinTargetG);
+            await _addColumnIfMissing(m, settings, settings.proteinTargetG);
           }
           if (from < 7) {
             // Reminder preferences, one row. Pure table creation, so the

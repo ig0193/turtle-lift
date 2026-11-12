@@ -37,8 +37,7 @@ import 'settings_store.dart';
 /// each kind lands a personal best, matching what a real lifter's history
 /// tends to look like.
 Future<void> seedSampleHistoryIfEmpty(AppDatabase db) async {
-  final existing =
-      await (db.select(db.sessions)..limit(1)).getSingleOrNull();
+  final existing = await (db.select(db.sessions)..limit(1)).getSingleOrNull();
   if (existing != null) return;
 
   const uuid = Uuid();

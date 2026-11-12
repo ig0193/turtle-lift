@@ -816,6 +816,30 @@ void main() {
       expect(await database.select(database.mealTicks).get(), isEmpty);
     });
 
+    test('does not add the protein target column twice', () async {
+      await createVersion5Database();
+      final legacy = NativeDatabase(dbFile);
+      await legacy.ensureOpen(_NoopUser());
+      await legacy.runCustom(
+        'ALTER TABLE settings ADD COLUMN "protein_target_g" INTEGER NULL '
+        'CHECK (protein_target_g IS NULL OR protein_target_g BETWEEN 1 AND 400)',
+        const <Object?>[],
+      );
+      await legacy.runCustom(
+        'UPDATE settings SET protein_target_g = 140 WHERE id = 1',
+        const <Object?>[],
+      );
+      await legacy.close();
+
+      final database = openUpgraded();
+
+      expect(
+        (await database.select(database.settings).getSingle()).proteinTargetG,
+        140,
+      );
+      expect(await database.select(database.dietPlanVersions).get(), isEmpty);
+    });
+
     test('an upgrade from 1 reaches 6 without adding a column twice',
         () async {
       // The protein target is added by ALTER TABLE to a settings table created
