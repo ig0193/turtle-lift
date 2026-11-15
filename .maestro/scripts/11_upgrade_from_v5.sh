@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Drives flow 11: an update from the last published build keeps the user's
-# data and runs the v6 and v7 migrations.
+# data and runs every migration from v6 to v10 (v10 drops the training plan
+# the fixture carries, since the Schedule no longer exists).
 #
 #   .maestro/scripts/11_upgrade_from_v5.sh <udid> <out-dir>
 #

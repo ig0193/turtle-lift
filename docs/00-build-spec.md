@@ -8,8 +8,8 @@
 | `01-app-idea.md` | Scope, data model, muscle taxonomy, palette, and the reasoning behind every rule here. |
 | `02-workout-tab-userflow.md` | Workout tab flow + mockups. |
 | `03-muscle-groups-tab-userflow.md` | Muscle Groups tab flow + mockups. |
-| `04-profile-tab-userflow.md` | Profile flow + mockups. Profile is the fourth tab (Personal | Schedule | Diet — Diet per `docs/adr/0007-diet-in-profile.md`); history is its own tab. |
-| `06-diet-tab-userflow.md` | Diet flow. Placement superseded by ADR 0007: a Profile segment, not a tab. |
+| `04-profile-tab-userflow.md` | Profile flow + mockups. The Profile tab is now the **You** tab, fourth in the bar: Profile | Activity | Analysis (`docs/adr/0016-you-tab-and-diet-tab.md`); history is its Activity segment; the Schedule was removed (ADR 0015). |
+| `06-diet-tab-userflow.md` | Diet flow. Placement superseded by ADR 0016: Diet is its own tab, first in the bar (ADR 0007 had made it a Profile segment). |
 
 Conflict resolution: if this file disagrees with `01`–`04`, **`01`–`04` win** — this is a digest, not a source of truth. Report the conflict.
 
@@ -86,22 +86,22 @@ Average 76 words per exercise across all four. Every entry mentions breathing; 1
 
 **No muscle-level state exists in the model.** → `01` §Muscle training state.
 
-**Diet** (`docs/adr/0007-diet-in-profile.md`) — schema v6:
+**Diet** (`docs/adr/0007-diet-in-profile.md`, a log since `docs/adr/0015-diet-is-a-log.md`) — schema v10:
 
 | Table | Rules |
 |---|---|
-| `DietPlanVersions` | `effectiveFrom` PK, always a Monday. Copy-on-write: an edit in week W writes only the version at `monday(W)`; no path writes an older version. |
-| `DietPlanItems` | `effectiveFrom` (cascade), `weekday` 0 = Mon … 6 = Sun, `slot` ∈ breakfast · lunch · snack · dinner, `foodId` (asset id, no FK), `servingsHalves` 1–8, `position`. Unique per `(effectiveFrom, weekday, slot, foodId)`. |
-| `MealTicks` | `(date, slot)` composite PK, local calendar date. Presence = eaten; untick is a hard delete. Only today and earlier days of this week. |
+| `DietLogEntries` | One food eaten in one slot on one day. `id` PK, `date` (local calendar date, `YYYY-MM-DD`), `slot` ∈ breakfast · lunch · snack · dinner, `foodId` (asset id, no FK), `servingsHalves` 1–8, `position`. Unique per `(date, slot, foodId)`. Today and earlier only (the store's rule, by its own clock). No weekly repeat, no tick: a row here has been eaten. Any past day can be edited; the Diet header's calendar picks one (ADR 0017). |
 | `Settings.proteinTargetG` | Nullable int, 1–400. Null = never set. Accepting the suggestion stores the number, never a flag. |
 
-`ReminderPrefs` — schema v7, one row: Schedule reminder and diet reminder switches and minutes (0–1439).
+`ReminderPrefs` — schema v7, one row: the diet reminder master switch and a switch and minute (0–1439) per meal slot. The `schedule_*` and `summary_*` columns are retired and unread (ADR 0015).
+
+**Removed in v10:** `TrainingPlanEntries` (the Schedule), `DietPlanVersions`, `DietPlanItems`, `MealTicks`. Step 10 keeps what the user did: each ticked meal becomes the foods the plan had in that slot that day.
 
 ---
 
 ## 3. Derived values — compute on read, never store
 
-`streak` · exercise count · set count · personal bests · **per-session PB count** · calorie estimate · resolved title · a template row's muscle line · diet planned / eaten / to-go protein, week meters, the target suggestion and reminder text (ADR 0007).
+`streak` · exercise count · set count · personal bests · **per-session PB count** · calorie estimate · resolved title · a template row's muscle line · diet logged / to-go protein, week meters and the target suggestion (ADR 0007, ADR 0015).
 
 **No lifted-volume (kg) metric anywhere in V1** — it cannot include bodyweight or timed exercises. Set count is the headline **volume proxy** in its place. → `01` §Derived values. (It stands in for the banned kg figure; it is not an instruction about which stat renders largest.)
 
@@ -189,7 +189,7 @@ streakAsOf(date) -> int
 
 **Model:** a session is a list of exercises; a template is a pre-filled list; ad-hoc is an empty one. Muscles describe the list (the live map) and never navigate it. → `docs/adr/0006-workout-tab-is-exercise-first.md`.
 
-**Landing** — at the tab root only, a **this-week strip** (plan day markers, `N of M this week`, what is left; `Pick training days` with no plan; taps to Profile › Schedule) and a **last workout** line that opens it in History (ADR 0008); a search field (by name, over templates and exercises), **My templates** (a rail; absent when none), **Ready-made** (the eleven predefined, a two-column grid, fixed order; for a returning user — a custom template or 3+ saved workouts — folded behind a `Ready-made · 11` row, open state in memory only), `Manage templates`, and a **pinned Start workout bar** above the tab bar. **No split filter**, nothing stores a split. A template tile shows its name, a derived muscle line and its exercise count; tapping it opens a **preview sheet** (the exercises, `Start workout`, `Cancel`) — two taps to start. A search result for an exercise starts an ad-hoc workout with it.
+**Landing** — at the tab root only, a **last workout** line that opens it in History (ADR 0008); a search field (by name, over templates and exercises), **My templates** (a rail; absent when none), **Ready-made** (the eleven predefined, a two-column grid, fixed order; for a returning user — a custom template or 3+ saved workouts — folded behind a `Ready-made · 11` row, open state in memory only), `Manage templates`, and a **pinned Start workout bar** above the tab bar. **No split filter**, nothing stores a split. A template tile shows its name, a derived muscle line and its exercise count; tapping it opens a **preview sheet** (the exercises, `Start workout`, `Cancel`) — two taps to start. A search result for an exercise starts an ad-hoc workout with it.
 
 **Start** — opens the session on a **ready view**: map at full size, `N exercises planned` / `Nothing logged yet`, one **Start logging** button, Discard (no Finish). Start logging opens the **exercise picker** (tall sheet: search, muscle chips as a filter, `IN THIS WORKOUT` first). "Started logging" is in-memory only, and is also true once anything is written.
 
@@ -255,7 +255,7 @@ streakAsOf(date) -> int
 
 ## 11. Profile and History
 
-History and Profile are both tabs (`docs/adr/0003-l0-navigation-variant-a.md`, amended by `docs/adr/0004-profile-returns-as-a-tab.md`). **The split is decided: anything computed from session rows lives on the History tab; anything the user typed lives on the Profile tab. Two named exceptions: the current week and the pointer to the last workout, which live on the **Workout landing** beside Start (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`, moved there from the Schedule pane), and the Diet pane's protein figures (`docs/adr/0007-diet-in-profile.md`); neither renders on History, the summary card or the share card. No figure appears in both places.** Profile › Schedule holds only the plan and reminders; a training reminder opens the Workout tab. → `04`, and `docs/plans/2026-09-14-2324-feat-profile-split-plan.md`.
+**The bar is Diet | Workout | Muscles | You (ADR 0016); History and Profile are now the Activity and Profile segments of the You tab, and the rule below applies between those two segments.** (`docs/adr/0003-l0-navigation-variant-a.md`, amended by `docs/adr/0004-profile-returns-as-a-tab.md` and ADR 0016.) **The split is decided: anything computed from session rows lives on the History tab; anything the user typed lives on the Profile tab. Two named exceptions: the pointer to the last workout, which lives on the **Workout landing** beside Start (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`), and the Diet pane's protein figures (`docs/adr/0007-diet-in-profile.md`); neither renders on History, the summary card or the share card. No figure appears in both places.** The Schedule is removed (ADR 0015). → `04`, and `docs/plans/2026-09-14-2324-feat-profile-split-plan.md`.
 
 - Stats: streak, total workouts, total sets, as one line at the top of the History tab; the streak explainer opens from it. The calendar shows a total for the month it displays, **never the current week** (ADR 0008). No volume stat. **These are derived, so they live on the History tab — never on the Profile landing.** (ADR 0013.)
 - Exercise history (reached from the History detail log, set logging and Muscles) shows a best-set chart by load type (assisted inverted, no e1RM, text under 3 sessions) and a quiet "Best at" table (1-12 reps). ADR 0013.
@@ -274,8 +274,8 @@ History and Profile are both tabs (`docs/adr/0003-l0-navigation-variant-a.md`, a
   - **Bodyweight is a dated series, not one number** (optional, kg, gates calories). An entry is immutable and takes effect from the day it is recorded: no edit, no delete, no backdating. A correction is a new entry that supersedes the old one going forward. One undated number plus derive-on-read would rewrite the calorie figure on every session already logged. → `04`.
   - `caloriesFor(session)` resolves the weight in effect on that session's `performedOn`. A session predating the earliest entry shows the add-weight prompt and never a figure, permanently — entering a weight later does not backfill it.
   - Gender (Male / Female / Prefer not to say, default male, selects asset pair).
-- Profile shell (ADR 0014): the Personal | Schedule | Diet control is pinned above the pane's scroll view. Personal's rows show their authored values ("74.5 kg · female diagram") and end with About (version, the privacy promise, open-source licences).
-- Reminders never read "on" when nothing will fire: Schedule says to pick a day when Remind me is on with none; the Diet Reminders row reads "None chosen" or "Off in Settings"; the off note has Open Settings. Saves show the new value before the write.
+- Profile shell (ADR 0014): the Profile | Activity | Analysis control is pinned above the panes, each of which owns its scroll view. Profile's rows show their authored values ("74.5 kg · female diagram") and end with About (version, the privacy promise, open-source licences).
+- Reminders never read "on" when nothing will fire: the Diet Reminders row reads "None chosen" or "Off in Settings"; the off note has Open Settings. Saves show the new value before the write.
 - Export: one JSON (entered data, now including reminder settings) plus a CSV of completed sets (units in the column names), enabled by any entered data. Delete all data offers Export first.
 
 → `04`.
@@ -314,7 +314,7 @@ A **planned** muscle on the live map is outlined in text secondary `#A3A3A7` —
 
 ## 13. Out of scope for V1
 
-No zone-lit human mascot (dead — see `mascot-brief.md`) · no login · no cloud sync · no soft delete · no rest timer · no stored workout duration (the live clock is display-only, §9) · no notifications except the opt-in, fixed-schedule reminders in ADR 0005 (built after the Schedule screen) and diet reminders under the same rules (ADR 0007) · no calorie, macro or food-diary tracking (Diet is a protein-only weekly plan with a daily protein total, ADR 0007) · no wearables · no AI · no premium · no ads · no multi-day splits or weekly rotation · no "today's workout" suggestion · no exercise videos or bundled third-party exercise animations (demonstrations are drawn by the app — ADR 0010) · no social features (sharing your own summary card as an image through the system share sheet is not one: no feed, account, link or upload — ADR 0008).
+No zone-lit human mascot (dead — see `mascot-brief.md`) · no login · no cloud sync · no soft delete · no rest timer · no stored workout duration (the live clock is display-only, §9) · no notifications except the opt-in diet reminders (ADR 0007, ADR 0015) under the reminder rules in ADR 0005 · no calorie, macro or food-diary tracking (Diet is a protein-only daily log from the fixed food list, with a daily protein total, ADR 0007 and ADR 0015) · no wearables · no AI · no premium · no ads · no multi-day splits or weekly rotation · no "today's workout" suggestion · no exercise videos or bundled third-party exercise animations (demonstrations are drawn by the app — ADR 0010) · no social features (sharing your own summary card as an image through the system share sheet is not one: no feed, account, link or upload — ADR 0008).
 
 Local storage only. Works fully offline. No onboarding wizard.
 

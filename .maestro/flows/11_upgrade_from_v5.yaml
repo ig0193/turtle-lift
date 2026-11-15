@@ -2,7 +2,9 @@
 # the app and keeps everything. Driven by .maestro/scripts/11_upgrade_from_v5.sh,
 # which puts test/fixtures/schema_v5_from_5fcae5f.sqlite (written by that
 # build's own code) in the app's Documents before this flow launches it.
-# The v6 (Diet) and v7 (reminders) migrations run on this launch.
+# Every migration from 6 to 10 runs on this launch. The last one (10) drops the
+# training plan the fixture carries (the Schedule is gone), so nothing here
+# looks for it; the plan table is simply no longer read.
 appId: dev.indresh.turtleLift
 name: 11 Upgrade from schema 5 keeps every record
 tags: [data]
@@ -16,7 +18,7 @@ tags: [data]
 
 # Saved workouts, with the assisted record read the right way round (20kg
 # assistance beats 25kg) and the timed and bodyweight sets intact.
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - assertVisible: "Pull day, personal best, 12 Oct.* · 2 exercises · 3 sets"
 - assertVisible: ".*7 Oct · 2 exercises · 4 sets"
 - assertVisible: "Push day, 5 Oct · 2 exercises · 4 sets"
@@ -26,7 +28,7 @@ tags: [data]
 - tapOn: "Back"
 
 # Templates, weigh-ins, body diagram.
-- tapOn: "Profile"
+- runFlow: ../subflows/open_profile_pane.yaml
 - assertVisible: "My workout templates\\. 11 predefined · 2 custom"
 - tapOn: "My workout templates.*"
 - scrollUntilVisible:
@@ -42,19 +44,14 @@ tags: [data]
 - assertVisible: ".*64\\.5kg.*"
 - tapOn: "Back"
 
-# The training plan (Mon, Wed, Fri from 28 Sep).
-- tapOn: "Schedule"
-- takeScreenshot: 11-schedule
-- assertVisible:
-    text: "Mon.*"
-    selected: true
-
-# Diet is new: first-time state, and it works.
+# Diet is new, and now its own first tab (ADR 0016): it opens on an empty day
+# (no first-time state), and it works.
 - tapOn: "Diet"
+- assertVisible: "Nothing logged for .*"
 - assertVisible: "Set a daily target"
 
 # Export carries the old workouts.
-- tapOn: "Personal"
+- runFlow: ../subflows/open_profile_pane.yaml
 - tapOn: "Export everything"
 - assertNotVisible: "Nothing to export yet.*"
 - assertVisible: ".*Workouts.*3.*"

@@ -65,7 +65,7 @@ struct WeekWidget: Widget {
         .modifier(PageBackground())
     }
     .configurationDisplayName("This week")
-    .description("Your training days and your last workout.")
+    .description("Your last workout.")
     .supportedFamilies([.systemSmall, .systemMedium])
   }
 }

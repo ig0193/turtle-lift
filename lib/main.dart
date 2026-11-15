@@ -8,7 +8,7 @@ import 'src/data/body_gender.dart';
 import 'src/data/custom_exercises.dart';
 import 'src/data/custom_templates.dart';
 import 'src/data/data_reset.dart';
-import 'src/data/diet_plan.dart';
+import 'src/data/diet_log.dart';
 import 'src/data/diet_reminders.dart';
 import 'src/data/exercise_index.dart';
 import 'src/data/exercise_library.dart';
@@ -19,8 +19,7 @@ import 'src/data/reminder_scheduler.dart';
 import 'src/data/sample_history_seed.dart';
 import 'src/data/session_store.dart';
 import 'src/data/settings_store.dart' show appDatabaseProvider;
-import 'src/data/training_plan.dart';
-import 'src/data/training_reminders.dart';
+import 'src/data/today.dart' show planTodayProvider;
 import 'src/theme/app_theme.dart';
 import 'src/ui/glance_sync.dart';
 import 'src/ui/l0_shell.dart';
@@ -72,10 +71,10 @@ import 'src/ui/session_summary_screen.dart' show kAppDisplayName;
 /// [FoodIndex.unavailable], so Diet shows its unavailable state and every other
 /// tab keeps working (KTD11). The exercise library stays fail-loud.
 ///
-/// **The Diet plan, ticks and target are the last read**, grouped into one
-/// future (`readStoredDiet`) because a record `.wait` stops at nine fields.
-/// Seeded for the same reason as the training plan: a Diet pane that flashed
-/// its empty state at someone with a plan would say something false.
+/// **The Diet log and target are the last read**, grouped into one future
+/// (`readStoredDiet`) because a record `.wait` stops at nine fields. Seeded
+/// before the first frame so a Diet pane never opens on an empty day at
+/// someone who has been logging.
 ///
 /// **Reminders start before the first boot, and only here** (KTD17). The
 /// notification plugin and the zone database are set up once per process by
@@ -94,7 +93,7 @@ Future<void> main() async {
   // a fresh install while that redesign is being reviewed on-device. No-ops
   // once any real session exists, and `kDebugMode` keeps it out of release
   // builds entirely. See `sample_history_seed.dart` for removal notes.
-  // The sample diet (a target, a planned week, one tick today) rides along
+  // The sample diet (a target and this week's meals up to today) rides along
   // for the Diet pane's on-device review, and no-ops once any diet exists.
   //
   // `--dart-define=TURTLE_NO_SEED=true` skips it, so the Maestro flows
@@ -162,7 +161,6 @@ Future<void> _bootFrom(
     initialCustomTemplates,
     initialSession,
     initialSavedSessions,
-    initialTrainingPlan,
     foods,
     initialDiet,
   ) = await (
@@ -172,7 +170,6 @@ Future<void> _bootFrom(
     readStoredCustomTemplates(CustomTemplateStore(database)),
     readOpenSession(SessionStore(database)),
     readSavedSessions(SessionStore(database)),
-    readStoredTrainingPlan(TrainingPlanStore(database)),
     loadFoodIndex(readFoodListAsset),
     readStoredDiet(database),
   ).wait;
@@ -190,7 +187,6 @@ Future<void> _bootFrom(
         appRestartProvider.overrideWithValue(() => _bootFrom(database)),
         initialBodyGenderProvider.overrideWithValue(initialGender),
         initialBodyweightLogProvider.overrideWithValue(initialBodyweight),
-        initialTrainingPlanProvider.overrideWithValue(initialTrainingPlan),
         initialActiveSessionProvider.overrideWithValue(initialSession),
         initialSavedSessionsProvider.overrideWithValue(initialSavedSessions),
         initialCustomTemplatesProvider
@@ -201,8 +197,7 @@ Future<void> _bootFrom(
         initialCustomExercisesProvider
             .overrideWithValue(initialCustomExercises),
         foodIndexProvider.overrideWithValue(foods),
-        initialDietPlanProvider.overrideWithValue(initialDiet.versions),
-        initialMealTicksProvider.overrideWithValue(initialDiet.ticks),
+        initialDietLogProvider.overrideWithValue(initialDiet.entries),
         initialProteinTargetProvider
             .overrideWithValue(initialDiet.proteinTargetG),
         initialReminderPrefsProvider.overrideWithValue(initialReminderPrefs),
@@ -298,14 +293,14 @@ class TurtleLiftApp extends StatelessWidget {
 
 /// Re-reads "today" whenever the app returns to the foreground (KTD13).
 ///
-/// `planTodayProvider` caches the date, so a phone that sat on the Schedule
-/// or Diet pane from Sunday evening into Monday morning would still show
-/// Sunday as today: last week's summary, last week's ticks. Invalidating the
-/// clock on resume moves every figure that watches it at once. It wraps the
-/// whole app, so there is one listener for the life of the scope.
+/// `planTodayProvider` caches the date, so a phone that sat on the Diet pane
+/// from Sunday evening into Monday morning would still show Sunday as today.
+/// Invalidating the clock on resume moves every figure that watches it at
+/// once. It wraps the whole app, so there is one listener for the life of the
+/// scope.
 ///
-/// **It also holds the training-reminder sync** (KTD15, U16): reschedule at
-/// boot, after every plan or preference change, and on resume.
+/// **It also holds the diet-reminder sync** (KTD15): reschedule at boot, after
+/// every preference change, and on resume.
 class RefreshTodayOnResume extends ConsumerStatefulWidget {
   const RefreshTodayOnResume({super.key, required this.child});
 
@@ -322,19 +317,14 @@ class _RefreshTodayOnResumeState extends ConsumerState<RefreshTodayOnResume> {
   @override
   void initState() {
     super.initState();
-    // Holds the training-reminder sync for the life of the scope: it
-    // reschedules now (boot), on every plan or preference change, and on
-    // resume, because the invalidation below moves the plan in force today.
-    ref.listenManual(trainingReminderSyncProvider, (_, _) {});
-    // Diet's reminders the same way (U17): a plan edit, a preference change
-    // or a resume reschedules them.
+    // Holds the diet-reminder sync for the life of the scope: it reschedules
+    // now (boot), on every preference change, and on resume.
     ref.listenManual(dietReminderSyncProvider, (_, _) {});
     _listener = AppLifecycleListener(
       onResume: () {
         ref.invalidate(planTodayProvider);
         // Rebuilt even when today has not moved, so the resume reschedule
         // runs every time rather than only across midnight.
-        ref.invalidate(trainingRemindersProvider);
         ref.invalidate(dietRemindersProvider);
       },
     );

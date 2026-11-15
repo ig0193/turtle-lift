@@ -4,6 +4,10 @@ Date: 2026-11-09
 
 ## Status
 
+> **Trimmed by [ADR 0015](0015-diet-is-a-log.md):** the week strip is removed
+> with the Schedule. The Last workout line, the widget's last-workout line and
+> the rest of this ADR stand.
+
 Accepted (the user approved the research recommendations, then the follow-up
 items). **Amends [ADR 0004](0004-profile-returns-as-a-tab.md)** (where the
 derived week summary lives) **and [ADR 0005](0005-schedule-and-opt-in-notifications.md)**

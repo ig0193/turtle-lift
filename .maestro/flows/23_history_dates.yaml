@@ -46,7 +46,7 @@ tags: [history]
 # --- the share card always carries the year
 - assertVisible: ".*15 December ${output.lastYear}.*"
 - tapOn: "Back"
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - assertVisible: "Barbell bench press, quick log, 15 Dec ${output.lastYear} · 1 exercise · 1 set"
 
 # --- the detail's exercise history: first logged with its year

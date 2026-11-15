@@ -58,8 +58,14 @@ Logs: `build/qa/<step>.log`, summary in `build/qa/summary.txt`.
 
 `tool/maestro_run.sh` builds a debug simulator app with
 `--dart-define=TURTLE_NO_SEED=true` (so a debug install starts **empty**; the
-sample seed would fill History and Diet), reinstalls it, and runs every
-`.maestro/flows/*.yaml` with `launchApp: clearState: true`. Output per device
+sample seed would fill Activity and Diet), reinstalls it, and runs every
+`.maestro/flows/*.yaml` with `launchApp: clearState: true`. **Tabs are
+`Diet | Workout | Muscles | You`** (ADR 0016): History is the **Activity**
+segment of You (You has Profile | Activity | Analysis), and Diet is its own
+tab. Flows reach them through two shared subflows,
+`.maestro/subflows/open_activity.yaml` (You, then Activity) and
+`.maestro/subflows/open_profile_pane.yaml` (You, then Profile), because the
+segment choice is kept in memory across tab switches. Output per device
 goes to `build/maestro/<device>/`: `junit.xml`, `report.html`, failure
 `artifacts/`, `app.log` (the app's log stream) and `app-exceptions.txt` if
 Flutter logged an exception. An exception fails the run even when every flow
@@ -67,32 +73,31 @@ passed.
 
 | Flow | User story |
 |---|---|
-| 01 | Log a full workout: weighted, bodyweight, assisted (with its banner), timed; mark done; finish; summary numbers; History row and card; Muscles renders |
-| 02 | Edit a past workout from History (set value, remove a set), derived figures follow; delete with Cancel then Delete |
-| 03 | Ready-made template preview, Cancel, start, discard; Save as template; start it from My templates; duplicate, rename, delete on Profile |
+| 01 | Log a full workout: weighted, bodyweight, assisted (with its banner), timed; mark done; finish; summary numbers; Activity row and card; Muscles renders |
+| 02 | Edit a past workout from Activity (set value, remove a set), derived figures follow; delete with Cancel then Delete |
+| 03 | Ready-made template preview, Cancel, start, discard; Save as template; start it from My templates; duplicate, rename, delete on You > Profile |
 | 04 | Personal details: gender, bodyweight (confirmation line, row value), keypad dismiss, persistence, kcal appears |
-| 05 | Schedule: training days, Remind me, explain-first sheet, iOS prompt, persistence after kill |
-| 06 | Diet: first-time state, target from suggestion, picker filters and search, serving sheet, Repeat on, eaten tick, edit servings, remove and undo, meal reminders screen, persistence after kill |
-| 07 | Reminder tap deep link: a diet reminder, warm (pops a pushed screen) and cold, opens Profile › Diet; a training reminder opens the Workout tab (ADR 0008). Scripted: `.maestro/scripts/07_reminder_deep_link.sh` |
+| 06 | Diet log (ADR 0015): opens on the day view, target from suggestion, picker filters and search, serving sheet, edit servings, remove and undo, meal reminders screen, persistence after kill |
+| 07 | Reminder tap deep link: a diet reminder, warm (pops a pushed screen) and cold, opens the Diet tab. Scripted: `.maestro/scripts/07_reminder_deep_link.sh` |
 | 08 | Export: disabled with reason when empty; share sheet; dismissed status line |
-| 09 | Delete all data: Cancel, then confirm; every tab empty; no re-seed on relaunch |
+| 09 | Delete all data: Cancel, then confirm; every tab empty (Workout, Activity, Analysis, Profile, Diet); no re-seed on relaunch |
 | 10 | Home and kill mid-workout keep the session |
 | 11 | Upgrade from the last published build (schema 5): every record survives, the open workout resumes, v6/v7 migrations run, Diet starts empty, export counts the old workouts. Scripted: `.maestro/scripts/11_upgrade_from_v5.sh` copies `test/fixtures/schema_v5_from_5fcae5f.sqlite` into the installed app's Documents first |
-| 12 | Workout tab (ADR 0008): week strip and last-workout line on the landing, Recent in the picker, last time in each set row (tap to copy), pinned Mark exercise done, live PB mark, PB in the kcal slot, Share card, Do again from History |
+| 12 | Workout tab (ADR 0008): last-workout line on the landing, Recent in the picker, last time in each set row (tap to copy), pinned Mark exercise done, live PB mark, PB in the kcal slot, Share card, Do again from History |
 | 13 | Template from scratch (ADR 0009): New template tile, multi-pick, arrows, save, Edit template from the preview, start, Edit list (move, remove) |
-| 14 | Custom exercise (ADR 0009): create from the picker, straight to logging, History, its no-form-guide page, into a template, Export counts it |
+| 14 | Custom exercise (ADR 0009): create from the picker, straight to logging, Activity, its no-form-guide page, into a template, Export counts it |
 | 15 | Swap in place (ADR 0011): Edit list swaps an untouched exercise at its position; one with a logged set is refused with a one-line reason and Add instead |
-| 16 | Exercise note (ADR 0011): note in set logging, shown in History detail, `Last time: …` hint next workout |
-| 21 | History edit safety (ADR 0013): rename then tap away and go back keeps the name; Change date moves the row; removing the only exercise deletes the workout |
-| 22 | History card parity: detail and editor show the same figures ("Day streak"); Share from the detail header; an exercise in the log opens its history, whose row opens the read-only detail |
-| 23 | Dates: a workout backdated to last December carries the year on the date chip, the share card, the History row and "first logged" |
+| 16 | Exercise note (ADR 0011): note in set logging, shown in Activity detail, `Last time: …` hint next workout |
+| 21 | Activity edit safety (ADR 0013): rename then tap away and go back keeps the name; Change date moves the row; removing the only exercise deletes the workout |
+| 22 | Activity card parity: detail and editor show the same figures ("Day streak"); Share from the detail header; an exercise in the log opens its history, whose row opens the read-only detail |
+| 23 | Dates: a workout backdated to last December carries the year on the date chip, the share card, the Activity row and "first logged" |
 | 24 | Exercise progress: three rising bench sessions; the chart's spoken summary and the "Best at" row |
-| 25 | History stats line and explainer, month total, full day labels, paging back and "Back to this month" |
+| 25 | Activity stats line and explainer, month total, full day labels, paging back and "Back to this month" |
 | 26 | All workouts search (match and no match) and swipe to delete with confirmation; counts follow |
 | 27 | Backfill: an empty past calendar day starts a workout dated that day; it files under Yesterday and the streak counts it |
-| 28 | Profile bodyweight (ADR 0014): 0.5 kg refused with "Between 20 and 250 kg"; a real weight confirmed and shown on the Personal row; a moved protein suggestion offers Update target (pre-filled, saved only on Save); the segment control is reachable after scrolling a Diet day |
-| 29 | Honest reminders (ADR 0014): Remind me with no days says to pick one; named time rows; meal reminders on with nothing chosen read "None chosen" on Diet |
-| 30 | About and data (ADR 0014): version, privacy note, licences page; a schedule alone is exportable and counted; Export mentions the CSV; Delete all data offers Export first |
+| 28 | Profile bodyweight (ADR 0014): 0.5 kg refused with "Between 20 and 250 kg"; a real weight confirmed and shown on the Personal details row; a moved protein suggestion offers Update target (pre-filled, saved only on Save); the You segment control is reachable after scrolling the Profile pane |
+| 29 | Honest reminders (ADR 0014): meal reminders on with nothing chosen read "None chosen" on Diet; named time rows |
+| 30 | About and data (ADR 0014): version, privacy note, licences page; a diet target alone is exportable and counted; Export mentions the CSV; Delete all data offers Export first |
 
 **The v5 fixture** was written by commit 5fcae5f's own stores (a throwaway
 worktree at that commit), so it is exactly what a user's device holds. The
@@ -134,7 +139,7 @@ case-insensitive, so `"Paneer.*"` also matches a search field holding
 - Percent coordinates must be whole numbers (`"30%"`, not `"29.5%"`).
 
 **Debugging a flow.** `maestro --device <udid> hierarchy` dumps what Maestro
-sees. `maestro --device <udid> test .maestro/flows/06_diet_plan.yaml` runs one
+sees. `maestro --device <udid> test .maestro/flows/06_diet_log.yaml` runs one
 flow. `FLOWS="06 07" NO_BUILD=1 tool/maestro_run.sh <udid>` reruns a subset.
 
 ## 4. Exploratory pass (after the scripted steps)

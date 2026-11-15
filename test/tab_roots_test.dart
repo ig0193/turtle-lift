@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/custom_templates.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
+import 'package:turtle_lift/src/data/food_index.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/data/history_preview_data.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
@@ -11,10 +12,12 @@ import 'package:turtle_lift/src/ui/app_screen.dart';
 import 'package:turtle_lift/src/data/body_gender.dart';
 import 'package:turtle_lift/src/ui/body_diagram.dart';
 import 'package:turtle_lift/src/ui/empty_state.dart';
+import 'package:turtle_lift/src/ui/diet_pane.dart';
+import 'package:turtle_lift/src/ui/diet_root.dart';
 import 'package:turtle_lift/src/ui/history_root.dart';
 import 'package:turtle_lift/src/ui/muscle_search_field.dart';
 import 'package:turtle_lift/src/ui/muscles_root.dart';
-import 'package:turtle_lift/src/ui/profile_root.dart';
+import 'package:turtle_lift/src/ui/you_root.dart';
 import 'package:turtle_lift/src/ui/tab_glyph.dart';
 import 'package:turtle_lift/src/ui/workout_root.dart';
 
@@ -69,15 +72,21 @@ void main() {
   /// landing holds a list of rows and needs a taller window to satisfy both
   /// ends of that band.
   final roots = <String, ({Widget Function() build, double clearanceHeight})>{
+    // The Diet tab: the day view (week strip, day card, four slot cards and
+    // the settings rows) is long, so a short window still overflows it.
+    'DietRoot': (build: () => const DietRoot(), clearanceHeight: 300),
     'WorkoutRoot': (build: () => const WorkoutRoot(), clearanceHeight: 300),
     // The Muscles landing is the tallest root by far -- a search field, a
     // front/back control, a full-height body map and 19 rows -- so it needs
     // the same taller window the Workout landing does. At 120 the map alone
     // overflows the viewport and no row is ever reached.
     'MusclesRoot': (build: () => const MusclesRoot(), clearanceHeight: 300),
+    // The Activity pane (the old History tab): hosted bare, as it is inside
+    // You, where the shell's inset reaches it through the same padding.
     'HistoryRoot': (build: () => const HistoryRoot(), clearanceHeight: 120),
-    // Personal pane: a segmented control, two group labels and four rows.
-    'ProfileRoot': (build: () => const ProfileRoot(), clearanceHeight: 200),
+    // The You tab on its Profile pane: a pinned segmented control over a
+    // scrollable of two group labels and four rows.
+    'YouRoot': (build: () => const YouRoot(), clearanceHeight: 200),
   };
 
   /// Hosts a root as the shell does: a bare body inside a fixed viewport, with
@@ -108,6 +117,8 @@ void main() {
         historySessionsProvider.overrideWithValue(const <HistorySession>[]),
         // Profile counts the user's custom templates; none is the common case.
         customTemplatesProvider.overrideWithValue(const <WorkoutTemplate>[]),
+        // Diet renders its day view for any available list, empty or not.
+        foodIndexProvider.overrideWithValue(FoodIndex.fromJson(const [])),
       ],
       child: MaterialApp(
         theme: buildAppTheme(),
@@ -181,11 +192,23 @@ void main() {
       find.byType(EmptyStateGlyphIcon),
     );
     expect(glyph.glyph, EmptyStateGlyph.logbook,
-        reason: "History's disc is a logbook page, not the clock its tab wears "
+        reason: "Activity's disc is a logbook page, not a tab icon "
             '-- the wrong glyph here renders a plausible screen and says '
             'nothing, so the glyph is asserted rather than the disc');
     expect(find.byType(TabGlyphIcon), findsNothing,
-        reason: 'TabGlyph.history is the clock and belongs to the bar only');
+        reason: 'tab-bar icons belong to the bar only');
+  });
+
+  testWidgets('Diet root shows the protein log, not an empty state or a tab '
+      'icon', (tester) async {
+    await tester.pumpWidget(hostTall(const DietRoot()));
+
+    expect(find.byType(DietPane), findsOneWidget);
+    expect(find.byKey(DietPane.dayViewKey), findsOneWidget,
+        reason: 'Diet opens on the day view; there is no first-time state');
+    expect(find.byType(EmptyState), findsNothing);
+    expect(find.byType(TabGlyphIcon), findsNothing,
+        reason: 'tab-bar icons belong to the bar only');
   });
 
   testWidgets('Muscles root renders the reference landing and has no empty '

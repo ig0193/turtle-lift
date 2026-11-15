@@ -19,7 +19,7 @@ import 'template_library_screen.dart';
 import 'template_editor_screen.dart' show showTemplateEditor;
 import 'template_preview_sheet.dart';
 import 'template_row.dart';
-import 'week_strip.dart';
+import 'last_workout_line.dart';
 
 /// The Workout tab's body: start a workout, or carry on with the one that is
 /// open.
@@ -150,10 +150,9 @@ class _WorkoutLandingBodyState extends ConsumerState<WorkoutLandingBody> {
           ),
           children: <Widget>[
             const SizedBox(height: 4),
-            // Where am I, before what do I pick (ADR 0008). Only at the root:
+            // Where did I leave off, before what do I pick. Only at the root:
             // the landing pushed over an open workout is for replacing it.
             if (!widget.isPushed) ...<Widget>[
-              const WeekStrip(),
               const LastWorkoutLine(),
               const SizedBox(height: 4),
             ],

@@ -12,12 +12,12 @@ import 'package:turtle_lift/src/data/personal_details_store.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/app_screen.dart';
-import 'package:turtle_lift/src/ui/profile_root.dart';
+import 'package:turtle_lift/src/ui/you_root.dart';
 import 'package:turtle_lift/src/ui/profile_screen.dart';
 
 /// ADR 0014 §4 and §7 (profile audit B4, B12): the segment control stays put
-/// while a pane scrolls, the Personal details row shows what it holds, and
-/// Personal ends with an About block (version, privacy, licences).
+/// while a pane scrolls, the Personal details row shows what it holds, and the
+/// Profile pane ends with an About block (version, privacy, licences).
 void main() {
   Widget host({
     List<BodyweightEntry> weights = const <BodyweightEntry>[],
@@ -30,10 +30,11 @@ void main() {
               .overrideWithValue(ExerciseIndex(const <Exercise>[])),
           initialBodyweightLogProvider.overrideWithValue(weights),
           initialBodyGenderProvider.overrideWithValue(gender),
+          youSegmentProvider.overrideWith(_StartOnProfile.new),
         ],
         child: MaterialApp(
           theme: buildAppTheme(),
-          home: AppScreen.root(title: 'Profile', body: const ProfileRoot()),
+          home: AppScreen.root(title: 'You', body: const YouRoot()),
         ),
       );
 
@@ -45,7 +46,7 @@ void main() {
 
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
-    final segment = find.byKey(ProfileRoot.segmentKey(ProfileSegment.diet));
+    final segment = find.byKey(YouRoot.segmentKey(YouSegment.profile));
     expect(
       find.ancestor(of: segment, matching: find.byType(Scrollable)),
       findsNothing,
@@ -103,4 +104,11 @@ void main() {
       expect(find.byType(LicensePage), findsOneWidget);
     });
   });
+}
+
+/// The You tab opens on Activity (ADR 0016); these tests are about the Profile
+/// pane, so they start the segment there.
+class _StartOnProfile extends YouSegmentNotifier {
+  @override
+  YouSegment build() => YouSegment.profile;
 }

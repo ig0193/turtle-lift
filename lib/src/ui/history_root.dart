@@ -17,7 +17,9 @@ import 'session_entry.dart' show startBackfill;
 import 'tab_index.dart';
 import 'tab_routes.dart' show kWorkoutTabIndex;
 
-/// The History tab's body: the stats line, a calendar, then the recent trail.
+/// The Activity pane's body (the old History tab, now a segment of the You tab,
+/// `docs/adr/0016-you-tab-and-diet-tab.md`): the stats line, a calendar, then
+/// the recent trail.
 ///
 /// **The stats line is `docs/00` §11's**: streak, total workouts, total sets,
 /// with the streak's explainer one tap away (`docs/04` copy). They are

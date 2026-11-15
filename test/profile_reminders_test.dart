@@ -4,26 +4,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
-import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/meal_slot.dart';
 import 'package:turtle_lift/src/data/notification_permission.dart';
 import 'package:turtle_lift/src/data/reminder_prefs.dart';
 import 'package:turtle_lift/src/data/reminder_scheduler.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
-import 'package:turtle_lift/src/data/training_plan.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
-import 'package:turtle_lift/src/ui/app_screen.dart';
 import 'package:turtle_lift/src/ui/diet_pane.dart';
 import 'package:turtle_lift/src/ui/diet_reminders_screen.dart';
-import 'package:turtle_lift/src/ui/profile_root.dart';
 import 'package:turtle_lift/src/ui/reminder_controls.dart';
-import 'package:turtle_lift/src/ui/schedule_pane.dart';
 
 import 'support/fake_reminder_scheduler.dart';
 
-/// Profile audit B5-B8 and B11 (ADR 0014 §5): reminders never say "on" when
-/// nothing will fire, every time row names its meal, quick taps never lose a
-/// change, and the notifications-off note leads to Settings.
+/// Profile audit B5, B7, B8 and B11 (ADR 0014 §5): reminders never say "on"
+/// when nothing will fire, every time row names its meal, quick taps never lose
+/// a change, and the notifications-off note leads to Settings. (B6, the
+/// training-days note, went with the Schedule: ADR 0015.)
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -36,22 +32,6 @@ void main() {
   tearDown(() => database.close());
 
   group('B5: saves show the new value before the write finishes', () {
-    test('training days', () async {
-      final container = ProviderContainer(overrides: [
-        appDatabaseProvider.overrideWithValue(database),
-        planTodayProvider.overrideWithValue(const LocalDate(2026, 11, 10)),
-      ]);
-      addTearDown(container.dispose);
-      final log = container.read(trainingPlanLogProvider.notifier);
-      final first = log.save(<int>{0});
-      expect(container.read(todayPlanWeekdaysProvider), <int>{0},
-          reason: 'a second tap reads this, so it must already be there');
-      final second =
-          log.save(<int>{...container.read(todayPlanWeekdaysProvider), 1});
-      await Future.wait(<Future<void>>[first, second]);
-      expect(container.read(todayPlanWeekdaysProvider), <int>{0, 1});
-    });
-
     test('reminder preferences', () async {
       final container = ProviderContainer(overrides: [
         appDatabaseProvider.overrideWithValue(database),
@@ -75,12 +55,15 @@ void main() {
     });
     test('on with two chosen', () {
       final prefs = on
-          .copyWith(dietOn: true, summaryOn: true)
+          .copyWith(dietOn: true)
+          .withSlot(MealSlot.breakfast,
+              const SlotReminder(on: true, minute: 480))
           .withSlot(MealSlot.lunch, const SlotReminder(on: true, minute: 780));
       expect(DietPane.remindersValue(prefs, permitted: true), '2 a day');
     });
     test('on but notifications turned off in Settings', () {
-      final prefs = on.copyWith(dietOn: true, summaryOn: true);
+      final prefs = on.copyWith(dietOn: true).withSlot(
+          MealSlot.lunch, const SlotReminder(on: true, minute: 780));
       expect(DietPane.remindersValue(prefs, permitted: false),
           'Off in Settings');
     });
@@ -100,66 +83,24 @@ void main() {
     expect(container.read(notificationPermissionProvider), isTrue);
   });
 
-  Widget scheduleHost({
-    required ReminderPreferences prefs,
-    Set<int> days = const <int>{},
-    Future<void> Function()? openSettings,
-  }) =>
-      ProviderScope(
-        overrides: [
-          appDatabaseProvider.overrideWithValue(database),
-          planTodayProvider.overrideWithValue(const LocalDate(2026, 11, 10)),
-          initialTrainingPlanProvider.overrideWithValue(<TrainingPlanEntry>[
-            if (days.isNotEmpty)
-              TrainingPlanEntry(
-                  effectiveFrom: const LocalDate(2026, 11, 9), weekdays: days),
-          ]),
-          initialReminderPrefsProvider.overrideWithValue(prefs),
-          reminderSchedulerProvider.overrideWithValue(reminders),
-          if (openSettings != null)
-            openAppSettingsProvider.overrideWithValue(openSettings),
-        ],
-        child: MaterialApp(
-          theme: buildAppTheme(),
-          home: AppScreen.root(title: 'Profile', body: const ProfileRoot()),
-        ),
-      );
-
-  Future<void> openSchedule(WidgetTester tester) async {
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.schedule)));
-    await tester.pumpAndSettle();
-  }
-
-  testWidgets('B6: Remind me on with no training days says to pick one',
-      (tester) async {
-    reminders.permitted = true;
-    await tester.pumpWidget(scheduleHost(
-        prefs: ReminderPreferences.defaults.copyWith(scheduleOn: true)));
-    await openSchedule(tester);
-    expect(find.text(SchedulePane.noDaysNote), findsOneWidget);
-
-    await tester.tap(find.byKey(SchedulePane.dayChipKey(0)));
-    await tester.pumpAndSettle();
-    expect(find.text(SchedulePane.noDaysNote), findsNothing);
-  });
-
-  testWidgets('B6: no hint while Remind me is off', (tester) async {
-    await tester.pumpWidget(scheduleHost(prefs: ReminderPreferences.defaults));
-    await openSchedule(tester);
-    expect(find.text(SchedulePane.noDaysNote), findsNothing);
-  });
-
   testWidgets('B11: the notifications-off note opens Settings',
       (tester) async {
     var opened = 0;
     reminders.permitted = false;
-    await tester.pumpWidget(scheduleHost(
-      prefs: ReminderPreferences.defaults.copyWith(scheduleOn: true),
-      days: <int>{0},
-      openSettings: () async => opened++,
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(database),
+        initialReminderPrefsProvider.overrideWithValue(
+            ReminderPreferences.defaults.copyWith(dietOn: true)),
+        reminderSchedulerProvider.overrideWithValue(reminders),
+        openAppSettingsProvider.overrideWithValue(() async => opened++),
+      ],
+      child: MaterialApp(
+        theme: buildAppTheme(),
+        home: const DietRemindersScreen(),
+      ),
     ));
-    await openSchedule(tester);
+    await tester.pumpAndSettle();
     expect(find.text(kNotificationsOffCopy), findsOneWidget);
     await tester.tap(find.byKey(NotificationsOffNote.openSettingsKey));
     await tester.pumpAndSettle();
@@ -191,12 +132,6 @@ void main() {
         startsWith('${slot.label} time.'),
       );
     }
-    expect(
-      tester
-          .getSemantics(find.byKey(DietRemindersScreen.summaryTimeKey))
-          .label,
-      startsWith('Morning summary time.'),
-    );
     expect(find.text(DietRemindersScreen.disabledReason), findsOneWidget);
   });
 }

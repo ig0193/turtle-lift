@@ -24,14 +24,15 @@ import '../theme/app_palette.dart';
 /// the same widget be driven by an `AnimatedBuilder`, a `TweenAnimationBuilder`
 /// or nothing at all.
 enum TabGlyph {
+  /// A bowl with two wisps of steam. `M4 11h16M4 11c0 5 3.5 8 8 8s8-3 8-8`
+  /// + `M9 4v3M15 4v3`
+  diet,
+
   /// A barbell. `M4 12h16M7 8v8M17 8v8`
   workout,
 
   /// A figure. `circle cx=12 cy=5 r=2.5` + `M12 8v7M12 15l-3 6M12 15l3 6M7 10h10`
   muscles,
-
-  /// A clock. `circle cx=12 cy=12 r=8` + `M12 7v5l3 2`
-  history,
 
   /// Head and shoulders. `circle cx=12 cy=8 r=3.5` + `M5 20c0-3.5 3-6 7-6s7 2.5 7 6`
   profile,
@@ -127,6 +128,21 @@ final Map<TabGlyph, Path> _basePaths = <TabGlyph, Path>{};
 Path _basePath(TabGlyph glyph) => _basePaths.putIfAbsent(glyph, () {
       final path = Path();
       switch (glyph) {
+        // Bowl: 'M4 11h16M4 11c0 5 3.5 8 8 8s8-3 8-8', steam 'M9 4v3M15 4v3'.
+        // The second curve's smooth-cubic `s` is written out: (16.5,19)
+        // mirrored through the join (12,19) is (7.5,19) -- here drawn from the
+        // right rim down and round, as `M20 11` would.
+        case TabGlyph.diet:
+          path
+            ..moveTo(4, 11)
+            ..lineTo(20, 11)
+            ..moveTo(4, 11)
+            ..cubicTo(4, 16, 7.5, 19, 12, 19)
+            ..cubicTo(16.5, 19, 20, 16, 20, 11)
+            ..moveTo(9, 4)
+            ..lineTo(9, 7)
+            ..moveTo(15, 4)
+            ..lineTo(15, 7);
         // Barbell: 'M4 12h16M7 8v8M17 8v8'
         case TabGlyph.workout:
           path
@@ -149,13 +165,6 @@ Path _basePath(TabGlyph glyph) => _basePaths.putIfAbsent(glyph, () {
             ..lineTo(15, 21)
             ..moveTo(7, 10)
             ..lineTo(17, 10);
-        // Clock: '<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>'
-        case TabGlyph.history:
-          path
-            ..addOval(Rect.fromCircle(center: const Offset(12, 12), radius: 8))
-            ..moveTo(12, 7)
-            ..lineTo(12, 12)
-            ..lineTo(15, 14);
         // Head and shoulders, the shape the header avatar used to draw. The
         // shoulders' smooth-cubic `s` is written out as its reflected control
         // point: (8,14) mirrored through the join (12,14) is (16,14).

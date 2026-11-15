@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/body_gender.dart';
 import '../data/exercise_index.dart';
 import '../data/muscle_training.dart';
-import '../data/training_plan.dart' show planTodayProvider;
+import '../data/today.dart' show planTodayProvider;
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'app_screen.dart';

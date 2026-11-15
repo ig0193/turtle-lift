@@ -1,0 +1,144 @@
+# User story: the Diet tab (the first tab, ADR 0016), the protein log, from a
+# fresh install: it opens
+# on today's empty day (no first-time screen), set a target from the
+# bodyweight suggestion, log a food through the picker and its filters, change
+# its servings, remove and undo, see that a day after today cannot be picked,
+# open meal reminders, pick a date from the calendar and slide the strip a day
+# at a time (ADR 0017), and find all of it intact after a kill and relaunch.
+# Date-independent: the "tomorrow" check is computed from today, and skipped on
+# a Sunday (the strip is this week, Monday to Sunday, so Sunday has no
+# tomorrow on it).
+appId: dev.indresh.turtleLift
+name: 06 Diet log - target, picker, serving sheet, undo, persistence
+tags: [diet]
+---
+- launchApp:
+    clearState: true
+- evalScript: "${output.tomorrow = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][(new Date().getDay() + 1) % 7]}"
+
+# --- bodyweight first (You > Profile), so the target screen can suggest
+- runFlow: ../subflows/open_profile_pane.yaml
+- tapOn: "Personal details.*"
+- tapOn: { id: "bodyweight-field" }
+- inputText: "72"
+- tapOn: { id: "record-weight" }
+- tapOn: "Back"
+
+# --- an empty log opens straight on the day (no first-time state)
+- tapOn: "Diet"
+- assertVisible: "Nothing logged for .*"
+- assertVisible: "0 g logged.*"
+- assertVisible: "Set a daily target"
+- assertNotVisible: "Plan Monday"
+
+# --- target from the suggestion (AE5: 1.6 x 72 = 115.2 -> 115)
+- tapOn: "Set a daily target"
+- assertVisible: "Suggested 115 g\\..*"
+- assertVisible: "A guide, not medical advice.*"
+- tapOn: "Suggested 115 g\\..*"
+- tapOn: "Save"
+- assertVisible: "0 of 115 g logged.*"
+
+# --- picker, filters, serving sheet (one day, no Repeat on)
+- tapOn: "Add food to Lunch"
+- assertVisible: "Protein per serving, highest first"
+- tapOn: "Non-veg"
+- assertVisible: "Chicken breast\\..*"
+- tapOn: "Egg"
+- tapOn: "Veg"
+- assertNotVisible: "Chicken breast\\..*"
+- tapOn: "Search foods"
+- inputText: "zzzz"
+- assertNotVisible: "Paneer\\. Veg.*"
+- eraseText: 10
+- inputText: "paneer"
+- tapOn: "Paneer\\. Veg.*"
+- assertNotVisible: "Repeat on"
+- tapOn: "Increase"
+- assertVisible: "1\\.5 × 5 cubes, 14\\.1 g"
+- tapOn: "Add to Lunch"
+- assertVisible: "14 of 115 g logged\n101 g to go.*"
+- assertVisible: "Paneer, 1\\.5 × 5 cubes, 14\\.1 g"
+# Nothing to tick: a food in the log has been eaten.
+- assertNotVisible: "Lunch not eaten"
+- assertNotVisible: "Lunch eaten"
+
+# --- a day after today cannot be picked (skipped on a Sunday)
+- runFlow:
+    when:
+      true: ${new Date().getDay() != 0}
+    commands:
+      - tapOn: "${output.tomorrow} .*"
+      - assertVisible: ".*, today"
+      - assertVisible: "14 of 115 g logged.*"
+
+# --- edit servings through the sheet; totals follow
+- tapOn: "Paneer, 1\\.5.*"
+- tapOn: "Decrease"
+- tapOn: "Save"
+- assertVisible: "9 of 115 g logged.*"
+
+# --- remove, then undo
+- tapOn: "Paneer, 5 cubes.*"
+- tapOn: "Remove from Lunch"
+- assertVisible: "0 of 115 g logged.*"
+- tapOn: "Undo"
+- assertVisible: "Paneer, 5 cubes, 9\\.4 g"
+- assertVisible: "9 of 115 g logged.*"
+- takeScreenshot: 06-diet-day
+
+# --- meal reminders screen: a master switch and the four meals, no summary
+- scrollUntilVisible:
+    element: "Reminders.*"
+    centerElement: true
+- tapOn: "Reminders.*"
+- assertVisible: "Meal reminders"
+- assertVisible: "Remind me.*"
+- assertVisible: ".*Turn on reminders to set times.*"
+- assertNotVisible: "Morning summary.*"
+- tapOn: "Back"
+
+# --- persists across a kill (and You comes back on its Activity segment)
+- stopApp
+- launchApp
+- tapOn: "You"
+- assertVisible:
+    text: "Activity"
+    selected: true
+- tapOn: "Diet"
+- assertVisible: "9 of 115 g logged.*"
+- assertVisible: "Paneer, 5 cubes, 9\\.4 g"
+
+# --- the date picker and the sliding strip (ADR 0017).
+# None of this section has been run (no Maestro or iOS simulator here). Every
+# GUESS is marked.
+# The calendar button is named "Pick a date" (DietCalendarButton's semantics
+# label), a 48pt target in the header.
+- tapOn: "Pick a date"
+# GUESS: the sheet's "Today" text button is the only element named exactly
+# "Today" while the sheet is open (the day cells are named like
+# "Wednesday 4 November 2026, today, food logged, selected").
+- assertVisible: "Today"
+- tapOn: "Today"
+# Picking today selects today and closes the sheet: today's figures are back.
+- assertVisible: "9 of 115 g logged.*"
+# GUESS: the strip's day cells are named "<Weekday> <n>, today" on today's cell
+# (the semantics label in the strip's `_WeekDay`), so this regex finds it, and
+# Maestro swipes from the middle of that element.
+- assertVisible: "[A-Za-z]+ [0-9]+, today"
+# Swiping right slides the window to EARLIER days, one day per cell dragged.
+- swipe:
+    from: "[A-Za-z]+ [0-9]+, today"
+    direction: RIGHT
+    duration: 400
+# GUESS: one swipe of this length moves the window by at most two days, so
+# today is still one of the seven cells.
+- assertVisible: "[A-Za-z]+ [0-9]+, today"
+# And left slides it back toward this week (it stops at this week's Monday).
+- swipe:
+    from: "[A-Za-z]+ [0-9]+, today"
+    direction: LEFT
+    duration: 400
+- assertVisible: "[A-Za-z]+ [0-9]+, today"
+# Nothing about the picked date is said above the strip: no "d Mon to d Mon".
+- assertNotVisible: "[0-9]+ [A-Z][a-z]{2} to [0-9]+ [A-Z][a-z]{2}"

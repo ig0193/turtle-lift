@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/body_gender.dart';
 import '../data/date_labels.dart';
 import '../data/diet_derived.dart' show suggestedTargetFor;
-import '../data/diet_plan.dart' show proteinTargetProvider;
+import '../data/diet_log.dart' show proteinTargetProvider;
 import '../data/local_date.dart';
 import '../data/personal_details_store.dart';
 import '../data/set_format.dart';

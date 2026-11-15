@@ -13,22 +13,24 @@ import 'package:turtle_lift/src/data/glance_bridge.dart';
 import 'package:turtle_lift/src/data/history_preview_data.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/reminder_scheduler.dart';
-import 'package:turtle_lift/src/data/training_plan.dart';
+import 'package:turtle_lift/src/data/today.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
 import 'package:turtle_lift/src/ui/diet_pane.dart';
+import 'package:turtle_lift/src/ui/diet_root.dart';
 import 'package:turtle_lift/src/ui/l0_shell.dart';
-import 'package:turtle_lift/src/ui/profile_root.dart';
+import 'package:turtle_lift/src/ui/you_root.dart';
 import 'package:turtle_lift/src/ui/reminder_tap_listener.dart';
-import 'package:turtle_lift/src/ui/schedule_pane.dart';
 import 'package:turtle_lift/src/ui/tab_index.dart';
+import 'package:turtle_lift/src/ui/tab_routes.dart' show kYouTabIndex;
 import 'package:turtle_lift/src/ui/workout_root.dart';
 
 import 'support/fake_reminder_scheduler.dart';
 
 /// A reminder tap while the app is running (KTD17, R11): pop to the shell
-/// route, select Profile, select the target's segment. Driven through the
-/// real `TurtleLiftApp`, so the listener's place in the tree is what is
-/// tested, not a copy of it.
+/// route, then select the target's tab (a diet reminder is the Diet tab, a
+/// workout target the Workout tab; `docs/adr/0016-you-tab-and-diet-tab.md`).
+/// Driven through the real `TurtleLiftApp`, so the listener's place in the
+/// tree is what is tested, not a copy of it.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -65,13 +67,17 @@ void main() {
     return ProviderScope.containerOf(tester.element(find.byType(L0Shell)));
   }
 
-  test('the Profile tab index is found from the shell, not hard-coded', () {
-    expect(kProfileTabIndex, 3);
-    expect(L0Shell.tabs[kProfileTabIndex].body, isA<ProfileRoot>());
+  test('the tab indexes are found from the shell, not hard-coded', () {
+    expect(kDietTabIndex, 0);
+    expect(kWorkoutTabIndex, 1);
+    expect(kYouTabIndex, 3);
+    expect(L0Shell.tabs[kDietTabIndex].body, isA<DietRoot>());
+    expect(L0Shell.tabs[kWorkoutTabIndex].body, isA<WorkoutRoot>());
+    expect(L0Shell.tabs[kYouTabIndex].body, isA<YouRoot>());
   });
 
   testWidgets('a diet tap over a pushed route pops to the shell and shows '
-      'Profile, Diet', (tester) async {
+      'the Diet tab', (tester) async {
     final container = await pumpApp(tester);
     final navigator = tester.state<NavigatorState>(find.byType(Navigator));
     navigator.push(MaterialPageRoute<void>(
@@ -87,8 +93,7 @@ void main() {
         reason: 'the pushed route is popped first (ADR 0003: tab switches '
             'happen with an empty stack)');
     expect(navigator.canPop(), isFalse);
-    expect(container.read(tabIndexProvider), 3);
-    expect(container.read(profileSegmentProvider), ProfileSegment.diet);
+    expect(container.read(tabIndexProvider), kDietTabIndex);
     expect(find.byType(DietPane), findsOneWidget);
   });
 
@@ -114,6 +119,31 @@ void main() {
     expect(container.read(dietSelectedDayProvider), LocalDate(2026, 11, 7));
   });
 
+  testWidgets('a diet tap brings today\'s week back into the strip, however '
+      'far it was slid (ADR 0017)', (tester) async {
+    final container = await pumpApp(tester);
+    container.read(dietSelectedDayProvider.notifier).select(LocalDate(2026, 10, 28));
+    container.read(dietStripStartProvider.notifier).shift(-9); // 24 Oct
+    expect(container.read(dietStripStartProvider), LocalDate(2026, 10, 24));
+
+    reminders.tap(ReminderTarget.dietToday);
+    await tester.pumpAndSettle();
+
+    expect(container.read(dietSelectedDayProvider), LocalDate(2026, 11, 4));
+    expect(container.read(dietStripStartProvider), LocalDate(2026, 11, 2),
+        reason: 'this week\'s Monday, with today in it');
+  });
+
+  testWidgets('a workout tap leaves the strip where it was', (tester) async {
+    final container = await pumpApp(tester);
+    container.read(dietStripStartProvider.notifier).shift(-3);
+
+    reminders.tap(ReminderTarget.workout);
+    await tester.pumpAndSettle();
+
+    expect(container.read(dietStripStartProvider), LocalDate(2026, 10, 30));
+  });
+
   testWidgets('a diet tap over an open bottom sheet closes it too',
       (tester) async {
     final container = await pumpApp(tester);
@@ -128,14 +158,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('a sheet'), findsNothing);
-    expect(container.read(tabIndexProvider), 3);
-    expect(container.read(profileSegmentProvider), ProfileSegment.diet);
+    expect(container.read(tabIndexProvider), kDietTabIndex);
   });
 
-  testWidgets('a training tap opens the Workout tab, where you train '
-      '(ADR 0008)', (tester) async {
+  testWidgets('a workout-target tap opens the Workout tab, where you train '
+      '(ADR 0008; a training notification an earlier build delivered still '
+      'carries this payload)', (tester) async {
     final container = await pumpApp(tester);
-    container.read(tabIndexProvider.notifier).select(3);
+    container.read(tabIndexProvider.notifier).select(kYouTabIndex);
     await tester.pumpAndSettle();
 
     reminders.tap(ReminderTarget.workout);
@@ -143,13 +173,13 @@ void main() {
 
     expect(container.read(tabIndexProvider), kWorkoutTabIndex);
     expect(find.byType(WorkoutLandingBody), findsOneWidget);
-    expect(find.byType(SchedulePane), findsNothing);
+    expect(find.byType(DietPane), findsNothing);
   });
 
-  testWidgets('a training tap over a pushed route pops it first',
+  testWidgets('a workout-target tap over a pushed route pops it first',
       (tester) async {
     final container = await pumpApp(tester);
-    container.read(tabIndexProvider.notifier).select(2);
+    container.read(tabIndexProvider.notifier).select(kYouTabIndex);
     final navigator = tester.state<NavigatorState>(find.byType(Navigator));
     navigator.push(MaterialPageRoute<void>(
       builder: (_) => const Scaffold(body: Text('pushed screen')),
@@ -164,19 +194,33 @@ void main() {
     expect(container.read(tabIndexProvider), kWorkoutTabIndex);
   });
 
-  testWidgets('a tap from another Profile segment switches to Diet',
-      (tester) async {
+  testWidgets('a diet tap from the You tab switches to the Diet tab and leaves '
+      'the You segment alone', (tester) async {
     final container = await pumpApp(tester);
-    container.read(tabIndexProvider.notifier).select(3);
+    container.read(tabIndexProvider.notifier).select(kYouTabIndex);
     container
-        .read(profileSegmentProvider.notifier)
-        .select(ProfileSegment.schedule);
+        .read(youSegmentProvider.notifier)
+        .select(YouSegment.analysis);
     await tester.pumpAndSettle();
 
     reminders.tap(ReminderTarget.dietToday);
     await tester.pumpAndSettle();
 
-    expect(container.read(profileSegmentProvider), ProfileSegment.diet);
+    expect(container.read(tabIndexProvider), kDietTabIndex);
+    expect(container.read(youSegmentProvider), YouSegment.analysis,
+        reason: 'Diet is its own tab now; there is no segment to select');
+    expect(find.byType(DietPane), findsOneWidget);
+  });
+
+  testWidgets('a diet tap from the Workout tab switches to the Diet tab',
+      (tester) async {
+    final container = await pumpApp(tester);
+    expect(container.read(tabIndexProvider), kWorkoutTabIndex);
+
+    reminders.tap(ReminderTarget.dietToday);
+    await tester.pumpAndSettle();
+
+    expect(container.read(tabIndexProvider), kDietTabIndex);
   });
 
   testWidgets('a tap on the Live Activity or the home-screen widget opens the '
@@ -184,7 +228,7 @@ void main() {
     final glance = _FakeGlance();
     final container = await pumpApp(tester,
         extra: [glanceBridgeProvider.overrideWithValue(glance)]);
-    container.read(tabIndexProvider.notifier).select(3);
+    container.read(tabIndexProvider.notifier).select(kYouTabIndex);
     final navigator = tester.state<NavigatorState>(find.byType(Navigator));
     navigator.push(MaterialPageRoute<void>(
       builder: (_) => const Scaffold(body: Text('pushed screen')),
@@ -199,7 +243,7 @@ void main() {
   });
 
   group('launch overrides (cold start)', () {
-    testWidgets('a diet launch target opens on Profile, Diet on the first '
+    testWidgets('a diet launch target opens on the Diet tab on the first '
         'frame (AE6)', (tester) async {
       reminders = FakeReminderScheduler();
       await tester.pumpWidget(
@@ -224,8 +268,7 @@ void main() {
       expect(find.byType(DietPane), findsOneWidget);
       final container =
           ProviderScope.containerOf(tester.element(find.byType(L0Shell)));
-      expect(container.read(tabIndexProvider), 3);
-      expect(container.read(profileSegmentProvider), ProfileSegment.diet);
+      expect(container.read(tabIndexProvider), kDietTabIndex);
     });
 
     test('a training launch target opens on the Workout tab', () {
@@ -234,8 +277,8 @@ void main() {
       addTearDown(container.dispose);
 
       expect(container.read(tabIndexProvider), kWorkoutTabIndex);
-      expect(container.read(profileSegmentProvider), ProfileSegment.personal,
-          reason: 'Profile is left alone');
+      expect(container.read(youSegmentProvider), YouSegment.activity,
+          reason: 'You is left alone: it still opens on Activity');
     });
 
     test('no launch target overrides nothing', () {
@@ -248,13 +291,13 @@ void main() {
           overrides: reminderLaunchOverrides(ReminderTarget.dietToday));
       addTearDown(container.dispose);
 
-      expect(container.read(tabIndexProvider), 3);
-      container.read(tabIndexProvider.notifier).select(0);
-      expect(container.read(tabIndexProvider), 0);
+      expect(container.read(tabIndexProvider), kDietTabIndex);
+      container.read(tabIndexProvider.notifier).select(kWorkoutTabIndex);
+      expect(container.read(tabIndexProvider), kWorkoutTabIndex);
       container
-          .read(profileSegmentProvider.notifier)
-          .select(ProfileSegment.personal);
-      expect(container.read(profileSegmentProvider), ProfileSegment.personal);
+          .read(youSegmentProvider.notifier)
+          .select(YouSegment.profile);
+      expect(container.read(youSegmentProvider), YouSegment.profile);
     });
   });
 }

@@ -121,7 +121,7 @@ String personalDetailsSubtitle(double? latestKg, BodyGender gender) {
 /// The About block's licences row.
 const String licencesRowTitle = 'Open-source licences';
 
-/// The Personal pane of the Profile tab: everything the app remembers because
+/// The Profile pane of the You tab: everything the app remembers because
 /// the user *told* it, and the two ways out of it.
 ///
 /// **Authored lives on Profile; derived lives on the History tab** (KD1,
@@ -130,11 +130,10 @@ const String licencesRowTitle = 'Open-source licences';
 /// on ("Everything here is a preference, never a derived value"), so a field's
 /// home on screen and its home in the schema can never disagree. Concretely: no
 /// streak, no workout or set count, no personal-best tally and no calorie
-/// figure appears on this pane. The one named exception is the **Schedule**
-/// pane's week summary, which lives next to it in [ProfileRoot] and not here.
+/// figure appears on this pane.
 ///
 /// **A pane, not a screen.** It is a [Column] of rows with no scrollable and no
-/// [AppScreen]: [ProfileRoot] owns the one scroll view, the pinned header and
+/// [AppScreen]: [YouRoot] gives it the one scroll view, the pinned header and
 /// the bottom clearance, so this widget cannot get any of those wrong.
 ///
 /// **Four rows, and the fourth is the reason the palette has eleven colours.**

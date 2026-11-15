@@ -102,7 +102,7 @@ void main() {
       ),
     ));
     container = ProviderScope.containerOf(tester.element(find.text('shell')));
-    container.read(tabIndexProvider.notifier).select(2);
+    container.read(tabIndexProvider.notifier).select(kYouTabIndex);
     final nav = tester.state<NavigatorState>(find.byType(Navigator));
     nav.push(MaterialPageRoute<void>(
       builder: (_) => HistorySessionDetailScreen(sessionId: saved.id),

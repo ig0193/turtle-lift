@@ -16,7 +16,7 @@ import 'package:turtle_lift/src/data/session_progress.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
 import 'package:turtle_lift/src/data/settings_store.dart'
     show appDatabaseProvider;
-import 'package:turtle_lift/src/data/training_plan.dart';
+import 'package:turtle_lift/src/data/today.dart';
 import 'package:turtle_lift/src/ui/glance_sync.dart';
 
 /// What the app tells the iOS Live Activity and home-screen widget
@@ -77,7 +77,6 @@ void main() {
     WidgetTester tester, {
     WorkoutSession? open,
     List<HistorySession>? history,
-    List<TrainingPlanEntry> plan = const <TrainingPlanEntry>[],
   }) async {
     bridge = _FakeBridge();
     await tester.pumpWidget(ProviderScope(
@@ -88,7 +87,6 @@ void main() {
         initialActiveSessionProvider.overrideWithValue(open),
         glanceBridgeProvider.overrideWithValue(bridge),
         planTodayProvider.overrideWithValue(LocalDate(2026, 10, 21)),
-        initialTrainingPlanProvider.overrideWithValue(plan),
         if (history != null) historySessionsProvider.overrideWithValue(history),
       ],
       child: const GlanceSync(child: SizedBox()),
@@ -203,14 +201,10 @@ void main() {
   });
 
   group('the home-screen widget', () {
-    testWidgets('gets this week and the last workout, derived', (tester) async {
+    testWidgets('gets the last workout as its headline, derived',
+        (tester) async {
       await pumpSync(
         tester,
-        plan: <TrainingPlanEntry>[
-          TrainingPlanEntry(
-              effectiveFrom: LocalDate(2026, 10, 1),
-              weekdays: const <int>{0, 2, 4}),
-        ],
         history: <HistorySession>[
           HistorySession(
             id: 'a',
@@ -226,17 +220,20 @@ void main() {
         ],
       );
 
+      // The Schedule is gone (ADR 0015): the wire shape is unchanged, but
+      // the last workout travels in `headline` and the rest is empty.
       final week = bridge.lastWeek!;
-      expect(week.headline, '1 of 3 this week');
-      expect(week.caption, '2 more to go. Next is Wednesday');
-      expect(week.days.map((d) => '${d.label}:${d.state}'),
-          <String>['Mon:hit', 'Wed:ahead', 'Fri:ahead']);
-      expect(week.lastWorkout, endsWith('Push day · 2 sets'));
+      expect(week.headline, endsWith('Push day · 2 sets'));
+      expect(week.caption, isEmpty);
+      expect(week.days, isEmpty);
+      expect(week.lastWorkout, isNull);
     });
 
-    testWidgets('with no plan it says so, never "0 of 0"', (tester) async {
+    testWidgets('with no history it says so quietly', (tester) async {
       await pumpSync(tester, history: const <HistorySession>[]);
-      expect(bridge.lastWeek!.headline, 'Pick training days');
+      expect(bridge.lastWeek!.headline, kNoWorkoutsGlance);
+      expect(kNoWorkoutsGlance, 'No workouts yet');
+      expect(bridge.lastWeek!.caption, isEmpty);
       expect(bridge.lastWeek!.days, isEmpty);
       expect(bridge.lastWeek!.lastWorkout, isNull);
     });

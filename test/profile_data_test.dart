@@ -9,20 +9,20 @@ import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/body_gender.dart';
 import 'package:turtle_lift/src/data/custom_templates.dart';
 import 'package:turtle_lift/src/data/data_export.dart';
-import 'package:turtle_lift/src/data/diet_plan_store.dart';
+import 'package:turtle_lift/src/data/diet_log.dart';
+import 'package:turtle_lift/src/data/diet_log_store.dart';
 import 'package:turtle_lift/src/data/exercise.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/food_index.dart';
 import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/meal_slot.dart';
-import 'package:turtle_lift/src/data/meal_ticks.dart';
 import 'package:turtle_lift/src/data/personal_details_store.dart';
 import 'package:turtle_lift/src/data/reminder_prefs.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
 import 'package:turtle_lift/src/data/settings_store.dart'
     show appDatabaseProvider;
-import 'package:turtle_lift/src/data/training_plan.dart';
+import 'package:turtle_lift/src/data/today.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/data_screens.dart';
@@ -134,39 +134,39 @@ void main() {
 
   test('B10: the JSON carries the reminder settings', () {
     final prefs = ReminderPreferences.defaults
-        .copyWith(scheduleOn: true, dietOn: true)
+        .copyWith(dietOn: true)
         .withSlot(MealSlot.lunch, const SlotReminder(on: true, minute: 780));
     final json = jsonDecode(buildExportJson(
       sessions: const <WorkoutSession>[],
       bodyweight: const <BodyweightEntry>[],
       customTemplates: const <WorkoutTemplate>[],
-      trainingPlan: const <TrainingPlanEntry>[],
       gender: BodyGender.male,
       index: index,
-      dietPlan: const <DietPlanVersion>[],
-      mealTicks: const <MealTick>[],
+      dietLog: const <DietLogEntry>[],
       proteinTargetG: null,
       foods: FoodIndex.unavailable(),
       exportedAt: DateTime.utc(2026, 11, 7),
       reminders: prefs,
     )) as Map<String, Object?>;
     final r = json['reminders']! as Map<String, Object?>;
-    expect(r['training'], <String, Object?>{'on': true, 'time': '18:30'});
+    expect(r.containsKey('training'), isFalse,
+        reason: 'the Schedule and its reminder are gone');
     final diet = r['diet']! as Map<String, Object?>;
     expect(diet['on'], isTrue);
     expect((diet['lunch']! as Map)['on'], isTrue);
     expect((diet['lunch']! as Map)['time'], '13:00');
+    expect(diet.containsKey('morningSummary'), isFalse);
   });
 
   late AppDatabase database;
   setUp(() => database = AppDatabase.forTesting(NativeDatabase.memory()));
   tearDown(() => database.close());
 
-  Widget host(Widget screen, {List<TrainingPlanEntry> plan = const []}) =>
+  Widget host(Widget screen, {List<DietLogEntry> log = const []}) =>
       ProviderScope(
         overrides: [
           planTodayProvider.overrideWithValue(const LocalDate(2026, 11, 4)),
-          initialTrainingPlanProvider.overrideWithValue(plan),
+          initialDietLogProvider.overrideWithValue(log),
           appDatabaseProvider.overrideWithValue(database),
           exerciseIndexProvider.overrideWithValue(index),
           customTemplatesProvider.overrideWithValue(const []),
@@ -175,11 +175,25 @@ void main() {
         child: MaterialApp(theme: buildAppTheme(), home: screen),
       );
 
-  testWidgets('B9: a schedule alone is something to export, and it is counted',
+  testWidgets('B9: a diet log alone is something to export, and it is counted',
       (tester) async {
-    await tester.pumpWidget(host(const ExportScreen(), plan: <TrainingPlanEntry>[
-      TrainingPlanEntry(
-          effectiveFrom: const LocalDate(2026, 11, 2), weekdays: <int>{0, 2, 4}),
+    await tester.pumpWidget(host(const ExportScreen(), log: <DietLogEntry>[
+      const DietLogEntry(
+        id: 'a',
+        date: LocalDate(2026, 11, 3),
+        slot: MealSlot.lunch,
+        foodId: 'rajma',
+        servingsHalves: 2,
+        position: 0,
+      ),
+      const DietLogEntry(
+        id: 'b',
+        date: LocalDate(2026, 11, 3),
+        slot: MealSlot.lunch,
+        foodId: 'rice',
+        servingsHalves: 2,
+        position: 1,
+      ),
     ]));
     await tester.pumpAndSettle();
     expect(
@@ -187,9 +201,9 @@ void main() {
       isNotNull,
     );
     final row = find.ancestor(
-        of: find.text('Training days'), matching: find.byType(Row));
-    expect(find.descendant(of: row, matching: find.text('3 a week')),
-        findsOneWidget);
+        of: find.text('Foods logged'), matching: find.byType(Row));
+    expect(find.descendant(of: row, matching: find.text('2')), findsOneWidget);
+    expect(find.text('Training days'), findsNothing);
   });
 
   testWidgets('Export says it also writes a CSV for spreadsheets',

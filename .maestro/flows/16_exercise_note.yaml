@@ -35,7 +35,7 @@ tags: [workout, history]
 - tapOn: "Back"
 
 # --- History detail shows it under the exercise.
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - tapOn: ".*Today · 1 exercise · 1 set"
 - scrollUntilVisible:
     element: ".*Seat 4.*"

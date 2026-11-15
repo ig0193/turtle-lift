@@ -14,7 +14,7 @@ tags: [history]
       - runFlow: ../subflows/log_bench_workout.yaml
       - waitForAnimationToEnd
       - tapOn: "Back"
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - assertVisible: "1 day streak, 7 workouts, 14 sets"
 - scrollUntilVisible:
     element: "See all 7 workouts"

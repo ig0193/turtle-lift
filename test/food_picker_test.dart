@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/food.dart';
 import 'package:turtle_lift/src/data/food_index.dart';
+import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/diet_type_glyph.dart';
 import 'package:turtle_lift/src/ui/food_picker_screen.dart';
@@ -11,6 +12,10 @@ import 'package:turtle_lift/src/ui/ghost_button.dart';
 
 /// The food picker, on fixture foods (the shipped list is still under owner
 /// review, so no test pins its values).
+// A Wednesday and the Sunday after it: the title shows the date's weekday.
+const LocalDate _wednesday = LocalDate(2026, 11, 11);
+const LocalDate _sunday = LocalDate(2026, 11, 15);
+
 void main() {
   Map<String, Object?> food(
     String id,
@@ -49,7 +54,7 @@ void main() {
         child: MaterialApp(
           theme: buildAppTheme(),
           home: home ??
-              const FoodPickerScreen(weekday: 2, slot: MealSlot.lunch),
+              const FoodPickerScreen(date: _wednesday, slot: MealSlot.lunch),
         ),
       );
 
@@ -63,11 +68,11 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('the title names the slot and weekday passed in',
+  testWidgets('the title names the slot and the weekday of the date passed in',
       (tester) async {
     await pumpPicker(tester);
     expect(find.text('Add to Lunch, Wed'), findsOneWidget);
-    expect(FoodPickerScreen.titleFor(6, MealSlot.breakfast),
+    expect(FoodPickerScreen.titleFor(_sunday, MealSlot.breakfast),
         'Add to Breakfast, Sun');
   });
 
@@ -238,7 +243,7 @@ void main() {
         builder: (context) => Scaffold(
           body: TextButton(
             onPressed: () =>
-                pushFoodPicker(context, weekday: 2, slot: MealSlot.lunch),
+                pushFoodPicker(context, date: _wednesday, slot: MealSlot.lunch),
             child: const Text('open'),
           ),
         ),
@@ -311,7 +316,7 @@ void main() {
     await pumpPicker(
       tester,
       home: FoodPickerScreen(
-        weekday: 2,
+        date: _wednesday,
         slot: MealSlot.lunch,
         onPick: (food) => picked = food,
       ),

@@ -1,35 +1,14 @@
 # User story (ADR 0014): reminders never read "on" when nothing will fire.
-# Remind me with no training days says to pick one; picking a day clears the
-# note. Meal reminders with the master on and nothing chosen read "None
-# chosen" on the Diet pane, and each time row names its meal.
+# Meal reminders with the master on and nothing chosen read "None chosen" on
+# the Diet tab, and each time row names its meal. (The Schedule's training-day
+# reminder this flow once also covered is gone, ADR 0015.)
 appId: dev.indresh.turtleLift
 name: 29 Profile - honest reminder states
 tags: [profile, notifications]
 ---
 - launchApp:
     clearState: true
-- tapOn: "Profile"
-- tapOn: "Schedule"
-- tapOn: "Remind me.*"
-- assertVisible: "Remind you on training days\\?"
-- tapOn: "Allow reminders"
-- runFlow:
-    when:
-      visible: "Allow"
-    commands:
-      - tapOn:
-          text: "Allow"
-          optional: true
-- assertVisible:
-    text: "Remind me\\. Notification on training days"
-    checked: true
-- assertVisible: "Pick at least one training day above to get a reminder\\."
-- assertVisible: "Reminder time\\. .*"
-- takeScreenshot: 29-no-days
-- tapOn: "Tuesday"
-- assertNotVisible: "Pick at least one training day above to get a reminder\\."
-
-# --- meal reminders: master on, nothing chosen
+# Diet is its own tab (ADR 0016): no You or segment taps.
 - tapOn: "Diet"
 - tapOn: "Set a daily target"
 - tapOn: { id: "protein-target-field" }
@@ -44,8 +23,25 @@ tags: [profile, notifications]
 - assertVisible: "Turn on reminders to set times"
 - assertVisible: "Breakfast time\\. 8:00 AM"
 - assertVisible: "Dinner time\\. 8:30 PM"
-- tapOn: "Remind me\\. Notifications built from your plan"
+
+# --- master on through the explain-first sheet and the OS prompt
+- tapOn: "Remind me\\. A nudge at each meal you turn on"
+- assertVisible: "Remind you to log meals\\?"
+- tapOn: "Allow reminders"
+# The iOS permission prompt. Maestro's iOS driver may accept a system
+# alert on its own before this step sees it, so the tap is conditional and
+# the proof is the state that follows (the switch only stays on once iOS
+# grants permission).
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn:
+          text: "Allow"
+          optional: true
 - assertNotVisible: "Turn on reminders to set times"
+- assertNotVisible: "Morning summary.*"
+- takeScreenshot: 29-master-on
 - tapOn: "Back"
 - scrollUntilVisible:
     element: "Reminders.*"

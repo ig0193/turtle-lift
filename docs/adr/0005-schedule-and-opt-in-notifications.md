@@ -4,6 +4,10 @@ Date: 2026-10-24
 
 ## Status
 
+> **Superseded by [ADR 0015](0015-diet-is-a-log.md):** the Schedule, its
+> training-day reminders and the week summary are removed. The five reminder
+> rules below still govern Diet's meal reminders.
+
 Accepted. **Amends the "no notifications" rule** in `CLAUDE.md`, `docs/00` §13 and
 `docs/01` §Out of scope, for this feature only. Notifications are decided and
 will be built **after** the Schedule screen ships. **Extended by

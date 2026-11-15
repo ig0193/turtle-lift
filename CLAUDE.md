@@ -85,15 +85,18 @@ are reviewed copy.
 4. Workout flow: landing → template picker → overview → exercise list → logging.
 5. Summary and celebration.
 6. Muscles tab.
-7. History tab.
-8. Profile tab — fourth tab, Personal | Schedule
-   (`docs/adr/0004-profile-returns-as-a-tab.md`), then the Schedule screen and
-   reminders (`docs/adr/0005-schedule-and-opt-in-notifications.md`, notifications last).
-9. Diet — third Profile segment, a protein-only weekly plan
+7. History — now the **Activity** segment of the You tab
+   (`docs/adr/0016-you-tab-and-diet-tab.md`).
+8. Profile tab — now the **You** tab, fourth in the bar, Profile | Activity |
+   Analysis (`docs/adr/0004-profile-returns-as-a-tab.md`, renamed by ADR 0016).
+   ~~The Schedule screen and its reminders~~ **Removed**
+   (`docs/adr/0015-diet-is-a-log.md`).
+9. Diet — its own tab, first in the bar, a protein-only daily log
    (`docs/adr/0007-diet-in-profile.md`, plan in
-   `docs/plans/2026-11-08-1702-feat-diet-weekly-protein-plan.md`). After
-   Profile/Schedule, before the mascot; diet reminders only after the ADR 0005
-   notification infrastructure exists.
+   `docs/adr/0015-diet-is-a-log.md`; the original plan,
+   `docs/plans/2026-11-08-1702-feat-diet-weekly-protein-plan.md`, describes the
+   weekly-plan version it replaced). Before the mascot; diet reminders use the
+   ADR 0005 notification infrastructure.
 
 ## Decided in session 1
 
@@ -137,7 +140,13 @@ are reviewed copy.
 - **The live clock is display-only.** `sessionClockElapsed` derives it from
   `loggedAt`; it is never stored and is shown nowhere but the live screen, and
   only for a session dated the day it started and under six hours old.
-- **Schema is at version 9.** Step 9 adds `custom_exercises.hidden` (Hide from
+- **Schema is at version 10.** Step 10 removes the Schedule and turns Diet from a
+  weekly plan into a dated log (`docs/adr/0015-diet-is-a-log.md`): it creates
+  `diet_log_entries`, turns each ticked meal into the foods that plan had in that
+  slot on that day, then drops `meal_ticks`, `diet_plan_items`,
+  `diet_plan_versions` and `training_plan_entries`. The `reminder_prefs`
+  `schedule_*` and `summary_*` columns stay, unwritten and unread. **No later step
+  may be numbered below 10.** Previously: schema version 9. Step 9 adds `custom_exercises.hidden` (Hide from
   picker, for a logged custom exercise that cannot be deleted) and
   `session_exercises.note` (one note per exercise per workout; the "Last time"
   hint is derived) — `docs/adr/0011-combined-build-decisions.md`, which also
@@ -185,11 +194,12 @@ are reviewed copy.
   `01` §Usage rules). The accent `#FFA53D` could not carry "delete": it means "active / this
   has been worked" *"wherever it appears"*, so a delete confirmation painted in it
   reads as approval. `test/theme_palette_test.dart` fails on any colour outside §12.
-- **The week lives on the Workout landing** (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`,
-  amends 0004 and 0005). Profile › Schedule holds only the plan (days, reminder);
-  the derived "this week" strip and a "last workout" line sit above the landing's
-  search, and a training reminder opens the Workout tab (payload string still
-  `schedule`). Planned muscles are outlined in `textSecondary`, never amber or
+- **The Workout landing leads with the last workout**
+  (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`, trimmed by
+  `docs/adr/0015-diet-is-a-log.md`). A "last workout" line sits above the
+  landing's search; the week strip and the Schedule it measured are gone. The
+  `schedule` notification payload string still opens the Workout tab, for
+  notifications already delivered. Planned muscles are outlined in `textSecondary`, never amber or
   steel. Sharing the summary card as an image (system share sheet), "Do again",
   the folding Ready-made grid, haptics (`AppHaptics`), the pinned Mark exercise
   done bar, last time in each set row and the live PB mark are all in 0008.
@@ -198,12 +208,33 @@ are reviewed copy.
   `ios/TurtleLiftWidgets` extension target (iOS 17+, App Group
   `group.dev.indresh.turtleLift`). No plugin. The activity's clock is a system
   timer from the session start; nothing is stored.
-- **Profile has three segments: Personal | Schedule | Diet**
-  (`docs/adr/0007-diet-in-profile.md`, proposed). Diet is a segment, not a fifth
-  tab — four tabs stays the ceiling (ADR 0004). The selected segment lives in an
-  in-memory `profileSegmentProvider`, never stored: Profile opens on Personal on
-  cold start and after Delete all data; a diet reminder tap selects Diet; a
-  training reminder tap opens the Workout tab (ADR 0008).
+- **The tab bar is Diet | Workout | Muscles | You**
+  (`docs/adr/0016-you-tab-and-diet-tab.md`, supersedes the "History as a tab" half
+  of ADR 0003). Four tabs stays the ceiling (ADR 0004): Diet took the slot
+  History left. **The app still opens on Workout**, now index 1; never name a
+  tab by number — read `kDietTabIndex`, `kWorkoutTabIndex` and `kYouTabIndex`
+  off the shell (`lib/src/ui/tab_routes.dart`).
+- **You has three segments: Profile | Activity | Analysis.** Profile is the old
+  Personal pane; **Activity is the old History tab, unchanged** (the code keeps
+  the name `History*`); Analysis is an empty placeholder. The panes sit in an
+  `IndexedStack`, each with its own scroll view, so a switch keeps their state.
+  The selected segment lives in an in-memory `youSegmentProvider`, never stored:
+  You opens on Activity on cold start and after Delete all data. A diet reminder
+  tap or launch opens the Diet tab. The placement rule stands: computed from
+  sessions lives on Activity, typed lives on Profile, no figure in both.
+- **Diet is a log, not a plan** (`docs/adr/0015-diet-is-a-log.md`). One row per
+  food per meal slot per day, today and earlier only; no weekly repeat, no eaten
+  tick, no first-time screen — it always opens on the day view. A food in the log
+  has been eaten. Reminders are fixed-text nudges to log a meal; export is
+  format 2. `planTodayProvider`, `startOfWeek` and `kWeekdayCount` live in
+  `lib/src/data/today.dart`.
+- **Diet has a date picker and a sliding week strip**
+  (`docs/adr/0017-diet-date-picker.md`). A calendar button in the Diet header
+  opens a month calendar with a dot on every logged day; picking a day selects it
+  and shows its week. The strip is always seven days and slides one day at a time
+  by dragging (never past this week's Monday); cells are keyed by position, not
+  weekday. Any past day can be logged or edited, never a future one.
+  `showDietDay` is the one way to jump to a day.
 
 - **Exercise demonstrations are drawn by the app** (`docs/adr/0010-exercise-demonstrations-are-drawn-not-bundled.md`),
   reversing the old "no per-exercise illustrations" scope line at the user's request. An original keyframed
@@ -240,13 +271,16 @@ are reviewed copy.
 ## Out of scope for V1 — do not build
 
 No login · no cloud sync · no soft delete · no rest timer · no stored workout duration (the live clock is display-only) ·
-no notifications (except the opt-in reminders in ADR 0005, built after Schedule, and diet reminders under the same rules, ADR 0007) · no wearables · no AI features · no premium tier · no ads ·
+no notifications (except the opt-in diet reminders, ADR 0007 and ADR 0015; the Schedule's training reminders were removed) · no wearables · no AI features · no premium tier · no ads ·
 no multi-day splits ·
 no achievements, badges or level-ups ·
 no calorie, macro or food-diary tracking (no calories, carbs or fat, no free-form food logging, no custom foods).
 
-Diet is a protein-only weekly plan with a daily protein total, and nothing wider
-(`docs/adr/0007-diet-in-profile.md`).
+Diet is a protein-only daily log from the fixed food list, with a daily protein
+total, and nothing wider (`docs/adr/0007-diet-in-profile.md`,
+`docs/adr/0015-diet-is-a-log.md`). The "no food-diary tracking" line above means
+no calories, macros, free-form entry or custom foods; logging servings of the
+reviewed protein foods is what Diet is.
 
 The turtle mascot (`docs/05-mascot-brief.md`) is **the last thing to build** — decorative only,
 never a body diagram, and it must never react to inactivity. Orientation per surface

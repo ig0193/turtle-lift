@@ -1,4 +1,4 @@
-# User story (R11, AE6): tapping a diet reminder opens Profile -> Diet on
+# User story (R11, AE6): tapping a diet reminder opens the Diet tab on
 # today, warm (popping a pushed screen first) and cold.
 #
 # This file is only the setup. It needs the host shell between steps
@@ -6,16 +6,19 @@
 # .maestro/scripts/07_reminder_deep_link.sh, which then drives
 # ../subflows/reminder_*.yaml. Run that script, not this file alone.
 appId: dev.indresh.turtleLift
-name: 07 Reminder tap deep-links to Profile -> Diet (setup)
+name: 07 Reminder tap deep-links to the Diet tab (setup)
 tags: [notifications, scripted]
 ---
 - launchApp:
     clearState: true
 # Notification permission through the app's own opt-in: clearState revokes
 # it, and Maestro's launchApp permissions do not grant it on iOS 26.
-- tapOn: "Profile"
-- tapOn: "Schedule"
-- tapOn: "Monday"
+# Diet is its own tab now (ADR 0016): no You or segment taps to reach it.
+- tapOn: "Diet"
+- scrollUntilVisible:
+    element: "Reminders.*"
+    centerElement: true
+- tapOn: "Reminders.*"
 - tapOn: "Remind me.*"
 - tapOn: "Allow reminders"
 # The iOS permission prompt. Maestro's iOS driver may accept a system
@@ -29,8 +32,10 @@ tags: [notifications, scripted]
       - tapOn:
           text: "Allow"
           optional: true
-- tapOn: "Personal"
-# Leave the app on a pushed screen on another tab, so the tap has to pop it.
+- tapOn: "Back"
+# Leave the app on a pushed screen on another tab (You > Profile), so the tap
+# has to pop it and switch to Diet.
+- runFlow: ../subflows/open_profile_pane.yaml
 - tapOn: "Personal details.*"
 - assertVisible: "Body diagram"
 - pressKey: home

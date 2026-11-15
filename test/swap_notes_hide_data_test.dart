@@ -9,18 +9,16 @@ import 'package:turtle_lift/src/data/body_gender.dart';
 import 'package:turtle_lift/src/data/custom_exercises.dart';
 import 'package:turtle_lift/src/data/data_export.dart';
 import 'package:turtle_lift/src/data/data_reset.dart';
-import 'package:turtle_lift/src/data/diet_plan_store.dart';
+import 'package:turtle_lift/src/data/diet_log_store.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/data/exercise_notes.dart';
 import 'package:turtle_lift/src/data/food_index.dart';
 import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
-import 'package:turtle_lift/src/data/meal_ticks.dart';
 import 'package:turtle_lift/src/data/personal_details_store.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
-import 'package:turtle_lift/src/data/training_plan.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
 
 import 'support/fake_reminder_scheduler.dart';
@@ -222,11 +220,9 @@ void main() {
         sessions: await store.readSavedSessions(),
         bodyweight: const <BodyweightEntry>[],
         customTemplates: const <WorkoutTemplate>[],
-        trainingPlan: const <TrainingPlanEntry>[],
         gender: BodyGender.male,
         index: index,
-        dietPlan: const <DietPlanVersion>[],
-        mealTicks: const <MealTick>[],
+        dietLog: const <DietLogEntry>[],
         proteinTargetG: null,
         foods: FoodIndex.unavailable(),
         exportedAt: DateTime.utc(2026, 11, 9),

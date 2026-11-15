@@ -78,10 +78,22 @@ void main() {
 
       expect(tester.takeException(), isNull,
           reason: 'the bar must lay out clean');
-      for (final label in const <String>['Workout', 'Muscles', 'History', 'Profile']) {
+      for (final label in const <String>['Diet', 'Workout', 'Muscles', 'You']) {
         expect(find.text(label), findsOneWidget,
             reason: 'the $label tab is missing');
       }
+      expect(find.text('History'), findsNothing,
+          reason: 'History is a You segment now, not a tab');
+      expect(find.text('Profile'), findsNothing,
+          reason: 'the Profile tab is the You tab now');
+      // Left to right in the order the bar declares: Diet | Workout | Muscles
+      // | You.
+      final xs = <double>[
+        for (final label in GlassTabBar.labels)
+          tester.getCenter(find.text(label)).dx,
+      ];
+      expect(xs, orderedEquals(<double>[...xs]..sort()),
+          reason: 'the tabs run left to right in label order');
       expect(find.byType(TabGlyphIcon), findsNWidgets(4),
           reason: 'each tab carries exactly one stroked glyph');
     });
@@ -802,7 +814,7 @@ void main() {
           .toList();
       expect(selected, hasLength(1),
           reason: 'exactly one tab may be marked selected');
-      expect(selected.single.getSemanticsData().label, contains('Muscles'),
+      expect(selected.single.getSemanticsData().label, contains('Workout'),
           reason: 'the selected tab must be the one at selectedIndex');
 
       handle.dispose();

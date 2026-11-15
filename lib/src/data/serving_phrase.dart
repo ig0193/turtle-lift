@@ -1,4 +1,4 @@
-/// How a planned food is put into words, shared by the serving sheet and the
+/// How a logged food is put into words, shared by the serving sheet and the
 /// diet reminders (U17), so a notification reads exactly like the row it
 /// came from.
 library;

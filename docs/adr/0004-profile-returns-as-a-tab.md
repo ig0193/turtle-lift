@@ -4,6 +4,12 @@ Date: 2026-10-24
 
 ## Status
 
+> **Renamed by [ADR 0016](0016-you-tab-and-diet-tab.md):** the Profile tab is the
+> You tab (Profile | Activity | Analysis).
+
+> **Amended by [ADR 0015](0015-diet-is-a-log.md):** the Schedule segment is
+> removed, so Profile is Personal | Diet (two segments, not three).
+
 Accepted. **Supersedes the Profile half of
 [ADR 0003](0003-l0-navigation-variant-a.md)** (Profile behind a header avatar).
 The rest of 0003 — History as a tab, the bar showing only at L0, an open session

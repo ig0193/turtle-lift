@@ -4,18 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/diet_derived.dart';
-import 'package:turtle_lift/src/data/diet_plan.dart';
-import 'package:turtle_lift/src/data/diet_plan_store.dart';
+import 'package:turtle_lift/src/data/diet_log.dart';
+import 'package:turtle_lift/src/data/diet_log_store.dart';
 import 'package:turtle_lift/src/data/food_index.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/meal_slot.dart';
-import 'package:turtle_lift/src/data/meal_ticks.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
-import 'package:turtle_lift/src/data/training_plan.dart';
+import 'package:turtle_lift/src/data/today.dart';
 
-/// QA: Diet's planned, eaten and to-go figures after edits to a plan that is
-/// already ticked, through the notifiers the screens call. Complements the
-/// provider group in `diet_derived_test.dart`, which edits an unticked plan.
+/// QA: Diet's logged and to-go figures after edits to a day that already has
+/// food in it, through the notifiers the screens call. Complements the
+/// provider group in `diet_derived_test.dart`, which starts from an empty log.
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -47,11 +46,8 @@ void main() {
         appDatabaseProvider.overrideWithValue(database),
         foodIndexProvider.overrideWithValue(foods),
         planClockProvider.overrideWithValue(() => nov(4)),
-        dietPlanStoreProvider.overrideWithValue(
-          DietPlanStore(database, today: () => nov(4)),
-        ),
-        mealTickStoreProvider.overrideWithValue(
-          MealTickStore(database, today: () => nov(4)),
+        dietLogStoreProvider.overrideWithValue(
+          DietLogStore(database, today: () => nov(4)),
         ),
       ],
     );
@@ -61,119 +57,88 @@ void main() {
     await database.close();
   });
 
-  DietPlanLog log() => c.read(dietPlanLogProvider.notifier);
+  DietLog log() => c.read(dietLogProvider.notifier);
   DietDay day(int d) => c.read(dietDayProvider(nov(d)));
-  DietPlanItem only(int d, MealSlot slot) =>
-      day(d).slots[slot.index].items.single.item;
+  DietLogEntry only(int d, MealSlot slot) =>
+      day(d).slots[slot.index].items.single.entry;
 
-  test(
-    'A5: changing servings on a ticked slot changes that day\'s eaten',
-    () async {
-      await log().addFood(
-        weekdays: <int>{0},
-        slot: MealSlot.lunch,
-        foodId: 'paneer',
-        halves: 2,
-      );
-      await c.read(mealTicksProvider.notifier).toggle(nov(2), MealSlot.lunch);
-      await c.read(proteinTargetProvider.notifier).set(40);
-      expect(day(2).eatenG, 14);
-      expect(day(2).toGoG, 26);
-
-      await log().setServings(only(2, MealSlot.lunch), 3);
-      expect(day(2).plannedG, 21);
-      expect(day(2).eatenG, 21, reason: 'eaten is plan x ticks, read now');
-      expect(day(2).toGoG, 19);
-    },
-  );
-
-  test(
-    'removing the only food of a ticked slot drops eaten, undo restores it',
-    () async {
-      await log().addFood(
-        weekdays: <int>{1},
-        slot: MealSlot.dinner,
-        foodId: 'dal',
-        halves: 2,
-      );
-      await c.read(mealTicksProvider.notifier).toggle(nov(3), MealSlot.dinner);
-      expect(day(3).eatenG, 9);
-
-      final removed = await log().removeItem(only(3, MealSlot.dinner));
-      expect(day(3).plannedG, 0);
-      expect(day(3).eatenG, 0, reason: 'a tick on an emptied slot counts 0 g');
-
-      await log().restoreItem(removed!);
-      expect(day(3).eatenG, 9, reason: 'the tick survived; the food is back');
-    },
-  );
-
-  test('AE4: adding again with Repeat on Mon-Fri leaves one row per day at the '
-      'new servings, and the week totals follow', () async {
+  test('A5: changing servings on a logged slot changes that day\'s total',
+      () async {
     await log().addFood(
-      weekdays: <int>{2},
+      date: nov(2),
+      slot: MealSlot.lunch,
+      foodId: 'paneer',
+      halves: 2,
+    );
+    await c.read(proteinTargetProvider.notifier).set(40);
+    expect(day(2).loggedG, 14);
+    expect(day(2).toGoG, 26);
+
+    await log().setServings(only(2, MealSlot.lunch), 3);
+    expect(day(2).loggedG, 21, reason: 'derived on read, nothing stored');
+    expect(day(2).toGoG, 19);
+  });
+
+  test('removing the only food of a slot empties it, undo restores it',
+      () async {
+    await log().addFood(
+      date: nov(3),
+      slot: MealSlot.dinner,
+      foodId: 'dal',
+      halves: 2,
+    );
+    expect(day(3).loggedG, 9);
+
+    final removed = await log().removeEntry(only(3, MealSlot.dinner));
+    expect(day(3).loggedG, 0);
+    expect(day(3).slots[MealSlot.dinner.index].isEmpty, isTrue);
+
+    await log().restoreEntry(removed!);
+    expect(day(3).loggedG, 9);
+    expect(only(3, MealSlot.dinner).servingsHalves, 2);
+  });
+
+  test('AE4: adding the same food again leaves one row at the new servings',
+      () async {
+    await log().addFood(
+      date: nov(4),
       slot: MealSlot.lunch,
       foodId: 'paneer',
       halves: 2,
     );
     await log().addFood(
-      weekdays: <int>{0, 1, 2, 3, 4},
+      date: nov(4),
       slot: MealSlot.lunch,
       foodId: 'paneer',
       halves: 4,
     );
 
-    for (var d = 2; d <= 6; d++) {
-      expect(day(d).slots[MealSlot.lunch.index].items, hasLength(1));
-      expect(day(d).plannedG, 28);
-    }
-    expect(day(7).plannedG, 0, reason: 'Saturday was not chosen');
-    expect(
-      c.read(dietWeekProvider).fold<int>(0, (s, d) => s + d.plannedG),
-      5 * 28,
-    );
+    expect(day(4).slots[MealSlot.lunch.index].items, hasLength(1));
+    expect(day(4).loggedG, 28);
   });
 
-  test('an edit never reaches a ticked day of an earlier week', () async {
+  test('an edit on one day never reaches another day or another week',
+      () async {
     await log().addFood(
-      weekdays: <int>{0},
+      date: nov(2),
       slot: MealSlot.lunch,
       foodId: 'paneer',
       halves: 2,
     );
-    final lastWeek = c.read(dietPlanLogProvider);
-    expect(lastWeek.single.effectiveFrom, nov(2));
-
-    // Next week's Monday: an edit writes a new version from that Monday.
-    final next = ProviderContainer(
-      overrides: [
-        appDatabaseProvider.overrideWithValue(database),
-        foodIndexProvider.overrideWithValue(foods),
-        planClockProvider.overrideWithValue(() => nov(9)),
-        initialDietPlanProvider.overrideWithValue(lastWeek),
-        dietPlanStoreProvider.overrideWithValue(
-          DietPlanStore(database, today: () => nov(9)),
-        ),
-      ],
+    await log().addFood(
+      date: nov(4),
+      slot: MealSlot.lunch,
+      foodId: 'paneer',
+      halves: 2,
     );
-    addTearDown(next.dispose);
-    await next
-        .read(dietPlanLogProvider.notifier)
-        .setServings(
-          next
-              .read(dietDayProvider(nov(9)))
-              .slots[MealSlot.lunch.index]
-              .items
-              .single
-              .item,
-          4,
-        );
 
-    expect(next.read(dietDayProvider(nov(9))).plannedG, 28);
+    await log().setServings(only(4, MealSlot.lunch), 4);
+    expect(day(4).loggedG, 28);
+    expect(day(2).loggedG, 14, reason: 'Monday keeps what was logged on it');
+    expect(day(9).loggedG, 0, reason: 'nothing repeats next week');
     expect(
-      next.read(dietDayProvider(nov(2))).plannedG,
-      14,
-      reason: 'last Monday keeps the plan it was lived under',
+      c.read(dietStripProvider(nov(2))).fold<int>(0, (s, d) => s + d.loggedG),
+      14 + 28,
     );
   });
 }

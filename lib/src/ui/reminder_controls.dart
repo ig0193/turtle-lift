@@ -8,14 +8,14 @@ import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'motion.dart';
 
-/// The reminder controls Schedule (ADR 0005) and Diet's Reminders screen
-/// (ADR 0007) share: a row with a drawn switch, a time row, the explain-first
-/// sheet, and [optInToReminders], which puts that sheet in front of the OS
-/// prompt.
+/// The reminder controls Diet's Reminders screen (ADR 0007) uses: a row with
+/// a drawn switch, a time row, the explain-first sheet, and
+/// [optInToReminders], which puts that sheet in front of the OS prompt.
 ///
-/// **Promoted from `schedule_pane.dart`** so both features read and behave
-/// alike. Every string a feature owns (titles, sheet copy) is a parameter;
-/// only the copy that must match across features lives here.
+/// **Kept as shared controls** from when the Schedule had reminders too
+/// (ADR 0005, removed by ADR 0015). Every string a feature owns (titles, sheet
+/// copy) is a parameter; only the copy that must match across features lives
+/// here.
 
 /// Shown when the OS will not deliver this app's notifications: after a
 /// refused prompt, or when permission was revoked in system Settings.

@@ -4,12 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_screen.dart';
 import 'l0_tab_chrome.dart';
 import 'glass_tab_bar.dart';
-import 'history_root.dart';
+import 'diet_calendar_sheet.dart' show DietCalendarButton;
+import 'diet_root.dart';
 import 'muscles_root.dart';
-import 'profile_root.dart';
 import 'tab_index.dart';
 import 'workout_root.dart';
 import 'workout_tab_chrome.dart';
+import 'you_root.dart';
 
 /// What one L0 tab contributes to the shell's chrome.
 ///
@@ -86,10 +87,14 @@ class L0Shell extends ConsumerWidget {
   /// Workout feature owns. The shell reads a small value and never learns what
   /// a workout session is.
   static const List<L0TabSpec> tabs = <L0TabSpec>[
+    L0TabSpec(
+      title: 'Diet',
+      body: DietRoot(),
+      actions: <Widget>[DietCalendarButton()],
+    ),
     L0TabSpec(title: 'Workout', body: WorkoutRoot()),
     L0TabSpec(title: 'Muscles', body: MusclesRoot()),
-    L0TabSpec(title: 'History', body: HistoryRoot()),
-    L0TabSpec(title: 'Profile', body: ProfileRoot()),
+    L0TabSpec(title: 'You', body: YouRoot()),
   ];
 
   @override
@@ -117,8 +122,10 @@ class L0Shell extends ConsumerWidget {
     // stack and the animated bar, so watching the whole session would repaint
     // all of it on every logged set and every keystroke in the title field,
     // from whichever tab the user happens to be on.
-    // Index 0 is the Workout tab, which is the only one whose header varies.
-    final chrome = index == 0
+    // Only the Workout tab's header varies. Found by what the tab *is*, not by
+    // its position: Diet now comes first, and a reorder must not hand the
+    // session chrome to another tab.
+    final chrome = tab.body is WorkoutRoot
         ? ref.watch(workoutTabChromeProvider)
         : const L0TabChrome();
 

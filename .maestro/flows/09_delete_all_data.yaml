@@ -1,14 +1,15 @@
 # User story: Delete all data. Cancel changes nothing; confirming wipes every
-# table, the app reboots, and every tab is back to its empty state (AE8:
-# Profile on Personal, Diet first-time). Debug builds do not re-seed.
+# table, the app reboots, and every tab is back to its empty state (AE8: You on
+# its Profile segment, Diet an empty log, Analysis still empty). Debug builds do
+# not re-seed.
 appId: dev.indresh.turtleLift
 name: 09 Delete all data - cancel, confirm, every tab empty
 tags: [data]
 ---
 - launchApp:
     clearState: true
-# Some data on every surface: a workout, a template, a bodyweight, a schedule
-# day and a diet target.
+# Some data on every surface: a workout, a template, a bodyweight and a diet
+# target.
 - runFlow: ../subflows/log_bench_workout.yaml
 - scrollUntilVisible:
     element: "Save as template"
@@ -16,20 +17,20 @@ tags: [data]
 - tapOn: "Save as template"
 - tapOn: "Save"
 - tapOn: "Back"
-- tapOn: "Profile"
+- runFlow: ../subflows/open_profile_pane.yaml
 - tapOn: "Personal details.*"
 - tapOn: { id: "bodyweight-field" }
 - inputText: "80"
 - tapOn: { id: "record-weight" }
 - tapOn: "Back"
-- tapOn: "Schedule"
-- tapOn: "Thursday"
+# Diet is its own tab (ADR 0016).
 - tapOn: "Diet"
 - tapOn: "Set a daily target"
 - tapOn: "Suggested .*"
 - tapOn: "Save"
-- assertVisible: "0 of 130 g planned.*"
-- tapOn: "Personal"
+- assertVisible: "0 of 130 g logged.*"
+# Back to You > Profile for the delete screen.
+- runFlow: ../subflows/open_profile_pane.yaml
 
 # --- cancel
 - scrollUntilVisible:
@@ -43,13 +44,11 @@ tags: [data]
 - assertVisible: "Delete all data\\?"
 - tapOn: "Cancel"
 - tapOn: "Back"
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - assertVisible: ".*Today · 1 exercise · 2 sets"
 
 # --- confirm
-- tapOn: "Profile"
-- tapOn: "Diet"
-- tapOn: "Personal"
+- runFlow: ../subflows/open_profile_pane.yaml
 - scrollUntilVisible:
     element: "Delete all data"
     centerElement: true
@@ -60,38 +59,37 @@ tags: [data]
     index: 1
 - tapOn: "Delete all"
 - extendedWaitUntil:
-    visible: "Start workout.*|Personal"
+    visible: "Start workout.*"
     timeout: 15000
 
 # --- every tab empty
 - tapOn: "Workout"
 - assertVisible: "Start workout.*"
 # My templates always shows (ADR 0011), holding only the New template tile.
-- assertVisible: "Pick training days"
 - assertNotVisible: "Last workout.*"
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - assertVisible: "No workouts yet.*"
-- tapOn: "Profile"
-- assertVisible:
-    text: "Personal"
-    selected: true
+# Analysis is an empty pane and stays so.
+- tapOn: "Analysis"
+- assertVisible: "Analysis is coming soon\\."
+- runFlow: ../subflows/open_profile_pane.yaml
 - assertVisible: "My workout templates\\. 11 predefined.*"
 - assertNotVisible: ".*1 custom.*"
 - tapOn: "Personal details.*"
 - assertVisible: "Add your weight to see calorie estimates.*"
 - tapOn: "Back"
-- tapOn: "Schedule"
-- assertVisible:
-    text: "Monday"
-    selected: false
 - tapOn: "Diet"
-- assertVisible: "Plan your week's protein.*"
-- tapOn: "Personal"
+# Diet has no first-time state: it opens on the day view, empty and with the
+# target gone.
+- assertVisible: "Nothing logged for .*"
+- assertVisible: "Set a daily target"
+- assertNotVisible: ".*of 130 g logged.*"
+- runFlow: ../subflows/open_profile_pane.yaml
 - tapOn: "Export everything"
 - assertVisible: "Nothing to export yet.*"
 
 # --- and it stays empty across a relaunch (no debug re-seed)
 - stopApp
 - launchApp
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - assertVisible: "No workouts yet.*"

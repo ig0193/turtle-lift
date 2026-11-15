@@ -1,5 +1,16 @@
 # Profile — user flow
 
+> **Renamed by `docs/adr/0016-you-tab-and-diet-tab.md`: the Profile tab is now the
+> You tab** (Profile | Activity | Analysis). Its Personal pane is the **Profile**
+> segment and is unchanged; History moved in as **Activity**; Diet left for its own
+> tab; Analysis is an empty placeholder. Where this flow says "the Profile tab",
+> read "You › Profile".
+
+> **Amended by `docs/adr/0015-diet-is-a-log.md`: the Schedule is removed.** Profile
+> is now **Personal | Diet**. Everything below about the Schedule segment, training
+> days, the week summary and training reminders describes a feature that no longer
+> exists; read it as history. Personal is unchanged.
+
 > Profile is the fourth tab, split into **Personal**, **Schedule** and **Diet** by a segmented
 > control (Diet added by `docs/adr/0007-diet-in-profile.md`); workout history is its own tab. See `docs/adr/0004-profile-returns-as-a-tab.md`
 > and `docs/adr/0005-schedule-and-opt-in-notifications.md`. Visual reference:

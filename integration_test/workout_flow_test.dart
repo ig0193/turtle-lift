@@ -10,14 +10,15 @@ import 'package:turtle_lift/src/ui/food_picker_screen.dart';
 import 'package:turtle_lift/src/ui/food_serving_sheet.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
 import 'package:turtle_lift/src/ui/l0_shell.dart';
-import 'package:turtle_lift/src/ui/profile_root.dart';
 import 'package:turtle_lift/src/ui/session_actions.dart';
 import 'package:turtle_lift/src/ui/session_overview_body.dart';
 import 'package:turtle_lift/src/ui/session_summary_screen.dart';
 import 'package:turtle_lift/src/ui/set_logging_screen.dart';
 import 'package:turtle_lift/src/ui/set_row.dart';
+import 'package:turtle_lift/src/ui/tab_routes.dart';
 import 'package:turtle_lift/src/ui/template_preview_sheet.dart';
 import 'package:turtle_lift/src/ui/workout_root.dart';
+import 'package:turtle_lift/src/ui/you_root.dart';
 
 /// Drives the real app on a real device, against the real database.
 ///
@@ -240,22 +241,25 @@ void main() {
     await tester.tap(find.text('Save'));
     await settle(tester);
 
-    // And the History tab lists the workout, from real data.
+    // And Activity (You, the old History tab) lists the workout, from real
+    // data.
     await tester.pageBack();
     await settle(tester);
-    await tester.tap(find.byKey(GlassTabBar.itemKey(2)));
+    await tester.tap(find.byKey(GlassTabBar.itemKey(kYouTabIndex)));
+    await settle(tester);
+    await tester.tap(find.byKey(YouRoot.segmentKey(YouSegment.activity)));
     await settle(tester);
     expect(find.text('Barbell curl'), findsWidgets,
-        reason: 'the History tab reads the workouts the user actually did');
+        reason: 'Activity reads the workouts the user actually did');
 
     // Back on Workout, the new template is under My templates.
-    await tester.tap(find.byKey(GlassTabBar.itemKey(0)));
+    await tester.tap(find.byKey(GlassTabBar.itemKey(kWorkoutTabIndex)));
     await settle(tester);
     expect(find.text(WorkoutLandingBody.customGroupLabel), findsOneWidget);
     expect(find.text('Curl day'), findsWidgets);
   });
 
-  testWidgets('an open workout survives a Profile, Diet round trip that '
+  testWidgets('an open workout survives a Diet tab round trip that '
       'adds a food (U18)', (tester) async {
     await bootToLanding(tester);
 
@@ -282,11 +286,9 @@ void main() {
     await settle(tester);
     expect(find.text('30kg × 10'), findsOneWidget);
 
-    // Profile, Diet: add soya bean to today's lunch through the picker and
-    // the serving sheet. No seeded plan uses it, so the row is new.
-    await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
-    await settle(tester);
-    await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.diet)));
+    // The Diet tab: log soya bean in today's lunch through the picker and
+    // the serving sheet. No seeded entry uses it, so the row is new.
+    await tester.tap(find.byKey(GlassTabBar.itemKey(kDietTabIndex)));
     await settle(tester);
     final addLunch = find.byKey(DietSlotCard.addFoodKey(MealSlot.lunch));
     await tester.scrollUntilVisible(addLunch, 300,
@@ -304,7 +306,7 @@ void main() {
     expect(row, findsOneWidget, reason: 'the food landed in the slot');
 
     // Back to Workout: the session and its set are untouched.
-    await tester.tap(find.byKey(GlassTabBar.itemKey(0)));
+    await tester.tap(find.byKey(GlassTabBar.itemKey(kWorkoutTabIndex)));
     await settle(tester);
     expect(find.byType(SessionOverviewBody), findsOneWidget,
         reason: 'the open workout still owns the Workout tab');
@@ -319,7 +321,7 @@ void main() {
         reason: 'the completed set survived the trip to Diet');
 
     // Leave no data behind: remove the food, discard the workout.
-    await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
+    await tester.tap(find.byKey(GlassTabBar.itemKey(kDietTabIndex)));
     await settle(tester);
     await tester.scrollUntilVisible(row, 300,
         scrollable: find.byType(Scrollable).first);
@@ -328,7 +330,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.byKey(FoodServingSheet.removeKey));
     await settle(tester);
-    await tester.tap(find.byKey(GlassTabBar.itemKey(0)));
+    await tester.tap(find.byKey(GlassTabBar.itemKey(kWorkoutTabIndex)));
     await settle(tester);
     await endOpenWorkout(tester);
   });

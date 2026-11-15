@@ -597,245 +597,6 @@ class BodyweightEntriesCompanion extends UpdateCompanion<BodyweightEntryRow> {
   }
 }
 
-class $TrainingPlanEntriesTable extends TrainingPlanEntries
-    with TableInfo<$TrainingPlanEntriesTable, TrainingPlanEntryRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $TrainingPlanEntriesTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _effectiveFromMeta = const VerificationMeta(
-    'effectiveFrom',
-  );
-  @override
-  late final GeneratedColumn<String> effectiveFrom = GeneratedColumn<String>(
-    'effective_from',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _weekdayMaskMeta = const VerificationMeta(
-    'weekdayMask',
-  );
-  @override
-  late final GeneratedColumn<int> weekdayMask = GeneratedColumn<int>(
-    'weekday_mask',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [effectiveFrom, weekdayMask];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'training_plan_entries';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<TrainingPlanEntryRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('effective_from')) {
-      context.handle(
-        _effectiveFromMeta,
-        effectiveFrom.isAcceptableOrUnknown(
-          data['effective_from']!,
-          _effectiveFromMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_effectiveFromMeta);
-    }
-    if (data.containsKey('weekday_mask')) {
-      context.handle(
-        _weekdayMaskMeta,
-        weekdayMask.isAcceptableOrUnknown(
-          data['weekday_mask']!,
-          _weekdayMaskMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_weekdayMaskMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {effectiveFrom};
-  @override
-  TrainingPlanEntryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return TrainingPlanEntryRow(
-      effectiveFrom: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}effective_from'],
-      )!,
-      weekdayMask: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}weekday_mask'],
-      )!,
-    );
-  }
-
-  @override
-  $TrainingPlanEntriesTable createAlias(String alias) {
-    return $TrainingPlanEntriesTable(attachedDatabase, alias);
-  }
-}
-
-class TrainingPlanEntryRow extends DataClass
-    implements Insertable<TrainingPlanEntryRow> {
-  /// The local calendar date the plan took effect, as `YYYY-MM-DD`. Text for
-  /// the reason [BodyweightEntries.date] is.
-  final String effectiveFrom;
-
-  /// The training weekdays as a bitmask: bit 0 is Monday ... bit 6 is Sunday.
-  /// Zero is a real answer -- "no training days from here" -- and is how a user
-  /// clears the plan without rewriting history.
-  final int weekdayMask;
-  const TrainingPlanEntryRow({
-    required this.effectiveFrom,
-    required this.weekdayMask,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['effective_from'] = Variable<String>(effectiveFrom);
-    map['weekday_mask'] = Variable<int>(weekdayMask);
-    return map;
-  }
-
-  TrainingPlanEntriesCompanion toCompanion(bool nullToAbsent) {
-    return TrainingPlanEntriesCompanion(
-      effectiveFrom: Value(effectiveFrom),
-      weekdayMask: Value(weekdayMask),
-    );
-  }
-
-  factory TrainingPlanEntryRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return TrainingPlanEntryRow(
-      effectiveFrom: serializer.fromJson<String>(json['effectiveFrom']),
-      weekdayMask: serializer.fromJson<int>(json['weekdayMask']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'effectiveFrom': serializer.toJson<String>(effectiveFrom),
-      'weekdayMask': serializer.toJson<int>(weekdayMask),
-    };
-  }
-
-  TrainingPlanEntryRow copyWith({String? effectiveFrom, int? weekdayMask}) =>
-      TrainingPlanEntryRow(
-        effectiveFrom: effectiveFrom ?? this.effectiveFrom,
-        weekdayMask: weekdayMask ?? this.weekdayMask,
-      );
-  TrainingPlanEntryRow copyWithCompanion(TrainingPlanEntriesCompanion data) {
-    return TrainingPlanEntryRow(
-      effectiveFrom: data.effectiveFrom.present
-          ? data.effectiveFrom.value
-          : this.effectiveFrom,
-      weekdayMask: data.weekdayMask.present
-          ? data.weekdayMask.value
-          : this.weekdayMask,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('TrainingPlanEntryRow(')
-          ..write('effectiveFrom: $effectiveFrom, ')
-          ..write('weekdayMask: $weekdayMask')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(effectiveFrom, weekdayMask);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is TrainingPlanEntryRow &&
-          other.effectiveFrom == this.effectiveFrom &&
-          other.weekdayMask == this.weekdayMask);
-}
-
-class TrainingPlanEntriesCompanion
-    extends UpdateCompanion<TrainingPlanEntryRow> {
-  final Value<String> effectiveFrom;
-  final Value<int> weekdayMask;
-  final Value<int> rowid;
-  const TrainingPlanEntriesCompanion({
-    this.effectiveFrom = const Value.absent(),
-    this.weekdayMask = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  TrainingPlanEntriesCompanion.insert({
-    required String effectiveFrom,
-    required int weekdayMask,
-    this.rowid = const Value.absent(),
-  }) : effectiveFrom = Value(effectiveFrom),
-       weekdayMask = Value(weekdayMask);
-  static Insertable<TrainingPlanEntryRow> custom({
-    Expression<String>? effectiveFrom,
-    Expression<int>? weekdayMask,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (effectiveFrom != null) 'effective_from': effectiveFrom,
-      if (weekdayMask != null) 'weekday_mask': weekdayMask,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  TrainingPlanEntriesCompanion copyWith({
-    Value<String>? effectiveFrom,
-    Value<int>? weekdayMask,
-    Value<int>? rowid,
-  }) {
-    return TrainingPlanEntriesCompanion(
-      effectiveFrom: effectiveFrom ?? this.effectiveFrom,
-      weekdayMask: weekdayMask ?? this.weekdayMask,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (effectiveFrom.present) {
-      map['effective_from'] = Variable<String>(effectiveFrom.value);
-    }
-    if (weekdayMask.present) {
-      map['weekday_mask'] = Variable<int>(weekdayMask.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('TrainingPlanEntriesCompanion(')
-          ..write('effectiveFrom: $effectiveFrom, ')
-          ..write('weekdayMask: $weekdayMask, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class $CustomTemplatesTable extends CustomTemplates
     with TableInfo<$CustomTemplatesTable, CustomTemplateRow> {
   @override
@@ -2868,181 +2629,12 @@ class SetEntriesCompanion extends UpdateCompanion<SetEntryRow> {
   }
 }
 
-class $DietPlanVersionsTable extends DietPlanVersions
-    with TableInfo<$DietPlanVersionsTable, DietPlanVersionRow> {
+class $DietLogEntriesTable extends DietLogEntries
+    with TableInfo<$DietLogEntriesTable, DietLogEntryRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $DietPlanVersionsTable(this.attachedDatabase, [this._alias]);
-  @override
-  late final GeneratedColumnWithTypeConverter<LocalDate, String> effectiveFrom =
-      GeneratedColumn<String>(
-        'effective_from',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-      ).withConverter<LocalDate>(
-        $DietPlanVersionsTable.$convertereffectiveFrom,
-      );
-  @override
-  List<GeneratedColumn> get $columns => [effectiveFrom];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'diet_plan_versions';
-  @override
-  Set<GeneratedColumn> get $primaryKey => {effectiveFrom};
-  @override
-  DietPlanVersionRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return DietPlanVersionRow(
-      effectiveFrom: $DietPlanVersionsTable.$convertereffectiveFrom.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}effective_from'],
-        )!,
-      ),
-    );
-  }
-
-  @override
-  $DietPlanVersionsTable createAlias(String alias) {
-    return $DietPlanVersionsTable(attachedDatabase, alias);
-  }
-
-  static TypeConverter<LocalDate, String> $convertereffectiveFrom =
-      const LocalDateConverter();
-}
-
-class DietPlanVersionRow extends DataClass
-    implements Insertable<DietPlanVersionRow> {
-  /// The Monday this version takes effect from, as `YYYY-MM-DD`.
-  final LocalDate effectiveFrom;
-  const DietPlanVersionRow({required this.effectiveFrom});
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    {
-      map['effective_from'] = Variable<String>(
-        $DietPlanVersionsTable.$convertereffectiveFrom.toSql(effectiveFrom),
-      );
-    }
-    return map;
-  }
-
-  DietPlanVersionsCompanion toCompanion(bool nullToAbsent) {
-    return DietPlanVersionsCompanion(effectiveFrom: Value(effectiveFrom));
-  }
-
-  factory DietPlanVersionRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return DietPlanVersionRow(
-      effectiveFrom: serializer.fromJson<LocalDate>(json['effectiveFrom']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'effectiveFrom': serializer.toJson<LocalDate>(effectiveFrom),
-    };
-  }
-
-  DietPlanVersionRow copyWith({LocalDate? effectiveFrom}) =>
-      DietPlanVersionRow(effectiveFrom: effectiveFrom ?? this.effectiveFrom);
-  DietPlanVersionRow copyWithCompanion(DietPlanVersionsCompanion data) {
-    return DietPlanVersionRow(
-      effectiveFrom: data.effectiveFrom.present
-          ? data.effectiveFrom.value
-          : this.effectiveFrom,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('DietPlanVersionRow(')
-          ..write('effectiveFrom: $effectiveFrom')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => effectiveFrom.hashCode;
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is DietPlanVersionRow &&
-          other.effectiveFrom == this.effectiveFrom);
-}
-
-class DietPlanVersionsCompanion extends UpdateCompanion<DietPlanVersionRow> {
-  final Value<LocalDate> effectiveFrom;
-  final Value<int> rowid;
-  const DietPlanVersionsCompanion({
-    this.effectiveFrom = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  DietPlanVersionsCompanion.insert({
-    required LocalDate effectiveFrom,
-    this.rowid = const Value.absent(),
-  }) : effectiveFrom = Value(effectiveFrom);
-  static Insertable<DietPlanVersionRow> custom({
-    Expression<String>? effectiveFrom,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (effectiveFrom != null) 'effective_from': effectiveFrom,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  DietPlanVersionsCompanion copyWith({
-    Value<LocalDate>? effectiveFrom,
-    Value<int>? rowid,
-  }) {
-    return DietPlanVersionsCompanion(
-      effectiveFrom: effectiveFrom ?? this.effectiveFrom,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (effectiveFrom.present) {
-      map['effective_from'] = Variable<String>(
-        $DietPlanVersionsTable.$convertereffectiveFrom.toSql(
-          effectiveFrom.value,
-        ),
-      );
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('DietPlanVersionsCompanion(')
-          ..write('effectiveFrom: $effectiveFrom, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $DietPlanItemsTable extends DietPlanItems
-    with TableInfo<$DietPlanItemsTable, DietPlanItemRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $DietPlanItemsTable(this.attachedDatabase, [this._alias]);
+  $DietLogEntriesTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -3053,28 +2645,14 @@ class $DietPlanItemsTable extends DietPlanItems
     requiredDuringInsert: true,
   );
   @override
-  late final GeneratedColumnWithTypeConverter<LocalDate, String> effectiveFrom =
+  late final GeneratedColumnWithTypeConverter<LocalDate, String> date =
       GeneratedColumn<String>(
-        'effective_from',
+        'date',
         aliasedName,
         false,
         type: DriftSqlType.string,
         requiredDuringInsert: true,
-        defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES diet_plan_versions (effective_from) ON DELETE CASCADE',
-        ),
-      ).withConverter<LocalDate>($DietPlanItemsTable.$convertereffectiveFrom);
-  static const VerificationMeta _weekdayMeta = const VerificationMeta(
-    'weekday',
-  );
-  @override
-  late final GeneratedColumn<int> weekday = GeneratedColumn<int>(
-    'weekday',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
+      ).withConverter<LocalDate>($DietLogEntriesTable.$converterdate);
   static const VerificationMeta _slotMeta = const VerificationMeta('slot');
   @override
   late final GeneratedColumn<String> slot = GeneratedColumn<String>(
@@ -3118,8 +2696,7 @@ class $DietPlanItemsTable extends DietPlanItems
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    effectiveFrom,
-    weekday,
+    date,
     slot,
     foodId,
     servingsHalves,
@@ -3129,10 +2706,10 @@ class $DietPlanItemsTable extends DietPlanItems
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'diet_plan_items';
+  static const String $name = 'diet_log_entries';
   @override
   VerificationContext validateIntegrity(
-    Insertable<DietPlanItemRow> instance, {
+    Insertable<DietLogEntryRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -3141,14 +2718,6 @@ class $DietPlanItemsTable extends DietPlanItems
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
       context.missing(_idMeta);
-    }
-    if (data.containsKey('weekday')) {
-      context.handle(
-        _weekdayMeta,
-        weekday.isAcceptableOrUnknown(data['weekday']!, _weekdayMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_weekdayMeta);
     }
     if (data.containsKey('slot')) {
       context.handle(
@@ -3191,23 +2760,19 @@ class $DietPlanItemsTable extends DietPlanItems
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  DietPlanItemRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+  DietLogEntryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return DietPlanItemRow(
+    return DietLogEntryRow(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      effectiveFrom: $DietPlanItemsTable.$convertereffectiveFrom.fromSql(
+      date: $DietLogEntriesTable.$converterdate.fromSql(
         attachedDatabase.typeMapping.read(
           DriftSqlType.string,
-          data['${effectivePrefix}effective_from'],
+          data['${effectivePrefix}date'],
         )!,
       ),
-      weekday: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}weekday'],
-      )!,
       slot: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}slot'],
@@ -3228,22 +2793,20 @@ class $DietPlanItemsTable extends DietPlanItems
   }
 
   @override
-  $DietPlanItemsTable createAlias(String alias) {
-    return $DietPlanItemsTable(attachedDatabase, alias);
+  $DietLogEntriesTable createAlias(String alias) {
+    return $DietLogEntriesTable(attachedDatabase, alias);
   }
 
-  static TypeConverter<LocalDate, String> $convertereffectiveFrom =
+  static TypeConverter<LocalDate, String> $converterdate =
       const LocalDateConverter();
 }
 
-class DietPlanItemRow extends DataClass implements Insertable<DietPlanItemRow> {
+class DietLogEntryRow extends DataClass implements Insertable<DietLogEntryRow> {
   final String id;
 
-  /// The version this item belongs to. Deleting the version takes its items.
-  final LocalDate effectiveFrom;
-
-  /// 0 is Monday ... 6 is Sunday, matching [TrainingPlanEntries]' bit order.
-  final int weekday;
+  /// The local calendar day, as `YYYY-MM-DD`. Text for the reason
+  /// [BodyweightEntries.date] is.
+  final LocalDate date;
 
   /// `breakfast`, `lunch`, `snack` or `dinner`. Stored by name, never index.
   final String slot;
@@ -3258,10 +2821,9 @@ class DietPlanItemRow extends DataClass implements Insertable<DietPlanItemRow> {
 
   /// Order within the slot, as the user added the foods.
   final int position;
-  const DietPlanItemRow({
+  const DietLogEntryRow({
     required this.id,
-    required this.effectiveFrom,
-    required this.weekday,
+    required this.date,
     required this.slot,
     required this.foodId,
     required this.servingsHalves,
@@ -3272,11 +2834,10 @@ class DietPlanItemRow extends DataClass implements Insertable<DietPlanItemRow> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     {
-      map['effective_from'] = Variable<String>(
-        $DietPlanItemsTable.$convertereffectiveFrom.toSql(effectiveFrom),
+      map['date'] = Variable<String>(
+        $DietLogEntriesTable.$converterdate.toSql(date),
       );
     }
-    map['weekday'] = Variable<int>(weekday);
     map['slot'] = Variable<String>(slot);
     map['food_id'] = Variable<String>(foodId);
     map['servings_halves'] = Variable<int>(servingsHalves);
@@ -3284,11 +2845,10 @@ class DietPlanItemRow extends DataClass implements Insertable<DietPlanItemRow> {
     return map;
   }
 
-  DietPlanItemsCompanion toCompanion(bool nullToAbsent) {
-    return DietPlanItemsCompanion(
+  DietLogEntriesCompanion toCompanion(bool nullToAbsent) {
+    return DietLogEntriesCompanion(
       id: Value(id),
-      effectiveFrom: Value(effectiveFrom),
-      weekday: Value(weekday),
+      date: Value(date),
       slot: Value(slot),
       foodId: Value(foodId),
       servingsHalves: Value(servingsHalves),
@@ -3296,15 +2856,14 @@ class DietPlanItemRow extends DataClass implements Insertable<DietPlanItemRow> {
     );
   }
 
-  factory DietPlanItemRow.fromJson(
+  factory DietLogEntryRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return DietPlanItemRow(
+    return DietLogEntryRow(
       id: serializer.fromJson<String>(json['id']),
-      effectiveFrom: serializer.fromJson<LocalDate>(json['effectiveFrom']),
-      weekday: serializer.fromJson<int>(json['weekday']),
+      date: serializer.fromJson<LocalDate>(json['date']),
       slot: serializer.fromJson<String>(json['slot']),
       foodId: serializer.fromJson<String>(json['foodId']),
       servingsHalves: serializer.fromJson<int>(json['servingsHalves']),
@@ -3316,8 +2875,7 @@ class DietPlanItemRow extends DataClass implements Insertable<DietPlanItemRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'effectiveFrom': serializer.toJson<LocalDate>(effectiveFrom),
-      'weekday': serializer.toJson<int>(weekday),
+      'date': serializer.toJson<LocalDate>(date),
       'slot': serializer.toJson<String>(slot),
       'foodId': serializer.toJson<String>(foodId),
       'servingsHalves': serializer.toJson<int>(servingsHalves),
@@ -3325,30 +2883,25 @@ class DietPlanItemRow extends DataClass implements Insertable<DietPlanItemRow> {
     };
   }
 
-  DietPlanItemRow copyWith({
+  DietLogEntryRow copyWith({
     String? id,
-    LocalDate? effectiveFrom,
-    int? weekday,
+    LocalDate? date,
     String? slot,
     String? foodId,
     int? servingsHalves,
     int? position,
-  }) => DietPlanItemRow(
+  }) => DietLogEntryRow(
     id: id ?? this.id,
-    effectiveFrom: effectiveFrom ?? this.effectiveFrom,
-    weekday: weekday ?? this.weekday,
+    date: date ?? this.date,
     slot: slot ?? this.slot,
     foodId: foodId ?? this.foodId,
     servingsHalves: servingsHalves ?? this.servingsHalves,
     position: position ?? this.position,
   );
-  DietPlanItemRow copyWithCompanion(DietPlanItemsCompanion data) {
-    return DietPlanItemRow(
+  DietLogEntryRow copyWithCompanion(DietLogEntriesCompanion data) {
+    return DietLogEntryRow(
       id: data.id.present ? data.id.value : this.id,
-      effectiveFrom: data.effectiveFrom.present
-          ? data.effectiveFrom.value
-          : this.effectiveFrom,
-      weekday: data.weekday.present ? data.weekday.value : this.weekday,
+      date: data.date.present ? data.date.value : this.date,
       slot: data.slot.present ? data.slot.value : this.slot,
       foodId: data.foodId.present ? data.foodId.value : this.foodId,
       servingsHalves: data.servingsHalves.present
@@ -3360,10 +2913,9 @@ class DietPlanItemRow extends DataClass implements Insertable<DietPlanItemRow> {
 
   @override
   String toString() {
-    return (StringBuffer('DietPlanItemRow(')
+    return (StringBuffer('DietLogEntryRow(')
           ..write('id: $id, ')
-          ..write('effectiveFrom: $effectiveFrom, ')
-          ..write('weekday: $weekday, ')
+          ..write('date: $date, ')
           ..write('slot: $slot, ')
           ..write('foodId: $foodId, ')
           ..write('servingsHalves: $servingsHalves, ')
@@ -3373,67 +2925,54 @@ class DietPlanItemRow extends DataClass implements Insertable<DietPlanItemRow> {
   }
 
   @override
-  int get hashCode => Object.hash(
-    id,
-    effectiveFrom,
-    weekday,
-    slot,
-    foodId,
-    servingsHalves,
-    position,
-  );
+  int get hashCode =>
+      Object.hash(id, date, slot, foodId, servingsHalves, position);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is DietPlanItemRow &&
+      (other is DietLogEntryRow &&
           other.id == this.id &&
-          other.effectiveFrom == this.effectiveFrom &&
-          other.weekday == this.weekday &&
+          other.date == this.date &&
           other.slot == this.slot &&
           other.foodId == this.foodId &&
           other.servingsHalves == this.servingsHalves &&
           other.position == this.position);
 }
 
-class DietPlanItemsCompanion extends UpdateCompanion<DietPlanItemRow> {
+class DietLogEntriesCompanion extends UpdateCompanion<DietLogEntryRow> {
   final Value<String> id;
-  final Value<LocalDate> effectiveFrom;
-  final Value<int> weekday;
+  final Value<LocalDate> date;
   final Value<String> slot;
   final Value<String> foodId;
   final Value<int> servingsHalves;
   final Value<int> position;
   final Value<int> rowid;
-  const DietPlanItemsCompanion({
+  const DietLogEntriesCompanion({
     this.id = const Value.absent(),
-    this.effectiveFrom = const Value.absent(),
-    this.weekday = const Value.absent(),
+    this.date = const Value.absent(),
     this.slot = const Value.absent(),
     this.foodId = const Value.absent(),
     this.servingsHalves = const Value.absent(),
     this.position = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  DietPlanItemsCompanion.insert({
+  DietLogEntriesCompanion.insert({
     required String id,
-    required LocalDate effectiveFrom,
-    required int weekday,
+    required LocalDate date,
     required String slot,
     required String foodId,
     required int servingsHalves,
     required int position,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       effectiveFrom = Value(effectiveFrom),
-       weekday = Value(weekday),
+       date = Value(date),
        slot = Value(slot),
        foodId = Value(foodId),
        servingsHalves = Value(servingsHalves),
        position = Value(position);
-  static Insertable<DietPlanItemRow> custom({
+  static Insertable<DietLogEntryRow> custom({
     Expression<String>? id,
-    Expression<String>? effectiveFrom,
-    Expression<int>? weekday,
+    Expression<String>? date,
     Expression<String>? slot,
     Expression<String>? foodId,
     Expression<int>? servingsHalves,
@@ -3442,8 +2981,7 @@ class DietPlanItemsCompanion extends UpdateCompanion<DietPlanItemRow> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (effectiveFrom != null) 'effective_from': effectiveFrom,
-      if (weekday != null) 'weekday': weekday,
+      if (date != null) 'date': date,
       if (slot != null) 'slot': slot,
       if (foodId != null) 'food_id': foodId,
       if (servingsHalves != null) 'servings_halves': servingsHalves,
@@ -3452,20 +2990,18 @@ class DietPlanItemsCompanion extends UpdateCompanion<DietPlanItemRow> {
     });
   }
 
-  DietPlanItemsCompanion copyWith({
+  DietLogEntriesCompanion copyWith({
     Value<String>? id,
-    Value<LocalDate>? effectiveFrom,
-    Value<int>? weekday,
+    Value<LocalDate>? date,
     Value<String>? slot,
     Value<String>? foodId,
     Value<int>? servingsHalves,
     Value<int>? position,
     Value<int>? rowid,
   }) {
-    return DietPlanItemsCompanion(
+    return DietLogEntriesCompanion(
       id: id ?? this.id,
-      effectiveFrom: effectiveFrom ?? this.effectiveFrom,
-      weekday: weekday ?? this.weekday,
+      date: date ?? this.date,
       slot: slot ?? this.slot,
       foodId: foodId ?? this.foodId,
       servingsHalves: servingsHalves ?? this.servingsHalves,
@@ -3480,13 +3016,10 @@ class DietPlanItemsCompanion extends UpdateCompanion<DietPlanItemRow> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (effectiveFrom.present) {
-      map['effective_from'] = Variable<String>(
-        $DietPlanItemsTable.$convertereffectiveFrom.toSql(effectiveFrom.value),
+    if (date.present) {
+      map['date'] = Variable<String>(
+        $DietLogEntriesTable.$converterdate.toSql(date.value),
       );
-    }
-    if (weekday.present) {
-      map['weekday'] = Variable<int>(weekday.value);
     }
     if (slot.present) {
       map['slot'] = Variable<String>(slot.value);
@@ -3508,229 +3041,13 @@ class DietPlanItemsCompanion extends UpdateCompanion<DietPlanItemRow> {
 
   @override
   String toString() {
-    return (StringBuffer('DietPlanItemsCompanion(')
+    return (StringBuffer('DietLogEntriesCompanion(')
           ..write('id: $id, ')
-          ..write('effectiveFrom: $effectiveFrom, ')
-          ..write('weekday: $weekday, ')
+          ..write('date: $date, ')
           ..write('slot: $slot, ')
           ..write('foodId: $foodId, ')
           ..write('servingsHalves: $servingsHalves, ')
           ..write('position: $position, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $MealTicksTable extends MealTicks
-    with TableInfo<$MealTicksTable, MealTickRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $MealTicksTable(this.attachedDatabase, [this._alias]);
-  @override
-  late final GeneratedColumnWithTypeConverter<LocalDate, String> date =
-      GeneratedColumn<String>(
-        'date',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-      ).withConverter<LocalDate>($MealTicksTable.$converterdate);
-  static const VerificationMeta _slotMeta = const VerificationMeta('slot');
-  @override
-  late final GeneratedColumn<String> slot = GeneratedColumn<String>(
-    'slot',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [date, slot];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'meal_ticks';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<MealTickRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('slot')) {
-      context.handle(
-        _slotMeta,
-        slot.isAcceptableOrUnknown(data['slot']!, _slotMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_slotMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {date, slot};
-  @override
-  MealTickRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return MealTickRow(
-      date: $MealTicksTable.$converterdate.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}date'],
-        )!,
-      ),
-      slot: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}slot'],
-      )!,
-    );
-  }
-
-  @override
-  $MealTicksTable createAlias(String alias) {
-    return $MealTicksTable(attachedDatabase, alias);
-  }
-
-  static TypeConverter<LocalDate, String> $converterdate =
-      const LocalDateConverter();
-}
-
-class MealTickRow extends DataClass implements Insertable<MealTickRow> {
-  /// The local calendar day, as `YYYY-MM-DD`. Text for the reason
-  /// [BodyweightEntries.date] is.
-  final LocalDate date;
-
-  /// `breakfast`, `lunch`, `snack` or `dinner`.
-  final String slot;
-  const MealTickRow({required this.date, required this.slot});
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    {
-      map['date'] = Variable<String>(
-        $MealTicksTable.$converterdate.toSql(date),
-      );
-    }
-    map['slot'] = Variable<String>(slot);
-    return map;
-  }
-
-  MealTicksCompanion toCompanion(bool nullToAbsent) {
-    return MealTicksCompanion(date: Value(date), slot: Value(slot));
-  }
-
-  factory MealTickRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return MealTickRow(
-      date: serializer.fromJson<LocalDate>(json['date']),
-      slot: serializer.fromJson<String>(json['slot']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'date': serializer.toJson<LocalDate>(date),
-      'slot': serializer.toJson<String>(slot),
-    };
-  }
-
-  MealTickRow copyWith({LocalDate? date, String? slot}) =>
-      MealTickRow(date: date ?? this.date, slot: slot ?? this.slot);
-  MealTickRow copyWithCompanion(MealTicksCompanion data) {
-    return MealTickRow(
-      date: data.date.present ? data.date.value : this.date,
-      slot: data.slot.present ? data.slot.value : this.slot,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('MealTickRow(')
-          ..write('date: $date, ')
-          ..write('slot: $slot')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(date, slot);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is MealTickRow &&
-          other.date == this.date &&
-          other.slot == this.slot);
-}
-
-class MealTicksCompanion extends UpdateCompanion<MealTickRow> {
-  final Value<LocalDate> date;
-  final Value<String> slot;
-  final Value<int> rowid;
-  const MealTicksCompanion({
-    this.date = const Value.absent(),
-    this.slot = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  MealTicksCompanion.insert({
-    required LocalDate date,
-    required String slot,
-    this.rowid = const Value.absent(),
-  }) : date = Value(date),
-       slot = Value(slot);
-  static Insertable<MealTickRow> custom({
-    Expression<String>? date,
-    Expression<String>? slot,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (date != null) 'date': date,
-      if (slot != null) 'slot': slot,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  MealTicksCompanion copyWith({
-    Value<LocalDate>? date,
-    Value<String>? slot,
-    Value<int>? rowid,
-  }) {
-    return MealTicksCompanion(
-      date: date ?? this.date,
-      slot: slot ?? this.slot,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (date.present) {
-      map['date'] = Variable<String>(
-        $MealTicksTable.$converterdate.toSql(date.value),
-      );
-    }
-    if (slot.present) {
-      map['slot'] = Variable<String>(slot.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('MealTicksCompanion(')
-          ..write('date: $date, ')
-          ..write('slot: $slot, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5048,8 +4365,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SettingsTable settings = $SettingsTable(this);
   late final $BodyweightEntriesTable bodyweightEntries =
       $BodyweightEntriesTable(this);
-  late final $TrainingPlanEntriesTable trainingPlanEntries =
-      $TrainingPlanEntriesTable(this);
   late final $CustomTemplatesTable customTemplates = $CustomTemplatesTable(
     this,
   );
@@ -5058,11 +4373,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $SetEntriesTable setEntries = $SetEntriesTable(this);
-  late final $DietPlanVersionsTable dietPlanVersions = $DietPlanVersionsTable(
-    this,
-  );
-  late final $DietPlanItemsTable dietPlanItems = $DietPlanItemsTable(this);
-  late final $MealTicksTable mealTicks = $MealTicksTable(this);
+  late final $DietLogEntriesTable dietLogEntries = $DietLogEntriesTable(this);
   late final $ReminderPrefsTable reminderPrefs = $ReminderPrefsTable(this);
   late final $CustomExercisesTable customExercises = $CustomExercisesTable(
     this,
@@ -5074,14 +4385,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     settings,
     bodyweightEntries,
-    trainingPlanEntries,
     customTemplates,
     sessions,
     sessionExercises,
     setEntries,
-    dietPlanVersions,
-    dietPlanItems,
-    mealTicks,
+    dietLogEntries,
     reminderPrefs,
     customExercises,
   ];
@@ -5100,13 +4408,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('set_entries', kind: UpdateKind.delete)],
-    ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'diet_plan_versions',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('diet_plan_items', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -5461,180 +4762,6 @@ typedef $$BodyweightEntriesTableProcessedTableManager =
         >,
       ),
       BodyweightEntryRow,
-      PrefetchHooks Function()
-    >;
-typedef $$TrainingPlanEntriesTableCreateCompanionBuilder =
-    TrainingPlanEntriesCompanion Function({
-      required String effectiveFrom,
-      required int weekdayMask,
-      Value<int> rowid,
-    });
-typedef $$TrainingPlanEntriesTableUpdateCompanionBuilder =
-    TrainingPlanEntriesCompanion Function({
-      Value<String> effectiveFrom,
-      Value<int> weekdayMask,
-      Value<int> rowid,
-    });
-
-class $$TrainingPlanEntriesTableFilterComposer
-    extends Composer<_$AppDatabase, $TrainingPlanEntriesTable> {
-  $$TrainingPlanEntriesTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get effectiveFrom => $composableBuilder(
-    column: $table.effectiveFrom,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get weekdayMask => $composableBuilder(
-    column: $table.weekdayMask,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$TrainingPlanEntriesTableOrderingComposer
-    extends Composer<_$AppDatabase, $TrainingPlanEntriesTable> {
-  $$TrainingPlanEntriesTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get effectiveFrom => $composableBuilder(
-    column: $table.effectiveFrom,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get weekdayMask => $composableBuilder(
-    column: $table.weekdayMask,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$TrainingPlanEntriesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $TrainingPlanEntriesTable> {
-  $$TrainingPlanEntriesTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get effectiveFrom => $composableBuilder(
-    column: $table.effectiveFrom,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get weekdayMask => $composableBuilder(
-    column: $table.weekdayMask,
-    builder: (column) => column,
-  );
-}
-
-class $$TrainingPlanEntriesTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $TrainingPlanEntriesTable,
-          TrainingPlanEntryRow,
-          $$TrainingPlanEntriesTableFilterComposer,
-          $$TrainingPlanEntriesTableOrderingComposer,
-          $$TrainingPlanEntriesTableAnnotationComposer,
-          $$TrainingPlanEntriesTableCreateCompanionBuilder,
-          $$TrainingPlanEntriesTableUpdateCompanionBuilder,
-          (
-            TrainingPlanEntryRow,
-            BaseReferences<
-              _$AppDatabase,
-              $TrainingPlanEntriesTable,
-              TrainingPlanEntryRow
-            >,
-          ),
-          TrainingPlanEntryRow,
-          PrefetchHooks Function()
-        > {
-  $$TrainingPlanEntriesTableTableManager(
-    _$AppDatabase db,
-    $TrainingPlanEntriesTable table,
-  ) : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$TrainingPlanEntriesTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$TrainingPlanEntriesTableOrderingComposer(
-                $db: db,
-                $table: table,
-              ),
-          createComputedFieldComposer: () =>
-              $$TrainingPlanEntriesTableAnnotationComposer(
-                $db: db,
-                $table: table,
-              ),
-          updateCompanionCallback:
-              ({
-                Value<String> effectiveFrom = const Value.absent(),
-                Value<int> weekdayMask = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => TrainingPlanEntriesCompanion(
-                effectiveFrom: effectiveFrom,
-                weekdayMask: weekdayMask,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String effectiveFrom,
-                required int weekdayMask,
-                Value<int> rowid = const Value.absent(),
-              }) => TrainingPlanEntriesCompanion.insert(
-                effectiveFrom: effectiveFrom,
-                weekdayMask: weekdayMask,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$TrainingPlanEntriesTable, TrainingPlanEntryRow>(
-                    table,
-                  ),
-                  BaseReferences<
-                    _$AppDatabase,
-                    $TrainingPlanEntriesTable,
-                    TrainingPlanEntryRow
-                  >(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$TrainingPlanEntriesTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $TrainingPlanEntriesTable,
-      TrainingPlanEntryRow,
-      $$TrainingPlanEntriesTableFilterComposer,
-      $$TrainingPlanEntriesTableOrderingComposer,
-      $$TrainingPlanEntriesTableAnnotationComposer,
-      $$TrainingPlanEntriesTableCreateCompanionBuilder,
-      $$TrainingPlanEntriesTableUpdateCompanionBuilder,
-      (
-        TrainingPlanEntryRow,
-        BaseReferences<
-          _$AppDatabase,
-          $TrainingPlanEntriesTable,
-          TrainingPlanEntryRow
-        >,
-      ),
-      TrainingPlanEntryRow,
       PrefetchHooks Function()
     >;
 typedef $$CustomTemplatesTableCreateCompanionBuilder =
@@ -7076,271 +6203,20 @@ typedef $$SetEntriesTableProcessedTableManager =
       SetEntryRow,
       PrefetchHooks Function({bool sessionExerciseId})
     >;
-typedef $$DietPlanVersionsTableCreateCompanionBuilder =
-    DietPlanVersionsCompanion Function({
-      required LocalDate effectiveFrom,
-      Value<int> rowid,
-    });
-typedef $$DietPlanVersionsTableUpdateCompanionBuilder =
-    DietPlanVersionsCompanion Function({
-      Value<LocalDate> effectiveFrom,
-      Value<int> rowid,
-    });
-
-final class $$DietPlanVersionsTableReferences
-    extends
-        BaseReferences<
-          _$AppDatabase,
-          $DietPlanVersionsTable,
-          DietPlanVersionRow
-        > {
-  $$DietPlanVersionsTableReferences(
-    super.$_db,
-    super.$_table,
-    super.$_typedResult,
-  );
-
-  static MultiTypedResultKey<$DietPlanItemsTable, List<DietPlanItemRow>>
-  _dietPlanItemsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.dietPlanItems,
-    aliasName:
-        'diet_plan_versions__effective_from__diet_plan_items__effective_from',
-  );
-
-  $$DietPlanItemsTableProcessedTableManager get dietPlanItemsRefs {
-    final manager = $$DietPlanItemsTableTableManager($_db, $_db.dietPlanItems)
-        .filter(
-          (f) => f.effectiveFrom.effectiveFrom.sqlEquals(
-            $_itemColumn<String>('effective_from')!,
-          ),
-        );
-
-    final cache = $_typedResult.readTableOrNull(_dietPlanItemsRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-}
-
-class $$DietPlanVersionsTableFilterComposer
-    extends Composer<_$AppDatabase, $DietPlanVersionsTable> {
-  $$DietPlanVersionsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnWithTypeConverterFilters<LocalDate, LocalDate, String>
-  get effectiveFrom => $composableBuilder(
-    column: $table.effectiveFrom,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
-  );
-
-  Expression<bool> dietPlanItemsRefs(
-    Expression<bool> Function($$DietPlanItemsTableFilterComposer f) f,
-  ) {
-    final $$DietPlanItemsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.effectiveFrom,
-      referencedTable: $db.dietPlanItems,
-      getReferencedColumn: (t) => t.effectiveFrom,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DietPlanItemsTableFilterComposer(
-            $db: $db,
-            $table: $db.dietPlanItems,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-}
-
-class $$DietPlanVersionsTableOrderingComposer
-    extends Composer<_$AppDatabase, $DietPlanVersionsTable> {
-  $$DietPlanVersionsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get effectiveFrom => $composableBuilder(
-    column: $table.effectiveFrom,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$DietPlanVersionsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $DietPlanVersionsTable> {
-  $$DietPlanVersionsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumnWithTypeConverter<LocalDate, String> get effectiveFrom =>
-      $composableBuilder(
-        column: $table.effectiveFrom,
-        builder: (column) => column,
-      );
-
-  Expression<T> dietPlanItemsRefs<T extends Object>(
-    Expression<T> Function($$DietPlanItemsTableAnnotationComposer a) f,
-  ) {
-    final $$DietPlanItemsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.effectiveFrom,
-      referencedTable: $db.dietPlanItems,
-      getReferencedColumn: (t) => t.effectiveFrom,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DietPlanItemsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.dietPlanItems,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-}
-
-class $$DietPlanVersionsTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $DietPlanVersionsTable,
-          DietPlanVersionRow,
-          $$DietPlanVersionsTableFilterComposer,
-          $$DietPlanVersionsTableOrderingComposer,
-          $$DietPlanVersionsTableAnnotationComposer,
-          $$DietPlanVersionsTableCreateCompanionBuilder,
-          $$DietPlanVersionsTableUpdateCompanionBuilder,
-          (DietPlanVersionRow, $$DietPlanVersionsTableReferences),
-          DietPlanVersionRow,
-          PrefetchHooks Function({bool dietPlanItemsRefs})
-        > {
-  $$DietPlanVersionsTableTableManager(
-    _$AppDatabase db,
-    $DietPlanVersionsTable table,
-  ) : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$DietPlanVersionsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$DietPlanVersionsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$DietPlanVersionsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<LocalDate> effectiveFrom = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => DietPlanVersionsCompanion(
-                effectiveFrom: effectiveFrom,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required LocalDate effectiveFrom,
-                Value<int> rowid = const Value.absent(),
-              }) => DietPlanVersionsCompanion.insert(
-                effectiveFrom: effectiveFrom,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$DietPlanVersionsTable, DietPlanVersionRow>(
-                    table,
-                  ),
-                  $$DietPlanVersionsTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({dietPlanItemsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (dietPlanItemsRefs) db.dietPlanItems,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (dietPlanItemsRefs)
-                    await $_getPrefetchedData<
-                      DietPlanVersionRow,
-                      $DietPlanVersionsTable,
-                      DietPlanItemRow
-                    >(
-                      currentTable: table,
-                      referencedTable: $$DietPlanVersionsTableReferences
-                          ._dietPlanItemsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$DietPlanVersionsTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).dietPlanItemsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where(
-                            (e) => e.effectiveFrom == item.effectiveFrom,
-                          ),
-                      typedResults: items,
-                    ),
-                ];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$DietPlanVersionsTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $DietPlanVersionsTable,
-      DietPlanVersionRow,
-      $$DietPlanVersionsTableFilterComposer,
-      $$DietPlanVersionsTableOrderingComposer,
-      $$DietPlanVersionsTableAnnotationComposer,
-      $$DietPlanVersionsTableCreateCompanionBuilder,
-      $$DietPlanVersionsTableUpdateCompanionBuilder,
-      (DietPlanVersionRow, $$DietPlanVersionsTableReferences),
-      DietPlanVersionRow,
-      PrefetchHooks Function({bool dietPlanItemsRefs})
-    >;
-typedef $$DietPlanItemsTableCreateCompanionBuilder =
-    DietPlanItemsCompanion Function({
+typedef $$DietLogEntriesTableCreateCompanionBuilder =
+    DietLogEntriesCompanion Function({
       required String id,
-      required LocalDate effectiveFrom,
-      required int weekday,
+      required LocalDate date,
       required String slot,
       required String foodId,
       required int servingsHalves,
       required int position,
       Value<int> rowid,
     });
-typedef $$DietPlanItemsTableUpdateCompanionBuilder =
-    DietPlanItemsCompanion Function({
+typedef $$DietLogEntriesTableUpdateCompanionBuilder =
+    DietLogEntriesCompanion Function({
       Value<String> id,
-      Value<LocalDate> effectiveFrom,
-      Value<int> weekday,
+      Value<LocalDate> date,
       Value<String> slot,
       Value<String> foodId,
       Value<int> servingsHalves,
@@ -7348,38 +6224,9 @@ typedef $$DietPlanItemsTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-final class $$DietPlanItemsTableReferences
-    extends
-        BaseReferences<_$AppDatabase, $DietPlanItemsTable, DietPlanItemRow> {
-  $$DietPlanItemsTableReferences(
-    super.$_db,
-    super.$_table,
-    super.$_typedResult,
-  );
-
-  static $DietPlanVersionsTable _effectiveFromTable(_$AppDatabase db) =>
-      db.dietPlanVersions.createAlias(
-        'diet_plan_items__effective_from__diet_plan_versions__effective_from',
-      );
-
-  $$DietPlanVersionsTableProcessedTableManager get effectiveFrom {
-    final $_column = $_itemColumn<String>('effective_from')!;
-
-    final manager = $$DietPlanVersionsTableTableManager(
-      $_db,
-      $_db.dietPlanVersions,
-    ).filter((f) => f.effectiveFrom.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_effectiveFromTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$DietPlanItemsTableFilterComposer
-    extends Composer<_$AppDatabase, $DietPlanItemsTable> {
-  $$DietPlanItemsTableFilterComposer({
+class $$DietLogEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $DietLogEntriesTable> {
+  $$DietLogEntriesTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7391,10 +6238,11 @@ class $$DietPlanItemsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get weekday => $composableBuilder(
-    column: $table.weekday,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<LocalDate, LocalDate, String> get date =>
+      $composableBuilder(
+        column: $table.date,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<String> get slot => $composableBuilder(
     column: $table.slot,
@@ -7415,34 +6263,11 @@ class $$DietPlanItemsTableFilterComposer
     column: $table.position,
     builder: (column) => ColumnFilters(column),
   );
-
-  $$DietPlanVersionsTableFilterComposer get effectiveFrom {
-    final $$DietPlanVersionsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.effectiveFrom,
-      referencedTable: $db.dietPlanVersions,
-      getReferencedColumn: (t) => t.effectiveFrom,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DietPlanVersionsTableFilterComposer(
-            $db: $db,
-            $table: $db.dietPlanVersions,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
-class $$DietPlanItemsTableOrderingComposer
-    extends Composer<_$AppDatabase, $DietPlanItemsTable> {
-  $$DietPlanItemsTableOrderingComposer({
+class $$DietLogEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $DietLogEntriesTable> {
+  $$DietLogEntriesTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7454,8 +6279,8 @@ class $$DietPlanItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get weekday => $composableBuilder(
-    column: $table.weekday,
+  ColumnOrderings<String> get date => $composableBuilder(
+    column: $table.date,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7478,34 +6303,11 @@ class $$DietPlanItemsTableOrderingComposer
     column: $table.position,
     builder: (column) => ColumnOrderings(column),
   );
-
-  $$DietPlanVersionsTableOrderingComposer get effectiveFrom {
-    final $$DietPlanVersionsTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.effectiveFrom,
-      referencedTable: $db.dietPlanVersions,
-      getReferencedColumn: (t) => t.effectiveFrom,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DietPlanVersionsTableOrderingComposer(
-            $db: $db,
-            $table: $db.dietPlanVersions,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
-class $$DietPlanItemsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $DietPlanItemsTable> {
-  $$DietPlanItemsTableAnnotationComposer({
+class $$DietLogEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DietLogEntriesTable> {
+  $$DietLogEntriesTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7515,8 +6317,8 @@ class $$DietPlanItemsTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<int> get weekday =>
-      $composableBuilder(column: $table.weekday, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<LocalDate, String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
 
   GeneratedColumn<String> get slot =>
       $composableBuilder(column: $table.slot, builder: (column) => column);
@@ -7531,71 +6333,55 @@ class $$DietPlanItemsTableAnnotationComposer
 
   GeneratedColumn<int> get position =>
       $composableBuilder(column: $table.position, builder: (column) => column);
-
-  $$DietPlanVersionsTableAnnotationComposer get effectiveFrom {
-    final $$DietPlanVersionsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.effectiveFrom,
-      referencedTable: $db.dietPlanVersions,
-      getReferencedColumn: (t) => t.effectiveFrom,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DietPlanVersionsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.dietPlanVersions,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
-class $$DietPlanItemsTableTableManager
+class $$DietLogEntriesTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $DietPlanItemsTable,
-          DietPlanItemRow,
-          $$DietPlanItemsTableFilterComposer,
-          $$DietPlanItemsTableOrderingComposer,
-          $$DietPlanItemsTableAnnotationComposer,
-          $$DietPlanItemsTableCreateCompanionBuilder,
-          $$DietPlanItemsTableUpdateCompanionBuilder,
-          (DietPlanItemRow, $$DietPlanItemsTableReferences),
-          DietPlanItemRow,
-          PrefetchHooks Function({bool effectiveFrom})
+          $DietLogEntriesTable,
+          DietLogEntryRow,
+          $$DietLogEntriesTableFilterComposer,
+          $$DietLogEntriesTableOrderingComposer,
+          $$DietLogEntriesTableAnnotationComposer,
+          $$DietLogEntriesTableCreateCompanionBuilder,
+          $$DietLogEntriesTableUpdateCompanionBuilder,
+          (
+            DietLogEntryRow,
+            BaseReferences<
+              _$AppDatabase,
+              $DietLogEntriesTable,
+              DietLogEntryRow
+            >,
+          ),
+          DietLogEntryRow,
+          PrefetchHooks Function()
         > {
-  $$DietPlanItemsTableTableManager(_$AppDatabase db, $DietPlanItemsTable table)
-    : super(
+  $$DietLogEntriesTableTableManager(
+    _$AppDatabase db,
+    $DietLogEntriesTable table,
+  ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$DietPlanItemsTableFilterComposer($db: db, $table: table),
+              $$DietLogEntriesTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$DietPlanItemsTableOrderingComposer($db: db, $table: table),
+              $$DietLogEntriesTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$DietPlanItemsTableAnnotationComposer($db: db, $table: table),
+              $$DietLogEntriesTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
-                Value<LocalDate> effectiveFrom = const Value.absent(),
-                Value<int> weekday = const Value.absent(),
+                Value<LocalDate> date = const Value.absent(),
                 Value<String> slot = const Value.absent(),
                 Value<String> foodId = const Value.absent(),
                 Value<int> servingsHalves = const Value.absent(),
                 Value<int> position = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => DietPlanItemsCompanion(
+              }) => DietLogEntriesCompanion(
                 id: id,
-                effectiveFrom: effectiveFrom,
-                weekday: weekday,
+                date: date,
                 slot: slot,
                 foodId: foodId,
                 servingsHalves: servingsHalves,
@@ -7605,17 +6391,15 @@ class $$DietPlanItemsTableTableManager
           createCompanionCallback:
               ({
                 required String id,
-                required LocalDate effectiveFrom,
-                required int weekday,
+                required LocalDate date,
                 required String slot,
                 required String foodId,
                 required int servingsHalves,
                 required int position,
                 Value<int> rowid = const Value.absent(),
-              }) => DietPlanItemsCompanion.insert(
+              }) => DietLogEntriesCompanion.insert(
                 id: id,
-                effectiveFrom: effectiveFrom,
-                weekday: weekday,
+                date: date,
                 slot: slot,
                 foodId: foodId,
                 servingsHalves: servingsHalves,
@@ -7625,184 +6409,12 @@ class $$DietPlanItemsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable<$DietPlanItemsTable, DietPlanItemRow>(table),
-                  $$DietPlanItemsTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({effectiveFrom = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (effectiveFrom) {
-                      state = state.withJoin(
-                        currentTable: table,
-                        currentColumn: table.effectiveFrom,
-                        referencedTable: $$DietPlanItemsTableReferences
-                            ._effectiveFromTable(db),
-                        referencedColumn: $$DietPlanItemsTableReferences
-                            ._effectiveFromTable(db)
-                            .effectiveFrom,
-                      ) as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$DietPlanItemsTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $DietPlanItemsTable,
-      DietPlanItemRow,
-      $$DietPlanItemsTableFilterComposer,
-      $$DietPlanItemsTableOrderingComposer,
-      $$DietPlanItemsTableAnnotationComposer,
-      $$DietPlanItemsTableCreateCompanionBuilder,
-      $$DietPlanItemsTableUpdateCompanionBuilder,
-      (DietPlanItemRow, $$DietPlanItemsTableReferences),
-      DietPlanItemRow,
-      PrefetchHooks Function({bool effectiveFrom})
-    >;
-typedef $$MealTicksTableCreateCompanionBuilder = MealTicksCompanion Function({
-  required LocalDate date,
-  required String slot,
-  Value<int> rowid,
-});
-typedef $$MealTicksTableUpdateCompanionBuilder = MealTicksCompanion Function({
-  Value<LocalDate> date,
-  Value<String> slot,
-  Value<int> rowid,
-});
-
-class $$MealTicksTableFilterComposer
-    extends Composer<_$AppDatabase, $MealTicksTable> {
-  $$MealTicksTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnWithTypeConverterFilters<LocalDate, LocalDate, String> get date =>
-      $composableBuilder(
-        column: $table.date,
-        builder: (column) => ColumnWithTypeConverterFilters(column),
-      );
-
-  ColumnFilters<String> get slot => $composableBuilder(
-    column: $table.slot,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$MealTicksTableOrderingComposer
-    extends Composer<_$AppDatabase, $MealTicksTable> {
-  $$MealTicksTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get date => $composableBuilder(
-    column: $table.date,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get slot => $composableBuilder(
-    column: $table.slot,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$MealTicksTableAnnotationComposer
-    extends Composer<_$AppDatabase, $MealTicksTable> {
-  $$MealTicksTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumnWithTypeConverter<LocalDate, String> get date =>
-      $composableBuilder(column: $table.date, builder: (column) => column);
-
-  GeneratedColumn<String> get slot =>
-      $composableBuilder(column: $table.slot, builder: (column) => column);
-}
-
-class $$MealTicksTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $MealTicksTable,
-          MealTickRow,
-          $$MealTicksTableFilterComposer,
-          $$MealTicksTableOrderingComposer,
-          $$MealTicksTableAnnotationComposer,
-          $$MealTicksTableCreateCompanionBuilder,
-          $$MealTicksTableUpdateCompanionBuilder,
-          (
-            MealTickRow,
-            BaseReferences<_$AppDatabase, $MealTicksTable, MealTickRow>,
-          ),
-          MealTickRow,
-          PrefetchHooks Function()
-        > {
-  $$MealTicksTableTableManager(_$AppDatabase db, $MealTicksTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$MealTicksTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$MealTicksTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$MealTicksTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<LocalDate> date = const Value.absent(),
-            Value<String> slot = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) => MealTicksCompanion(date: date, slot: slot, rowid: rowid),
-          createCompanionCallback: ({
-            required LocalDate date,
-            required String slot,
-            Value<int> rowid = const Value.absent(),
-          }) => MealTicksCompanion.insert(date: date, slot: slot, rowid: rowid),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$MealTicksTable, MealTickRow>(table),
-                  BaseReferences<_$AppDatabase, $MealTicksTable, MealTickRow>(
-                    db,
-                    table,
-                    e,
-                  ),
+                  e.readTable<$DietLogEntriesTable, DietLogEntryRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $DietLogEntriesTable,
+                    DietLogEntryRow
+                  >(db, table, e),
                 ),
               )
               .toList(),
@@ -7811,21 +6423,21 @@ class $$MealTicksTableTableManager
       );
 }
 
-typedef $$MealTicksTableProcessedTableManager =
+typedef $$DietLogEntriesTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $MealTicksTable,
-      MealTickRow,
-      $$MealTicksTableFilterComposer,
-      $$MealTicksTableOrderingComposer,
-      $$MealTicksTableAnnotationComposer,
-      $$MealTicksTableCreateCompanionBuilder,
-      $$MealTicksTableUpdateCompanionBuilder,
+      $DietLogEntriesTable,
+      DietLogEntryRow,
+      $$DietLogEntriesTableFilterComposer,
+      $$DietLogEntriesTableOrderingComposer,
+      $$DietLogEntriesTableAnnotationComposer,
+      $$DietLogEntriesTableCreateCompanionBuilder,
+      $$DietLogEntriesTableUpdateCompanionBuilder,
       (
-        MealTickRow,
-        BaseReferences<_$AppDatabase, $MealTicksTable, MealTickRow>,
+        DietLogEntryRow,
+        BaseReferences<_$AppDatabase, $DietLogEntriesTable, DietLogEntryRow>,
       ),
-      MealTickRow,
+      DietLogEntryRow,
       PrefetchHooks Function()
     >;
 typedef $$ReminderPrefsTableCreateCompanionBuilder =
@@ -8487,8 +7099,6 @@ class $AppDatabaseManager {
       $$SettingsTableTableManager(_db, _db.settings);
   $$BodyweightEntriesTableTableManager get bodyweightEntries =>
       $$BodyweightEntriesTableTableManager(_db, _db.bodyweightEntries);
-  $$TrainingPlanEntriesTableTableManager get trainingPlanEntries =>
-      $$TrainingPlanEntriesTableTableManager(_db, _db.trainingPlanEntries);
   $$CustomTemplatesTableTableManager get customTemplates =>
       $$CustomTemplatesTableTableManager(_db, _db.customTemplates);
   $$SessionsTableTableManager get sessions =>
@@ -8497,12 +7107,8 @@ class $AppDatabaseManager {
       $$SessionExercisesTableTableManager(_db, _db.sessionExercises);
   $$SetEntriesTableTableManager get setEntries =>
       $$SetEntriesTableTableManager(_db, _db.setEntries);
-  $$DietPlanVersionsTableTableManager get dietPlanVersions =>
-      $$DietPlanVersionsTableTableManager(_db, _db.dietPlanVersions);
-  $$DietPlanItemsTableTableManager get dietPlanItems =>
-      $$DietPlanItemsTableTableManager(_db, _db.dietPlanItems);
-  $$MealTicksTableTableManager get mealTicks =>
-      $$MealTicksTableTableManager(_db, _db.mealTicks);
+  $$DietLogEntriesTableTableManager get dietLogEntries =>
+      $$DietLogEntriesTableTableManager(_db, _db.dietLogEntries);
   $$ReminderPrefsTableTableManager get reminderPrefs =>
       $$ReminderPrefsTableTableManager(_db, _db.reminderPrefs);
   $$CustomExercisesTableTableManager get customExercises =>

@@ -4,7 +4,7 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:turtle_lift/src/ui/week_strip.dart';
+import 'package:turtle_lift/src/ui/last_workout_line.dart';
 import 'package:turtle_lift/main.dart' as app;
 import 'package:turtle_lift/src/data/active_session.dart';
 import 'package:turtle_lift/src/data/custom_templates.dart';
@@ -18,19 +18,21 @@ import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/data/food_index.dart';
 import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
-import 'package:turtle_lift/src/data/meal_ticks.dart';
-import 'package:turtle_lift/src/data/diet_plan_store.dart';
+import 'package:turtle_lift/src/data/diet_log.dart';
+import 'package:turtle_lift/src/data/diet_log_store.dart';
 import 'package:turtle_lift/src/data/personal_details_store.dart';
 import 'package:turtle_lift/src/data/reminder_scheduler.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
-import 'package:turtle_lift/src/data/training_plan.dart';
+import 'package:turtle_lift/src/data/today.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
 import 'package:turtle_lift/src/ui/diet_pane.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
 import 'package:turtle_lift/src/ui/l0_shell.dart';
 import 'package:turtle_lift/src/ui/muscles_root.dart';
-import 'package:turtle_lift/src/ui/profile_root.dart';
-import 'package:turtle_lift/src/ui/schedule_pane.dart';
+import 'package:turtle_lift/src/ui/profile_screen.dart' show profileRowKey;
+import 'package:turtle_lift/src/ui/tab_routes.dart'
+    show kDietTabIndex, kYouTabIndex;
+import 'package:turtle_lift/src/ui/you_root.dart';
 import 'package:turtle_lift/src/ui/workout_root.dart';
 
 import 'support/fake_reminder_scheduler.dart';
@@ -71,11 +73,9 @@ void main() {
         sessions: await store.readSavedSessions(),
         bodyweight: const <BodyweightEntry>[],
         customTemplates: const <WorkoutTemplate>[],
-        trainingPlan: const <TrainingPlanEntry>[],
         gender: BodyGender.male,
         index: index,
-        dietPlan: const <DietPlanVersion>[],
-        mealTicks: const <MealTick>[],
+        dietLog: const <DietLogEntry>[],
         proteinTargetG: null,
         foods: FoodIndex.unavailable(),
         exportedAt: DateTime.utc(2026, 11, 8),
@@ -246,8 +246,8 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('the reboot is empty on Workout, Muscles, History and all '
-        'three Profile segments', (tester) async {
+    testWidgets('the reboot is empty on Workout, Muscles, Diet and every You '
+        'segment', (tester) async {
       final database = AppDatabase.forTesting(NativeDatabase.memory());
       app.openAppDatabase = () => database;
       addTearDown(() async {
@@ -264,6 +264,11 @@ void main() {
         isNotEmpty,
         reason: 'precondition: the debug seed gave the wipe data to remove',
       );
+      expect(
+        shellContainer(tester).read(dietLogProvider),
+        isNotEmpty,
+        reason: 'precondition: the debug seed also logged some meals',
+      );
 
       final restart = shellContainer(tester).read(appRestartProvider);
       final reminders = FakeReminderScheduler();
@@ -279,41 +284,45 @@ void main() {
       expect(shellContainer(tester).read(customTemplatesProvider), isEmpty);
       expect(shellContainer(tester).read(customExerciseListProvider), isEmpty);
       expect(shellContainer(tester).read(activeSessionProvider), isNull);
-      // No training days in force, and no last workout to point at (ADR 0008).
-      expect(find.text(WeekStrip.pickDaysLabel), findsOneWidget);
+      // No last workout to point at (ADR 0008), and no week strip: the
+      // Schedule is gone (ADR 0015).
       expect(find.byKey(LastWorkoutLine.lineKey), findsNothing);
+      expect(find.text('Pick training days'), findsNothing);
 
       // Muscles: pure reference, renders the same with or without data.
-      await tapTab(tester, 1);
+      await tapTab(
+          tester, L0Shell.tabs.indexWhere((t) => t.body is MusclesRoot));
       expect(find.byType(MusclesRoot), findsOneWidget);
 
-      // History: the empty state.
-      await tapTab(tester, 2);
+      // Diet: an empty log day, never a first-time state to get past.
+      await tapTab(tester, kDietTabIndex);
+      expect(find.byKey(DietPane.dayViewKey), findsOneWidget);
+      expect(
+        shellContainer(tester).read(dietLogProvider),
+        isEmpty,
+        reason: 'the debug sample diet is never re-seeded after a wipe',
+      );
+      final weekday = shellContainer(tester).read(planTodayProvider).weekday - 1;
+      expect(find.text(DietPane.nothingLoggedFor(weekday)), findsOneWidget);
+
+      // You: opens on Activity (the old History tab): the empty state.
+      await tapTab(tester, kYouTabIndex);
+      expect(
+        shellContainer(tester).read(youSegmentProvider),
+        YouSegment.activity,
+      );
       expect(find.text('No workouts yet'), findsOneWidget);
 
-      // Profile: opens on Personal.
-      await tapTab(tester, 3);
-      expect(
-        shellContainer(tester).read(profileSegmentProvider),
-        ProfileSegment.personal,
-      );
-
-      // Schedule: no training days in force.
-      await tester.tap(
-        find.byKey(ProfileRoot.segmentKey(ProfileSegment.schedule)),
-      );
+      // Profile: the rows are there, with nothing of the user's own in them.
+      await tester.tap(find.byKey(YouRoot.segmentKey(YouSegment.profile)));
       await tester.pumpAndSettle();
-      expect(
-        shellContainer(tester).read(todayPlanWeekdaysProvider),
-        isEmpty,
-      );
-      expect(find.byKey(SchedulePane.dayChipKey(0)), findsOneWidget);
+      expect(find.byKey(profileRowKey('templates')), findsOneWidget);
 
-      // Diet: the first-time state.
-      await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.diet)));
+      // Analysis: empty by design, and there is no Schedule segment (ADR 0015).
+      await tester.tap(find.byKey(YouRoot.segmentKey(YouSegment.analysis)));
       await tester.pumpAndSettle();
-      expect(find.byKey(DietPane.emptyStateKey), findsOneWidget);
-      expect(find.text(DietPane.emptyHeading), findsOneWidget);
+      expect(find.text(YouRoot.analysisCopy), findsOneWidget);
+      expect(find.text('Schedule'), findsNothing);
 
       expect(tester.takeException(), isNull);
     });

@@ -50,7 +50,7 @@ struct WeekGlance: Codable {
   var lastWorkout: String?
 
   static let placeholder = WeekGlance(
-    headline: "Pick training days",
+    headline: "No workouts yet",
     caption: "",
     days: [],
     lastWorkout: nil

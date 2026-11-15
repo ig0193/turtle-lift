@@ -8,7 +8,7 @@ import '../data/exercise_index.dart';
 import '../data/generated/muscle_taxonomy.dart';
 import '../data/session_store.dart';
 import '../data/muscle_training.dart';
-import '../data/training_plan.dart' show planTodayProvider;
+import '../data/today.dart' show planTodayProvider;
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import 'app_screen.dart';

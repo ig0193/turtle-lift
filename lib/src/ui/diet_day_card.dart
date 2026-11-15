@@ -1,39 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 
 import '../data/diet_derived.dart';
 import '../data/local_date.dart';
 import '../theme/app_palette.dart';
 import 'food_picker_screen.dart' show kDietWeekdayShort;
-import 'week_day_chip.dart' show kWeekdayLong;
+import 'week_day_meter.dart' show kWeekdayLong;
 
-/// The selected day's planned protein (`.daycard` in `prototypes/diet.html`).
+/// The selected day's logged protein (`.daycard` in `prototypes/diet.html`).
 ///
 /// R17, states counts, never verdicts:
 ///
-/// * No target: "86 g planned".
-/// * A target: "86 of 120 g planned", with "34 g to go" only while planned is
+/// * No target: "86 g logged".
+/// * A target: "86 of 120 g logged", with "34 g to go" only while logged is
 ///   under the target. At or past it there is no second line, and no word
 ///   for "past" either.
 ///
-/// **Structure.** The top line is the planned count; [subLines] holds the
-/// line under it ("28 g eaten", [eatenLine], on today and earlier days this
-/// week); [footer] is the [DietTargetBar] with its legend when a target is
-/// set, or the "Set a daily target" link ([setTargetKey]) when none is. The
-/// Diet pane composes both, so the card stays a plain layout.
+/// **Structure.** The top line is the logged count; [footer] is the
+/// [DietTargetBar] when a target is set, or the "Set a daily target" link
+/// ([setTargetKey]) when none is. The Diet pane composes it, so the card
+/// stays a plain layout.
 class DietDayCard extends StatelessWidget {
-  const DietDayCard({
-    required this.day,
-    this.subLines = const <String>[],
-    this.footer,
-    super.key,
-  });
+  const DietDayCard({required this.day, this.footer, super.key});
 
   final DietDay day;
 
-  /// Extra count lines joined after "N g to go" with " · ".
-  final List<String> subLines;
-
-  /// Below the lines: the bar and legend, or the target link (U13).
+  /// Below the lines: the bar, or the target link.
   final Widget? footer;
 
   @visibleForTesting
@@ -42,27 +34,14 @@ class DietDayCard extends StatelessWidget {
   /// The "Set a daily target" link in the no-target card (AE2).
   static const Key setTargetKey = ValueKey<String>('diet-day-set-target');
 
-  /// The planned-against-target bar: its track, its two layers, its legend.
+  /// The logged-against-target bar: its track and its one layer.
   @visibleForTesting
   static const Key barKey = ValueKey<String>('diet-day-bar');
 
   @visibleForTesting
-  static const Key plannedLayerKey = ValueKey<String>('diet-day-bar-planned');
+  static const Key loggedLayerKey = ValueKey<String>('diet-day-bar-logged');
 
-  @visibleForTesting
-  static const Key eatenLayerKey = ValueKey<String>('diet-day-bar-eaten');
-
-  @visibleForTesting
-  static const Key legendKey = ValueKey<String>('diet-day-legend');
-
-  static const String plannedLegend = 'Planned';
-
-  static const String eatenLegend = 'Eaten';
-
-  /// "28 g eaten" (R19): a count beside planned, never a verdict.
-  static String eatenLine(int grams) => '$grams g eaten';
-
-  /// "34 g to go", or null without a target or once the target is planned.
+  /// "34 g to go", or null without a target or once the target is logged.
   static String? toGoLine(DietDay day) {
     final toGo = day.toGoG;
     return toGo == null || toGo == 0 ? null : '$toGo g to go';
@@ -71,7 +50,7 @@ class DietDayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final target = day.targetG;
-    final lines = <String>[?toGoLine(day), ...subLines];
+    final toGo = toGoLine(day);
     return Container(
       key: cardKey,
       margin: const EdgeInsets.only(bottom: 12),
@@ -87,20 +66,20 @@ class DietDayCard extends StatelessWidget {
           Text.rich(
             TextSpan(
               children: <InlineSpan>[
-                TextSpan(text: '${day.plannedG}', style: _bigStyle),
+                TextSpan(text: '${day.loggedG}', style: _bigStyle),
                 TextSpan(
                   text: target == null
-                      ? ' g planned'
-                      : ' of $target g planned',
+                      ? ' g logged'
+                      : ' of $target g logged',
                   style: _ofStyle,
                 ),
               ],
             ),
           ),
-          if (lines.isNotEmpty)
+          if (toGo != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(lines.join(' · '), style: _subStyle),
+              child: Text(toGo, style: _subStyle),
             ),
           ?footer,
         ],
@@ -109,15 +88,13 @@ class DietDayCard extends StatelessWidget {
   }
 }
 
-/// The planned-against-target bar and its legend (`.pbar` and `.legend` in
-/// `prototypes/diet.html`), shown only when a target is set (R17).
+/// The logged-against-target bar (`.pbar` in `prototypes/diet.html`), shown
+/// only when a target is set (R17).
 ///
-/// Two layers on a [AppPalette.mutedSurface] track (KTD20): planned in
-/// [AppPalette.textMuted], and on a tickable day eaten in
-/// [AppPalette.accentStrong] over it. Both stop at full; there is no shape for
-/// "past the target". **Every layer has a word in the legend**, so nothing is
-/// told by colour alone (R19). A future day has no eaten layer and no "Eaten"
-/// entry, because nothing on it can be ticked yet.
+/// One layer on a [AppPalette.mutedSurface] track (KTD20), in
+/// [AppPalette.accentStrong]. It stops at full; there is no shape for "past
+/// the target". The count above it carries the meaning, so the bar needs no
+/// legend and nothing is told by colour alone.
 class DietTargetBar extends StatelessWidget {
   const DietTargetBar({required this.day, super.key});
 
@@ -125,56 +102,26 @@ class DietTargetBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final target = day.targetG!;
-    final planned = day.meter ?? 0;
-    final eaten = (day.eatenG / target).clamp(0.0, 1.0);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        ExcludeSemantics(
-          child: Container(
-            key: DietDayCard.barKey,
-            height: 7,
-            margin: const EdgeInsets.only(top: 12, bottom: 8),
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: AppPalette.mutedSurface,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Stack(
-              children: <Widget>[
-                _BarLayer(
-                  layerKey: DietDayCard.plannedLayerKey,
-                  fraction: planned,
-                  color: AppPalette.textMuted,
-                ),
-                if (day.tickable)
-                  _BarLayer(
-                    layerKey: DietDayCard.eatenLayerKey,
-                    fraction: eaten,
-                    color: AppPalette.accentStrong,
-                  ),
-              ],
-            ),
-          ),
+    return ExcludeSemantics(
+      child: Container(
+        key: DietDayCard.barKey,
+        height: 7,
+        margin: const EdgeInsets.only(top: 12),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppPalette.mutedSurface,
+          borderRadius: BorderRadius.circular(4),
         ),
-        Row(
-          key: DietDayCard.legendKey,
+        child: Stack(
           children: <Widget>[
-            const _LegendEntry(
-              label: DietDayCard.plannedLegend,
-              color: AppPalette.textMuted,
+            _BarLayer(
+              layerKey: DietDayCard.loggedLayerKey,
+              fraction: day.meter ?? 0,
+              color: AppPalette.accentStrong,
             ),
-            if (day.tickable) ...<Widget>[
-              const SizedBox(width: 12),
-              const _LegendEntry(
-                label: DietDayCard.eatenLegend,
-                color: AppPalette.accentStrong,
-              ),
-            ],
           ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -209,80 +156,140 @@ class _BarLayer extends StatelessWidget {
   }
 }
 
-/// A swatch and its word. The word carries the meaning; the swatch only
-/// matches it to the layer.
-class _LegendEntry extends StatelessWidget {
-  const _LegendEntry({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 5),
-        Text(label, style: _subStyle),
-      ],
-    );
-  }
-}
-
-/// This week, Monday to Sunday (`.week` in `prototypes/diet.html`). Today's
-/// short name is in the accent; the selected day carries an accent outline,
-/// never a fill. With a target, each day carries a `WeekDayMeter` under its
-/// date ([meters]).
-class DietWeekStrip extends StatelessWidget {
+/// Seven days in a row (`.week` in `prototypes/diet.html`), a window that
+/// slides one day at a time.
+///
+/// **Always seven.** [start] is the first; dragging left reveals later days
+/// and dragging right earlier ones, **one day per cell-width dragged**, so it
+/// follows the finger instead of jumping a week. A quick fling that did not
+/// travel a full cell still moves one day, so a flick is never a no-op. The
+/// window's bounds are the notifier's ([onShift]), not this widget's.
+///
+/// Today's short name is in the accent; the selected day carries an accent
+/// outline, never a fill. With a target, each day carries a `WeekDayMeter`
+/// under its date ([meters]). **A day after [today] cannot be picked**: Diet
+/// is a log, and a meal that has not been eaten has nothing to log.
+///
+/// Screen readers cannot drag, so the strip offers "Show earlier day" and
+/// "Show later day" as custom actions.
+class DietWeekStrip extends StatefulWidget {
   const DietWeekStrip({
-    required this.monday,
+    required this.start,
     required this.today,
     required this.selected,
     required this.onSelected,
+    required this.onShift,
     this.meters,
     super.key,
   });
 
-  final LocalDate monday;
+  /// The first of the seven days.
+  final LocalDate start;
   final LocalDate today;
   final LocalDate selected;
   final ValueChanged<LocalDate> onSelected;
 
+  /// Slide the window by this many days (negative is earlier).
+  final ValueChanged<int> onShift;
+
   /// One widget per day under the date (the meters); null for none.
   final List<Widget>? meters;
 
-  /// A day of the strip, 0 = Monday.
-  static Key dayKey(int weekday) => ValueKey<String>('diet-week-day-$weekday');
+  /// A day of the strip: the [position]th of its seven, 0 = the first.
+  static Key dayKey(int position) =>
+      ValueKey<String>('diet-week-day-$position');
+
+  /// The draggable strip, for a test to swipe.
+  @visibleForTesting
+  static const Key stripKey = ValueKey<String>('diet-week-strip');
+
+  /// A fling faster than this (logical pixels per second) moves one day even
+  /// when the drag did not travel a full cell.
+  static const double flingVelocity = 700;
+
+  @override
+  State<DietWeekStrip> createState() => _DietWeekStripState();
+}
+
+class _DietWeekStripState extends State<DietWeekStrip> {
+  /// Drag distance not yet turned into a day.
+  double _carry = 0;
+
+  /// Whole days moved during the current drag.
+  int _moved = 0;
+
+  void _onDragUpdate(DragUpdateDetails details, double cell) {
+    // Dragging left (negative dx) reveals later days: the window start moves
+    // later. Each full cell of travel is one day.
+    _carry -= details.delta.dx;
+    while (_carry >= cell) {
+      _carry -= cell;
+      _moved++;
+      widget.onShift(1);
+    }
+    while (_carry <= -cell) {
+      _carry += cell;
+      _moved--;
+      widget.onShift(-1);
+    }
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (_moved == 0 && velocity.abs() > DietWeekStrip.flingVelocity) {
+      widget.onShift(velocity < 0 ? 1 : -1);
+    }
+    _carry = 0;
+    _moved = 0;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: <Widget>[
-          for (var d = 0; d < kWeekdayLong.length; d++) ...<Widget>[
-            if (d > 0) const SizedBox(width: 4),
-            Expanded(
-              child: _WeekDay(
-                key: dayKey(d),
-                weekday: d,
-                date: monday.addDays(d),
-                isToday: monday.addDays(d) == today,
-                selected: monday.addDays(d) == selected,
-                meter: meters?[d],
-                onTap: () => onSelected(monday.addDays(d)),
+    final w = widget;
+    return Semantics(
+      container: true,
+      customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
+        const CustomSemanticsAction(label: 'Show earlier day'): () =>
+            w.onShift(-1),
+        const CustomSemanticsAction(label: 'Show later day'): () =>
+            w.onShift(1),
+      },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final cell = constraints.maxWidth / kWeekdayLong.length;
+          return GestureDetector(
+            key: DietWeekStrip.stripKey,
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragUpdate: (d) => _onDragUpdate(d, cell),
+            onHorizontalDragEnd: _onDragEnd,
+            onHorizontalDragCancel: () {
+              _carry = 0;
+              _moved = 0;
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: <Widget>[
+                  for (var i = 0; i < kWeekdayLong.length; i++) ...<Widget>[
+                    if (i > 0) const SizedBox(width: 4),
+                    Expanded(
+                      child: _WeekDay(
+                        key: DietWeekStrip.dayKey(i),
+                        date: w.start.addDays(i),
+                        isToday: w.start.addDays(i) == w.today,
+                        selected: w.start.addDays(i) == w.selected,
+                        meter: w.meters?[i],
+                        onTap: w.start.addDays(i) > w.today
+                            ? null
+                            : () => w.onSelected(w.start.addDays(i)),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-          ],
-        ],
+          );
+        },
       ),
     );
   }
@@ -290,7 +297,6 @@ class DietWeekStrip extends StatelessWidget {
 
 class _WeekDay extends StatelessWidget {
   const _WeekDay({
-    required this.weekday,
     required this.date,
     required this.isToday,
     required this.selected,
@@ -299,18 +305,23 @@ class _WeekDay extends StatelessWidget {
     super.key,
   });
 
-  final int weekday;
   final LocalDate date;
   final bool isToday;
   final bool selected;
   final Widget? meter;
-  final VoidCallback onTap;
+
+  /// Null for a day that cannot be picked yet.
+  final VoidCallback? onTap;
+
+  /// 0 = Monday ... 6 = Sunday. **From the date**, not the column: the strip
+  /// slides, so the first cell is any weekday.
+  int get weekday => date.weekday - 1;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       container: true,
-      button: true,
+      button: onTap != null,
       selected: selected,
       label: '${kWeekdayLong[weekday]} ${date.day}${isToday ? ', today' : ''}',
       excludeSemantics: true,
@@ -346,9 +357,11 @@ class _WeekDay extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: selected
-                      ? AppPalette.textPrimary
-                      : AppPalette.textSecondary,
+                  color: onTap == null
+                      ? AppPalette.textMuted
+                      : selected
+                          ? AppPalette.textPrimary
+                          : AppPalette.textSecondary,
                   fontFeatures: const <FontFeature>[
                     FontFeature.tabularFigures(),
                   ],

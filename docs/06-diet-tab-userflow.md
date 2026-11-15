@@ -1,5 +1,19 @@
 # Diet — user flow
 
+> **Diet is a tab again, first in the bar** (`docs/adr/0016-you-tab-and-diet-tab.md`,
+> after ADR 0007 had made it a Profile segment). Where this flow says "Profile ›
+> Diet" read the Diet tab; there is no segment control above it.
+>
+> **ADR 0017 changes the week strip:** it is a seven-day window that slides one day
+> at a time, and a calendar button in the header picks any past day.
+
+> **Amended by `docs/adr/0015-diet-is-a-log.md`: Diet is a log, not a plan.**
+> Profile is now Personal | Diet (no Schedule). Foods are logged against a date
+> (today and earlier), not planned for a weekday that repeats; there is no
+> first-time state, no "Repeat on", no eaten tick and no morning summary. Where
+> this flow says "plan", "planned" or "eaten", read "log" and "logged". The
+> protein rule, the food list, the target and the opt-in meal reminders stand.
+
 > **Accepted; placement superseded by `docs/adr/0007-diet-in-profile.md`:** Diet
 > is the third Profile segment (Personal | Schedule | Diet), **not a fifth tab**.
 > Where this flow says "tab", "L0" or "tab root", read Profile → Diet. ADR 0007

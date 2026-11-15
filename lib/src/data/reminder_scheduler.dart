@@ -19,13 +19,13 @@ enum ReminderTarget {
   /// Profile, Diet segment, today (`docs/adr/0007-diet-in-profile.md`).
   dietToday('diet/today'),
 
-  /// A training-day reminder: the Workout tab, where training starts
-  /// (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`).
+  /// The Workout tab, where training starts: a Live Activity or home-screen
+  /// widget tap (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`).
   ///
-  /// **The payload still says `schedule`.** It was written when this target
-  /// opened Profile › Schedule (ADR 0005), and the OS keeps pending
-  /// notifications for weeks: renaming the string would orphan every one
-  /// already scheduled. The place moved; the name on the envelope did not.
+  /// **The payload still says `schedule`.** It was written for the training-day
+  /// reminders, which are gone (`docs/adr/0015-diet-is-a-log.md`), but one the
+  /// OS already delivered can sit in the notification shelf for weeks, and
+  /// tapping it must still open the Workout tab, so the string stays.
   workout('schedule');
 
   const ReminderTarget(this.payload);
@@ -64,11 +64,14 @@ class ReminderIdRange {
   String toString() => 'ReminderIdRange($first-$last)';
 }
 
-/// The Schedule training-day reminders, one per weekday.
-const ReminderIdRange kTrainingReminderIds = ReminderIdRange(100, 106);
-
-/// The Diet morning summaries, one per weekday.
-const ReminderIdRange kDietSummaryReminderIds = ReminderIdRange(200, 206);
+/// Ids that earlier builds scheduled and no feature owns any more: the
+/// Schedule training-day reminders (100-106) and the Diet morning summaries
+/// (200-206). Cancelled once at boot, so an upgrade does not leave a pending
+/// notification for something the app no longer has.
+const List<ReminderIdRange> kRetiredReminderIds = <ReminderIdRange>[
+  ReminderIdRange(100, 106),
+  ReminderIdRange(200, 206),
+];
 
 /// The Diet meal reminders: 300 + weekday x 10 + slot index.
 const ReminderIdRange kDietMealReminderIds = ReminderIdRange(300, 363);
@@ -77,18 +80,6 @@ void _checkWeekday(int weekday) {
   if (weekday < 0 || weekday > 6) {
     throw ArgumentError.value(weekday, 'weekday', 'must be 0 (Mon) to 6 (Sun)');
   }
-}
-
-/// The training reminder id for [weekday], 0 = Monday.
-int trainingReminderId(int weekday) {
-  _checkWeekday(weekday);
-  return kTrainingReminderIds.first + weekday;
-}
-
-/// The Diet summary id for [weekday], 0 = Monday.
-int dietSummaryReminderId(int weekday) {
-  _checkWeekday(weekday);
-  return kDietSummaryReminderIds.first + weekday;
 }
 
 /// The Diet meal reminder id for [slot] on [weekday], 0 = Monday.
@@ -124,7 +115,7 @@ tz.TZDateTime nextWeeklyInstance(tz.TZDateTime now, int weekday, int minute) {
 /// fake, the way `appDatabaseProvider` keeps them off the file system.
 ///
 /// **What it does not do:** decide what to schedule. Callers build reminders
-/// from the plan and the preferences, cancel their own [ReminderIdRange], and
+/// from the preferences, cancel their own [ReminderIdRange], and
 /// schedule afresh; that "reschedule" is theirs (U16, U17).
 abstract interface class ReminderScheduler {
   /// False where notifications cannot work (not initialised, or a platform

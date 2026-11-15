@@ -4,6 +4,10 @@ Date: 2026-09-14
 
 ## Status
 
+> **Amended by [ADR 0016](0016-you-tab-and-diet-tab.md):** History is no longer a
+> tab; it is the Activity segment of the You tab. The bar is Diet | Workout |
+> Muscles | You. The bar-at-L0 and stack-depth rules stand.
+
 Accepted. **The Profile-behind-an-avatar half is superseded by [ADR 0004](0004-profile-returns-as-a-tab.md)** — Profile is a fourth tab. History as a tab and the two riders below stand.
 
 ## Context

@@ -84,7 +84,7 @@ tags: [workout]
 - tapOn: "Back"
 
 # --- History: the row, then its card and log
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - assertVisible: "Chest, back, abs, Today · 4 exercises · 5 sets"
 - tapOn: "Chest, back, abs, Today.*"
 - assertVisible: ".*5\nSets\n4\nExercises\n1\nDay streak.*"

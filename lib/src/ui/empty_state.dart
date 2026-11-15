@@ -124,8 +124,8 @@ const TextStyle kEmptyStateBodyStyle = TextStyle(
 /// The empty-state discs, one per root.
 ///
 /// **These are not the tab-bar icons and must not be swapped for them.**
-/// `TabGlyph.history` is a clock; the History empty state's disc is a logbook
-/// page. The two drawings live in different places in the prototype
+/// The Activity (History) empty state's disc is a logbook page, not a clock.
+/// The two drawings live in different places in the prototype
 /// (`.tabs svg` versus `.empty .ico svg`) and diverge on purpose: the tab icon
 /// names a destination, the disc illustrates the missing thing. Reaching for
 /// `TabGlyph` here compiles, renders, and is silently wrong — which is why the

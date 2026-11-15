@@ -16,13 +16,16 @@ part 'app_database.g.dart';
 /// units, sex and bodyweight). If you find yourself adding a column that could
 /// be recomputed from session rows, that is the rule catching you.
 ///
-/// Schema version 8 (step 8 is the user's own exercises, see
+/// Schema version 10 (step 10 removes the Schedule and turns the Diet plan into
+/// a dated log, see `docs/adr/0015-diet-is-a-log.md`; step 9 is the hidden and
+/// note columns, see `docs/adr/0011-combined-build-decisions.md`; step 8 is
+/// the user's own exercises, see
 /// `docs/adr/0009-custom-exercises-and-template-editing.md`; step 7 is the reminder preferences, see
 /// `docs/adr/0005-schedule-and-opt-in-notifications.md` and ADR 0007; step 6
-/// is the Diet plan, meal ticks and protein target,
-/// see `docs/adr/0007-diet-in-profile.md`; step 5 gives a custom template its
+/// is the protein target and, until step 10, the weekly Diet plan and meal
+/// ticks, see `docs/adr/0007-diet-in-profile.md`; step 5 gives a custom template its
 /// exercise list, see `docs/adr/0006-workout-tab-is-exercise-first.md`; step 4
-/// is the training-day plan), and the app's **first** migration — so the shape here is the one every
+/// was the training-day plan, also dropped by step 10), and the app's **first** migration — so the shape here is the one every
 /// later migration will be copied from.
 ///
 /// **Version 2 is the session tables and it has now landed.** Step 2 creates
@@ -45,14 +48,11 @@ part 'app_database.g.dart';
   tables: <Type>[
     Settings,
     BodyweightEntries,
-    TrainingPlanEntries,
     CustomTemplates,
     Sessions,
     SessionExercises,
     SetEntries,
-    DietPlanVersions,
-    DietPlanItems,
-    MealTicks,
+    DietLogEntries,
     ReminderPrefs,
     CustomExercises,
   ],
@@ -72,7 +72,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   /// **The first migration in the app's history.** There was no
   /// [MigrationStrategy] before this one, so the shape here is the precedent:
@@ -122,11 +122,9 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(customTemplates);
             await m.addColumn(settings, settings.bodyGender);
           }
-          if (from < 4) {
-            // The Schedule's dated training-day plan. Pure table creation, so
-            // the one-transaction, idempotent rule above holds.
-            await m.createTable(trainingPlanEntries);
-          }
+          // Step 4 created the Schedule's `training_plan_entries`. The feature
+          // is gone (`docs/adr/0015-diet-is-a-log.md`), so there is no table
+          // definition left to create from; step 10 drops it wherever it is.
           if (from >= 3 && from < 5) {
             // A template is now a list of exercises, not of muscle groups.
             //
@@ -151,16 +149,14 @@ class AppDatabase extends _$AppDatabase {
             }
           }
           if (from < 6) {
-            // The Diet plan. Pure DDL, so the one-transaction, idempotent rule
-            // above holds.
+            // The protein target. Step 6 also created the weekly Diet plan
+            // tables; they are gone (`docs/adr/0015-diet-is-a-log.md`) and
+            // step 10 drops them wherever they exist.
             //
             // **`addColumn` is safe for every `from` here.** Unlike step 5,
             // no earlier step creates `settings`: it exists from version 1,
             // so a user upgrading from any older version is still missing
             // the column at this point, and nobody gets a duplicate.
-            await m.createTable(dietPlanVersions);
-            await m.createTable(dietPlanItems);
-            await m.createTable(mealTicks);
             await _addColumnIfMissing(m, settings, settings.proteinTargetG);
           }
           if (from < 7) {
@@ -188,8 +184,64 @@ class AppDatabase extends _$AppDatabase {
             await _addColumnIfMissing(m, customExercises, customExercises.hidden);
             await _addColumnIfMissing(m, sessionExercises, sessionExercises.note);
           }
+          if (from < 10) {
+            // Schedule removed and Diet turned from a weekly plan into a dated
+            // log (`docs/adr/0015-diet-is-a-log.md`).
+            //
+            // **The one step that moves data.** What the user *did* is kept: a
+            // meal ticked as eaten becomes the foods that plan had in that slot
+            // on that day, logged on that date. The plan itself, the training
+            // days and the ticks are then dropped. It is still one transaction,
+            // and it retries cleanly: a kill mid-step rolls everything back.
+            //
+            // `DROP TABLE IF EXISTS` and the existence check keep it safe for a
+            // development install that never had the tables.
+            await m.createTable(dietLogEntries);
+            if (await _tableExists('meal_ticks') &&
+                await _tableExists('diet_plan_items') &&
+                await _tableExists('diet_plan_versions')) {
+              await customStatement(_ticksToLogSql);
+            }
+            for (final table in const <String>[
+              'meal_ticks',
+              'diet_plan_items',
+              'diet_plan_versions',
+              'training_plan_entries',
+            ]) {
+              await customStatement('DROP TABLE IF EXISTS $table');
+            }
+          }
         },
       );
+
+  Future<bool> _tableExists(String name) async {
+    final rows = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+      variables: <Variable<Object>>[Variable<String>(name)],
+    ).get();
+    return rows.isNotEmpty;
+  }
+
+  /// Each tick, with the foods the plan in force that week had in that slot on
+  /// that weekday. The Monday is `date` minus its weekday offset, and the plan
+  /// in force is the latest version on or before it, as `versionInEffectOn`
+  /// resolved it. `OR IGNORE` because the log's UNIQUE would otherwise make a
+  /// food that somehow appears twice fail the whole upgrade.
+  static const String _ticksToLogSql = '''
+INSERT OR IGNORE INTO diet_log_entries
+  (id, date, slot, food_id, servings_halves, position)
+SELECT lower(hex(randomblob(16))), t.date, t.slot, i.food_id,
+       i.servings_halves, i.position
+FROM meal_ticks t
+JOIN diet_plan_items i
+  ON i.slot = t.slot
+ AND i.weekday = (CAST(strftime('%w', t.date) AS INTEGER) + 6) % 7
+ AND i.effective_from = (
+   SELECT MAX(v.effective_from) FROM diet_plan_versions v
+   WHERE v.effective_from <=
+     date(t.date, '-' || ((CAST(strftime('%w', t.date) AS INTEGER) + 6) % 7)
+                  || ' days'))
+''';
 
   Future<void> _addColumnIfMissing(
     Migrator m,
@@ -299,40 +351,6 @@ class BodyweightEntries extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{date};
-}
-
-/// The weekdays the user aims to train on, as a dated series.
-///
-/// **The same shape as [BodyweightEntries], for the same reason.**
-/// `docs/adr/0005-schedule-and-opt-in-notifications.md`: an entry is immutable
-/// and takes effect from the day it is saved, so a past week keeps being read
-/// against the plan that was in force *then*. One stored pattern, re-read
-/// against old weeks, would turn every past hit into a miss the moment the user
-/// changed a day. Whether a plan day was hit is derived on read from sessions
-/// and is never stored here.
-///
-/// There is no update or delete path in the store above this table.
-/// [effectiveFrom] is the primary key, so saving twice on one day replaces that
-/// day -- the user fixing a mis-tap, which is the only correction allowed
-/// because today is not yet history.
-@DataClassName('TrainingPlanEntryRow')
-class TrainingPlanEntries extends Table {
-  /// The local calendar date the plan took effect, as `YYYY-MM-DD`. Text for
-  /// the reason [BodyweightEntries.date] is.
-  TextColumn get effectiveFrom => text()();
-
-  /// The training weekdays as a bitmask: bit 0 is Monday ... bit 6 is Sunday.
-  /// Zero is a real answer -- "no training days from here" -- and is how a user
-  /// clears the plan without rewriting history.
-  IntColumn get weekdayMask => integer()();
-
-  @override
-  Set<Column<Object>> get primaryKey => <Column<Object>>{effectiveFrom};
-
-  @override
-  List<String> get customConstraints => <String>[
-        'CHECK (weekday_mask BETWEEN 0 AND 127)',
-      ];
 }
 
 /// The templates the user made for themselves.
@@ -550,49 +568,30 @@ class SetEntries extends Table {
       ];
 }
 
-/// The four meal slots, by the name stored in [DietPlanItems.slot] and
-/// [MealTicks.slot]. Inlined into both tables' CHECKs, so a fifth slot is a
-/// schema step, not a quiet new string.
+/// The four meal slots, by the name stored in [DietLogEntries.slot]. Inlined
+/// into the table's CHECK, so a fifth slot is a schema step, not a quiet new
+/// string.
 const String _mealSlotCheck =
     "CHECK (slot IN ('breakfast', 'lunch', 'snack', 'dinner'))";
 
-/// One whole-week version of the Diet plan, keyed by the Monday it takes
-/// effect from (`docs/adr/0007-diet-in-profile.md`).
+/// One food eaten in one meal slot on one calendar day
+/// (`docs/adr/0015-diet-is-a-log.md`).
 ///
-/// **The same dated-series idea as [TrainingPlanEntries].** An edit in week W
-/// copies the latest earlier version into a new one at W's Monday before it
-/// applies, so a past week keeps reading the plan that was in force then. The
-/// store, not this table, keeps the Monday rule and never writes an older
-/// version: a CHECK cannot see "this week".
-///
-/// A version with no items is a real answer, "nothing planned from here", in
-/// the way a zero weekday mask is.
-@DataClassName('DietPlanVersionRow')
-class DietPlanVersions extends Table {
-  /// The Monday this version takes effect from, as `YYYY-MM-DD`.
-  TextColumn get effectiveFrom => text().map(const LocalDateConverter())();
-
-  @override
-  Set<Column<Object>> get primaryKey => <Column<Object>>{effectiveFrom};
-}
-
-/// One food in one meal slot of one weekday, within a [DietPlanVersions] week.
+/// **A log, not a plan.** A row belongs to the date it was logged on and
+/// repeats nowhere; there is no weekly pattern and no "eaten" tick, because a
+/// food that is here has been eaten. Which dates may be written (today and
+/// earlier) is the store's rule, because a CHECK cannot see "today".
 ///
 /// **No protein figure is stored.** Every total is derived on read from
 /// [foodId] and [servingsHalves] against the bundled food list, so a corrected
-/// food value flows into the plan rather than being frozen into old rows.
-@DataClassName('DietPlanItemRow')
-class DietPlanItems extends Table {
+/// food value flows into the log rather than being frozen into old rows.
+@DataClassName('DietLogEntryRow')
+class DietLogEntries extends Table {
   TextColumn get id => text()();
 
-  /// The version this item belongs to. Deleting the version takes its items.
-  TextColumn get effectiveFrom => text()
-      .map(const LocalDateConverter())
-      .references(DietPlanVersions, #effectiveFrom,
-          onDelete: KeyAction.cascade)();
-
-  /// 0 is Monday ... 6 is Sunday, matching [TrainingPlanEntries]' bit order.
-  IntColumn get weekday => integer()();
+  /// The local calendar day, as `YYYY-MM-DD`. Text for the reason
+  /// [BodyweightEntries.date] is.
+  TextColumn get date => text().map(const LocalDateConverter())();
 
   /// `breakfast`, `lunch`, `snack` or `dinner`. Stored by name, never index.
   TextColumn get slot => text()();
@@ -615,32 +614,10 @@ class DietPlanItems extends Table {
   /// replace rather than a second row that double counts every total.
   @override
   List<String> get customConstraints => <String>[
-        'UNIQUE (effective_from, weekday, slot, food_id)',
-        'CHECK (weekday BETWEEN 0 AND 6)',
+        'UNIQUE (date, slot, food_id)',
         _mealSlotCheck,
         'CHECK (servings_halves BETWEEN 1 AND 8)',
       ];
-}
-
-/// A meal the user ticked as eaten on a calendar day.
-///
-/// **Presence means eaten; an untick is a hard delete.** There is no "false"
-/// row. Which dates may be ticked (this week, never the future) is the store's
-/// rule, because a CHECK cannot see "today".
-@DataClassName('MealTickRow')
-class MealTicks extends Table {
-  /// The local calendar day, as `YYYY-MM-DD`. Text for the reason
-  /// [BodyweightEntries.date] is.
-  TextColumn get date => text().map(const LocalDateConverter())();
-
-  /// `breakfast`, `lunch`, `snack` or `dinner`.
-  TextColumn get slot => text()();
-
-  @override
-  Set<Column<Object>> get primaryKey => <Column<Object>>{date, slot};
-
-  @override
-  List<String> get customConstraints => <String>[_mealSlotCheck];
 }
 
 /// The user's reminder preferences, as exactly one row
@@ -655,12 +632,17 @@ class MealTicks extends Table {
 /// missing row reads as these defaults, so a fresh install and an upgraded one
 /// agree without a seed row. Times are minutes after local midnight, the
 /// defaults from the plan's A7. What a reminder says is never stored: its text
-/// is built from the plan on every reschedule.
+/// is built on every reschedule.
+///
+/// **Only the Diet columns are live.** The Schedule's `schedule_*` columns and
+/// Diet's morning-summary columns are retired (`docs/adr/0015-diet-is-a-log.md`)
+/// and stay, unwritten and unread: SQLite cannot drop them without rebuilding a
+/// table that holds user data.
 @DataClassName('ReminderPrefsRow')
 class ReminderPrefs extends Table {
   IntColumn get id => integer()();
 
-  /// The Schedule tab's training-day reminder (ADR 0005).
+  /// Retired: the Schedule's training-day reminder (ADR 0005, ADR 0015).
   BoolColumn get scheduleOn => boolean().withDefault(const Constant(false))();
 
   IntColumn get scheduleMinute => integer()
@@ -722,8 +704,8 @@ class ReminderPrefs extends Table {
 /// The id of the one reminder-preferences row.
 const int kReminderPrefsRowId = 1;
 
-/// The Schedule reminder's default time, 18:30: the time the Schedule pane's
-/// Remind me row has shown since it shipped inert.
+/// The retired Schedule reminder's default time, 18:30. Kept only because the
+/// `schedule_minute` column's default names it, and that column stays.
 const int kDefaultScheduleReminderMinute = 18 * 60 + 30;
 
 /// An exercise the user created (`docs/adr/0009-custom-exercises-and-template-editing.md`), schema

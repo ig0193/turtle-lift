@@ -2,8 +2,8 @@
   "Simulator Target Bundle": "dev.indresh.turtleLift",
   "aps": {
     "alert": {
-      "title": "Lunch",
-      "body": "Paneer: 9 g protein planned"
+      "title": "Log your lunch",
+      "body": "Add what you ate to today's Diet log."
     },
     "sound": "default"
   },

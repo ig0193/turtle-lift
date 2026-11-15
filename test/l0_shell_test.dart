@@ -7,16 +7,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/custom_templates.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
+import 'package:turtle_lift/src/data/food_index.dart';
 import 'package:turtle_lift/src/data/history_preview_data.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
+import 'package:turtle_lift/src/ui/diet_calendar_sheet.dart';
+import 'package:turtle_lift/src/ui/diet_pane.dart';
+import 'package:turtle_lift/src/ui/diet_root.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
 import 'package:turtle_lift/src/ui/history_root.dart';
 import 'package:turtle_lift/src/ui/l0_shell.dart';
 import 'package:turtle_lift/src/ui/muscles_root.dart';
 import 'package:turtle_lift/src/ui/profile_screen.dart';
 import 'package:turtle_lift/src/ui/tab_index.dart';
+import 'package:turtle_lift/src/ui/tab_routes.dart';
 import 'package:turtle_lift/src/ui/workout_root.dart';
+import 'package:turtle_lift/src/ui/you_root.dart';
 
 /// The shell is the app's only navigation surface, and almost everything it can
 /// get wrong renders perfectly:
@@ -60,8 +66,10 @@ void main() {
           // empty History keeps these tests independent of the session fixture,
           // so changing that fixture cannot break the shell suite.
           historySessionsProvider.overrideWithValue(const <HistorySession>[]),
-          // Profile mounts with the other roots and counts custom templates.
+          // You mounts with the other roots and counts custom templates.
           customTemplatesProvider.overrideWithValue(const <WorkoutTemplate>[]),
+          // Diet is a tab now, mounted with the rest, and reads the food list.
+          foodIndexProvider.overrideWithValue(FoodIndex.fromJson(const [])),
         ],
         child: MaterialApp(
           theme: buildAppTheme(),
@@ -105,32 +113,38 @@ void main() {
   NavigatorState navigatorOf(WidgetTester tester) =>
       Navigator.of(tester.element(find.byType(L0Shell)));
 
-  /// The copy that identifies each root on screen, in tab order.
+  /// The copy that identifies each root on screen, in tab order:
+  /// Diet | Workout | Muscles | You.
   const rootText = <String>[
+    // The day card's target link, at the top of the Diet day view.
+    DietPane.setTargetLabel, // DietRoot
     'Ready-made', // WorkoutRoot
     // The front/back control, near the top of the root: the section label over
     // the 19 rows sits below the body map and is off-screen on the short
     // viewport `useShortScreen` sets up.
     'Front', // MusclesRoot
-    'No workouts yet', // HistoryRoot, seeded empty above
-    ProfilePersonalPane.yoursGroupLabel, // ProfileRoot, Personal pane
+    'No workouts yet', // YouRoot, Activity pane (seeded empty above)
   ];
 
+  // Found from the shell, so a reorder moves these and not the tests.
+  final musclesTab = L0Shell.tabs.indexWhere((t) => t.body is MusclesRoot);
+
   group('tabs', () {
-    testWidgets('opens on Workout', (tester) async {
+    testWidgets('opens on Workout, the second tab', (tester) async {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull,
           reason: 'the shell must lay out clean');
-      expect(find.text(rootText[0]).hitTestable(), findsOneWidget,
+      expect(find.text(rootText[kWorkoutTabIndex]).hitTestable(),
+          findsOneWidget,
           reason: 'the app opens on the tab you came to use');
       expect(tester.widget<GlassTabBar>(find.byType(GlassTabBar)).selectedIndex,
-          0,
+          kWorkoutTabIndex,
           reason: 'the bar must agree with the body about which tab is current');
     });
 
-    testWidgets('tapping each tab shows that root and not the other two',
+    testWidgets('tapping each tab shows that root and not the other three',
         (tester) async {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
@@ -170,27 +184,27 @@ void main() {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(GlassTabBar.itemKey(2)));
+      await tester.tap(find.byKey(GlassTabBar.itemKey(kDietTabIndex)));
       await tester.pumpAndSettle();
 
-      await tester.drag(scrollableIn(HistoryRoot), const Offset(0, -60));
+      await tester.drag(scrollableIn(DietRoot), const Offset(0, -60));
       await tester.pumpAndSettle();
 
-      final scrolled = scrollOffsetIn(tester, HistoryRoot);
+      final scrolled = scrollOffsetIn(tester, DietRoot);
       expect(scrolled, greaterThan(0),
-          reason: 'the History root did not scroll, so the check below would '
+          reason: 'the Diet root did not scroll, so the check below would '
               'pass on a shell that discards its children');
 
-      await tester.tap(find.byKey(GlassTabBar.itemKey(1)));
+      await tester.tap(find.byKey(GlassTabBar.itemKey(musclesTab)));
       await tester.pumpAndSettle();
-      expect(find.text(rootText[1]).hitTestable(), findsOneWidget,
+      expect(find.text(rootText[musclesTab]).hitTestable(), findsOneWidget,
           reason: 'the Muscles root must actually be showing in between');
 
-      await tester.tap(find.byKey(GlassTabBar.itemKey(2)));
+      await tester.tap(find.byKey(GlassTabBar.itemKey(kDietTabIndex)));
       await tester.pumpAndSettle();
 
-      expect(scrollOffsetIn(tester, HistoryRoot), scrolled,
-          reason: 'the History root came back scrolled to a different offset');
+      expect(scrollOffsetIn(tester, DietRoot), scrolled,
+          reason: 'the Diet root came back scrolled to a different offset');
     });
 
     testWidgets('the header title and its semantics label follow the tab',
@@ -243,14 +257,93 @@ void main() {
         tester.element(find.byType(L0Shell)),
         listen: false,
       );
-      container.read(tabIndexProvider.notifier).select(1);
+      container.read(tabIndexProvider.notifier).select(musclesTab);
       await tester.pumpAndSettle();
 
-      expect(find.text(rootText[1]).hitTestable(), findsOneWidget,
+      expect(find.text(rootText[musclesTab]).hitTestable(), findsOneWidget,
           reason: 'the Muscles root must be showing');
       expect(tester.widget<GlassTabBar>(find.byType(GlassTabBar)).selectedIndex,
-          1,
+          musclesTab,
           reason: 'the bar must follow a change it did not originate');
+    });
+
+    testWidgets('the Diet tab shows the protein log under a "Diet" header',
+        (tester) async {
+      await tester.pumpWidget(host());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(GlassTabBar.itemKey(kDietTabIndex)));
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: find.byType(AppBar), matching: find.text('Diet')),
+          findsOneWidget);
+      expect(find.byType(DietPane).hitTestable(), findsOneWidget);
+      expect(find.byKey(DietPane.dayViewKey), findsOneWidget,
+          reason: 'Diet opens on the day view, with no first-time state');
+    });
+
+    testWidgets('the Diet header has the calendar button, and no other tab '
+        'does (ADR 0017)', (tester) async {
+      await tester.pumpWidget(host());
+      await tester.pumpAndSettle();
+
+      Finder calendarButton() => find.descendant(
+            of: find.byType(AppBar),
+            matching: find.byKey(DietCalendarButton.buttonKey),
+          );
+
+      for (var tab = 0; tab < L0Shell.tabs.length; tab++) {
+        await tester.tap(find.byKey(GlassTabBar.itemKey(tab)));
+        await tester.pumpAndSettle();
+        if (tab == kDietTabIndex) {
+          expect(calendarButton(), findsOneWidget,
+              reason: 'the Diet header carries the date picker');
+        } else {
+          expect(calendarButton(), findsNothing,
+              reason: 'header actions are per tab, so ${L0Shell.tabs[tab].title}'
+                  ' has none of Diet\'s');
+        }
+      }
+    });
+
+    testWidgets('the calendar button opens the date picker over the Diet tab',
+        (tester) async {
+      await tester.pumpWidget(host());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(GlassTabBar.itemKey(kDietTabIndex)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(DietCalendarButton.buttonKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DietCalendarSheet), findsOneWidget);
+    });
+
+    testWidgets('the You tab is headed "You" and holds Profile, Activity and '
+        'Analysis', (tester) async {
+      await tester.pumpWidget(host());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(GlassTabBar.itemKey(kYouTabIndex)));
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: find.byType(AppBar), matching: find.text('You')),
+          findsOneWidget);
+      for (final segment in YouSegment.values) {
+        expect(find.byKey(YouRoot.segmentKey(segment)), findsOneWidget,
+            reason: '${segment.label} is a segment of You');
+      }
+      expect(find.text('History'), findsNothing,
+          reason: 'there is no History tab or header any more');
+
+      expect(find.text('No workouts yet').hitTestable(), findsOneWidget,
+          reason: 'You opens on Activity: the old History tab, now a pane');
+
+      await tester.tap(find.byKey(YouRoot.segmentKey(YouSegment.profile)));
+      await tester.pumpAndSettle();
+      expect(find.text(ProfilePersonalPane.yoursGroupLabel).hitTestable(),
+          findsOneWidget,
+          reason: 'and Profile is one tap away');
     });
 
     testWidgets('the shell declares one spec per bar label', (tester) async {
@@ -261,6 +354,14 @@ void main() {
           reason: 'every bar slot needs a root and a header behind it');
       expect(L0Shell.tabs, hasLength(kL0TabCount),
           reason: 'the index range and the specs must agree');
+      expect(GlassTabBar.labels, <String>['Diet', 'Workout', 'Muscles', 'You'],
+          reason: 'Diet | Workout | Muscles | You (ADR 0016)');
+      expect(
+        L0Shell.tabs.map((t) => t.body.runtimeType).toList(),
+        <Type>[DietRoot, WorkoutRoot, MusclesRoot, YouRoot],
+        reason: 'the roots sit behind the labels in the same order, and '
+            'History is not a tab any more: it is You, Activity',
+      );
       expect(
         L0Shell.tabs.map((t) => t.title).toList(),
         GlassTabBar.labels,
@@ -295,8 +396,12 @@ void main() {
       expect(barHeight, greaterThan(0), reason: 'the bar must have a height');
 
       for (final rootType in const <Type>[
+        DietRoot,
         WorkoutRoot,
         MusclesRoot,
+        YouRoot,
+        // Mounted inside You, as its Activity pane: the inset must reach it
+        // through the segment control's column just the same.
         HistoryRoot,
       ]) {
         // skipOffstage: false — IndexedStack keeps all four roots mounted but
@@ -317,7 +422,7 @@ void main() {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(GlassTabBar.itemKey(2)));
+      await tester.tap(find.byKey(GlassTabBar.itemKey(kYouTabIndex)));
       await tester.pumpAndSettle();
       expect(find.byType(GlassTabBar).hitTestable(), findsOneWidget,
           reason: 'the bar is up at L0 before anything is pushed');
@@ -344,9 +449,9 @@ void main() {
       expect(find.byType(GlassTabBar).hitTestable(), findsOneWidget,
           reason: 'popping back to L0 brings the bar back');
       expect(tester.widget<GlassTabBar>(find.byType(GlassTabBar)).selectedIndex,
-          2,
+          kYouTabIndex,
           reason: 'the tab selected before the push must still be selected');
-      expect(find.text(rootText[2]).hitTestable(), findsOneWidget,
+      expect(find.text(rootText[kYouTabIndex]).hitTestable(), findsOneWidget,
           reason: 'and its root must still be the one showing');
     });
 
@@ -372,7 +477,7 @@ void main() {
           reason: 'the bar must still occupy its space under the barrier');
     });
 
-    testWidgets('a push from the Profile tab covers the bar, and pops back',
+    testWidgets('a push from the You tab covers the bar, and pops back',
         (tester) async {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
@@ -381,7 +486,9 @@ void main() {
       // `find.byType(L0Shell)` matches nothing.
       final navigator = navigatorOf(tester);
 
-      await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
+      await tester.tap(find.byKey(GlassTabBar.itemKey(kYouTabIndex)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(YouRoot.segmentKey(YouSegment.profile)));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(profileRowKey('export')));
       await tester.pumpAndSettle();
@@ -391,7 +498,7 @@ void main() {
       // its barrier, so hitTestable() alone would pass for the very thing this
       // is meant to rule out -- the dialog test above asserts exactly that.
       expect(find.byType(GlassTabBar), findsNothing,
-          reason: 'a Profile row opens an opaque page route, so the bar goes '
+          reason: 'a Profile-pane row opens an opaque page route, so the bar goes '
               'offstage; a modal sheet would leave it onstage underneath');
       expect(find.byType(GlassTabBar, skipOffstage: false), findsOneWidget,
           reason: 'the shell stays mounted beneath the route, so the tab '
@@ -402,7 +509,7 @@ void main() {
       expect(find.byType(GlassTabBar).hitTestable(), findsOneWidget,
           reason: 'popping returns to the shell');
       expect(tester.widget<GlassTabBar>(find.byType(GlassTabBar)).selectedIndex,
-          3,
+          kYouTabIndex,
           reason: 'and to the same tab');
     });
   });

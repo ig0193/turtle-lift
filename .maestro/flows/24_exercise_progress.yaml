@@ -17,7 +17,7 @@ tags: [history]
     file: ../subflows/log_bench_at.yaml
     env: { WEIGHT: "70" }
 
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - tapOn: "Barbell bench press, quick log, Today · 1 exercise · 1 set"
 - scrollUntilVisible:
     element: "Barbell bench press\n.*"

@@ -4,6 +4,14 @@ Date: 2026-11-08
 
 ## Status
 
+> **Placement reversed by [ADR 0016](0016-you-tab-and-diet-tab.md):** Diet is its
+> own tab, first in the bar, not a Profile segment.
+
+> **Amended by [ADR 0015](0015-diet-is-a-log.md):** Diet is a dated log, not a
+> weekly plan. The weekly versions, "Repeat on", the eaten tick, the first-time
+> state and the morning summary are gone; the protein rule, the food list, the
+> target and the opt-in meal reminders stand.
+
 Proposed — awaiting owner signature. **Amends the "not a nutrition app" line** in
 `docs/01` §Not trying to be (and its V2 parking-lot entries), and the matching
 lines in `docs/00` §13 and `CLAUDE.md` §Out of scope, for a protein-only weekly

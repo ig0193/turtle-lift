@@ -6,25 +6,26 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/main.dart' as app;
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/data_reset.dart';
-import 'package:turtle_lift/src/data/diet_plan.dart';
-import 'package:turtle_lift/src/data/diet_plan_store.dart';
+import 'package:turtle_lift/src/data/diet_log.dart';
+import 'package:turtle_lift/src/data/diet_log_store.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/data/food_index.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/meal_slot.dart';
-import 'package:turtle_lift/src/data/meal_ticks.dart';
 import 'package:turtle_lift/src/data/reminder_prefs.dart';
 import 'package:turtle_lift/src/data/reminder_scheduler.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
 import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/ui/diet_pane.dart';
+import 'package:turtle_lift/src/ui/diet_root.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
 import 'package:turtle_lift/src/ui/history_root.dart';
 import 'package:turtle_lift/src/ui/l0_shell.dart';
 import 'package:turtle_lift/src/ui/muscles_root.dart';
-import 'package:turtle_lift/src/ui/profile_root.dart';
+import 'package:turtle_lift/src/ui/you_root.dart';
 import 'package:turtle_lift/src/ui/tab_index.dart';
+import 'package:turtle_lift/src/ui/tab_routes.dart' show kDietTabIndex, kWorkoutTabIndex;
 import 'package:turtle_lift/src/ui/workout_root.dart';
 
 import 'support/fake_reminder_scheduler.dart';
@@ -79,7 +80,13 @@ void main() {
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [exerciseIndexProvider.overrideWithValue(index)],
+        overrides: [
+          exerciseIndexProvider.overrideWithValue(index),
+          // Diet is a tab now and the shell builds every tab, so the food
+          // list has to be there from the first frame (main() overrides it
+          // before runApp; this test imitates main()).
+          foodIndexProvider.overrideWithValue(FoodIndex.fromJson(const [])),
+        ],
         child: const app.TurtleLiftApp(),
       ),
     );
@@ -195,19 +202,25 @@ void main() {
         reason: 'the exercise library is unaffected by the food list');
 
     // Every tab still renders: walk the bar and look for each root on stage.
-    final roots = <Type>[WorkoutRoot, MusclesRoot, HistoryRoot, ProfileRoot];
+    final roots = <Type>[DietRoot, WorkoutRoot, MusclesRoot, YouRoot];
     for (var tab = 0; tab < roots.length; tab++) {
       await tester.tap(find.byKey(GlassTabBar.itemKey(tab)));
       await tester.pumpAndSettle();
       expect(find.byType(roots[tab]), findsOneWidget,
           reason: 'tab $tab must render with the food list unavailable');
     }
+    // The Activity pane (the old History tab) lives inside You, and Diet's
+    // own unavailable copy is what its tab shows.
+    expect(find.byType(HistoryRoot), findsOneWidget);
+    await tester.tap(find.byKey(GlassTabBar.itemKey(kDietTabIndex)));
+    await tester.pumpAndSettle();
+    expect(find.byKey(DietPane.unavailableKey), findsOneWidget);
     expect(find.byType(ErrorWidget), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('main() seeds the Diet plan, ticks and target from the '
-      'database, and refreshes today on resume', (tester) async {
+  testWidgets('main() seeds the Diet log and target from the database, and '
+      'refreshes today on resume', (tester) async {
     final database = AppDatabase.forTesting(NativeDatabase.memory());
     app.openAppDatabase = () => database;
     addTearDown(() async {
@@ -216,13 +229,12 @@ void main() {
     });
     final today = LocalDate.today();
     await tester.runAsync(() async {
-      await DietPlanStore(database).addFood(
-        weekdays: <int>{today.weekday - 1},
+      await DietLogStore(database).addFood(
+        date: today,
         slot: MealSlot.lunch,
         foodId: 'any-food',
         halves: 2,
       );
-      await MealTickStore(database).toggle(today, MealSlot.lunch);
       await SettingsStore(database).writeProteinTarget(140);
     });
 
@@ -231,10 +243,11 @@ void main() {
 
     final container =
         ProviderScope.containerOf(tester.element(find.byType(L0Shell)));
-    expect(container.read(dietPlanLogProvider).single.items.single.foodId,
-        'any-food');
-    expect(container.read(mealTicksProvider),
-        <MealTick>{MealTick(date: today, slot: MealSlot.lunch)});
+    final log = container.read(dietLogProvider).single;
+    expect(log.foodId, 'any-food');
+    expect(log.date, today);
+    expect(log.slot, MealSlot.lunch);
+    expect(log.servingsHalves, 2);
     expect(container.read(proteinTargetProvider), 140);
     expect(find.byType(app.RefreshTodayOnResume), findsOneWidget,
         reason: 'the app must re-read today when it comes back (KTD13)');
@@ -256,16 +269,18 @@ void main() {
         ProviderScope.containerOf(tester.element(find.byType(L0Shell)));
     expect(container.read(proteinTargetProvider), isNotNull,
         reason: 'tests run in debug mode, where main() seeds a sample diet');
-    expect(container.read(dietPlanLogProvider).single.items, isNotEmpty);
-    expect(container.read(mealTicksProvider), hasLength(1));
+    final log = container.read(dietLogProvider);
+    expect(log, isNotEmpty);
+    expect(log.every((e) => e.date <= LocalDate.today()), isTrue,
+        reason: 'a log never holds a meal that has not been eaten yet');
   });
 
   group('reminders at boot (KTD17)', () {
     ProviderContainer shellContainer(WidgetTester tester) =>
         ProviderScope.containerOf(tester.element(find.byType(L0Shell)));
 
-    testWidgets('a cold-start diet/today launch boots into Profile with Diet '
-        'selected (AE6)', (tester) async {
+    testWidgets('a cold-start diet/today launch boots into the Diet tab '
+        '(AE6)', (tester) async {
       final database = AppDatabase.forTesting(NativeDatabase.memory());
       app.openAppDatabase = () => database;
       app.prepareReminders = () async => ReminderTarget.dietToday;
@@ -278,14 +293,13 @@ void main() {
       await tester.pump();
 
       final container = shellContainer(tester);
-      expect(container.read(tabIndexProvider), 3);
-      expect(container.read(profileSegmentProvider), ProfileSegment.diet);
+      expect(container.read(tabIndexProvider), kDietTabIndex);
       expect(find.byType(DietPane), findsOneWidget,
-          reason: 'the first frame after boot is Profile, Diet');
+          reason: 'the first frame after boot is the Diet tab');
     });
 
     testWidgets('after a cold-start diet launch, Delete all data and the '
-        'reboot land on Personal, not Diet (AE8)', (tester) async {
+        'reboot land on Workout, not Diet (AE8)', (tester) async {
       final database = AppDatabase.forTesting(NativeDatabase.memory());
       app.openAppDatabase = () => database;
       app.prepareReminders = () async {
@@ -299,8 +313,7 @@ void main() {
 
       await tester.runAsync(app.main);
       await tester.pumpAndSettle();
-      expect(shellContainer(tester).read(profileSegmentProvider),
-          ProfileSegment.diet);
+      expect(shellContainer(tester).read(tabIndexProvider), kDietTabIndex);
 
       final restart = shellContainer(tester).read(appRestartProvider);
       final reminders = FakeReminderScheduler();
@@ -311,11 +324,11 @@ void main() {
       await tester.pumpAndSettle();
 
       final rebooted = shellContainer(tester);
-      expect(rebooted.read(profileSegmentProvider), ProfileSegment.personal,
+      expect(rebooted.read(youSegmentProvider), YouSegment.activity);
+      expect(rebooted.read(tabIndexProvider), kWorkoutTabIndex,
           reason: 'the launch target belongs to the first boot only; the '
               'plugin reports it for the whole process');
-      expect(rebooted.read(tabIndexProvider), 0);
-      expect(rebooted.read(dietPlanLogProvider), isEmpty,
+      expect(rebooted.read(dietLogProvider), isEmpty,
           reason: 'the debug sample diet is never re-seeded after a wipe');
       expect(rebooted.read(proteinTargetProvider), isNull);
       expect(prepareCalls, 1,
@@ -332,14 +345,16 @@ void main() {
         await database.close();
       });
       final stored = ReminderPreferences.defaults
-          .copyWith(dietOn: true, summaryOn: true, summaryMinute: 6 * 60);
+          .copyWith(dietOn: true)
+          .withSlot(MealSlot.lunch,
+              const SlotReminder(on: true, minute: 12 * 60));
       await tester.runAsync(() => ReminderPrefsStore(database).write(stored));
 
       await tester.runAsync(app.main);
       await tester.pumpAndSettle();
 
       expect(shellContainer(tester).read(reminderPrefsProvider), stored);
-      expect(shellContainer(tester).read(tabIndexProvider), 0,
+      expect(shellContainer(tester).read(tabIndexProvider), kWorkoutTabIndex,
           reason: 'with no launch target the app opens on Workout');
     });
 

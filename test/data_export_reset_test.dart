@@ -9,20 +9,18 @@ import 'package:turtle_lift/src/data/body_gender.dart';
 import 'package:turtle_lift/src/data/custom_templates.dart';
 import 'package:turtle_lift/src/data/data_export.dart';
 import 'package:turtle_lift/src/data/data_reset.dart';
-import 'package:turtle_lift/src/data/diet_plan_store.dart';
+import 'package:turtle_lift/src/data/diet_log_store.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/exercise_library.dart';
 import 'package:turtle_lift/src/data/food_index.dart';
 import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/meal_slot.dart';
-import 'package:turtle_lift/src/data/meal_ticks.dart';
 import 'package:turtle_lift/src/data/personal_details_store.dart';
 import 'package:turtle_lift/src/data/reminder_prefs.dart';
 import 'package:turtle_lift/src/data/reminder_scheduler.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
-import 'package:turtle_lift/src/data/training_plan.dart';
 import 'package:turtle_lift/src/data/workout_templates.dart';
 
 import 'support/fake_reminder_scheduler.dart';
@@ -96,16 +94,9 @@ void main() {
             isPredefined: false,
           ),
         ],
-        trainingPlan: <TrainingPlanEntry>[
-          TrainingPlanEntry(
-            effectiveFrom: LocalDate(2026, 11, 2),
-            weekdays: <int>{5, 1, 3},
-          ),
-        ],
         gender: BodyGender.female,
         index: index,
-        dietPlan: const <DietPlanVersion>[],
-        mealTicks: const <MealTick>[],
+        dietLog: const <DietLogEntry>[],
         proteinTargetG: null,
         foods: FoodIndex.unavailable(),
         exportedAt: DateTime.utc(2026, 11, 7, 12),
@@ -127,8 +118,62 @@ void main() {
       ]);
       expect((json['templates']! as List).single,
           <String, Object?>{'name': 'Mine', 'exerciseIds': <Object?>['barbell-bench-press']});
-      expect((json['schedule']! as List).single,
-          <String, Object?>{'effectiveFrom': '2026-11-02', 'weekdays': <Object?>[1, 3, 5]});
+      expect(json.containsKey('schedule'), isFalse,
+          reason: 'the Schedule is gone (ADR 0015), so no key for it');
+    });
+
+    test('is format 2: the Schedule and the diet plan keys are gone', () {
+      expect(kExportFormatVersion, 2);
+      final json = jsonDecode(buildExportJson(
+        sessions: const <WorkoutSession>[],
+        bodyweight: const <BodyweightEntry>[],
+        customTemplates: const <WorkoutTemplate>[],
+        gender: BodyGender.male,
+        index: index,
+        dietLog: const <DietLogEntry>[],
+        proteinTargetG: null,
+        foods: FoodIndex.unavailable(),
+        exportedAt: DateTime.utc(2026, 11, 7),
+        reminders: ReminderPreferences.defaults
+            .copyWith(dietOn: true)
+            .withSlot(MealSlot.lunch,
+                const SlotReminder(on: true, minute: 12 * 60 + 15)),
+      )) as Map<String, Object?>;
+
+      expect(json['formatVersion'], 2);
+      expect(json.containsKey('schedule'), isFalse);
+      final diet = json['diet']! as Map<String, Object?>;
+      expect(diet.containsKey('planVersions'), isFalse);
+      expect(diet.containsKey('eaten'), isFalse);
+    });
+
+    test('reminders carry only the Diet switches and meal times', () {
+      final json = jsonDecode(buildExportJson(
+        sessions: const <WorkoutSession>[],
+        bodyweight: const <BodyweightEntry>[],
+        customTemplates: const <WorkoutTemplate>[],
+        gender: BodyGender.male,
+        index: index,
+        dietLog: const <DietLogEntry>[],
+        proteinTargetG: null,
+        foods: FoodIndex.unavailable(),
+        exportedAt: DateTime.utc(2026, 11, 7),
+        reminders: ReminderPreferences.defaults
+            .copyWith(dietOn: true)
+            .withSlot(MealSlot.lunch,
+                const SlotReminder(on: true, minute: 12 * 60 + 15)),
+      )) as Map<String, Object?>;
+
+      final reminders = json['reminders']! as Map<String, Object?>;
+      expect(reminders.keys.toSet(), <String>{'diet'},
+          reason: 'no training reminder');
+      final diet = reminders['diet']! as Map<String, Object?>;
+      expect(diet.keys.toSet(),
+          <String>{'on', 'breakfast', 'lunch', 'snack', 'dinner'},
+          reason: 'no morning summary');
+      expect(diet['on'], isTrue);
+      expect(diet['lunch'], <String, Object?>{'on': true, 'time': '12:15'});
+      expect(diet['breakfast'], <String, Object?>{'on': false, 'time': '08:00'});
     });
 
     test('stores nothing derived: no streak, PB, count or calorie field',
@@ -138,11 +183,9 @@ void main() {
         sessions: await store.readSavedSessions(),
         bodyweight: const <BodyweightEntry>[],
         customTemplates: const <WorkoutTemplate>[],
-        trainingPlan: const <TrainingPlanEntry>[],
         gender: BodyGender.male,
         index: index,
-        dietPlan: const <DietPlanVersion>[],
-        mealTicks: const <MealTick>[],
+        dietLog: const <DietLogEntry>[],
         proteinTargetG: null,
         foods: FoodIndex.unavailable(),
         exportedAt: DateTime.utc(2026, 11, 7),
@@ -172,19 +215,16 @@ void main() {
       ]);
 
       Future<Map<String, Object?>> exportDiet({
-        required List<DietPlanVersion> plan,
-        required List<MealTick> ticks,
+        required List<DietLogEntry> log,
         required int? target,
       }) async {
         final json = jsonDecode(buildExportJson(
           sessions: const <WorkoutSession>[],
           bodyweight: const <BodyweightEntry>[],
           customTemplates: const <WorkoutTemplate>[],
-          trainingPlan: const <TrainingPlanEntry>[],
           gender: BodyGender.male,
           index: index,
-          dietPlan: plan,
-          mealTicks: ticks,
+          dietLog: log,
           proteinTargetG: target,
           foods: foods,
           exportedAt: DateTime.utc(2026, 11, 8),
@@ -192,67 +232,61 @@ void main() {
         return json['diet']! as Map<String, Object?>;
       }
 
-      /// A target, two plan versions and a tick, written through the stores.
+      /// A target and four logged foods over two days, written through the
+      /// store.
       Future<Map<String, Object?>> exportSeeded() async {
-        await DietPlanStore(database, today: () => nov(4)).addFood(
-          weekdays: <int>{0, 2},
+        final logStore = DietLogStore(database, today: () => nov(10));
+        await logStore.addFood(
+          date: nov(4),
           slot: MealSlot.lunch,
           foodId: 'fixture-paneer',
           halves: 3,
         );
-        final week2 = DietPlanStore(database, today: () => nov(10));
-        await week2.addFood(
-          weekdays: <int>{1},
+        await logStore.addFood(
+          date: nov(4),
+          slot: MealSlot.breakfast,
+          foodId: 'fixture-paneer',
+          halves: 1,
+        );
+        await logStore.addFood(
+          date: nov(10),
           slot: MealSlot.dinner,
           foodId: 'retired-food',
           halves: 2,
         );
-        await MealTickStore(database, today: () => nov(4))
-            .toggle(nov(2), MealSlot.lunch);
         await SettingsStore(database).writeProteinTarget(120);
 
         return exportDiet(
-          plan: await week2.readVersions(),
-          ticks: await MealTickStore(database).read(),
+          log: await logStore.readEntries(),
           target: await SettingsStore(database).readProteinTarget(),
         );
       }
 
-      test('carries the target, every plan version and the ticks, with food '
-          'names beside ids', () async {
+      test('carries the target and every logged food, with food names beside '
+          'ids', () async {
         final diet = await exportSeeded();
 
         expect(diet['proteinTargetG'], 120);
-        final versions = diet['planVersions']! as List<Object?>;
-        expect(versions, hasLength(2));
-        expect(versions.first, <String, Object?>{
-          'effectiveFrom': '2026-11-02',
-          'items': <Object?>[
-            <String, Object?>{
-              'weekday': 0,
-              'slot': 'lunch',
-              'foodId': 'fixture-paneer',
-              'name': 'Fixture paneer',
-              'servings': 1.5,
-            },
-            <String, Object?>{
-              'weekday': 2,
-              'slot': 'lunch',
-              'foodId': 'fixture-paneer',
-              'name': 'Fixture paneer',
-              'servings': 1.5,
-            },
-          ],
+        final log = (diet['log']! as List<Object?>).cast<Map<String, Object?>>();
+        expect(log, hasLength(3));
+        expect(log.first, <String, Object?>{
+          'date': '2026-11-04',
+          'slot': 'breakfast',
+          'foodId': 'fixture-paneer',
+          'name': 'Fixture paneer',
+          'servings': 0.5,
         });
-        final second = versions.last! as Map<String, Object?>;
-        expect(second['effectiveFrom'], '2026-11-09');
-        expect(second['items'], hasLength(3),
-            reason: 'the copied week plus the new dinner');
+        expect(log[1], <String, Object?>{
+          'date': '2026-11-04',
+          'slot': 'lunch',
+          'foodId': 'fixture-paneer',
+          'name': 'Fixture paneer',
+          'servings': 1.5,
+        });
         expect(
-          (second['items']! as List).cast<Map<String, Object?>>().firstWhere(
-              (i) => i['foodId'] == 'retired-food'),
+          log.last,
           <String, Object?>{
-            'weekday': 1,
+            'date': '2026-11-10',
             'slot': 'dinner',
             'foodId': 'retired-food',
             'name': null,
@@ -261,12 +295,9 @@ void main() {
           reason: 'an id the food list no longer knows keeps its id, and its '
               'name is null like an unknown exercise name',
         );
-        expect(diet['eaten'], <Object?>[
-          <String, Object?>{'date': '2026-11-02', 'slot': 'lunch'},
-        ]);
       });
 
-      test('stores nothing derived: no planned, eaten total, to go, total or '
+      test('stores nothing derived: no logged total, to go, total, meter or '
           'suggested key', () async {
         final diet = await exportSeeded();
 
@@ -280,12 +311,9 @@ void main() {
                 'total',
                 'suggest',
                 'meter',
+                'eaten',
               ]) {
                 expect(key, isNot(contains(banned)), reason: '$path.$key');
-              }
-              if (key == 'eaten') {
-                expect(entry.value, isA<List<Object?>>(),
-                    reason: 'eaten is the list of ticks, never a number');
               }
               walk(entry.value, '$path.$key');
             }
@@ -297,22 +325,14 @@ void main() {
         }
 
         walk(diet, 'diet');
-        expect(diet.keys.toSet(),
-            <String>{'proteinTargetG', 'planVersions', 'eaten'});
+        expect(diet.keys.toSet(), <String>{'proteinTargetG', 'log'});
       });
 
-      test('with no diet data, diet is a null target and empty lists',
+      test('with no diet data, diet is a null target and an empty log',
           () async {
         expect(
-          await exportDiet(
-              plan: const <DietPlanVersion>[],
-              ticks: const <MealTick>[],
-              target: null),
-          <String, Object?>{
-            'proteinTargetG': null,
-            'planVersions': <Object?>[],
-            'eaten': <Object?>[],
-          },
+          await exportDiet(log: const <DietLogEntry>[], target: null),
+          <String, Object?>{'proteinTargetG': null, 'log': <Object?>[]},
         );
       });
     });
@@ -334,7 +354,6 @@ void main() {
         name: 'Mine',
         exerciseIds: 'barbell-bench-press',
       );
-      await TrainingPlanStore(database).replaceFromWeek('2026-11-02', 0x15);
       await database.into(database.customExercises).insert(
             CustomExercisesCompanion.insert(
               id: 'custom-mine',
@@ -344,13 +363,12 @@ void main() {
               primaryIds: 'quads/quads',
             ),
           );
-      await DietPlanStore(database).addFood(
-        weekdays: <int>{0, 3},
+      await DietLogStore(database).addFood(
+        date: LocalDate.today(),
         slot: MealSlot.breakfast,
         foodId: 'any-food',
         halves: 2,
       );
-      await MealTickStore(database).toggle(LocalDate.today(), MealSlot.dinner);
       await SettingsStore(database).writeProteinTarget(150);
       await ReminderPrefsStore(database)
           .write(ReminderPreferences.defaults.copyWith(dietOn: true));
