@@ -3453,7 +3453,7 @@ class ReminderPrefsRow extends DataClass
     implements Insertable<ReminderPrefsRow> {
   final int id;
 
-  /// The Schedule tab's training-day reminder (ADR 0005).
+  /// Retired: the Schedule's training-day reminder (ADR 0005, ADR 0015).
   final bool scheduleOn;
   final int scheduleMinute;
 
