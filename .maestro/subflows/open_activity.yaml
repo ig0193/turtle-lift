@@ -1,0 +1,14 @@
+# Opens the Activity pane: the You tab, then its Activity segment. Activity is
+# what the History tab was (docs/adr/0016-you-tab-and-diet-tab.md), so every
+# flow that used to `tapOn: "History"` runs this instead.
+#
+# The segment choice is kept in memory across tab switches, so the second tap
+# is needed even when You was visited before. Tapping the already-selected
+# segment is harmless.
+appId: dev.indresh.turtleLift
+---
+- tapOn: "You"
+- tapOn: "Activity"
+- assertVisible:
+    text: "Activity"
+    selected: true

@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/derived.dart';
 import 'package:turtle_lift/src/data/history_preview_data.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
-import 'package:turtle_lift/src/data/training_plan.dart' show planClockProvider, planTodayProvider;
+import 'package:turtle_lift/src/data/today.dart' show planClockProvider, planTodayProvider;
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/history_calendar_card.dart';
 import 'package:turtle_lift/src/ui/history_root.dart';

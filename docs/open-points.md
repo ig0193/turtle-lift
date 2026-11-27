@@ -5,19 +5,19 @@ committed yet.
 
 ## Before shipping
 
-### 1. ~~The "Remind me" switch does nothing~~ Resolved
-- **Resolved by U16** of `docs/plans/2026-11-08-1702-feat-diet-weekly-protein-plan.md`.
-  The switch and time are stored (`ReminderPrefs`, schema v7). Turning it on
-  shows the explain-first sheet, then the system prompt. Once allowed, one
-  weekly notification is scheduled per training day at the chosen time
-  (`lib/src/data/training_reminders.dart`). They are rescheduled after every
-  plan or time change, at boot and on resume. If permission is refused, the
-  switch stays off with a line pointing to Settings. The row is hidden where
+### 1. ~~The "Remind me" switch does nothing~~ Resolved, then trimmed
+- **Resolved by U16** of `docs/plans/2026-11-08-1702-feat-diet-weekly-protein-plan.md`,
+  and **trimmed by `docs/adr/0015-diet-is-a-log.md`**: the Schedule and its
+  training-day reminder are gone. Diet's meal reminders remain: the switch and
+  times are stored (`ReminderPrefs`, schema v7), turning it on shows the
+  explain-first sheet, then the system prompt, and one weekly "Log your lunch"
+  style notification is scheduled per enabled slot
+  (`lib/src/data/diet_reminders.dart`). If permission is refused, the switch
+  stays off with a line pointing to Settings. The row is hidden where
   notifications are unsupported. The shared controls are in
   `lib/src/ui/reminder_controls.dart`.
-- **Still to check on a device:** a delivered training reminder, and that
-  tapping it opens Profile → Schedule (the simulator smoke in the plan's
-  Verification Contract).
+- **Still to check on a device:** a delivered meal reminder, and that tapping
+  it opens Profile → Diet on today.
 
 ### 2. Export hasn't been tried end to end
 - **Where:** Profile → Export everything (`lib/src/ui/data_screens.dart`).

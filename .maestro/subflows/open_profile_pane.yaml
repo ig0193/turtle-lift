@@ -1,0 +1,14 @@
+# Opens the Profile pane: the You tab, then its Profile segment. This is what
+# the Profile tab's Personal pane was (docs/adr/0016-you-tab-and-diet-tab.md),
+# so every flow that used to `tapOn: "Profile"` as a tab runs this instead.
+#
+# The segment is always tapped: Activity is the cold-start default, and the
+# choice is kept in memory across tab switches, so You reopens on whichever
+# segment was last shown.
+appId: dev.indresh.turtleLift
+---
+- tapOn: "You"
+- tapOn: "Profile"
+- assertVisible:
+    text: "Profile"
+    selected: true

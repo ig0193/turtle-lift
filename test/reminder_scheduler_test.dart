@@ -12,16 +12,12 @@ void main() {
   setUpAll(tzdata.initializeTimeZones);
 
   group('reminder ids (KTD15)', () {
-    test('training is 100-106, one per weekday', () {
-      expect([for (var d = 0; d < 7; d++) trainingReminderId(d)],
-          [100, 101, 102, 103, 104, 105, 106]);
-      expect(kTrainingReminderIds, const ReminderIdRange(100, 106));
-    });
-
-    test('the diet summary is 200-206', () {
-      expect([for (var d = 0; d < 7; d++) dietSummaryReminderId(d)],
-          [200, 201, 202, 203, 204, 205, 206]);
-      expect(kDietSummaryReminderIds, const ReminderIdRange(200, 206));
+    test('the retired training (100-106) and summary (200-206) ranges are '
+        'kept only so they can be cancelled', () {
+      expect(kRetiredReminderIds, const <ReminderIdRange>[
+        ReminderIdRange(100, 106),
+        ReminderIdRange(200, 206),
+      ]);
     });
 
     test('a diet meal is 300 + weekday x 10 + slot', () {
@@ -31,42 +27,35 @@ void main() {
       expect(kDietMealReminderIds, const ReminderIdRange(300, 363));
     });
 
-    test('all 42 are distinct, inside their own range and under the iOS cap '
-        'of 64 pending', () {
+    test('all 28 meal ids are distinct, inside the meal range and clear of '
+        'the retired ranges', () {
       final ids = <int>{
-        for (var d = 0; d < 7; d++) ...{
-          trainingReminderId(d),
-          dietSummaryReminderId(d),
+        for (var d = 0; d < 7; d++)
           for (final slot in MealSlot.values) dietMealReminderId(d, slot),
-        },
       };
-      expect(ids, hasLength(42));
+      // 7 weekdays x 4 slots is the most Diet can ever have pending, well
+      // under the iOS cap of 64.
+      expect(ids, hasLength(28));
       expect(ids.length, lessThan(64));
-      for (var d = 0; d < 7; d++) {
-        expect(kTrainingReminderIds.contains(trainingReminderId(d)), isTrue);
-        expect(
-            kDietSummaryReminderIds.contains(dietSummaryReminderId(d)), isTrue);
-        for (final slot in MealSlot.values) {
-          final id = dietMealReminderId(d, slot);
-          expect(kDietMealReminderIds.contains(id), isTrue);
-          expect(kTrainingReminderIds.contains(id), isFalse);
-          expect(kDietSummaryReminderIds.contains(id), isFalse);
+      for (final id in ids) {
+        expect(kDietMealReminderIds.contains(id), isTrue);
+        for (final retired in kRetiredReminderIds) {
+          expect(retired.contains(id), isFalse);
         }
       }
     });
 
     test('a weekday outside 0-6 is refused', () {
-      expect(() => trainingReminderId(7), throwsArgumentError);
-      expect(() => dietSummaryReminderId(-1), throwsArgumentError);
       expect(() => dietMealReminderId(7, MealSlot.lunch), throwsArgumentError);
+      expect(() => dietMealReminderId(-1, MealSlot.lunch), throwsArgumentError);
     });
   });
 
   group('the tap payload (KTD17)', () {
     test('diet/today and schedule round-trip, never a tab index', () {
       expect(ReminderTarget.dietToday.payload, 'diet/today');
-      // Unchanged since ADR 0005, so a training reminder the OS already holds
-      // still routes after the target moved from Profile to Workout.
+      // Unchanged since ADR 0005, so a training notification the OS already
+      // delivered still opens the Workout tab after the feature was removed.
       expect(ReminderTarget.workout.payload, 'schedule');
       for (final target in ReminderTarget.values) {
         expect(ReminderTarget.fromPayload(target.payload), target);

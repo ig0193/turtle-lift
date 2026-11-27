@@ -5,8 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // What the iOS system surfaces show: the Live Activity for an open workout
-// and the home-screen widget's week
-// (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`).
+// and the home-screen widget's last workout
+// (`docs/adr/0008-the-week-lives-on-the-workout-landing.md`, trimmed by
+// `docs/adr/0015-diet-is-a-log.md`).
 //
 // **Told, never asked.** Every value here is derived in Dart at the moment it
 // is sent and pushed whole; the native side keeps only the last thing it was
@@ -61,7 +62,9 @@ class SessionGlance {
   int get hashCode => Object.hash(title, done, total, clockStart);
 }
 
-/// One plan day on the widget: its short name and `hit`, `empty` or `ahead`.
+/// One day marker on the widget: its short name and `hit`, `empty` or `ahead`.
+/// **Always empty now**: the training plan it marked is gone, and the type
+/// stays because the widget's decoder still expects the `days` key.
 @immutable
 class GlanceDay {
   const GlanceDay(this.label, this.state);
@@ -77,10 +80,9 @@ class GlanceDay {
   int get hashCode => Object.hash(label, state);
 }
 
-/// This week and the last workout, as the home-screen widget shows them.
-///
-/// The same words as the Workout landing's strip, because they come from the
-/// same functions: counts and days, never a verdict, never a workout to do.
+/// What the home-screen widget shows. See `weekGlanceProvider`: the last
+/// workout travels in [headline], and [caption], [days] and [lastWorkout] are
+/// empty, because the wire shape is the one the widget already decodes.
 @immutable
 class WeekGlance {
   const WeekGlance({
@@ -90,14 +92,14 @@ class WeekGlance {
     required this.lastWorkout,
   });
 
-  /// "1 of 3 this week", or the quiet line when there is no week to show.
+  /// "Yesterday · Push day · 14 sets", or the quiet line with no history.
   final String headline;
 
-  /// "2 more to go. Next is Wednesday", or empty.
+  /// Empty.
   final String caption;
   final List<GlanceDay> days;
 
-  /// "Yesterday · Push day · 14 sets", or null with no history.
+  /// Null.
   final String? lastWorkout;
 
   Map<String, Object?> toJson() => <String, Object?>{

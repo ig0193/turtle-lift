@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/diet_derived.dart';
+import '../data/local_date.dart';
 import '../data/meal_slot.dart';
 import '../theme/app_palette.dart';
 import 'diet_type_glyph.dart';
@@ -10,30 +11,25 @@ import 'food_serving_sheet.dart';
 /// One meal slot on the selected day (`.slot` in `prototypes/diet.html`).
 ///
 /// A bordered card: the [DietSlotHeader] (name, and the slot total once
-/// anything is planned), one row per food, and "+ Add food", which opens the
-/// picker for this weekday and slot. Tapping a row opens the serving sheet in
-/// edit mode for that weekday only (U11). Every figure comes from
-/// [DietSlotDay], computed on read.
+/// anything is logged), one row per food, and "+ Add food", which opens the
+/// picker for this date and slot. Tapping a row opens the serving sheet in
+/// edit mode for that day only. Every figure comes from [DietSlotDay],
+/// computed on read.
 class DietSlotCard extends StatelessWidget {
   const DietSlotCard({
     required this.slotDay,
-    required this.weekday,
-    this.headerTrailing,
+    required this.date,
     this.headerSubtitle,
     super.key,
   });
 
   final DietSlotDay slotDay;
 
-  /// 0 = Monday to 6 = Sunday: the day "+ Add food" plans into.
-  final int weekday;
-
-  /// Passed to [DietSlotHeader.trailing]: the [DietEatenTick], only where
-  /// [DietSlotDay.canTick] (R18).
-  final Widget? headerTrailing;
+  /// The day "+ Add food" logs into.
+  final LocalDate date;
 
   /// Passed to [DietSlotHeader.subtitle]: the reminder time, shown only when
-  /// that slot's reminder is on (U17, A7).
+  /// that slot's reminder is on (A7).
   final String? headerSubtitle;
 
   static const String addFoodLabel = '+ Add food';
@@ -48,10 +44,6 @@ class DietSlotCard extends StatelessWidget {
   @visibleForTesting
   static Key addFoodKey(MealSlot slot) =>
       ValueKey<String>('diet-slot-add-${slot.name}');
-
-  /// The slot's eaten tick, when it has one.
-  static Key tickKey(MealSlot slot) =>
-      ValueKey<String>('diet-slot-tick-${slot.name}');
 
   @visibleForTesting
   static Key rowKey(MealSlot slot, String foodId) =>
@@ -74,14 +66,13 @@ class DietSlotCard extends StatelessWidget {
             slot: slot,
             proteinG: slotDay.isEmpty ? null : slotDay.proteinG,
             subtitle: headerSubtitle,
-            trailing: headerTrailing,
           ),
           for (final row in slotDay.items)
-            _FoodRow(key: rowKey(slot, row.item.foodId), row: row),
+            _FoodRow(key: rowKey(slot, row.entry.foodId), row: row),
           _AddFoodRow(
             key: addFoodKey(slot),
             slot: slot,
-            weekday: weekday,
+            date: date,
             divided: !slotDay.isEmpty,
           ),
         ],
@@ -90,18 +81,13 @@ class DietSlotCard extends StatelessWidget {
   }
 }
 
-/// `.sh`: the slot name (with an optional line under it) and, when something
-/// is planned, the slot total right-aligned, then an optional trailing
-/// control.
-///
-/// **Public because two later units hang things on it**: the eaten tick
-/// goes in [trailing] (U14) and the reminder time in [subtitle] (U17).
+/// `.sh`: the slot name (with an optional line under it, the reminder time)
+/// and, when something is logged, the slot total right-aligned.
 class DietSlotHeader extends StatelessWidget {
   const DietSlotHeader({
     required this.slot,
     required this.proteinG,
     this.subtitle,
-    this.trailing,
     super.key,
   });
 
@@ -110,18 +96,13 @@ class DietSlotHeader extends StatelessWidget {
   /// The slot total in whole grams, or null for an empty slot (no total).
   final int? proteinG;
   final String? subtitle;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     final total = proteinG;
     return Container(
       constraints: const BoxConstraints(minHeight: 48),
-      // A trailing control brings its own 48pt box, so the header gives up
-      // the padding that box already provides rather than growing past it.
-      padding: trailing == null
-          ? const EdgeInsets.fromLTRB(12, 12, 12, 8)
-          : const EdgeInsets.fromLTRB(12, 0, 4, 0),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       child: Row(
         children: <Widget>[
           Expanded(
@@ -141,84 +122,10 @@ class DietSlotHeader extends StatelessWidget {
             Text(
               '$total g',
               key: DietSlotCard.totalKey(slot),
-              semanticsLabel: '${slot.label}: $total g planned',
+              semanticsLabel: '${slot.label}: $total g logged',
               style: _totalStyle,
             ),
-          if (trailing != null) ...<Widget>[
-            const SizedBox(width: 2),
-            trailing!,
-          ],
         ],
-      ),
-    );
-  }
-}
-
-/// `.tickbtn`: one tap marks a slot eaten on its date (R18, KD2).
-///
-/// **Outlined, never filled**, like every selection control in the app: off
-/// is a quiet [AppPalette.border] ring with no glyph; on is an
-/// [AppPalette.accentStrong] ring and check. The accent is the eaten colour
-/// on Diet (KTD20), the same one the eaten layer of the day bar uses.
-///
-/// A 32pt ring in a 48pt tap target. The semantics name the slot and the
-/// state ("Lunch eaten", "Lunch not eaten"), so a screen reader hears what a
-/// tap will change without relying on the ring's colour.
-class DietEatenTick extends StatelessWidget {
-  const DietEatenTick({
-    required this.slot,
-    required this.ticked,
-    required this.onTap,
-    super.key,
-  });
-
-  final MealSlot slot;
-  final bool ticked;
-  final VoidCallback onTap;
-
-  @visibleForTesting
-  static const Key ringKey = ValueKey<String>('diet-eaten-tick-ring');
-
-  /// "Lunch eaten" / "Lunch not eaten".
-  static String labelFor(MealSlot slot, {required bool ticked}) =>
-      '${slot.label} ${ticked ? 'eaten' : 'not eaten'}';
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      checked: ticked,
-      label: labelFor(slot, ticked: ticked),
-      excludeSemantics: true,
-      onTap: onTap,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox.square(
-          dimension: 48,
-          child: Center(
-            child: Container(
-              key: ringKey,
-              width: 32,
-              height: 32,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  width: 1.5,
-                  color: ticked ? AppPalette.accentStrong : AppPalette.border,
-                ),
-              ),
-              child: ticked
-                  ? const Icon(
-                      Icons.check_rounded,
-                      size: 18,
-                      color: AppPalette.accentStrong,
-                    )
-                  : null,
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -285,20 +192,20 @@ class _FoodRow extends StatelessWidget {
 class _AddFoodRow extends StatelessWidget {
   const _AddFoodRow({
     required this.slot,
-    required this.weekday,
+    required this.date,
     required this.divided,
     super.key,
   });
 
   final MealSlot slot;
-  final int weekday;
+  final LocalDate date;
 
   /// A rule above it when rows sit above; an empty slot has none.
   final bool divided;
 
   @override
   Widget build(BuildContext context) {
-    void open() => pushFoodPicker(context, weekday: weekday, slot: slot);
+    void open() => pushFoodPicker(context, date: date, slot: slot);
     return Semantics(
       container: true,
       button: true,

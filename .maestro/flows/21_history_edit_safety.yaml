@@ -13,7 +13,7 @@ tags: [history]
 - runFlow: ../subflows/log_bench_workout.yaml
 - waitForAnimationToEnd
 - tapOn: "Back"
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - tapOn: ".*Today · 1 exercise · 2 sets"
 - scrollUntilVisible:
     element: "Edit workout"

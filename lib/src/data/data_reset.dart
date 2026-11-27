@@ -28,15 +28,12 @@ Future<void> wipeAllData(
 }) async {
   await db.transaction(() async {
     await db.delete(db.reminderPrefs).go();
-    await db.delete(db.mealTicks).go();
-    await db.delete(db.dietPlanItems).go();
-    await db.delete(db.dietPlanVersions).go();
+    await db.delete(db.dietLogEntries).go();
     await db.delete(db.setEntries).go();
     await db.delete(db.sessionExercises).go();
     await db.delete(db.sessions).go();
     await db.delete(db.customTemplates).go();
     await db.delete(db.customExercises).go();
-    await db.delete(db.trainingPlanEntries).go();
     await db.delete(db.bodyweightEntries).go();
     await db.delete(db.settings).go();
   });

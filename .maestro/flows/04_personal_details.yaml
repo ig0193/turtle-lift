@@ -1,4 +1,4 @@
-# User story: Profile -> Personal details: choose the body diagram gender and
+# User story: You -> Profile -> Personal details: choose the body diagram gender and
 # record a bodyweight; the calorie estimate appears for workouts logged after
 # it; both survive a kill and relaunch.
 appId: dev.indresh.turtleLift
@@ -7,11 +7,8 @@ tags: [profile]
 ---
 - launchApp:
     clearState: true
-- tapOn: "Profile"
-# Profile opens on Personal (ADR 0007 §2).
-- assertVisible:
-    text: "Personal"
-    selected: true
+# You opens on its Profile segment (ADR 0016); the subflow asserts it.
+- runFlow: ../subflows/open_profile_pane.yaml
 - tapOn: "Personal details.*"
 - assertVisible:
     text: "Male"
@@ -36,7 +33,7 @@ tags: [profile]
 # --- persists
 - stopApp
 - launchApp
-- tapOn: "Profile"
+- runFlow: ../subflows/open_profile_pane.yaml
 - tapOn: "Personal details.*"
 - assertVisible:
     text: "Female"
@@ -50,4 +47,4 @@ tags: [profile]
 - tapOn: "Workout"
 - runFlow: ../subflows/log_bench_workout.yaml
 - assertVisible: ".*kcal.*"
-- assertNotVisible: ".*Add your bodyweight in Profile to see kcal.*"
+- assertNotVisible: ".*Add your bodyweight in You, Profile to see kcal.*"

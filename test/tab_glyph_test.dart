@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
+import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
 import 'package:turtle_lift/src/ui/tab_glyph.dart';
 
 /// Guards the one property the tab bar buys by hand-painting these icons: the
@@ -96,7 +97,7 @@ void main() {
       expect(
         base.shouldRepaint(
           const TabGlyphPainter(
-            glyph: TabGlyph.history,
+            glyph: TabGlyph.diet,
             strokeWidth: kTabGlyphStrokeWidth,
             color: AppPalette.textSecondary,
           ),
@@ -190,8 +191,8 @@ void main() {
         // The stroke must stay in logical pixels while the 24-unit viewBox is
         // scaled down to the 22px slot -- if the canvas were scaled instead,
         // 2.2 would silently land as 2.017 on screen.
-        const painter = TabGlyphPainter(
-          glyph: TabGlyph.workout,
+        final painter = TabGlyphPainter(
+          glyph: glyph,
           strokeWidth: kTabGlyphSelectedStrokeWidth,
           color: AppPalette.textSecondary,
         );
@@ -203,6 +204,39 @@ void main() {
         expect(bounds.bottom, lessThanOrEqualTo(kTabGlyphSize));
       });
     }
+  });
+
+  group('the diet glyph (a bowl and two wisps of steam)', () {
+    // The selected weight is the widest the bar ever strokes it, and a stroke
+    // is centred on the path, so half of it hangs outside the geometry. The
+    // whole stroke, not just the path, has to stay inside the slot.
+    test('keeps its whole selected stroke inside the slot', () {
+      final bounds = _painterFor(TabGlyph.diet)
+          .pathFor(const Size.square(kTabGlyphSize))
+          .getBounds()
+          .inflate(kTabGlyphSelectedStrokeWidth / 2);
+      expect(bounds.left, greaterThanOrEqualTo(0));
+      expect(bounds.top, greaterThanOrEqualTo(0));
+      expect(bounds.right, lessThanOrEqualTo(kTabGlyphSize));
+      expect(bounds.bottom, lessThanOrEqualTo(kTabGlyphSize));
+    });
+
+    test('is its own drawing, not a copy of another tab glyph', () {
+      final diet = _painterFor(TabGlyph.diet)
+          .pathFor(const Size.square(kTabGlyphSize))
+          .getBounds();
+      for (final other in TabGlyph.values.where((g) => g != TabGlyph.diet)) {
+        final bounds = _painterFor(other)
+            .pathFor(const Size.square(kTabGlyphSize))
+            .getBounds();
+        expect(bounds, isNot(diet), reason: 'diet matches ${other.name}');
+      }
+    });
+
+    test('the tab bar draws it first, ahead of the barbell', () {
+      expect(GlassTabBar.glyphs.first, TabGlyph.diet);
+      expect(GlassTabBar.glyphs[1], TabGlyph.workout);
+    });
   });
 }
 

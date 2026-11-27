@@ -1,14 +1,14 @@
-# User story (ADR 0014): Personal ends with About (version, the privacy
-# promise, open-source licences). A training plan alone is something to
+# User story (ADR 0014): You > Profile ends with About (version, the privacy
+# promise, open-source licences). A diet target alone is something to
 # export and is counted; Export says it adds a CSV. Delete all data offers
 # Export first and says exported files are not touched.
 appId: dev.indresh.turtleLift
-name: 30 Profile - About, export a schedule, Export first
+name: 30 Profile - About, export a diet target, Export first
 tags: [profile, data]
 ---
 - launchApp:
     clearState: true
-- tapOn: "Profile"
+- runFlow: ../subflows/open_profile_pane.yaml
 - scrollUntilVisible:
     element: "Open-source licences"
     centerElement: true
@@ -20,17 +20,18 @@ tags: [profile, data]
 - assertVisible: ".*TurtleLift.*"
 - tapOn: "Back"
 
-# --- a schedule alone makes something to export (B9)
-- scrollUntilVisible:
-    element: "Personal"
-    direction: UP
-- tapOn: "Schedule"
-- tapOn: "Monday"
-- tapOn: "Thursday"
-- tapOn: "Personal"
+# --- a diet target alone makes something to export (B9). The segment control
+# is pinned above the panes, so there is nothing to scroll back to.
+- tapOn: "Diet"
+- tapOn: "Set a daily target"
+- tapOn: { id: "protein-target-field" }
+- inputText: "120"
+- tapOn: "Daily protein target"
+- tapOn: "Save"
+- runFlow: ../subflows/open_profile_pane.yaml
 - tapOn: "Export everything"
 - assertNotVisible: "Nothing to export yet.*"
-- assertVisible: ".*Training days.*2 a week.*"
+- assertVisible: ".*Foods logged.*0.*"
 - assertVisible: ".*CSV of your sets.*"
 - assertVisible:
     text: "Export"
@@ -42,6 +43,6 @@ tags: [profile, data]
 - assertVisible: ".*Files you already exported or shared are not touched\\..*"
 - tapOn: "Export first"
 - assertVisible: "Export everything"
-- assertVisible: ".*Training days.*2 a week.*"
+- assertVisible: ".*Foods logged.*0.*"
 - tapOn: "Back"
 - assertVisible: "Delete all data"

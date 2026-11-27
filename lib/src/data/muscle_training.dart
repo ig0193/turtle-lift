@@ -6,7 +6,7 @@ import 'exercise_index.dart';
 import 'local_date.dart';
 import 'session_store.dart';
 import 'set_format.dart';
-import 'training_plan.dart' show planTodayProvider, startOfWeek;
+import 'today.dart' show planTodayProvider, startOfWeek;
 
 /// What the log says about one sub-muscle group, for the Muscles map
 /// (`docs/adr/0012-muscles-tab-shows-your-training.md`).

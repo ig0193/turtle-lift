@@ -4,12 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/diet_derived.dart' show suggestedTargetProvider;
 import '../data/date_labels.dart' show shortDateLabel;
-import '../data/diet_plan.dart' show proteinTargetProvider;
+import '../data/diet_log.dart' show proteinTargetProvider;
 import '../data/local_date.dart' show LocalDate;
 import '../data/bodyweight_resolution.dart' show weightInEffectProvider;
 import '../data/settings_store.dart'
     show kMaxProteinTargetG, kMinProteinTargetG;
-import '../data/training_plan.dart' show planTodayProvider;
+import '../data/today.dart' show planTodayProvider;
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
 import 'ghost_button.dart';
@@ -342,9 +342,9 @@ class _AddBodyweightBox extends StatelessWidget {
 /// A quiet in-text action with a 48pt tap target: "Set a daily target",
 /// "Add your bodyweight to get a suggestion".
 ///
-/// **Not in the accent.** On Diet the accent means one thing, eaten (the tick
-/// and the eaten layer, KTD20), so a link carries its affordance with weight
-/// and an underline instead.
+/// **Not in the accent.** On Diet the accent means one thing, what has been
+/// logged (the day bar's layer, KTD20), so a link carries its affordance with
+/// weight and an underline instead.
 class DietTextLink extends StatelessWidget {
   const DietTextLink({required this.label, required this.onTap, super.key});
 

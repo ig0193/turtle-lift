@@ -58,7 +58,7 @@ tags: [templates]
       - tapOn: "Discard"
 
 # --- Manage on Profile: duplicate a predefined one, rename, delete.
-- tapOn: "Profile"
+- runFlow: ../subflows/open_profile_pane.yaml
 - assertVisible: "My workout templates\\. 11 predefined · 1 custom"
 - tapOn: "My workout templates.*"
 - tapOn: "Duplicate Push day"

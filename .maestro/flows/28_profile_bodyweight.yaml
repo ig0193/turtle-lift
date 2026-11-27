@@ -2,27 +2,27 @@
 # one is confirmed and shows on the Personal row; when a protein target is
 # set, a weigh-in that moves the suggestion offers Update target, which
 # opens the target screen pre-filled and changes nothing until Save. The
-# segment control stays reachable after scrolling a long Diet day.
+# segment control stays reachable after scrolling a long You > Profile pane.
 appId: dev.indresh.turtleLift
 name: 28 Profile - bodyweight range, confirmation, suggestion follow-up
 tags: [profile]
 ---
 - launchApp:
     clearState: true
-- tapOn: "Profile"
+- runFlow: ../subflows/open_profile_pane.yaml
 - assertVisible: "Personal details\\. No weight yet · male diagram"
 
-# --- a target first, typed by hand
+# --- a target first, typed by hand (Diet is its own tab, ADR 0016)
 - tapOn: "Diet"
 - tapOn: "Set a daily target"
 - tapOn: { id: "protein-target-field" }
 - inputText: "100"
 - tapOn: "Daily protein target"
 - tapOn: "Save"
-- assertVisible: "0 of 100 g planned.*"
+- assertVisible: "0 of 100 g logged.*"
 
 # --- B1: 0.5 kg is refused, with the reason
-- tapOn: "Personal"
+- runFlow: ../subflows/open_profile_pane.yaml
 - tapOn: "Personal details.*"
 - tapOn: { id: "bodyweight-field" }
 - inputText: "0.5"
@@ -51,11 +51,20 @@ tags: [profile]
 # --- the row shows the value; the target followed only because we saved
 - assertVisible: "Personal details\\. 80 kg · male diagram"
 - tapOn: "Diet"
-- assertVisible: "0 of 130 g planned.*"
+- assertVisible: "0 of 130 g logged.*"
 
-# --- B4: scrolled down a Diet day, the segment control is still there
+# --- B4: scrolled down the Profile pane, the segment control is still there
+# (it is pinned above the panes), and Profile keeps its scroll position.
+- runFlow: ../subflows/open_profile_pane.yaml
 - scrollUntilVisible:
-    element: "Plan settings"
+    element: "Delete all data"
     centerElement: true
-- tapOn: "Personal"
+- tapOn: "Activity"
+- assertVisible:
+    text: "Activity"
+    selected: true
+- tapOn: "Profile"
+- scrollUntilVisible:
+    element: "Personal details\\. 80 kg · male diagram"
+    direction: UP
 - assertVisible: "Personal details\\. 80 kg · male diagram"

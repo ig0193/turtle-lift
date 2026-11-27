@@ -11,7 +11,7 @@ tags: [history]
 - runFlow: ../subflows/log_bench_workout.yaml
 - waitForAnimationToEnd
 - tapOn: "Back"
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - evalScript: "${(function () {
     var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -47,6 +47,6 @@ tags: [history]
 - tapOn: "Back"
 - runFlow: ../subflows/finish_workout.yaml
 - tapOn: "Back"
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - assertVisible: "Barbell bench press, quick log, Yesterday · 1 exercise · .*"
 - assertVisible: "2 day streak, 2 workouts, .*"

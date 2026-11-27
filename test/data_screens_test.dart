@@ -6,8 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/custom_templates.dart';
 import 'package:turtle_lift/src/data/data_reset.dart';
-import 'package:turtle_lift/src/data/diet_plan.dart';
-import 'package:turtle_lift/src/data/diet_plan_store.dart';
+import 'package:turtle_lift/src/data/diet_log.dart';
+import 'package:turtle_lift/src/data/diet_log_store.dart';
 import 'package:turtle_lift/src/data/exercise.dart';
 import 'package:turtle_lift/src/data/exercise_index.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
@@ -17,7 +17,7 @@ import 'package:turtle_lift/src/data/reminder_scheduler.dart'
     show reminderSchedulerProvider;
 import 'package:turtle_lift/src/data/settings_store.dart'
     show appDatabaseProvider;
-import 'package:turtle_lift/src/data/training_plan.dart'
+import 'package:turtle_lift/src/data/today.dart'
     show planTodayProvider;
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/data_screens.dart';
@@ -37,13 +37,13 @@ void main() {
   Widget host(
     Widget screen, {
     Future<void> Function()? restart,
-    List<DietPlanVersion> dietPlan = const <DietPlanVersion>[],
+    List<DietLogEntry> dietLog = const <DietLogEntry>[],
     FakeReminderScheduler? reminders,
   }) =>
       ProviderScope(
         overrides: [
           planTodayProvider.overrideWithValue(LocalDate(2026, 11, 4)),
-          initialDietPlanProvider.overrideWithValue(dietPlan),
+          initialDietLogProvider.overrideWithValue(dietLog),
           appDatabaseProvider.overrideWithValue(database),
           exerciseIndexProvider
               .overrideWithValue(ExerciseIndex(const <Exercise>[])),
@@ -72,58 +72,54 @@ void main() {
   });
 
   group('counts', () {
-    DietPlanItem item(int weekday, String foodId) => DietPlanItem(
-          id: '$weekday-$foodId',
-          weekday: weekday,
+    DietLogEntry entry(int day, String foodId) => DietLogEntry(
+          id: '$day-$foodId',
+          date: LocalDate(2026, 11, day),
           slot: MealSlot.lunch,
           foodId: foodId,
           servingsHalves: 2,
           position: 0,
         );
 
-    testWidgets('foods planned counts the items in this week\'s plan only, '
-        'and diet alone makes something to export', (tester) async {
+    testWidgets('foods logged counts every entry in the log, and a diet log '
+        'alone makes something to export', (tester) async {
       await tester.pumpWidget(host(
         const ExportScreen(),
-        dietPlan: <DietPlanVersion>[
-          DietPlanVersion(
-            effectiveFrom: LocalDate(2026, 10, 26),
-            items: <DietPlanItem>[
-              for (var d = 0; d < 5; d++) item(d, 'old'),
-            ],
-          ),
-          DietPlanVersion(
-            effectiveFrom: LocalDate(2026, 11, 2),
-            items: <DietPlanItem>[item(0, 'a'), item(2, 'b'), item(4, 'c')],
-          ),
+        dietLog: <DietLogEntry>[
+          entry(2, 'a'),
+          entry(3, 'b'),
+          entry(4, 'c'),
         ],
       ));
       await tester.pumpAndSettle();
 
       final row = find.ancestor(
-        of: find.text('Foods planned'),
+        of: find.text('Foods logged'),
         matching: find.byType(Row),
       );
       expect(
           find.descendant(of: row, matching: find.text('3')), findsOneWidget);
+      expect(find.text('Training days'), findsNothing);
+      expect(find.text('Foods planned'), findsNothing);
       expect(
         tester
             .widget<FilledButton>(find.byKey(ExportScreen.exportKey))
             .onPressed,
         isNotNull,
       );
-      expect(find.textContaining('your diet plan'), findsOneWidget);
+      expect(find.textContaining('your reminders and your diet log'),
+          findsOneWidget);
     });
   });
 
   group('delete all data', () {
-    testWidgets('the confirmation names the diet plan', (tester) async {
+    testWidgets('the confirmation names the diet log and the reminders', (tester) async {
       await tester.pumpWidget(host(const DeleteAllDataScreen()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(DeleteAllDataScreen.deleteKey));
       await tester.pumpAndSettle();
-      expect(find.textContaining('and your diet plan will be removed'),
+      expect(find.textContaining('your diet log and your reminders will be removed'),
           findsOneWidget);
     });
 

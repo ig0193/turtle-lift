@@ -341,7 +341,7 @@ class _CustomExerciseEditorScreenState
               const SizedBox(height: 4),
               Text(
                 _hidden
-                    ? 'Hidden from the exercise picker. It stays in History, '
+                    ? 'Hidden from the exercise picker. It stays in Activity, '
                         'your records and export.'
                     : 'It is in your workouts, so it cannot be deleted: its '
                         'sets would lose their name. Hide it from the picker '

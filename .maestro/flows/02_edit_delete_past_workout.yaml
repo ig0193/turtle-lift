@@ -8,7 +8,7 @@ tags: [history]
     clearState: true
 - runFlow: ../subflows/log_bench_workout.yaml
 - tapOn: "Back"
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - assertVisible: "Barbell bench press, quick log, Today · 1 exercise · 2 sets"
 - tapOn: ".*Today · 1 exercise · 2 sets"
 - assertVisible: "Barbell bench press\n60kg × 8 · 60kg × 8"
@@ -53,5 +53,5 @@ tags: [history]
 - tapOn: "Delete workout"
 - tapOn: "Delete"
 - waitForAnimationToEnd
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - assertVisible: "No workouts yet.*"

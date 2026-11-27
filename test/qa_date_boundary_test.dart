@@ -6,26 +6,24 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/diet_derived.dart';
-import 'package:turtle_lift/src/data/diet_plan.dart';
-import 'package:turtle_lift/src/data/diet_plan_store.dart';
+import 'package:turtle_lift/src/data/diet_log.dart';
+import 'package:turtle_lift/src/data/diet_log_store.dart';
 import 'package:turtle_lift/src/data/food_index.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/meal_slot.dart';
-import 'package:turtle_lift/src/data/meal_ticks.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
-import 'package:turtle_lift/src/data/training_plan.dart';
+import 'package:turtle_lift/src/data/today.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/diet_pane.dart';
-import 'package:turtle_lift/src/ui/diet_slot_card.dart';
 
 /// QA: the calendar-date edges, with every clock injected.
 ///
 /// The single most likely way to get these wrong in the field is an app left
 /// open across midnight: the UI's "today" is cached until the next resume
 /// (`planTodayProvider`), while the stores read the wall clock at write time.
-/// `diet_derived_test`, `meal_ticks_test` and `training_plan_test` prove each
-/// side alone; this proves them together across the Sunday-to-Monday edge,
-/// where "this week" changes.
+/// `diet_derived_test` and `diet_log_store_test` prove each side alone; this
+/// proves them together across the Sunday-to-Monday edge, where "this week"
+/// changes.
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -70,85 +68,93 @@ void main() {
     // The UI's today and the stores' today read one wall clock, as in the
     // app; only the UI caches it until a resume.
     planClockProvider.overrideWithValue(() => wallClock),
-    dietPlanStoreProvider.overrideWithValue(
-      DietPlanStore(database, today: () => wallClock),
-    ),
-    mealTickStoreProvider.overrideWithValue(
-      MealTickStore(database, today: () => wallClock),
+    dietLogStoreProvider.overrideWithValue(
+      DietLogStore(database, today: () => wallClock),
     ),
   ];
 
   group('Diet left open from Sunday night into Monday', () {
-    test('an edit after midnight lands in the new week, the pane follows it, '
-        'and last week keeps what was eaten', () async {
+    test('a log written after midnight lands on the day it was logged for, '
+        'the pane follows the real today, and Sunday is untouched', () async {
       final c = ProviderContainer(overrides: clockedOverrides());
       addTearDown(c.dispose);
-      final log = c.read(dietPlanLogProvider.notifier);
+      final log = c.read(dietLogProvider.notifier);
 
-      // Sunday: plan lunch and tick it.
+      // Sunday: log lunch.
       await log.addFood(
-        weekdays: <int>{6},
+        date: nov(8),
         slot: MealSlot.lunch,
         foodId: 'twelve',
         halves: 2,
       );
-      expect(
-        await c.read(mealTicksProvider.notifier).toggle(nov(8), MealSlot.lunch),
-        isTrue,
-      );
-      expect(c.read(dietDayProvider(nov(8))).eatenG, 12);
+      expect(c.read(dietDayProvider(nov(8))).loggedG, 12);
+      expect(c.read(planTodayProvider), nov(8), reason: 'cached by the pane');
 
-      // Past midnight, no resume: the user doubles Sunday lunch.
+      // Past midnight, no resume: the pane still says Sunday is today.
       wallClock = nov(9);
+      expect(c.read(planTodayProvider), nov(8));
+
       await log.addFood(
-        weekdays: <int>{6},
+        date: nov(9),
         slot: MealSlot.lunch,
         foodId: 'twelve',
         halves: 4,
       );
 
-      expect(
-        c.read(dietDayProvider(nov(8))).plannedG,
-        12,
-        reason: 'copy-on-write: last week keeps the plan it was lived under',
-      );
-      expect(c.read(dietDayProvider(nov(8))).eatenG, 12);
-      expect(
-        c.read(dietDayProvider(nov(15))).plannedG,
-        24,
-        reason: 'the edit takes effect from this Monday',
-      );
+      expect(c.read(dietDayProvider(nov(8))).loggedG, 12,
+          reason: 'nothing logged on Monday touches Sunday');
+      expect(c.read(dietDayProvider(nov(9))).loggedG, 24);
+      expect(c.read(dietDayProvider(nov(15))).loggedG, 0,
+          reason: 'a log does not repeat into next week');
       expect(
         c.read(planTodayProvider),
         nov(9),
-        reason:
-            'after a write the pane shows the week the write landed in; '
-            'left on last week the edit would vanish from the screen',
+        reason: 'after a write the pane moves to the real today',
       );
-      expect(c.read(dietWeekProvider).first.date, nov(9));
+      expect(c.read(dietStripProvider(nov(9))).first.date, nov(9));
     });
 
-    testWidgets('tapping a tick still showing for Sunday does not throw', (
-      tester,
-    ) async {
-      await tester.runAsync(() async {
-        await DietPlanStore(database, today: () => wallClock).addFood(
-          weekdays: <int>{6},
-          slot: MealSlot.lunch,
-          foodId: 'twelve',
-          halves: 2,
-        );
-      });
-      final plan = await tester.runAsync(
-        () => DietPlanStore(database).readVersions(),
-      );
+    test('logging against the stale Sunday after midnight still works: it is '
+        'in the past, not the future', () async {
+      final c = ProviderContainer(overrides: clockedOverrides());
+      addTearDown(c.dispose);
+      wallClock = nov(9);
 
+      await c.read(dietLogProvider.notifier).addFood(
+            date: nov(8),
+            slot: MealSlot.dinner,
+            foodId: 'twelve',
+            halves: 2,
+          );
+
+      expect(c.read(dietDayProvider(nov(8))).loggedG, 12);
+      expect(c.read(dietDayProvider(nov(9))).loggedG, 0);
+    });
+
+    test('a day the stale clock thinks is today but the wall clock does not '
+        'yet reach is refused: nothing is written', () async {
+      final c = ProviderContainer(overrides: clockedOverrides());
+      addTearDown(c.dispose);
+
+      // The wall clock is Sunday; Monday is tomorrow.
+      await expectLater(
+        c.read(dietLogProvider.notifier).addFood(
+              date: nov(9),
+              slot: MealSlot.lunch,
+              foodId: 'twelve',
+              halves: 2,
+            ),
+        throwsArgumentError,
+      );
+      expect(await DietLogStore(database).readEntries(), isEmpty);
+    });
+
+    testWidgets('the week strip lets you pick today and earlier days, never a '
+        'later one', (tester) async {
+      wallClock = nov(4); // Wednesday
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            ...clockedOverrides(),
-            initialDietPlanProvider.overrideWithValue(plan!),
-          ],
+          overrides: clockedOverrides(),
           child: MaterialApp(
             theme: buildAppTheme(),
             home: Scaffold(
@@ -158,38 +164,18 @@ void main() {
         ),
       );
       await tester.pump();
-      final tick = find.byKey(DietSlotCard.tickKey(MealSlot.lunch));
-      expect(tick, findsOneWidget, reason: 'Sunday is today on screen');
+      expect(find.text(DietPane.nothingLoggedFor(2)), findsOneWidget,
+          reason: 'opens on today, Wednesday');
 
-      // Midnight passes with the app in the foreground.
-      wallClock = nov(9);
-      await tester.ensureVisible(tick);
-      await tester.tap(tick);
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 30)),
-      );
+      await tester.tap(find.byKey(DietPane.weekDayKey(4))); // Friday: later
       await tester.pump();
+      expect(find.text(DietPane.nothingLoggedFor(4)), findsNothing);
+      expect(find.text(DietPane.nothingLoggedFor(2)), findsOneWidget,
+          reason: 'a later day cannot be picked');
 
-      expect(
-        tester.takeException(),
-        isNull,
-        reason:
-            'the store refuses last week; the tap must not surface that '
-            'as an uncaught error',
-      );
-      expect(
-        await tester.runAsync(() => MealTickStore(database).read()),
-        isEmpty,
-        reason: 'Sunday is last week now, so nothing is written',
-      );
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(DietPane)),
-      );
-      expect(
-        container.read(planTodayProvider),
-        nov(9),
-        reason: 'the refusal moves the pane to the real today',
-      );
+      await tester.tap(find.byKey(DietPane.weekDayKey(0))); // Monday: earlier
+      await tester.pump();
+      expect(find.text(DietPane.nothingLoggedFor(0)), findsOneWidget);
     });
   });
 }

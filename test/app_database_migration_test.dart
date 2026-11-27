@@ -76,6 +76,29 @@ void main() {
     return database;
   }
 
+  Future<Set<String>> tableNames(AppDatabase database) async => (await database
+          .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
+          .get())
+      .map((r) => r.read<String>('name'))
+      .toSet();
+
+  /// Runs raw statements on an old-shape file, the way a build that wrote it
+  /// would have, before [AppDatabase] reopens it.
+  ///
+  /// **[version] is required because reopening resets it.** [_NoopUser]
+  /// reports schema 0, so opening a file through it stamps `user_version = 0`
+  /// on the way in; every helper here therefore ends by writing the version
+  /// the file is meant to be at, and so does this one.
+  Future<void> runLegacy(List<String> statements, {required int version}) async {
+    final legacy = NativeDatabase(dbFile);
+    await legacy.ensureOpen(_NoopUser());
+    for (final statement in statements) {
+      await legacy.runCustom(statement, const <Object?>[]);
+    }
+    await legacy.runCustom('PRAGMA user_version = $version', const <Object?>[]);
+    await legacy.close();
+  }
+
   group('upgrading an existing version-1 install', () {
     test('keeps the settings row and the filter the user chose', () async {
       await createVersion1Database(storedFilter: 'ppl');
@@ -105,16 +128,16 @@ void main() {
       );
     });
 
-    test('reaches schema version 9', () async {
+    test('reaches schema version 10', () async {
       await createVersion1Database();
       final database = openUpgraded();
       await database.select(database.settings).get();
 
-      expect(database.schemaVersion, 9);
+      expect(database.schemaVersion, 10);
       expect(
         (await database.customSelect('PRAGMA user_version').getSingle())
             .read<int>('user_version'),
-        9,
+        10,
       );
     });
 
@@ -134,35 +157,15 @@ void main() {
       expect(entries.single.weightKg, 78.5);
     });
 
-    test('adds a usable training-plan table', () async {
+    test('has no training-plan table: the Schedule is gone (ADR 0015)',
+        () async {
       await createVersion1Database();
       final database = openUpgraded();
+      await database.select(database.settings).get();
 
-      await database.into(database.trainingPlanEntries).insert(
-            TrainingPlanEntriesCompanion.insert(
-              effectiveFrom: '2026-10-24',
-              weekdayMask: 0x15, // Monday, Wednesday, Friday
-            ),
-          );
-
-      final entries = await database.select(database.trainingPlanEntries).get();
-      expect(entries.single.effectiveFrom, '2026-10-24');
-      expect(entries.single.weekdayMask, 0x15);
-    });
-
-    test('the plan table rejects a mask outside the seven weekdays', () async {
-      await createVersion1Database();
-      final database = openUpgraded();
-
-      expect(
-        database.into(database.trainingPlanEntries).insert(
-              TrainingPlanEntriesCompanion.insert(
-                effectiveFrom: '2026-10-24',
-                weekdayMask: 128,
-              ),
-            ),
-        throwsA(anything),
-      );
+      expect(await tableNames(database), isNot(contains('training_plan_entries')),
+          reason: 'step 4 no longer creates it, and step 10 drops it wherever '
+              'it exists');
     });
 
     test('adds a usable custom-templates table', () async {
@@ -788,11 +791,9 @@ void main() {
             .weightKg,
         64.5,
       );
-      expect(
-        (await database.select(database.trainingPlanEntries).getSingle())
-            .weekdayMask,
-        21,
-      );
+      expect(await tableNames(database), isNot(contains('training_plan_entries')),
+          reason: 'the Schedule\'s one row is dropped with its table at step '
+              '10; nothing else is');
       expect(
         (await database.select(database.customTemplates).getSingle())
             .exerciseIds,
@@ -807,13 +808,21 @@ void main() {
       expect((await database.select(database.setEntries).getSingle()).reps, 8);
     });
 
-    test('adds the three diet tables, empty', () async {
+    test('ends with an empty diet log and none of the old diet tables',
+        () async {
       await createVersion5Database();
       final database = openUpgraded();
 
-      expect(await database.select(database.dietPlanVersions).get(), isEmpty);
-      expect(await database.select(database.dietPlanItems).get(), isEmpty);
-      expect(await database.select(database.mealTicks).get(), isEmpty);
+      expect(await database.select(database.dietLogEntries).get(), isEmpty);
+      expect(
+        await tableNames(database),
+        containsAll(<String>['diet_log_entries']),
+      );
+      expect(
+        await tableNames(database),
+        isNot(anyOf(contains('diet_plan_versions'), contains('diet_plan_items'),
+            contains('meal_ticks'))),
+      );
     });
 
     test('does not add the protein target column twice', () async {
@@ -837,7 +846,7 @@ void main() {
         (await database.select(database.settings).getSingle()).proteinTargetG,
         140,
       );
-      expect(await database.select(database.dietPlanVersions).get(), isEmpty);
+      expect(await database.select(database.dietLogEntries).get(), isEmpty);
     });
 
     test('an upgrade from 1 reaches 6 without adding a column twice',
@@ -858,200 +867,158 @@ void main() {
       expect(row.workoutTemplateFilter, 'single');
       expect(row.proteinTargetG, 140);
 
-      await database.into(database.dietPlanVersions).insert(
-            DietPlanVersionsCompanion.insert(
-              effectiveFrom: const LocalDate(2026, 11, 2),
+      await database.into(database.dietLogEntries).insert(
+            DietLogEntriesCompanion.insert(
+              id: 'e1',
+              date: const LocalDate(2026, 11, 2),
+              slot: 'lunch',
+              foodId: 'paneer',
+              servingsHalves: 2,
+              position: 0,
             ),
           );
-      expect(await database.select(database.dietPlanVersions).get(),
+      expect(await database.select(database.dietLogEntries).get(),
           hasLength(1));
     });
   });
 
   group('a fresh install', () {
-    test('creates the three diet tables and reminder_prefs', () async {
+    test('creates the diet log and reminder_prefs, and none of the retired '
+        'tables', () async {
       final database = openUpgraded();
 
-      final names = (await database
-              .customSelect(
-                "SELECT name FROM sqlite_master WHERE type = 'table'",
-              )
-              .get())
-          .map((r) => r.read<String>('name'))
-          .toSet();
+      final names = await tableNames(database);
 
       expect(
         names,
         containsAll(<String>[
           'settings',
           'bodyweight_entries',
-          'training_plan_entries',
           'custom_templates',
           'sessions',
           'session_exercises',
           'set_entries',
-          'diet_plan_versions',
-          'diet_plan_items',
-          'meal_ticks',
+          'diet_log_entries',
           'reminder_prefs',
+          'custom_exercises',
         ]),
       );
+      for (final retired in <String>[
+        'training_plan_entries',
+        'diet_plan_versions',
+        'diet_plan_items',
+        'meal_ticks',
+      ]) {
+        expect(names, isNot(contains(retired)), reason: retired);
+      }
     });
   });
 
-  // Every diet constraint is proven twice: on a fresh install (`createAll`) and
-  // on a database that reached 6 through the upgrade step, because the two
-  // build their DDL by different routes. The protein target is the sharp case:
-  // it arrives by ALTER TABLE, which a table-level CHECK would never reach.
+  // Every diet-log constraint is proven twice: on a fresh install (`createAll`)
+  // and on a database that reached 10 through the upgrade step, because the
+  // two build their DDL by different routes. The protein target is the sharp
+  // case: it arrives by ALTER TABLE, which a table-level CHECK would never
+  // reach.
   for (final (label, prepare) in <(String, Future<void> Function())>[
     ('fresh install', () async {}),
     ('upgraded from 5', createVersion5Database),
   ]) {
-    group('diet constraints ($label)', () {
-      const monday = LocalDate(2026, 11, 2);
+    group('diet log constraints ($label)', () {
+      const day = LocalDate(2026, 11, 4);
 
-      Future<AppDatabase> openWithVersion() async {
+      Future<AppDatabase> open() async {
         await prepare();
-        final database = openUpgraded();
-        await database.into(database.dietPlanVersions).insert(
-              DietPlanVersionsCompanion.insert(effectiveFrom: monday),
-            );
-        return database;
+        return openUpgraded();
       }
 
-      Future<void> insertItem(
+      Future<void> insertEntry(
         AppDatabase database, {
-        String id = 'i1',
-        LocalDate effectiveFrom = monday,
-        int weekday = 0,
+        String id = 'e1',
+        LocalDate date = day,
         String slot = 'breakfast',
         String foodId = 'paneer',
         int servingsHalves = 2,
+        int position = 0,
       }) =>
-          database.into(database.dietPlanItems).insert(
-                DietPlanItemsCompanion.insert(
+          database.into(database.dietLogEntries).insert(
+                DietLogEntriesCompanion.insert(
                   id: id,
-                  effectiveFrom: effectiveFrom,
-                  weekday: weekday,
+                  date: date,
                   slot: slot,
                   foodId: foodId,
                   servingsHalves: servingsHalves,
-                  position: 0,
+                  position: position,
                 ),
               );
 
-      test('a well-formed item is accepted at both ends of every range',
-          () async {
-        final database = await openWithVersion();
+      test('a well-formed entry is accepted at both ends of the serving range '
+          'and for all four meals', () async {
+        final database = await open();
 
-        await insertItem(database, id: 'a', weekday: 0, servingsHalves: 1);
-        await insertItem(
-          database,
-          id: 'b',
-          weekday: 6,
-          slot: 'dinner',
-          servingsHalves: 8,
-        );
-        await insertItem(database, id: 'c', slot: 'lunch');
-        await insertItem(database, id: 'd', slot: 'snack');
+        await insertEntry(database, id: 'a', servingsHalves: 1);
+        await insertEntry(database, id: 'b', slot: 'dinner', servingsHalves: 8);
+        await insertEntry(database, id: 'c', slot: 'lunch');
+        await insertEntry(database, id: 'd', slot: 'snack');
 
-        final rows = await database.select(database.dietPlanItems).get();
+        final rows = await database.select(database.dietLogEntries).get();
         expect(rows, hasLength(4));
-        expect(rows.first.effectiveFrom, monday);
+        expect(rows.first.date, day);
       });
 
       test('servings of 0 and 9 halves are rejected', () async {
-        final database = await openWithVersion();
+        final database = await open();
 
         await expectLater(
-          insertItem(database, id: 'a', servingsHalves: 0),
+          insertEntry(database, id: 'a', servingsHalves: 0),
           throwsA(isA<Exception>()),
         );
         await expectLater(
-          insertItem(database, id: 'b', servingsHalves: 9),
+          insertEntry(database, id: 'b', servingsHalves: 9),
           throwsA(isA<Exception>()),
           reason: 'servings are 0.5 to 4, stored as 1 to 8 halves',
         );
       });
 
       test('a slot outside the four meals is rejected', () async {
-        final database = await openWithVersion();
+        final database = await open();
 
         await expectLater(
-          insertItem(database, slot: 'brunch'),
+          insertEntry(database, slot: 'brunch'),
           throwsA(isA<Exception>()),
         );
       });
 
-      test('weekday 7 is rejected; 0 is Monday and 6 is Sunday', () async {
-        final database = await openWithVersion();
+      test('the same food twice in one slot of one day is rejected, on '
+          'another day or in another slot it is fine', () async {
+        final database = await open();
+        await insertEntry(database, id: 'a');
 
         await expectLater(
-          insertItem(database, id: 'a', weekday: 7),
-          throwsA(isA<Exception>()),
-        );
-        await expectLater(
-          insertItem(database, id: 'b', weekday: -1),
-          throwsA(isA<Exception>()),
-        );
-      });
-
-      test('the same food twice in one slot of one day is rejected',
-          () async {
-        final database = await openWithVersion();
-        await insertItem(database, id: 'a');
-
-        await expectLater(
-          insertItem(database, id: 'b', servingsHalves: 4),
+          insertEntry(database, id: 'b', servingsHalves: 4),
           throwsA(isA<Exception>()),
           reason: 'a repeat add replaces the row; two rows would count the '
               'food twice in every total',
         );
-        await insertItem(database, id: 'c', weekday: 1);
-        await insertItem(database, id: 'd', slot: 'lunch');
-        expect(await database.select(database.dietPlanItems).get(),
-            hasLength(3));
+        await insertEntry(database, id: 'c', date: day.addDays(1));
+        await insertEntry(database, id: 'd', slot: 'lunch');
+        await insertEntry(database, id: 'e', foodId: 'curd');
+        expect(await database.select(database.dietLogEntries).get(),
+            hasLength(4));
       });
 
-      test('an item cannot point at a version that does not exist', () async {
-        final database = await openWithVersion();
+      test('an id is the primary key', () async {
+        final database = await open();
+        await insertEntry(database, id: 'a');
 
         await expectLater(
-          insertItem(
-            database,
-            id: 'orphan',
-            effectiveFrom: const LocalDate(2026, 11, 9),
-          ),
+          insertEntry(database, id: 'a', foodId: 'curd'),
           throwsA(isA<Exception>()),
         );
       });
 
-      test('deleting a version takes its items with it', () async {
-        final database = await openWithVersion();
-        const nextMonday = LocalDate(2026, 11, 9);
-        await database.into(database.dietPlanVersions).insert(
-              DietPlanVersionsCompanion.insert(effectiveFrom: nextMonday),
-            );
-        await insertItem(database, id: 'a');
-        await insertItem(database, id: 'b', weekday: 3);
-        await insertItem(database, id: 'kept', effectiveFrom: nextMonday);
-
-        await (database.delete(database.dietPlanVersions)
-              ..where((t) => t.effectiveFrom.equalsValue(monday)))
-            .go();
-
-        final rows = await database.select(database.dietPlanItems).get();
-        expect(
-          rows.map((r) => r.id),
-          <String>['kept'],
-          reason: 'the cascade needs the foreign-key pragma armed on every '
-              'connection, migrated ones included',
-        );
-      });
-
-      test('a protein target of 0 or 401 is rejected; null and 1 to 400 are not',
-          () async {
-        final database = await openWithVersion();
+      test('a protein target of 0 or 401 is rejected; null and 1 to 400 are '
+          'not', () async {
+        final database = await open();
 
         Future<void> write(int? grams) =>
             database.into(database.settings).insertOnConflictUpdate(
@@ -1078,41 +1045,22 @@ void main() {
         );
       });
 
-      test('a tick date round-trips as the same calendar day', () async {
-        final database = await openWithVersion();
+      test('a log date round-trips as the same calendar day', () async {
+        final database = await open();
 
         // The 11pm case: a calendar date stored as text cannot slide into the
         // next day the way a timestamp through UTC can.
-        await database.into(database.mealTicks).insert(
-              MealTicksCompanion.insert(
-                date: const LocalDate(2026, 12, 31),
-                slot: 'dinner',
-              ),
-            );
+        await insertEntry(database, date: const LocalDate(2026, 12, 31));
 
-        final tick = await database.select(database.mealTicks).getSingle();
-        expect(tick.date, const LocalDate(2026, 12, 31));
-        expect(tick.slot, 'dinner');
+        final entry = await database.select(database.dietLogEntries).getSingle();
+        expect(entry.date, const LocalDate(2026, 12, 31));
         expect(
-          (await database.customSelect('SELECT date FROM meal_ticks').getSingle())
+          (await database
+                  .customSelect('SELECT date FROM diet_log_entries')
+                  .getSingle())
               .read<String>('date'),
           '2026-12-31',
         );
-      });
-
-      test('a meal is ticked at most once a day, and only a real meal',
-          () async {
-        final database = await openWithVersion();
-        Future<void> tick(String slot) =>
-            database.into(database.mealTicks).insert(
-                  MealTicksCompanion.insert(date: monday, slot: slot),
-                );
-
-        await tick('lunch');
-        await expectLater(tick('lunch'), throwsA(isA<Exception>()));
-        await expectLater(tick('brunch'), throwsA(isA<Exception>()));
-        await tick('snack');
-        expect(await database.select(database.mealTicks).get(), hasLength(2));
       });
     });
   }
@@ -1158,25 +1106,21 @@ void main() {
   }
 
   group('the reminder step (6 → 7)', () {
-    test('keeps every diet row and the protein target', () async {
+    test('keeps the protein target and what the user ate', () async {
       await createVersion6Database();
       final database = openUpgraded();
 
       final settings = await database.select(database.settings).getSingle();
       expect(settings.proteinTargetG, 140);
       expect(settings.bodyGender, 'female');
-      expect(
-        (await database.select(database.dietPlanVersions).getSingle())
-            .effectiveFrom,
-        const LocalDate(2026, 11, 2),
-      );
-      final item = await database.select(database.dietPlanItems).getSingle();
-      expect(item.foodId, 'paneer');
-      expect(item.servingsHalves, 2);
-      expect(
-        (await database.select(database.mealTicks).getSingle()).date,
-        const LocalDate(2026, 11, 4),
-      );
+      // The v6 fixture planned paneer for Wednesday lunch and ticked
+      // Wednesday 2026-11-04 as eaten: that tick is the one thing of the plan
+      // that survives, as the foods that were logged.
+      final entry = await database.select(database.dietLogEntries).getSingle();
+      expect(entry.date, const LocalDate(2026, 11, 4));
+      expect(entry.slot, 'lunch');
+      expect(entry.foodId, 'paneer');
+      expect(entry.servingsHalves, 2);
       expect((await database.select(database.setEntries).getSingle()).reps, 8);
     });
 
@@ -1410,6 +1354,309 @@ void main() {
       expect(
           (await database.select(database.customExercises).getSingle()).hidden,
           isTrue);
+    });
+  });
+
+  /// Writes the version-9 schema: version 8, then the hide-and-note step's
+  /// columns, transcribed from a fresh version-9 build. It still holds every
+  /// table step 10 drops -- a training plan, the weekly diet plan and meal
+  /// ticks -- plus a reminder row, a protein target, sessions and a custom
+  /// exercise, which step 10 must not touch.
+  Future<void> createVersion9Database() async {
+    await createVersion8Database();
+    await runLegacy(<String>[
+      'ALTER TABLE custom_exercises ADD COLUMN "hidden" INTEGER NOT NULL '
+          'DEFAULT 0 CHECK ("hidden" IN (0, 1))',
+      'ALTER TABLE session_exercises ADD COLUMN "note" TEXT NULL',
+    ], version: 9);
+  }
+
+  /// Replaces the fixture's single plan item and tick with a plan worth
+  /// converting. Weeks start on Monday; `weekday` 0 is Monday.
+  ///
+  /// * Plan A, in force from Monday 2026-10-26: Monday breakfast oats;
+  ///   Wednesday lunch rajma then curd, Wednesday dinner dal; Sunday dinner
+  ///   paneer.
+  /// * Plan B, in force from Monday 2026-11-09: Wednesday lunch chicken;
+  ///   Friday snack nuts. (It does not repeat A's Wednesday lunch.)
+  Future<void> seedConvertiblePlan(List<(String date, String slot)> ticks) =>
+      runLegacy(<String>[
+        'DELETE FROM meal_ticks',
+        'DELETE FROM diet_plan_items',
+        'DELETE FROM diet_plan_versions',
+        "INSERT INTO diet_plan_versions (effective_from) VALUES ('2026-10-26')",
+        "INSERT INTO diet_plan_versions (effective_from) VALUES ('2026-11-09')",
+        'INSERT INTO diet_plan_items (id, effective_from, weekday, slot, '
+            'food_id, servings_halves, position) VALUES '
+            "('a1', '2026-10-26', 0, 'breakfast', 'oats', 2, 0), "
+            "('a2', '2026-10-26', 2, 'lunch', 'rajma', 2, 0), "
+            "('a3', '2026-10-26', 2, 'lunch', 'curd', 3, 1), "
+            "('a4', '2026-10-26', 2, 'dinner', 'dal', 4, 0), "
+            "('a5', '2026-10-26', 6, 'dinner', 'paneer', 4, 0), "
+            "('b1', '2026-11-09', 2, 'lunch', 'chicken', 6, 0), "
+            "('b2', '2026-11-09', 4, 'snack', 'nuts', 1, 0)",
+        for (final (date, slot) in ticks)
+          "INSERT INTO meal_ticks (date, slot) VALUES ('$date', '$slot')",
+      ], version: 9);
+
+  Future<List<(String, String, String, int, int)>> logRows(
+    AppDatabase database,
+  ) async =>
+      <(String, String, String, int, int)>[
+        for (final r in await database
+            .customSelect('SELECT date, slot, food_id, servings_halves, '
+                'position FROM diet_log_entries '
+                'ORDER BY date, slot, position')
+            .get())
+          (
+            r.read<String>('date'),
+            r.read<String>('slot'),
+            r.read<String>('food_id'),
+            r.read<int>('servings_halves'),
+            r.read<int>('position'),
+          ),
+      ];
+
+  group('the log step (9 -> 10)', () {
+    test('drops the training plan, the weekly diet plan and the ticks, and '
+        'creates the log', () async {
+      await createVersion9Database();
+      final database = openUpgraded();
+
+      final names = await tableNames(database);
+      for (final retired in <String>[
+        'training_plan_entries',
+        'diet_plan_versions',
+        'diet_plan_items',
+        'meal_ticks',
+      ]) {
+        expect(names, isNot(contains(retired)), reason: retired);
+      }
+      expect(names, contains('diet_log_entries'));
+      expect(
+        (await database.customSelect('PRAGMA user_version').getSingle())
+            .read<int>('user_version'),
+        10,
+      );
+    });
+
+    test('a tick becomes the foods the plan in force that week had in that '
+        'slot on that weekday', () async {
+      await createVersion9Database();
+      await seedConvertiblePlan(<(String, String)>[
+        // A Wednesday in plan A's week: plan A, both lunch foods.
+        ('2026-10-28', 'lunch'),
+        // A Wednesday in plan B's week: plan B only, never A's rajma and curd.
+        ('2026-11-11', 'lunch'),
+        // A Wednesday two weeks after plan B started: plan B still governs.
+        ('2026-11-18', 'lunch'),
+        // Monday itself, the first day of plan A.
+        ('2026-10-26', 'breakfast'),
+        // Sunday: weekday 6, still the week that began on Monday 2026-10-26.
+        ('2026-11-01', 'dinner'),
+      ]);
+      final database = openUpgraded();
+
+      expect(await logRows(database), <(String, String, String, int, int)>[
+        ('2026-10-26', 'breakfast', 'oats', 2, 0),
+        ('2026-10-28', 'lunch', 'rajma', 2, 0),
+        ('2026-10-28', 'lunch', 'curd', 3, 1),
+        ('2026-11-01', 'dinner', 'paneer', 4, 0),
+        ('2026-11-11', 'lunch', 'chicken', 6, 0),
+        ('2026-11-18', 'lunch', 'chicken', 6, 0),
+      ]);
+    });
+
+    test('a tick on a slot the plan had nothing in converts to nothing',
+        () async {
+      await createVersion9Database();
+      await seedConvertiblePlan(<(String, String)>[
+        ('2026-10-28', 'snack'), // Wednesday, plan A has no snack
+        ('2026-11-12', 'breakfast'), // Thursday, plan B has no Thursday
+        ('2026-10-28', 'lunch'), // the one that does convert
+      ]);
+      final database = openUpgraded();
+
+      expect(await logRows(database), <(String, String, String, int, int)>[
+        ('2026-10-28', 'lunch', 'rajma', 2, 0),
+        ('2026-10-28', 'lunch', 'curd', 3, 1),
+      ]);
+    });
+
+    test('a tick from before any plan existed converts to nothing',
+        () async {
+      await createVersion9Database();
+      await seedConvertiblePlan(<(String, String)>[
+        ('2026-10-19', 'breakfast'), // a Monday, the week before plan A
+      ]);
+      final database = openUpgraded();
+
+      expect(await logRows(database), isEmpty);
+    });
+
+    test('planned meals that were never ticked are not logged', () async {
+      await createVersion9Database();
+      await seedConvertiblePlan(<(String, String)>[('2026-10-28', 'lunch')]);
+      final database = openUpgraded();
+
+      final foods = (await logRows(database)).map((r) => r.$3);
+      expect(foods, isNot(contains('dal')),
+          reason: 'Wednesday dinner was planned, not eaten: a plan is gone, '
+              'only what was eaten is kept');
+      expect(foods, isNot(contains('nuts')));
+    });
+
+    test('with no ticks the log starts empty', () async {
+      await createVersion9Database();
+      await seedConvertiblePlan(const <(String, String)>[]);
+      final database = openUpgraded();
+
+      expect(await logRows(database), isEmpty);
+    });
+
+    test('with no plan items at all a tick converts to nothing and the '
+        'upgrade still succeeds', () async {
+      await createVersion9Database();
+      await runLegacy(<String>[
+        'DELETE FROM diet_plan_items',
+        'DELETE FROM diet_plan_versions',
+        "INSERT INTO meal_ticks (date, slot) VALUES ('2026-11-04', 'dinner')",
+      ], version: 9);
+      final database = openUpgraded();
+
+      expect(await logRows(database), isEmpty);
+      expect(
+        (await database.customSelect('PRAGMA user_version').getSingle())
+            .read<int>('user_version'),
+        10,
+      );
+    });
+
+    test('converted rows get their own distinct ids and obey the log\'s '
+        'constraints', () async {
+      await createVersion9Database();
+      await seedConvertiblePlan(<(String, String)>[
+        ('2026-10-28', 'lunch'),
+        ('2026-11-11', 'lunch'),
+      ]);
+      final database = openUpgraded();
+
+      final rows = await database.select(database.dietLogEntries).get();
+      expect(rows, hasLength(3));
+      expect(rows.map((r) => r.id).toSet(), hasLength(3));
+      for (final row in rows) {
+        expect(row.id, hasLength(32), reason: 'randomblob(16) as hex');
+        expect(<String>['breakfast', 'lunch', 'snack', 'dinner'],
+            contains(row.slot));
+        expect(row.servingsHalves, inInclusiveRange(1, 8));
+      }
+      // The log's UNIQUE still applies to a converted day.
+      await expectLater(
+        database.into(database.dietLogEntries).insert(
+              DietLogEntriesCompanion.insert(
+                id: 'dup',
+                date: const LocalDate(2026, 10, 28),
+                slot: 'lunch',
+                foodId: 'rajma',
+                servingsHalves: 1,
+                position: 5,
+              ),
+            ),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('nothing else the user has is disturbed', () async {
+      await createVersion9Database();
+      await seedConvertiblePlan(<(String, String)>[('2026-10-28', 'lunch')]);
+      final database = openUpgraded();
+
+      final settings = await database.select(database.settings).getSingle();
+      expect(settings.workoutTemplateFilter, 'ppl');
+      expect(settings.bodyGender, 'female');
+      expect(settings.proteinTargetG, 140,
+          reason: 'the target stays; only the plan is dropped');
+
+      final session = await database.select(database.sessions).getSingle();
+      expect(session.performedOn, const LocalDate(2026, 11, 2));
+      expect(await database.select(database.sessionExercises).get(),
+          hasLength(1));
+      final set = await database.select(database.setEntries).getSingle();
+      expect(set.reps, 8);
+      expect(set.weightKg, 60);
+
+      expect(
+          (await database.select(database.bodyweightEntries).getSingle())
+              .weightKg,
+          64.5);
+      expect(
+          (await database.select(database.customTemplates).getSingle())
+              .exerciseIds,
+          'plank');
+      final custom = await database.select(database.customExercises).getSingle();
+      expect(custom.name, 'Hack squat');
+      expect(custom.hidden, isFalse);
+
+      final prefs = await database.select(database.reminderPrefs).getSingle();
+      expect(prefs.dietOn, isTrue,
+          reason: 'the reminder row survives, retired columns included');
+    });
+
+    test('reopening an upgraded database changes nothing and adds no rows',
+        () async {
+      await createVersion9Database();
+      await seedConvertiblePlan(<(String, String)>[('2026-10-28', 'lunch')]);
+      final first = openUpgraded();
+      final before = await logRows(first);
+      await first.close();
+
+      final second = openUpgraded();
+      expect(await logRows(second), before);
+      expect(
+        (await second.customSelect('PRAGMA user_version').getSingle())
+            .read<int>('user_version'),
+        10,
+      );
+    });
+
+    test('a version-5 install walks all the way to 10', () async {
+      await createVersion5Database();
+      final database = openUpgraded();
+
+      expect(
+        (await database.customSelect('PRAGMA user_version').getSingle())
+            .read<int>('user_version'),
+        10,
+      );
+      final names = await tableNames(database);
+      expect(
+          names,
+          containsAll(<String>[
+            'diet_log_entries',
+            'reminder_prefs',
+            'custom_exercises',
+          ]));
+      expect(names, isNot(contains('training_plan_entries')),
+          reason: 'its one row goes with the table');
+      expect(await database.select(database.dietLogEntries).get(), isEmpty,
+          reason: 'a v5 install never had diet tables to convert');
+      expect((await database.select(database.settings).getSingle()).bodyGender,
+          'female');
+      expect((await database.select(database.setEntries).getSingle()).reps, 8);
+    });
+
+    test('a version-1 install reaches the same tables as a fresh install',
+        () async {
+      await createVersion1Database(storedFilter: 'single');
+      final upgraded = openUpgraded();
+      final upgradedNames = await tableNames(upgraded);
+      await upgraded.close();
+
+      final fresh = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(fresh.close);
+      final freshNames = await tableNames(fresh);
+
+      expect(upgradedNames, freshNames);
     });
   });
 

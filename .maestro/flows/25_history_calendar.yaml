@@ -10,7 +10,7 @@ tags: [history]
 - runFlow: ../subflows/log_bench_workout.yaml
 - waitForAnimationToEnd
 - tapOn: "Back"
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 
 # --- the stats line, and its explainer
 - assertVisible: "1 day streak, 1 workout, 2 sets"

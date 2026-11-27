@@ -10,8 +10,8 @@ import 'reminder_scheduler.dart';
 ///
 /// **Read by anything that summarises reminders** -- the Diet pane's
 /// Reminders row says "Off in Settings" from it (profile audit B7, ADR 0014).
-/// The Schedule and meal reminder screens push what they read into it too,
-/// so every surface agrees. Never stored: it is the OS's answer, not ours.
+/// The meal reminder screen pushes what it reads into it too, so every
+/// surface agrees. Never stored: it is the OS's answer, not ours.
 class NotificationPermission extends Notifier<bool?> {
   @override
   bool? build() {

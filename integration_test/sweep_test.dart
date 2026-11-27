@@ -2,12 +2,17 @@
 // error — an overflow, a null, a bad state. The flow test proves the happy
 // path works; this one proves nothing is quietly broken along the way.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:turtle_lift/main.dart' as app;
 import 'package:turtle_lift/src/data/food_index.dart';
+import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/meal_slot.dart';
+import 'package:turtle_lift/src/data/today.dart' show startOfWeek;
 import 'package:turtle_lift/src/ui/destructive_confirmation.dart';
+import 'package:turtle_lift/src/ui/diet_calendar_sheet.dart';
+import 'package:turtle_lift/src/ui/diet_day_card.dart' show DietWeekStrip;
 import 'package:turtle_lift/src/ui/diet_pane.dart';
 import 'package:turtle_lift/src/ui/diet_slot_card.dart';
 import 'package:turtle_lift/src/ui/exercise_picker_sheet.dart';
@@ -15,13 +20,15 @@ import 'package:turtle_lift/src/ui/food_picker_screen.dart';
 import 'package:turtle_lift/src/ui/food_serving_sheet.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
 import 'package:turtle_lift/src/ui/l0_shell.dart';
-import 'package:turtle_lift/src/ui/profile_root.dart';
+import 'package:turtle_lift/src/ui/muscles_root.dart';
 import 'package:turtle_lift/src/ui/session_actions.dart';
 import 'package:turtle_lift/src/ui/session_overview_body.dart';
 import 'package:turtle_lift/src/ui/set_logging_screen.dart';
 import 'package:turtle_lift/src/ui/set_row.dart';
+import 'package:turtle_lift/src/ui/tab_routes.dart';
 import 'package:turtle_lift/src/ui/template_preview_sheet.dart';
 import 'package:turtle_lift/src/ui/workout_root.dart';
+import 'package:turtle_lift/src/ui/you_root.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -125,9 +132,17 @@ void main() {
           matching: find.byType(TextField),
         );
 
-    // --- The other two tabs. Tapped by the bar's own key: the header renders
-    // the same words, so finding them by text hits the title instead.
-    for (final index in <int>[1, 2, 0]) {
+    // --- The other three tabs, ending back on Workout. Tapped by the bar's
+    // own key: the header renders the same words, so finding them by text hits
+    // the title instead. Indexes come from the shell's own list, never numbers.
+    final musclesTab =
+        L0Shell.tabs.indexWhere((tab) => tab.body is MusclesRoot);
+    for (final index in <int>[
+      kDietTabIndex,
+      musclesTab,
+      kYouTabIndex,
+      kWorkoutTabIndex,
+    ]) {
       await tester.tap(find.byKey(GlassTabBar.itemKey(index)));
       await settle(tester);
     }
@@ -226,13 +241,21 @@ void main() {
     await tester.pageBack();
     await settle(tester);
 
-    // --- History, which now reads the workout just finished.
-    await tester.tap(find.byKey(GlassTabBar.itemKey(2)));
+    // --- Activity (the old History tab, now a segment of You), which reads
+    // the workout just finished; then the empty Analysis pane.
+    await tester.tap(find.byKey(GlassTabBar.itemKey(kYouTabIndex)));
+    await settle(tester);
+    await tester
+        .tap(find.byKey(YouRoot.segmentKey(YouSegment.activity)));
+    await settle(tester);
+    await tester
+        .tap(find.byKey(YouRoot.segmentKey(YouSegment.analysis)));
     await settle(tester);
 
-    // --- Profile, Diet: every day, the picker and its filters, the add and
-    // edit sheets, the undo, the target and reminders screens. The food it
-    // adds it removes again.
+    // --- The Diet tab: every day of the strip (days after today are disabled,
+    // so tapping them is inert), the picker and its filters, the add and edit
+    // sheets, the undo, the target and reminders screens. The food it adds it
+    // removes again.
     Future<void> scrollToAndTap(Finder finder) async {
       await tester.scrollUntilVisible(finder, 300,
           scrollable: find.byType(Scrollable).first);
@@ -241,15 +264,53 @@ void main() {
       await settle(tester);
     }
 
-    await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
-    await settle(tester);
-    await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.diet)));
+    await tester.tap(find.byKey(GlassTabBar.itemKey(kDietTabIndex)));
     await settle(tester);
     expect(find.byType(DietPane), findsOneWidget);
     for (var weekday = 0; weekday < 7; weekday++) {
       await tester.tap(find.byKey(DietPane.weekDayKey(weekday)));
       await settle(tester);
     }
+    await tester.tap(
+        find.byKey(DietPane.weekDayKey(DateTime.now().weekday - 1)));
+    await settle(tester);
+
+    // The date picker (ADR 0017): open it, page a month back, pick a day, and
+    // the strip follows that day's week; then Today brings it home. The strip
+    // is swiped once each way. Dates come from the clock the app is running
+    // on, so the walk is date-independent.
+    final diet = ProviderScope.containerOf(
+        tester.element(find.byType(DietPane)));
+    final today = LocalDate.today();
+    final lastMonth = DateTime(today.year, today.month - 1, 15);
+    final picked = LocalDate(lastMonth.year, lastMonth.month, 15);
+    await tester.tap(find.byKey(DietCalendarButton.buttonKey));
+    await settle(tester);
+    expect(find.byType(DietCalendarSheet), findsOneWidget);
+    await tester.tap(find.byKey(DietCalendarSheet.prevButtonKey));
+    await settle(tester);
+    await tester.tap(find.byKey(DietCalendarSheet.dayKey(picked)));
+    await settle(tester);
+    expect(find.byType(DietCalendarSheet), findsNothing);
+    expect(diet.read(dietSelectedDayProvider), picked);
+    expect(diet.read(dietStripStartProvider), startOfWeek(picked),
+        reason: 'the strip shows the picked day\'s week');
+    await tester.tap(find.byKey(DietCalendarButton.buttonKey));
+    await settle(tester);
+    await tester.tap(find.byKey(DietCalendarSheet.todayKey));
+    await settle(tester);
+    expect(diet.read(dietSelectedDayProvider), today);
+    expect(diet.read(dietStripStartProvider), startOfWeek(today));
+    // One swipe each way: later days are out of reach from this week, so the
+    // window stays; then it slides back and forward again.
+    await tester.drag(find.byKey(DietWeekStrip.stripKey), const Offset(120, 0));
+    await settle(tester);
+    expect(diet.read(dietStripStartProvider).isBefore(startOfWeek(today)), isTrue,
+        reason: 'swiping right shows earlier days');
+    await tester.drag(find.byKey(DietWeekStrip.stripKey), const Offset(-240, 0));
+    await settle(tester);
+    expect(diet.read(dietStripStartProvider), startOfWeek(today),
+        reason: 'swiping left comes back, and stops at this week');
     await tester.tap(
         find.byKey(DietPane.weekDayKey(DateTime.now().weekday - 1)));
     await settle(tester);
@@ -289,8 +350,11 @@ void main() {
     await settle(tester);
     await tester.drag(find.byType(Scrollable).first, const Offset(0, 3000));
     await settle(tester);
-    await tester.tap(
-        find.byKey(ProfileRoot.segmentKey(ProfileSegment.personal)));
+    // Back to You, on its Activity pane, so the walk ends where a cold start
+    // opens You.
+    await tester.tap(find.byKey(GlassTabBar.itemKey(kYouTabIndex)));
+    await settle(tester);
+    await tester.tap(find.byKey(YouRoot.segmentKey(YouSegment.activity)));
     await settle(tester);
 
     expect(

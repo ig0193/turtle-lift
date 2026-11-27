@@ -71,19 +71,19 @@ class GlassTabBar extends StatelessWidget {
   /// pop-to-root dozens of times in one gesture.
   final ValueChanged<int> onSelected;
 
-  /// The four tabs, in order. Profile is the fourth tab again
-  /// (`docs/adr/0004-profile-returns-as-a-tab.md`).
+  /// The four tabs, in order: Diet | Workout | Muscles | You
+  /// (`docs/adr/0016-you-tab-and-diet-tab.md`).
   static const List<String> labels = <String>[
+    'Diet',
     'Workout',
     'Muscles',
-    'History',
-    'Profile',
+    'You',
   ];
 
   static const List<TabGlyph> glyphs = <TabGlyph>[
+    TabGlyph.diet,
     TabGlyph.workout,
     TabGlyph.muscles,
-    TabGlyph.history,
     TabGlyph.profile,
   ];
 

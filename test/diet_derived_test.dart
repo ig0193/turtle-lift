@@ -5,17 +5,17 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/diet_derived.dart';
-import 'package:turtle_lift/src/data/diet_plan.dart';
-import 'package:turtle_lift/src/data/diet_plan_store.dart';
+import 'package:turtle_lift/src/data/diet_log.dart';
+import 'package:turtle_lift/src/data/diet_log_store.dart';
 import 'package:turtle_lift/src/data/food.dart';
 import 'package:turtle_lift/src/data/food_index.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
-import 'package:turtle_lift/src/data/meal_ticks.dart';
+import 'package:turtle_lift/src/data/meal_slot.dart';
 import 'package:turtle_lift/src/data/personal_details_store.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
-import 'package:turtle_lift/src/data/training_plan.dart';
+import 'package:turtle_lift/src/data/today.dart';
 
-/// Every number Diet shows is computed here, on read. These tests run on
+/// Every number Diet shows is computed here, on read, from the log. These tests run on
 /// fixture foods, never the shipped list: its values are still under owner
 /// review (U19) and a test pinned to them would break on every pass.
 ///
@@ -48,32 +48,30 @@ void main() {
   ]);
 
   var nextId = 0;
-  DietPlanItem item(
+  DietLogEntry entry(
     String foodId, {
-    int weekday = 2,
+    LocalDate? date,
     MealSlot slot = MealSlot.lunch,
     int halves = 2,
     int position = 0,
   }) =>
-      DietPlanItem(
-        id: 'i${nextId++}',
-        weekday: weekday,
+      DietLogEntry(
+        id: 'e${nextId++}',
+        date: date ?? nov(4),
         slot: slot,
         foodId: foodId,
         servingsHalves: halves,
         position: position,
       );
 
-  DietPlanVersion version(int mondayDay, List<DietPlanItem> items) =>
-      DietPlanVersion(effectiveFrom: nov(mondayDay), items: items);
-
   group('rounding', () {
     test('three rows of 2.4 g total 7 g: rounded once on the total, not 6',
         () {
-      final items = <DietPlanItem>[item('a'), item('b'), item('c')];
-      expect(gramsOf(proteinUnitsOf(items, foods)), 7);
+      final entries = <DietLogEntry>[entry('a'), entry('b'), entry('c')];
+      expect(gramsOf(proteinUnitsOf(entries, foods)), 7);
       expect(
-        items.map((i) => gramsOf(proteinUnitsOf(<DietPlanItem>[i], foods)))
+        entries
+            .map((e) => gramsOf(proteinUnitsOf(<DietLogEntry>[e], foods)))
             .fold<int>(0, (a, b) => a + b),
         6,
         reason: 'summing rounded rows is the bug this guards against',
@@ -81,80 +79,58 @@ void main() {
     });
 
     test('half servings: 1.5 x 12.0 g is 18 g', () {
-      expect(gramsOf(proteinUnitsOf(<DietPlanItem>[item('twelve', halves: 3)],
-          foods)), 18);
+      expect(
+          gramsOf(proteinUnitsOf(
+              <DietLogEntry>[entry('twelve', halves: 3)], foods)),
+          18);
     });
 
     test('a total of exactly half a gram rounds up', () {
       // 0.5 x 1.0 g = 0.5 g.
       final half = FoodIndex.fromJson(<Map<String, Object?>>[food('one', 1.0)]);
-      expect(gramsOf(proteinUnitsOf(
-          <DietPlanItem>[item('one', halves: 1)], half)), 1);
+      expect(
+          gramsOf(proteinUnitsOf(<DietLogEntry>[entry('one', halves: 1)], half)),
+          1);
     });
 
     test('an unknown food counts 0 g', () {
-      expect(proteinUnitsOf(<DietPlanItem>[item('gone')], foods), 0);
+      expect(proteinUnitsOf(<DietLogEntry>[entry('gone')], foods), 0);
     });
   });
 
   group('target arithmetic', () {
     test('AE1: 86 against 120 is 34 to go; 120 against 120 is 0', () {
-      expect(toGoGrams(target: 120, planned: 86), 34);
-      expect(toGoGrams(target: 120, planned: 120), 0);
+      expect(toGoGrams(target: 120, logged: 86), 34);
+      expect(toGoGrams(target: 120, logged: 120), 0);
     });
 
-    test('to go clamps at 0 when planned exceeds the target', () {
-      expect(toGoGrams(target: 100, planned: 130), 0);
+    test('to go clamps at 0 when logged exceeds the target', () {
+      expect(toGoGrams(target: 100, logged: 130), 0);
     });
 
-    test('the meter is planned over target, clamped to 0..1', () {
-      expect(meterFraction(target: 120, planned: 60), 0.5);
-      expect(meterFraction(target: 120, planned: 0), 0);
-      expect(meterFraction(target: 100, planned: 130), 1);
-    });
-  });
-
-  group('version in effect', () {
-    final versions = <DietPlanVersion>[
-      version(2, <DietPlanItem>[item('twelve')]),
-      version(16, <DietPlanItem>[item('a')]),
-    ];
-
-    test('a week with its own version uses it', () {
-      expect(versionInEffectOn(versions, nov(18))!.effectiveFrom, nov(16));
-      expect(versionInEffectOn(versions, nov(16))!.effectiveFrom, nov(16));
-    });
-
-    test('a week with no version resolves to the latest earlier one', () {
-      expect(versionInEffectOn(versions, nov(12))!.effectiveFrom, nov(2));
-      expect(versionInEffectOn(versions, nov(15))!.effectiveFrom, nov(2),
-          reason: 'Sunday the 15th is still the week of the 9th');
-    });
-
-    test('a date before any version resolves to an empty plan', () {
-      expect(versionInEffectOn(versions, nov(1)), isNull);
-      expect(itemsInEffectOn(versions, nov(1)), isEmpty);
-    });
-
-    test('any list order resolves the same way', () {
-      expect(versionInEffectOn(versions.reversed.toList(), nov(12))!
-          .effectiveFrom, nov(2));
+    test('the meter is logged over target, clamped to 0..1', () {
+      expect(meterFraction(target: 120, logged: 60), 0.5);
+      expect(meterFraction(target: 120, logged: 0), 0);
+      expect(meterFraction(target: 100, logged: 130), 1);
     });
   });
 
-  group('tickable', () {
-    test('Sunday of this week is tickable on Sunday', () {
-      expect(isTickable(nov(8), today: nov(8)), isTrue);
-      expect(isTickable(nov(2), today: nov(8)), isTrue);
+  group('entriesOn', () {
+    test('returns only the entries dated that day', () {
+      final all = <DietLogEntry>[
+        entry('a', date: nov(3)),
+        entry('b', date: nov(4)),
+        entry('c', date: nov(4), slot: MealSlot.dinner),
+        entry('a', date: nov(5)),
+      ];
+      expect(entriesOn(all, nov(4)).map((e) => e.foodId), <String>['b', 'c']);
+      expect(entriesOn(all, nov(6)), isEmpty);
     });
 
-    test('on the following Monday, last Sunday is not', () {
-      expect(isTickable(nov(8), today: nov(9)), isFalse);
-      expect(isTickable(nov(9), today: nov(9)), isTrue);
-    });
-
-    test('a future day is not tickable', () {
-      expect(isTickable(nov(5), today: nov(4)), isFalse);
+    test('a food logged on one weekday never shows on the next week\'s same '
+        'weekday: there is no repeat', () {
+      final all = <DietLogEntry>[entry('a', date: nov(4))];
+      expect(entriesOn(all, nov(11)), isEmpty);
     });
   });
 
@@ -173,36 +149,26 @@ void main() {
   });
 
   group('a day', () {
-    // Wednesday the 4th; today is Wednesday unless a test says otherwise.
-    final plan = <DietPlanVersion>[
-      version(2, <DietPlanItem>[
-        item('forty-three', weekday: 2, slot: MealSlot.breakfast),
-        item('forty-three', weekday: 2, slot: MealSlot.lunch),
-        item('twelve', weekday: 0, slot: MealSlot.lunch),
-        item('twenty-eight', weekday: 0, slot: MealSlot.dinner),
-        item('gone', weekday: 2, slot: MealSlot.snack, halves: 3),
-      ]),
+    // Wednesday the 4th has 86 g; Monday the 2nd has 12 + 28 = 40 g.
+    final log = <DietLogEntry>[
+      entry('forty-three', date: nov(4), slot: MealSlot.breakfast),
+      entry('forty-three', date: nov(4), slot: MealSlot.lunch),
+      entry('gone', date: nov(4), slot: MealSlot.snack, halves: 3),
+      entry('twelve', date: nov(2), slot: MealSlot.lunch),
+      entry('twenty-eight', date: nov(2), slot: MealSlot.dinner),
     ];
 
-    DietDay day(
-      LocalDate date, {
-      LocalDate? today,
-      int? target,
-      Set<MealTick> ticks = const <MealTick>{},
-      List<DietPlanVersion>? versions,
-    }) =>
+    DietDay day(LocalDate date, {int? target, List<DietLogEntry>? entries}) =>
         dietDayFor(
           date: date,
-          today: today ?? nov(4),
-          versions: versions ?? plan,
-          ticks: ticks,
+          entries: entries ?? log,
           target: target,
           foods: foods,
         );
 
-    test('AE1: 86 of 120 planned with 34 to go and a meter', () {
+    test('AE1: 86 of 120 logged with 34 to go and a meter', () {
       final d = day(nov(4), target: 120);
-      expect(d.plannedG, 86);
+      expect(d.loggedG, 86);
       expect(d.toGoG, 34);
       expect(d.meter, closeTo(86 / 120, 1e-9));
       expect(d.slots.map((s) => s.slot), MealSlot.values);
@@ -225,57 +191,33 @@ void main() {
       expect(snack.isEmpty, isFalse, reason: 'it can still be removed');
     });
 
-    test('AE3: a ticked Monday lunch reads 12 g eaten; Friday has no tick',
-        () {
-      final ticks = <MealTick>{MealTick(date: nov(2), slot: MealSlot.lunch)};
-      final monday = day(nov(2), ticks: ticks);
-      expect(monday.eatenG, 12);
-      expect(monday.slots[MealSlot.lunch.index].ticked, isTrue);
-      expect(monday.slots[MealSlot.lunch.index].canTick, isTrue);
-      final friday = day(nov(6), ticks: ticks);
-      expect(friday.tickable, isFalse);
-      expect(friday.slots.every((s) => !s.canTick), isTrue);
+    test('a day counts only its own entries', () {
+      expect(day(nov(2)).loggedG, 40);
+      expect(day(nov(3)).loggedG, 0);
+      expect(day(nov(11)).loggedG, 0, reason: 'nothing repeats next week');
     });
 
-    test('an empty slot cannot be ticked', () {
-      final monday = day(nov(2));
-      expect(monday.slots[MealSlot.breakfast.index].isEmpty, isTrue);
-      expect(monday.slots[MealSlot.breakfast.index].canTick, isFalse);
+    test('rows within a slot follow position, not insertion order', () {
+      final d = day(nov(4), entries: <DietLogEntry>[
+        entry('b', slot: MealSlot.snack, position: 1),
+        entry('a', slot: MealSlot.snack, position: 0),
+      ]);
+      expect(d.slots[MealSlot.snack.index].items.map((i) => i.entry.foodId),
+          <String>['a', 'b']);
     });
 
-    test('eaten ignores a tick on a slot that has since become empty', () {
-      final ticks = <MealTick>{
-        MealTick(date: nov(2), slot: MealSlot.breakfast), // empty slot
-        MealTick(date: nov(2), slot: MealSlot.dinner),
-      };
-      final monday = day(nov(2), ticks: ticks);
-      expect(monday.eatenG, 28);
-      expect(monday.slots[MealSlot.breakfast.index].ticked, isFalse,
-          reason: 'no tick is ever shown on an empty slot');
-    });
-
-    test('eaten uses the plan in effect that week', () {
-      final versions = <DietPlanVersion>[
-        ...plan,
-        version(9, <DietPlanItem>[
-          item('a', weekday: 0, slot: MealSlot.lunch),
-        ]),
-      ];
-      final ticks = <MealTick>{
-        MealTick(date: nov(2), slot: MealSlot.lunch),
-        MealTick(date: nov(9), slot: MealSlot.lunch),
-      };
-      expect(day(nov(2), today: nov(10), versions: versions, ticks: ticks)
-          .eatenG, 12);
-      expect(day(nov(9), today: nov(10), versions: versions, ticks: ticks)
-          .eatenG, 2);
-    });
-
-    test('a date before any version is an empty day', () {
-      final d = day(LocalDate(2026, 10, 30), target: 100);
-      expect(d.plannedG, 0);
+    test('a day with nothing logged is empty with the full target to go', () {
+      final d = day(nov(3), target: 100);
+      expect(d.loggedG, 0);
       expect(d.toGoG, 100);
+      expect(d.isEmpty, isTrue);
       expect(d.slots.every((s) => s.isEmpty), isTrue);
+    });
+
+    test('logged at or past the target has 0 to go and a full meter', () {
+      final d = day(nov(4), target: 50);
+      expect(d.toGoG, 0);
+      expect(d.meter, 1);
     });
   });
 
@@ -291,52 +233,62 @@ void main() {
         appDatabaseProvider.overrideWithValue(database),
         foodIndexProvider.overrideWithValue(foods),
         planTodayProvider.overrideWithValue(nov(4)),
-        dietPlanStoreProvider
-            .overrideWithValue(DietPlanStore(database, today: () => nov(4))),
-        mealTickStoreProvider
-            .overrideWithValue(MealTickStore(database, today: () => nov(4))),
+        dietLogStoreProvider
+            .overrideWithValue(DietLogStore(database, today: () => nov(4))),
         ...extra,
       ]);
       addTearDown(c.dispose);
       return c;
     }
 
-    test('editing the plan moves dietDayProvider with no manual invalidation',
+    test('editing the log moves dietDayProvider with no manual invalidation',
         () async {
       final c = container();
       final sub = c.listen(dietDayProvider(nov(4)), (_, _) {});
       addTearDown(sub.close);
-      expect(sub.read().plannedG, 0);
+      expect(sub.read().loggedG, 0);
 
-      final log = c.read(dietPlanLogProvider.notifier);
+      final log = c.read(dietLogProvider.notifier);
       await log.addFood(
-          weekdays: <int>{2}, slot: MealSlot.lunch, foodId: 'twelve', halves: 3);
-      expect(c.read(dietDayProvider(nov(4))).plannedG, 18);
+          date: nov(4), slot: MealSlot.lunch, foodId: 'twelve', halves: 3);
+      expect(c.read(dietDayProvider(nov(4))).loggedG, 18);
 
-      final row = c.read(dietDayProvider(nov(4)))
-          .slots[MealSlot.lunch.index].items.single.item;
+      final row = c
+          .read(dietDayProvider(nov(4)))
+          .slots[MealSlot.lunch.index]
+          .items
+          .single
+          .entry;
       await log.setServings(row, 2);
-      expect(c.read(dietDayProvider(nov(4))).plannedG, 12);
+      expect(c.read(dietDayProvider(nov(4))).loggedG, 12);
 
-      final removed = await log.removeItem(row);
-      expect(c.read(dietDayProvider(nov(4))).plannedG, 0);
-      await log.restoreItem(removed!);
-      expect(c.read(dietDayProvider(nov(4))).plannedG, 12);
+      final removed = await log.removeEntry(row);
+      expect(c.read(dietDayProvider(nov(4))).loggedG, 0);
+      await log.restoreEntry(removed!);
+      expect(c.read(dietDayProvider(nov(4))).loggedG, 12);
 
-      expect(await DietPlanStore(database).readVersions(),
-          c.read(dietPlanLogProvider),
+      expect(await DietLogStore(database).readEntries(),
+          c.read(dietLogProvider),
           reason: 'state is what was stored');
     });
 
-    test('ticks and the target feed the day and persist', () async {
+    test('a write on one day leaves another day untouched', () async {
+      final c = container();
+      await c.read(dietLogProvider.notifier).addFood(
+          date: nov(3), slot: MealSlot.lunch, foodId: 'twelve', halves: 2);
+      await c.read(dietLogProvider.notifier).addFood(
+          date: nov(4), slot: MealSlot.lunch, foodId: 'a', halves: 2);
+      expect(c.read(dietDayProvider(nov(3))).loggedG, 12);
+      expect(c.read(dietDayProvider(nov(4))).loggedG, 2);
+    });
+
+    test('the target feeds the day and persists', () async {
       final c = container(extra: [
-        initialDietPlanProvider.overrideWithValue(<DietPlanVersion>[
-          version(2, <DietPlanItem>[item('twelve', weekday: 2)]),
+        initialDietLogProvider.overrideWithValue(<DietLogEntry>[
+          entry('twelve'),
         ]),
       ]);
-      expect(await c.read(mealTicksProvider.notifier)
-          .toggle(nov(4), MealSlot.lunch), isTrue);
-      expect(c.read(dietDayProvider(nov(4))).eatenG, 12);
+      expect(c.read(dietDayProvider(nov(4))).loggedG, 12);
 
       await c.read(proteinTargetProvider.notifier).set(20);
       expect(c.read(dietDayProvider(nov(4))).toGoG, 8);
@@ -345,32 +297,30 @@ void main() {
       await c.read(proteinTargetProvider.notifier).clear();
       expect(c.read(dietDayProvider(nov(4))).targetG, isNull);
       expect(await SettingsStore(database).readProteinTarget(), isNull);
-
-      expect(await c.read(mealTicksProvider.notifier)
-          .toggle(nov(4), MealSlot.lunch), isFalse);
-      expect(c.read(dietDayProvider(nov(4))).eatenG, 0);
-      expect(await MealTickStore(database).read(), isEmpty);
     });
 
     test('boot seeds read back what is stored', () async {
-      final plans = DietPlanStore(database, today: () => nov(4));
-      await plans.addFood(
-          weekdays: <int>{0}, slot: MealSlot.dinner, foodId: 'a', halves: 2);
-      await MealTickStore(database, today: () => nov(4))
-          .toggle(nov(2), MealSlot.dinner);
+      final store = DietLogStore(database, today: () => nov(4));
+      await store.addFood(
+          date: nov(2), slot: MealSlot.dinner, foodId: 'a', halves: 2);
       await SettingsStore(database).writeProteinTarget(140);
 
       final stored = await readStoredDiet(database);
-      expect(stored.versions, await plans.readVersions());
-      expect(stored.ticks,
-          <MealTick>{MealTick(date: nov(2), slot: MealSlot.dinner)});
+      expect(stored.entries, await store.readEntries());
+      expect(stored.entries.single.date, nov(2));
       expect(stored.proteinTargetG, 140);
     });
 
-    test('the week is Monday to Sunday of today', () {
+    test('the strip is the seven days from its first day', () {
       final c = container();
-      expect(c.read(dietWeekProvider).map((d) => d.date),
+      expect(c.read(dietStripProvider(nov(2))).map((d) => d.date),
           <LocalDate>[for (var d = 2; d <= 8; d++) nov(d)]);
+    });
+
+    test('the strip can start on any day, not only a Monday', () {
+      final c = container();
+      expect(c.read(dietStripProvider(nov(5))).map((d) => d.date),
+          <LocalDate>[for (var d = 5; d <= 11; d++) nov(d)]);
     });
 
     test('the suggestion reads the bodyweight in effect today', () {

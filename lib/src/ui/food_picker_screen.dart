@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/food.dart';
 import '../data/food_index.dart';
+import '../data/local_date.dart';
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
 import 'diet_type_glyph.dart';
@@ -10,7 +11,7 @@ import 'food_serving_sheet.dart';
 import 'ghost_button.dart';
 import 'muscle_search_field.dart';
 
-/// Short weekday names, 0 = Monday (KTD5's weekday numbering).
+/// Short weekday names, 0 = Monday.
 const List<String> kDietWeekdayShort = <String>[
   'Mon',
   'Tue',
@@ -37,26 +38,26 @@ class FoodPickerFilter extends Notifier<DietFilter> {
 final foodPickerFilterProvider =
     NotifierProvider<FoodPickerFilter, DietFilter>(FoodPickerFilter.new);
 
-/// Pushes the picker for [slot] on [weekday] (0 = Monday).
+/// Pushes the picker for [slot] on [date].
 ///
 /// Tapping a food opens the serving sheet over the picker; committing Add
 /// closes the sheet and then the picker, back to the Diet pane with the new
-/// row in its slot (U11). Backing out of the sheet leaves the picker open.
+/// row in its slot. Backing out of the sheet leaves the picker open.
 Future<void> pushFoodPicker(
   BuildContext context, {
-  required int weekday,
+  required LocalDate date,
   required MealSlot slot,
 }) =>
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (pickerContext) => FoodPickerScreen(
-          weekday: weekday,
+          date: date,
           slot: slot,
           onPick: (food) async {
             final added = await showAddFoodSheet(
               pickerContext,
               food: food,
-              weekday: weekday,
+              date: date,
               slot: slot,
             );
             if (added && pickerContext.mounted) {
@@ -79,22 +80,22 @@ Future<void> pushFoodPicker(
 /// rows rather than buttons that do nothing.
 class FoodPickerScreen extends ConsumerStatefulWidget {
   const FoodPickerScreen({
-    required this.weekday,
+    required this.date,
     required this.slot,
     this.onPick,
     super.key,
   });
 
-  /// 0 = Monday to 6 = Sunday.
-  final int weekday;
+  /// The day the food is logged on.
+  final LocalDate date;
   final MealSlot slot;
 
   /// Called with the tapped food. Null leaves rows untappable.
   final ValueChanged<Food>? onPick;
 
   /// "Add to Lunch, Wed".
-  static String titleFor(int weekday, MealSlot slot) =>
-      'Add to ${slot.label}, ${kDietWeekdayShort[weekday]}';
+  static String titleFor(LocalDate date, MealSlot slot) =>
+      'Add to ${slot.label}, ${kDietWeekdayShort[date.weekday - 1]}';
 
   static const String searchHint = 'Search foods';
   static const String noMatchCopy = 'No foods match';
@@ -143,7 +144,7 @@ class _FoodPickerScreenState extends ConsumerState<FoodPickerScreen> {
     final foods = ref.watch(foodIndexProvider).search(_query, filter);
 
     return AppScreen.pushed(
-      title: FoodPickerScreen.titleFor(widget.weekday, widget.slot),
+      title: FoodPickerScreen.titleFor(widget.date, widget.slot),
       body: ListView(
         padding: screenScrollPadding(context),
         children: <Widget>[

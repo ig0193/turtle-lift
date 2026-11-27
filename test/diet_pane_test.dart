@@ -4,45 +4,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
-import 'package:turtle_lift/src/data/diet_plan.dart';
-import 'package:turtle_lift/src/data/diet_plan_store.dart';
+import 'package:turtle_lift/src/data/diet_log.dart';
+import 'package:turtle_lift/src/data/diet_log_store.dart';
 import 'package:turtle_lift/src/data/food_index.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/meal_slot.dart';
-import 'package:turtle_lift/src/data/meal_ticks.dart';
+import 'package:turtle_lift/src/data/reminder_prefs.dart';
+import 'package:turtle_lift/src/data/reminder_scheduler.dart'
+    show reminderSchedulerProvider;
 import 'package:turtle_lift/src/data/settings_store.dart';
-import 'package:turtle_lift/src/data/training_plan.dart';
+import 'package:turtle_lift/src/data/today.dart';
 import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/app_screen.dart';
 import 'package:turtle_lift/src/ui/diet_day_card.dart';
 import 'package:turtle_lift/src/ui/diet_pane.dart';
 import 'package:turtle_lift/src/ui/diet_slot_card.dart';
-import 'package:turtle_lift/src/ui/empty_state.dart';
 import 'package:turtle_lift/src/ui/food_picker_screen.dart';
 import 'package:turtle_lift/src/ui/food_serving_sheet.dart';
 import 'package:turtle_lift/src/ui/ghost_button.dart';
 import 'package:turtle_lift/src/ui/glass_tab_bar.dart';
 import 'package:turtle_lift/src/ui/protein_target_screen.dart';
-import 'package:turtle_lift/src/ui/week_day_chip.dart';
+import 'package:turtle_lift/src/ui/week_day_meter.dart';
 
 import 'protein_target_screen_test.dart' show expectNoBannedCopy;
+import 'support/fake_reminder_scheduler.dart';
 
-/// The Diet segment's states, on fixture foods (the shipped list is still
-/// under owner review). "Today" is Wednesday 4 November 2026; Monday is the
-/// 2nd.
+/// The Diet pane as a log (`docs/adr/0015-diet-is-a-log.md`), on fixture foods
+/// (the shipped list is still under owner review). "Today" is Wednesday 4
+/// November 2026; Monday is the 2nd, and the days after the 4th cannot be
+/// logged.
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
   LocalDate nov(int day) => LocalDate(2026, 11, day);
 
   late AppDatabase database;
-  late DietPlanStore store;
-  late MealTickStore tickStore;
+  late DietLogStore store;
   setUp(() {
     database = AppDatabase.forTesting(NativeDatabase.memory());
-    store = DietPlanStore(database, today: () => nov(4));
-    tickStore = MealTickStore(database, today: () => nov(4));
+    store = DietLogStore(database, today: () => nov(4));
   });
   tearDown(() => database.close());
 
@@ -68,11 +69,12 @@ void main() {
     food('egg', 'Boiled egg', 6.3),
   ]);
 
-  DietPlanItem item(String foodId,
-          {int weekday = 2, MealSlot slot = MealSlot.lunch, int halves = 2}) =>
-      DietPlanItem(
-        id: '$foodId-$weekday-${slot.name}',
-        weekday: weekday,
+  /// One logged food. [day] is the day of November 2026; the default is today.
+  DietLogEntry entry(String foodId,
+          {int day = 4, MealSlot slot = MealSlot.lunch, int halves = 2}) =>
+      DietLogEntry(
+        id: '$foodId-$day-${slot.name}',
+        date: nov(day),
         slot: slot,
         foodId: foodId,
         servingsHalves: halves,
@@ -80,27 +82,30 @@ void main() {
       );
 
   /// The shell's shape: a root [AppScreen] over the floating tab bar, the
-  /// pane in a list padded by [screenScrollPadding], as [ProfileRoot] does.
+  /// pane in a list padded by [screenScrollPadding], as [YouRoot] does.
   Widget host({
     FoodIndex? index,
-    List<DietPlanVersion> plan = const <DietPlanVersion>[],
+    List<DietLogEntry> log = const <DietLogEntry>[],
     int? target,
-    Set<MealTick> ticks = const <MealTick>{},
+    ReminderPreferences? reminders,
+    FakeReminderScheduler? scheduler,
     LocalDate Function()? clock,
   }) =>
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(database),
-          dietPlanStoreProvider.overrideWithValue(store),
-          mealTickStoreProvider.overrideWithValue(tickStore),
+          dietLogStoreProvider.overrideWithValue(store),
           foodIndexProvider.overrideWithValue(index ?? foods),
           if (clock == null)
             planTodayProvider.overrideWithValue(nov(4))
           else
             planClockProvider.overrideWithValue(clock),
-          initialDietPlanProvider.overrideWithValue(plan),
+          initialDietLogProvider.overrideWithValue(log),
           initialProteinTargetProvider.overrideWithValue(target),
-          initialMealTicksProvider.overrideWithValue(ticks),
+          if (reminders != null)
+            initialReminderPrefsProvider.overrideWithValue(reminders),
+          if (scheduler != null)
+            reminderSchedulerProvider.overrideWithValue(scheduler),
         ],
         child: MaterialApp(
           theme: buildAppTheme(),
@@ -128,88 +133,19 @@ void main() {
           'Food list unavailable. Reinstall the app to restore it.');
       expect(find.byType(FilledButton), findsNothing);
       expect(find.byType(GhostButton), findsNothing);
-      expect(find.text(DietPane.emptyHeading), findsNothing);
+      expect(find.byKey(DietPane.dayViewKey), findsNothing);
     });
 
-    testWidgets('wins over a stored plan: nothing can be shown without foods',
+    testWidgets('wins over a stored log: nothing can be shown without foods',
         (tester) async {
       await tester.pumpWidget(host(
         index: FoodIndex.unavailable(),
-        plan: <DietPlanVersion>[
-          DietPlanVersion(effectiveFrom: nov(2), items: [item('paneer')]),
-        ],
+        log: <DietLogEntry>[entry('paneer')],
       ));
       await tester.pumpAndSettle();
 
       expect(find.text(DietPane.unavailableCopy), findsOneWidget);
       expect(find.text('Paneer'), findsNothing);
-    });
-  });
-
-  group('first-time empty state', () {
-    testWidgets('bowl glyph, heading, one line and one filled Plan Monday',
-        (tester) async {
-      await tester.pumpWidget(host());
-      await tester.pumpAndSettle();
-
-      expect(find.text(DietPane.emptyHeading), findsOneWidget);
-      expect(DietPane.emptyHeading, "Plan your week's protein");
-      expect(find.text(DietPane.emptyBody), findsOneWidget);
-      final glyph =
-          tester.widget<EmptyStateGlyphIcon>(find.byType(EmptyStateGlyphIcon));
-      expect(glyph.glyph, EmptyStateGlyph.bowl);
-
-      expect(find.byType(FilledButton), findsOneWidget,
-          reason: 'one primary action per view');
-      expect(
-        find.descendant(
-            of: find.byType(FilledButton), matching: find.text('Plan Monday')),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('a ghost "Set a daily target" under Plan Monday opens the '
-        'target screen (U13)', (tester) async {
-      await tester.pumpWidget(host());
-      await tester.pumpAndSettle();
-
-      final ghost = find.byKey(DietPane.setTargetKey);
-      expect(ghost, findsOneWidget);
-      expect(find.ancestor(of: ghost, matching: find.byType(GhostButton)),
-          findsOneWidget);
-      expect(find.descendant(of: ghost, matching: find.text('Set a daily target')),
-          findsOneWidget);
-      expect(tester.getTopLeft(ghost).dy,
-          greaterThan(tester.getTopLeft(find.byKey(DietPane.planMondayKey)).dy));
-
-      await tester.tap(ghost);
-      await tester.pumpAndSettle();
-      expect(find.byType(ProteinTargetScreen), findsOneWidget);
-    });
-
-    testWidgets('Plan Monday opens the picker for Monday, Breakfast',
-        (tester) async {
-      await tester.pumpWidget(host());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(DietPane.planMondayKey));
-      await tester.pumpAndSettle();
-
-      final picker =
-          tester.widget<FoodPickerScreen>(find.byType(FoodPickerScreen));
-      expect(picker.weekday, 0);
-      expect(picker.slot, MealSlot.breakfast);
-      expect(find.text('Add to Breakfast, Mon'), findsOneWidget);
-    });
-
-    testWidgets('a plan whose versions are all empty is still first-time',
-        (tester) async {
-      await tester.pumpWidget(host(plan: <DietPlanVersion>[
-        DietPlanVersion(effectiveFrom: nov(2), items: const <DietPlanItem>[]),
-      ]));
-      await tester.pumpAndSettle();
-
-      expect(find.text(DietPane.emptyHeading), findsOneWidget);
     });
   });
 
@@ -222,9 +158,6 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  List<DietPlanVersion> planOf(List<DietPlanItem> items) =>
-      <DietPlanVersion>[DietPlanVersion(effectiveFrom: nov(2), items: items)];
-
   Finder slotCard(MealSlot slot) => find.byKey(DietSlotCard.cardKey(slot));
 
   Finder inSlot(MealSlot slot, String text) =>
@@ -235,11 +168,69 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  group('the week strip', () {
-    testWidgets('shows Monday to Sunday of this week with today selected',
+  group('opening on an empty log', () {
+    testWidgets(
+        'goes straight to the day view: no first-time state, no Plan Monday',
         (tester) async {
+      await pump(tester, host());
+
+      expect(find.byKey(DietPane.dayViewKey), findsOneWidget);
+      expect(find.text('Plan Monday'), findsNothing);
+      expect(find.text("Plan your week's protein"), findsNothing);
+      expect(find.byType(FilledButton), findsNothing,
+          reason: 'the day view has no single primary action');
+      for (final slot in MealSlot.values) {
+        expect(slotCard(slot), findsOneWidget);
+        expect(find.byKey(DietSlotCard.addFoodKey(slot)), findsOneWidget);
+      }
+    });
+
+    testWidgets('today is selected, and says nothing is logged yet',
+        (tester) async {
+      await pump(tester, host());
+
+      final container =
+          ProviderScope.containerOf(tester.element(find.byType(DietPane)));
+      expect(container.read(dietSelectedDayProvider), nov(4));
+      expect(find.text('0 g logged'), findsOneWidget);
+      expect(find.text('Nothing logged for Wednesday'), findsOneWidget);
+      expect(find.textContaining('planned'), findsNothing);
+      expect(find.textContaining('Nothing planned'), findsNothing);
+    });
+
+    testWidgets('the card offers "Set a daily target", which opens the screen',
+        (tester) async {
+      await pump(tester, host());
+
+      final link = find.byKey(DietDayCard.setTargetKey);
+      expect(find.descendant(of: link, matching: find.text('Set a daily target')),
+          findsOneWidget);
+      await tester.tap(link);
+      await tester.pumpAndSettle();
+      expect(find.byType(ProteinTargetScreen), findsOneWidget);
+    });
+
+    testWidgets("+ Add food on a fresh log opens today's picker",
+        (tester) async {
+      await pump(tester, host());
+
+      await tester.tap(find.byKey(DietSlotCard.addFoodKey(MealSlot.breakfast)));
+      await tester.pumpAndSettle();
+
+      final picker =
+          tester.widget<FoodPickerScreen>(find.byType(FoodPickerScreen));
+      expect(picker.date, nov(4));
+      expect(picker.slot, MealSlot.breakfast);
+      expect(find.text('Add to Breakfast, Wed'), findsOneWidget);
+    });
+  });
+
+  group('the week strip', () {
+    testWidgets(
+        'shows Monday to Sunday of this week with today selected; days after '
+        'today are not buttons', (tester) async {
       final handle = tester.ensureSemantics();
-      await pump(tester, host(plan: planOf([item('paneer')])));
+      await pump(tester, host(log: <DietLogEntry>[entry('paneer')]));
 
       for (var d = 0; d < 7; d++) {
         final chip = find.byKey(DietPane.weekDayKey(d));
@@ -247,8 +238,13 @@ void main() {
         expect(find.descendant(of: chip, matching: find.text('${2 + d}')),
             findsOneWidget,
             reason: 'the date of weekday $d');
-        expect(tester.getSemantics(chip),
-            isSemantics(isButton: true, isSelected: d == 2, hasTapAction: true),
+        final pickable = d <= 2;
+        expect(
+            tester.getSemantics(chip),
+            isSemantics(
+                isButton: pickable,
+                isSelected: d == 2,
+                hasTapAction: pickable),
             reason: 'weekday $d');
       }
       expect(
@@ -258,9 +254,20 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('tapping a day after today changes nothing', (tester) async {
+      await pump(tester, host(log: <DietLogEntry>[entry('paneer')]));
+
+      await selectDay(tester, 4);
+      final container =
+          ProviderScope.containerOf(tester.element(find.byType(DietPane)));
+      expect(container.read(dietSelectedDayProvider), nov(4));
+      expect(inSlot(MealSlot.lunch, 'Paneer'), findsOneWidget,
+          reason: 'still on today');
+    });
+
     testWidgets('the selected day is outlined on the 16pt card radius '
         '(taste pass: one radius scale)', (tester) async {
-      await pump(tester, host(plan: planOf([item('paneer')])));
+      await pump(tester, host(log: <DietLogEntry>[entry('paneer')]));
       final box = tester.widget<Container>(find.descendant(
         of: find.byKey(DietPane.weekDayKey(2)),
         matching: find.byType(Container),
@@ -269,65 +276,83 @@ void main() {
       expect(decoration.borderRadius, BorderRadius.circular(16));
     });
 
-    testWidgets("tapping Friday shows Friday's slots", (tester) async {
+    testWidgets("tapping Monday shows Monday's slots", (tester) async {
       await pump(
         tester,
-        host(plan: planOf([
-          item('paneer'),
-          item('egg', weekday: 4, slot: MealSlot.breakfast),
-        ])),
+        host(log: <DietLogEntry>[
+          entry('paneer'),
+          entry('egg', day: 2, slot: MealSlot.breakfast),
+        ]),
       );
       expect(inSlot(MealSlot.lunch, 'Paneer'), findsOneWidget);
       expect(find.text('Boiled egg'), findsNothing);
 
-      await selectDay(tester, 4);
+      await selectDay(tester, 0);
       expect(inSlot(MealSlot.breakfast, 'Boiled egg'), findsOneWidget);
       expect(find.text('Paneer'), findsNothing);
     });
 
     testWidgets('the selected day is in memory and survives a rebuild',
         (tester) async {
-      await pump(tester, host(plan: planOf([item('paneer')])));
-      await selectDay(tester, 5);
+      await pump(tester, host(log: <DietLogEntry>[entry('paneer')]));
+      await selectDay(tester, 1);
 
       final container =
           ProviderScope.containerOf(tester.element(find.byType(DietPane)));
-      expect(container.read(dietSelectedDayProvider), nov(7));
+      expect(container.read(dietSelectedDayProvider), nov(3));
     });
 
     testWidgets(
         'a resume across midnight resets the selection to the new today; a '
         'same-day resume keeps it', (tester) async {
       var today = nov(4);
-      await pump(
-          tester, host(plan: planOf([item('paneer')]), clock: () => today));
+      await pump(tester,
+          host(log: <DietLogEntry>[entry('paneer')], clock: () => today));
       final container =
           ProviderScope.containerOf(tester.element(find.byType(DietPane)));
 
-      await selectDay(tester, 6);
+      await selectDay(tester, 0);
       container.invalidate(planTodayProvider); // resume, same day
       await tester.pumpAndSettle();
-      expect(container.read(dietSelectedDayProvider), nov(8));
+      expect(container.read(dietSelectedDayProvider), nov(2));
 
       today = nov(5); // past midnight
       container.invalidate(planTodayProvider);
       await tester.pumpAndSettle();
       expect(container.read(dietSelectedDayProvider), nov(5));
     });
+
+    testWidgets('after midnight the new day can be picked on the strip',
+        (tester) async {
+      var today = nov(4);
+      await pump(tester, host(clock: () => today));
+      final handle = tester.ensureSemantics();
+      expect(
+          tester.getSemantics(find.byKey(DietPane.weekDayKey(3))),
+          isSemantics(isButton: false, isSelected: false, hasTapAction: false));
+
+      today = nov(5);
+      ProviderScope.containerOf(tester.element(find.byType(DietPane)))
+          .invalidate(planTodayProvider);
+      await tester.pumpAndSettle();
+      expect(
+          tester.getSemantics(find.byKey(DietPane.weekDayKey(3))),
+          isSemantics(isButton: true, isSelected: true, hasTapAction: true));
+      handle.dispose();
+    });
   });
 
   group('the day card', () {
-    testWidgets('AE2: with no target it reads "86 g planned" and no bar',
+    testWidgets('AE2: with no target it reads "86 g logged" and no bar',
         (tester) async {
-      await pump(tester, host(plan: planOf([item('soya', halves: 8)])));
+      await pump(tester, host(log: <DietLogEntry>[entry('soya', halves: 8)]));
 
       final card = find.byKey(DietDayCard.cardKey);
       expect(card, findsOneWidget);
-      expect(find.descendant(of: card, matching: find.text('86 g planned')),
+      expect(find.descendant(of: card, matching: find.text('86 g logged')),
           findsOneWidget);
       expect(find.textContaining('to go'), findsNothing);
       expect(find.byKey(DietDayCard.barKey), findsNothing);
-      expect(find.text('Planned'), findsNothing);
       final link = find.byKey(DietDayCard.setTargetKey);
       expect(find.descendant(of: card, matching: link), findsOneWidget);
       expect(find.descendant(of: link, matching: find.text('Set a daily target')),
@@ -338,37 +363,38 @@ void main() {
       expect(find.byType(ProteinTargetScreen), findsOneWidget);
     });
 
-    testWidgets('AE1: with a target it reads "86 of 120 g planned", 34 g to go',
+    testWidgets('AE1: with a target it reads "86 of 120 g logged", 34 g to go',
         (tester) async {
       await pump(tester,
-          host(target: 120, plan: planOf([item('soya', halves: 8)])));
+          host(target: 120, log: <DietLogEntry>[entry('soya', halves: 8)]));
 
-      expect(find.text('86 of 120 g planned'), findsOneWidget);
+      expect(find.text('86 of 120 g logged'), findsOneWidget);
       expect(find.text('34 g to go'), findsOneWidget);
     });
 
     testWidgets('AE1: at the target there is no "to go" line', (tester) async {
       await pump(tester,
-          host(target: 120, plan: planOf([item('chicken', halves: 8)])));
+          host(target: 120, log: <DietLogEntry>[entry('chicken', halves: 8)]));
 
-      expect(find.text('120 of 120 g planned'), findsOneWidget);
+      expect(find.text('120 of 120 g logged'), findsOneWidget);
       expect(find.textContaining('to go'), findsNothing);
     });
 
-    testWidgets('a target and no plan skips the first-time state',
+    testWidgets('a target and nothing logged reads 0 of the target',
         (tester) async {
       await pump(tester, host(target: 120));
 
-      expect(find.text(DietPane.emptyHeading), findsNothing);
-      expect(find.text('0 of 120 g planned'), findsOneWidget);
-      expect(find.text('Nothing planned for Wednesday'), findsOneWidget);
+      expect(find.byKey(DietPane.dayViewKey), findsOneWidget);
+      expect(find.text('0 of 120 g logged'), findsOneWidget);
+      expect(find.text('120 g to go'), findsOneWidget);
+      expect(find.text('Nothing logged for Wednesday'), findsOneWidget);
     });
   });
 
   group('the slot cards', () {
     testWidgets('four slots in order, rows read name, serving and grams',
         (tester) async {
-      await pump(tester, host(plan: planOf([item('paneer')])));
+      await pump(tester, host(log: <DietLogEntry>[entry('paneer')]));
 
       final ys = <double>[
         for (final slot in MealSlot.values) tester.getTopLeft(slotCard(slot)).dy,
@@ -397,11 +423,11 @@ void main() {
         (tester) async {
       await pump(
         tester,
-        host(plan: planOf([
-          item('paneer'), // 9.4
-          item('dal'), // 6.5
-          item('dal', slot: MealSlot.dinner, halves: 3), // 9.75
-        ])),
+        host(log: <DietLogEntry>[
+          entry('paneer'), // 9.4
+          entry('dal'), // 6.5
+          entry('dal', slot: MealSlot.dinner, halves: 3), // 9.75
+        ]),
       );
 
       // Lunch 15.9 -> 16; dinner 9.75 -> 10; day 25.65 -> 26, rounded once.
@@ -422,29 +448,29 @@ void main() {
       expect(find.byKey(DietSlotCard.totalKey(MealSlot.breakfast)),
           findsNothing,
           reason: 'an empty slot shows no total');
-      expect(find.text('26 g planned'), findsOneWidget);
+      expect(find.text('26 g logged'), findsOneWidget);
       expect(inSlot(MealSlot.dinner, '1.5 katori'), findsOneWidget);
     });
 
-    testWidgets('a day with nothing planned says so above four empty slots',
+    testWidgets('a day with nothing logged says so above four empty slots',
         (tester) async {
-      await pump(tester, host(plan: planOf([item('paneer')])));
-      await selectDay(tester, 3);
+      await pump(tester, host(log: <DietLogEntry>[entry('paneer')]));
+      await selectDay(tester, 1);
 
-      expect(find.text('Nothing planned for Thursday'), findsOneWidget);
+      expect(find.text('Nothing logged for Tuesday'), findsOneWidget);
       for (final slot in MealSlot.values) {
         expect(slotCard(slot), findsOneWidget);
         expect(find.byKey(DietSlotCard.totalKey(slot)), findsNothing);
       }
-      final line = tester.getTopLeft(find.text('Nothing planned for Thursday'));
+      final line = tester.getTopLeft(find.text('Nothing logged for Tuesday'));
       expect(line.dy,
           lessThan(tester.getTopLeft(slotCard(MealSlot.breakfast)).dy));
     });
 
-    testWidgets('+ Add food opens the picker for that weekday and slot',
+    testWidgets('+ Add food opens the picker for the selected date and slot',
         (tester) async {
-      await pump(tester, host(plan: planOf([item('paneer')])));
-      await selectDay(tester, 4);
+      await pump(tester, host(log: <DietLogEntry>[entry('paneer')]));
+      await selectDay(tester, 1);
 
       await tester.ensureVisible(find.byKey(DietSlotCard.addFoodKey(MealSlot.snack)));
       await tester.tap(find.byKey(DietSlotCard.addFoodKey(MealSlot.snack)));
@@ -452,23 +478,23 @@ void main() {
 
       final picker =
           tester.widget<FoodPickerScreen>(find.byType(FoodPickerScreen));
-      expect(picker.weekday, 4);
+      expect(picker.date, nov(3));
       expect(picker.slot, MealSlot.snack);
-      expect(find.text('Add to Snack, Fri'), findsOneWidget);
+      expect(find.text('Add to Snack, Tue'), findsOneWidget);
     });
 
     testWidgets('an unknown food renders "Unknown food", 0 g, and can be '
         'removed (R26)', (tester) async {
       await store.addFood(
-          weekdays: <int>{2}, slot: MealSlot.lunch, foodId: 'gone', halves: 2);
-      await pump(tester, host(plan: await store.readVersions()));
+          date: nov(4), slot: MealSlot.lunch, foodId: 'gone', halves: 2);
+      await pump(tester, host(log: await store.readEntries()));
 
       final row = find.byKey(DietSlotCard.rowKey(MealSlot.lunch, 'gone'));
       expect(find.descendant(of: row, matching: find.text('Unknown food')),
           findsOneWidget);
       expect(find.descendant(of: row, matching: find.text('0 g')),
           findsOneWidget);
-      expect(find.text('0 g planned'), findsOneWidget);
+      expect(find.text('0 g logged'), findsOneWidget);
 
       await tester.tap(row);
       await tester.pumpAndSettle();
@@ -479,20 +505,19 @@ void main() {
       await tester.tap(find.byKey(FoodServingSheet.removeKey));
       await tester.pumpAndSettle();
       expect(row, findsNothing);
-      final stored = await store.readVersions();
-      expect(stored.expand((v) => v.items), isEmpty);
+      expect(await store.readEntries(), isEmpty);
     });
 
     testWidgets('the last slot card scrolls clear of the floating tab bar',
         (tester) async {
       await pump(
         tester,
-        host(plan: planOf([
+        host(log: <DietLogEntry>[
           for (final slot in MealSlot.values) ...[
-            item('paneer', slot: slot),
-            item('dal', slot: slot),
+            entry('paneer', slot: slot),
+            entry('dal', slot: slot),
           ],
-        ])),
+        ]),
         size: const Size(375, 667),
       );
 
@@ -504,13 +529,14 @@ void main() {
       expect(add.bottom, lessThanOrEqualTo(bar.top));
     });
 
-    testWidgets('no primary button on the day view, and no verdict copy',
-        (tester) async {
+    testWidgets('no tick controls, and no verdict copy', (tester) async {
       await pump(tester,
-          host(target: 40, plan: planOf([item('soya', halves: 8)])));
+          host(target: 40, log: <DietLogEntry>[entry('soya', halves: 8)]));
 
       expect(find.byType(FilledButton), findsNothing,
           reason: 'the day view has no single primary action');
+      expect(find.byIcon(Icons.check_rounded), findsNothing,
+          reason: 'a logged food has been eaten: there is nothing to tick');
       final copy = tester
           .widgetList<Text>(find.descendant(
               of: find.byType(DietPane), matching: find.byType(Text)))
@@ -527,41 +553,29 @@ void main() {
         ]) {
           expect(text.contains(banned), isFalse, reason: '"$text"');
         }
+        expect(text.contains('eaten'), isFalse, reason: '"$text"');
+        expect(text.contains('planned'), isFalse, reason: '"$text"');
       }
       expect(find.textContaining('to go'), findsNothing,
-          reason: '86 of 40 g: planned past the target, so no "to go"');
+          reason: '86 of 40 g: logged past the target, so no "to go"');
     });
   });
 
-  group('planning a week', () {
-    testWidgets('the seeded 4 x 7 plan is built in 12 or fewer sheet commits',
+  group('logging a day', () {
+    testWidgets('four slots are logged in four sheet commits, all on today',
         (tester) async {
       await pump(tester, host(), size: const Size(390, 1400));
       var commits = 0;
 
-      /// From the Diet pane: + Add food (or Plan Monday), pick, set Repeat on
-      /// to exactly [days], commit.
-      Future<void> plan(MealSlot slot, String foodId, Set<int> days,
-          {int fromWeekday = 0}) async {
-        final planMonday = find.byKey(DietPane.planMondayKey);
-        if (planMonday.evaluate().isNotEmpty) {
-          await tester.tap(planMonday);
-        } else {
-          await selectDay(tester, fromWeekday);
-          final add = find.byKey(DietSlotCard.addFoodKey(slot));
-          await tester.ensureVisible(add);
-          await tester.tap(add);
-        }
+      /// From the Diet pane: + Add food, pick, commit.
+      Future<void> log(MealSlot slot, String foodId) async {
+        final add = find.byKey(DietSlotCard.addFoodKey(slot));
+        await tester.ensureVisible(add);
+        await tester.tap(add);
         await tester.pumpAndSettle();
         final row = find.byKey(FoodPickerScreen.rowKey(foodId));
         await tester.ensureVisible(row);
         await tester.tap(row);
-        await tester.pumpAndSettle();
-        for (var d = 0; d < 7; d++) {
-          final chip = find.byKey(FoodServingSheet.repeatChipKey(d));
-          final selected = tester.widget<WeekDayChip>(chip).selected;
-          if (selected != days.contains(d)) await tester.tap(chip);
-        }
         await tester.pumpAndSettle();
         await tester.tap(find.byKey(FoodServingSheet.commitKey));
         await tester.pumpAndSettle();
@@ -569,44 +583,36 @@ void main() {
         expect(find.byType(FoodPickerScreen), findsNothing);
       }
 
-      const week = <int>{0, 1, 2, 3, 4, 5, 6};
-      const weekdays = <int>{0, 1, 2, 3, 4};
-      const weekend = <int>{5, 6};
-      await plan(MealSlot.breakfast, 'egg', weekdays);
-      await plan(MealSlot.breakfast, 'paneer', weekend, fromWeekday: 5);
-      await plan(MealSlot.lunch, 'dal', week);
-      await plan(MealSlot.lunch, 'paneer', weekdays);
-      await plan(MealSlot.snack, 'soya', week);
-      await plan(MealSlot.dinner, 'chicken', weekdays);
-      await plan(MealSlot.dinner, 'dal', weekend, fromWeekday: 6);
+      await log(MealSlot.breakfast, 'egg');
+      await log(MealSlot.lunch, 'dal');
+      await log(MealSlot.snack, 'soya');
+      await log(MealSlot.dinner, 'chicken');
 
-      expect(commits, lessThanOrEqualTo(12));
-      final items = (await store.readVersions())
-          .singleWhere((v) => v.effectiveFrom == nov(2))
-          .items;
-      for (var d = 0; d < 7; d++) {
-        for (final slot in MealSlot.values) {
-          expect(items.where((i) => i.weekday == d && i.slot == slot),
-              isNotEmpty,
-              reason: '${slot.label} on weekday $d');
-        }
-      }
-      // And the pane shows it: Saturday has every slot filled.
-      await selectDay(tester, 5);
+      expect(commits, 4);
+      final entries = await store.readEntries();
+      expect(entries, hasLength(4));
+      expect(entries.map((e) => e.date).toSet(), <LocalDate>{nov(4)},
+          reason: 'a log writes to the selected day and nowhere else');
       for (final slot in MealSlot.values) {
+        expect(entries.where((e) => e.slot == slot), hasLength(1),
+            reason: slot.label);
         expect(find.byKey(DietSlotCard.totalKey(slot)), findsOneWidget);
       }
+      // 6.3 + 6.5 + 21.5 + 30 = 64.3 -> 64
+      expect(find.text('64 g logged'), findsOneWidget);
+
+      // Another day is untouched.
+      await selectDay(tester, 1);
+      expect(find.text('Nothing logged for Tuesday'), findsOneWidget);
+      expect(find.text('0 g logged'), findsOneWidget);
     });
   });
-
-  ProviderContainer containerOf(WidgetTester tester) =>
-      ProviderScope.containerOf(tester.element(find.byType(MaterialApp)));
 
   double widthOf(WidgetTester tester, Key key) =>
       tester.getSize(find.byKey(key)).width;
 
-  /// To the bottom of the pane, where the plan settings sit, scrolled clear
-  /// of the floating tab bar as a user would.
+  /// To the bottom of the pane, where the settings sit, scrolled clear of the
+  /// floating tab bar as a user would.
   Future<void> scrollToEnd(WidgetTester tester) async {
     await tester.drag(find.byType(ListView), const Offset(0, -3000));
     await tester.pumpAndSettle();
@@ -615,7 +621,7 @@ void main() {
   group('the target (U13)', () {
     testWidgets('an in-pane Target row reads "Not set" and opens the screen',
         (tester) async {
-      await pump(tester, host(plan: planOf([item('paneer')])));
+      await pump(tester, host(log: <DietLogEntry>[entry('paneer')]));
 
       final row = find.byKey(DietPane.targetRowKey);
       await scrollToEnd(tester);
@@ -623,9 +629,18 @@ void main() {
           findsOneWidget);
       expect(find.descendant(of: row, matching: find.text('Not set')),
           findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
+      expect(find.text('Plan settings'), findsNothing);
+      expect(
+        find.descendant(
+            of: row,
+            matching:
+                find.text('Daily protein, measured against what you log')),
+        findsOneWidget,
+      );
       expect(tester.getTopLeft(row).dy,
           greaterThan(tester.getTopLeft(slotCard(MealSlot.dinner)).dy),
-          reason: 'plan settings sit below the slots');
+          reason: 'settings sit below the slots');
 
       await tester.tap(row);
       await tester.pumpAndSettle();
@@ -633,7 +648,8 @@ void main() {
     });
 
     testWidgets('with a target the row reads "120 g a day"', (tester) async {
-      await pump(tester, host(target: 120, plan: planOf([item('paneer')])));
+      await pump(
+          tester, host(target: 120, log: <DietLogEntry>[entry('paneer')]));
 
       final row = find.byKey(DietPane.targetRowKey);
       expect(find.descendant(of: row, matching: find.text('120 g a day')),
@@ -642,8 +658,8 @@ void main() {
 
     testWidgets('saving a target on the screen moves the day card',
         (tester) async {
-      await pump(tester, host(plan: planOf([item('soya', halves: 8)])));
-      expect(find.text('86 g planned'), findsOneWidget);
+      await pump(tester, host(log: <DietLogEntry>[entry('soya', halves: 8)]));
+      expect(find.text('86 g logged'), findsOneWidget);
 
       await tester.tap(find.byKey(DietDayCard.setTargetKey));
       await tester.pumpAndSettle();
@@ -652,7 +668,7 @@ void main() {
       await tester.tap(find.byKey(ProteinTargetScreen.saveKey));
       await tester.pumpAndSettle();
 
-      expect(find.text('86 of 120 g planned'), findsOneWidget);
+      expect(find.text('86 of 120 g logged'), findsOneWidget);
       expect(find.text('34 g to go'), findsOneWidget);
       expect(find.byKey(DietDayCard.setTargetKey), findsNothing);
       expect(await SettingsStore(database).readProteinTarget(), 120);
@@ -661,8 +677,8 @@ void main() {
     testWidgets('Clear target returns the day card to the no-target copy',
         (tester) async {
       await pump(tester,
-          host(target: 120, plan: planOf([item('soya', halves: 8)])));
-      expect(find.text('86 of 120 g planned'), findsOneWidget);
+          host(target: 120, log: <DietLogEntry>[entry('soya', halves: 8)]));
+      expect(find.text('86 of 120 g logged'), findsOneWidget);
 
       final row = find.byKey(DietPane.targetRowKey);
       await scrollToEnd(tester);
@@ -673,7 +689,7 @@ void main() {
       await tester.tap(clear);
       await tester.pumpAndSettle();
 
-      expect(find.text('86 g planned'), findsOneWidget);
+      expect(find.text('86 g logged'), findsOneWidget);
       expect(find.textContaining('to go'), findsNothing);
       expect(find.byKey(DietDayCard.barKey), findsNothing);
       expect(find.byKey(DietDayCard.setTargetKey), findsOneWidget);
@@ -685,46 +701,42 @@ void main() {
     });
 
     testWidgets(
-        'with a target the card shows the planned bar and a "Planned" legend',
+        'with a target the card shows one logged bar and no legend',
         (tester) async {
-      // Friday: a future day, so planned only.
       await pump(
           tester,
           host(
               target: 120,
-              plan: planOf([item('soya', weekday: 4, halves: 4)]))); // 43 g
-      await selectDay(tester, 4);
+              log: <DietLogEntry>[entry('soya', halves: 4)])); // 43 g
 
       expect(find.byKey(DietDayCard.barKey), findsOneWidget);
       expect(find.byKey(DietDayCard.setTargetKey), findsNothing);
       expect(
-          widthOf(tester, DietDayCard.plannedLayerKey) /
+          widthOf(tester, DietDayCard.loggedLayerKey) /
               widthOf(tester, DietDayCard.barKey),
           closeTo(43 / 120, 0.01));
-      final legend = find.byKey(DietDayCard.legendKey);
-      expect(find.descendant(of: legend, matching: find.text('Planned')),
-          findsOneWidget,
-          reason: 'a word, never colour alone');
+      expect(find.text('Planned'), findsNothing);
+      expect(find.text('Eaten'), findsNothing);
       expect(find.byType(LinearProgressIndicator), findsNothing);
     });
 
-    testWidgets('the planned bar stops at full past the target',
+    testWidgets('the logged bar stops at full past the target',
         (tester) async {
       await pump(tester,
-          host(target: 40, plan: planOf([item('soya', halves: 8)])));
+          host(target: 40, log: <DietLogEntry>[entry('soya', halves: 8)]));
 
-      expect(widthOf(tester, DietDayCard.plannedLayerKey),
+      expect(widthOf(tester, DietDayCard.loggedLayerKey),
           closeTo(widthOf(tester, DietDayCard.barKey), 0.01));
     });
 
-    testWidgets('strip chips carry a meter of planned against target',
+    testWidgets('strip chips carry a meter of logged against target',
         (tester) async {
       await pump(
         tester,
-        host(target: 100, plan: planOf([
-          item('chicken', weekday: 0, halves: 4), // 60 g Monday
-          item('chicken', weekday: 1, halves: 8), // 120 g Tuesday
-        ])),
+        host(target: 100, log: <DietLogEntry>[
+          entry('chicken', day: 2, halves: 4), // 60 g Monday
+          entry('chicken', day: 3, halves: 8), // 120 g Tuesday
+        ]),
       );
 
       Finder meter(int d) => find.descendant(
@@ -744,233 +756,81 @@ void main() {
     });
 
     testWidgets('no target, no meters', (tester) async {
-      await pump(tester, host(plan: planOf([item('paneer')])));
+      await pump(tester, host(log: <DietLogEntry>[entry('paneer')]));
       expect(find.byType(WeekDayMeter), findsNothing);
     });
   });
 
-  group('eaten ticks (U14)', () {
-    // Monday lunch: soya 21.5 + egg 6.3 = 27.8 -> 28 g.
-    List<DietPlanItem> week() => [
-          item('soya', weekday: 0),
-          item('egg', weekday: 0),
-          item('paneer', weekday: 0, slot: MealSlot.dinner),
-          item('paneer'), // Wednesday lunch
-          item('chicken', weekday: 4), // Friday lunch
-        ];
+  group('the Reminders row', () {
+    ReminderPreferences prefs({bool dietOn = true, Set<MealSlot> on = const {}}) {
+      var p = ReminderPreferences.defaults.copyWith(dietOn: dietOn);
+      for (final slot in on) {
+        p = p.withSlot(slot, p.slot(slot).copyWith(on: true));
+      }
+      return p;
+    }
 
-    Finder tick(MealSlot slot) => find.byKey(DietSlotCard.tickKey(slot));
-
-    testWidgets(
-        'AE3: ticking Monday lunch on Wednesday shows "28 g eaten" on Monday; '
-        'Friday has no tick controls', (tester) async {
-      await pump(tester, host(plan: planOf(week())));
-      await selectDay(tester, 0);
-
-      expect(find.textContaining('eaten'), findsNothing);
-      await tester.tap(tick(MealSlot.lunch));
-      await tester.pumpAndSettle();
-
+    test('says Off, None chosen, Off in Settings, or counts slots only', () {
+      expect(DietPane.remindersValue(prefs(dietOn: false)), 'Off');
+      expect(DietPane.remindersValue(prefs()), 'None chosen');
       expect(
-          find.descendant(
-              of: find.byKey(DietDayCard.cardKey),
-              matching: find.text('28 g eaten')),
-          findsOneWidget);
-      expect(await tickStore.read(),
-          [MealTick(date: nov(2), slot: MealSlot.lunch)]);
-      expect(containerOf(tester).read(mealTicksProvider),
-          {MealTick(date: nov(2), slot: MealSlot.lunch)});
-
-      await selectDay(tester, 4);
-      for (final slot in MealSlot.values) {
-        expect(tick(slot), findsNothing, reason: '${slot.label} on Friday');
-      }
-      expect(find.textContaining('eaten'), findsNothing);
+          DietPane.remindersValue(prefs(on: {MealSlot.lunch, MealSlot.dinner})),
+          '2 a day');
+      expect(
+          DietPane.remindersValue(prefs(on: MealSlot.values.toSet())),
+          '4 a day');
+      expect(DietPane.remindersValue(prefs(on: {MealSlot.lunch}), permitted: false),
+          'Off in Settings');
+      expect(DietPane.remindersValue(prefs(on: {MealSlot.lunch}), permitted: true),
+          '1 a day');
     });
 
-    testWidgets('today carries ticks too', (tester) async {
-      await pump(tester, host(plan: planOf(week())));
-      expect(tick(MealSlot.lunch), findsOneWidget);
-    });
-
-    testWidgets('an empty slot shows no tick on any day', (tester) async {
-      await pump(tester, host(plan: planOf(week())));
-
-      for (final d in <int>[0, 1, 2, 4]) {
-        await selectDay(tester, d);
-        expect(tick(MealSlot.breakfast), findsNothing, reason: 'weekday $d');
-        expect(tick(MealSlot.snack), findsNothing, reason: 'weekday $d');
-      }
-      await selectDay(tester, 0);
-      expect(tick(MealSlot.dinner), findsOneWidget);
-    });
-
-    testWidgets('untick removes the eaten line when nothing else is ticked',
+    testWidgets('shows the slot count where notifications work',
         (tester) async {
-      await tickStore.toggle(nov(2), MealSlot.lunch);
-      await tickStore.toggle(nov(2), MealSlot.dinner);
-      await pump(
-        tester,
-        host(plan: planOf(week()), ticks: {
-          MealTick(date: nov(2), slot: MealSlot.lunch),
-          MealTick(date: nov(2), slot: MealSlot.dinner),
-        }),
-      );
-      await selectDay(tester, 0);
-      expect(find.text('37 g eaten'), findsOneWidget); // 27.8 + 9.4
-
-      await tester.tap(tick(MealSlot.lunch));
-      await tester.pumpAndSettle();
-      expect(find.text('9 g eaten'), findsOneWidget);
-
-      await tester.ensureVisible(tick(MealSlot.dinner));
-      await tester.tap(tick(MealSlot.dinner));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('eaten'), findsNothing);
-      expect(await tickStore.read(), isEmpty);
-    });
-
-    testWidgets("A5: editing Monday's lunch on Wednesday changes Monday's eaten",
-        (tester) async {
-      // A stored plan, so the edit goes through the store as a user's would.
-      for (final i in week()) {
-        await store.addFood(
-            weekdays: {i.weekday}, slot: i.slot, foodId: i.foodId, halves: 2);
-      }
-      await tickStore.toggle(nov(2), MealSlot.lunch);
       await pump(
         tester,
         host(
-          plan: await store.readVersions(),
-          ticks: {MealTick(date: nov(2), slot: MealSlot.lunch)},
+          scheduler: FakeReminderScheduler(permitted: true),
+          reminders: prefs(on: {MealSlot.breakfast, MealSlot.snack}),
         ),
       );
-      await selectDay(tester, 0);
-      expect(find.text('28 g eaten'), findsOneWidget);
+      await scrollToEnd(tester);
 
-      await tester.tap(find.byKey(DietSlotCard.rowKey(MealSlot.lunch, 'egg')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(FoodServingSheet.removeKey));
-      await tester.pumpAndSettle();
-
-      expect(find.text('22 g eaten'), findsOneWidget); // 21.5
-    });
-
-    testWidgets(
-        'the tick is 48pt, outlined, and its label names slot and state',
-        (tester) async {
-      final handle = tester.ensureSemantics();
-      await pump(tester, host(plan: planOf(week())));
-      await selectDay(tester, 0);
-
-      final size = tester.getSize(tick(MealSlot.lunch));
-      expect(size.width, greaterThanOrEqualTo(48));
-      expect(size.height, greaterThanOrEqualTo(48));
-      expect(
-          tester.getSemantics(tick(MealSlot.lunch)),
-          isSemantics(
-              label: 'Lunch not eaten',
-              hasTapAction: true,
-              hasCheckedState: true,
-              isChecked: false));
-      expect(
-          find.descendant(
-              of: tick(MealSlot.lunch),
-              matching: find.byIcon(Icons.check_rounded)),
-          findsNothing);
-
-      await tester.tap(tick(MealSlot.lunch));
-      await tester.pumpAndSettle();
-      expect(
-          tester.getSemantics(tick(MealSlot.lunch)),
-          isSemantics(
-              label: 'Lunch eaten',
-              hasTapAction: true,
-              hasCheckedState: true,
-              isChecked: true));
-      final glyph = tester.widget<Icon>(find.descendant(
-          of: tick(MealSlot.lunch), matching: find.byIcon(Icons.check_rounded)));
-      expect(glyph.color, AppPalette.accentStrong);
-
-      // An outline, never a fill.
-      final ring = tester.widget<Container>(find.descendant(
-          of: tick(MealSlot.lunch),
-          matching: find.byKey(DietEatenTick.ringKey)));
-      final box = ring.decoration! as BoxDecoration;
-      expect(box.color, isNull);
-      expect((box.border! as Border).top.color, AppPalette.accentStrong);
-      handle.dispose();
-    });
-
-    testWidgets(
-        'with a target the bar gains the eaten layer and an "Eaten" legend '
-        'on a tickable day', (tester) async {
-      await tickStore.toggle(nov(2), MealSlot.lunch);
-      await pump(
-        tester,
-        host(
-          target: 100,
-          plan: planOf(week()),
-          ticks: {MealTick(date: nov(2), slot: MealSlot.lunch)},
-        ),
-      );
-      await selectDay(tester, 0);
-
-      // Monday plans 37 g: one line, "to go" then "eaten".
-      expect(find.text('63 g to go · 28 g eaten'), findsOneWidget);
-      final legend = find.byKey(DietDayCard.legendKey);
-      expect(find.descendant(of: legend, matching: find.text('Planned')),
+      final row = find.byKey(DietPane.remindersRowKey);
+      expect(find.descendant(of: row, matching: find.text('Reminders')),
           findsOneWidget);
-      expect(find.descendant(of: legend, matching: find.text('Eaten')),
+      expect(find.descendant(of: row, matching: find.text('A nudge to log each meal')),
           findsOneWidget);
-      expect(
-          widthOf(tester, DietDayCard.eatenLayerKey) /
-              widthOf(tester, DietDayCard.barKey),
-          closeTo(0.28, 0.01));
-
-      await selectDay(tester, 4); // the future: neither
-      expect(find.byKey(DietDayCard.eatenLayerKey), findsNothing);
-      expect(find.descendant(of: legend, matching: find.text('Eaten')),
-          findsNothing);
-      expect(find.descendant(of: legend, matching: find.text('Planned')),
+      expect(find.descendant(of: row, matching: find.text('2 a day')),
           findsOneWidget);
-    });
-
-    testWidgets('one accent meaning: only the tick and the eaten layer',
-        (tester) async {
-      await tickStore.toggle(nov(2), MealSlot.lunch);
-      await pump(
-        tester,
-        host(
-          target: 100,
-          plan: planOf(week()),
-          ticks: {MealTick(date: nov(2), slot: MealSlot.lunch)},
-        ),
-      );
-      await selectDay(tester, 0);
-
-      // Text in the accent: only today's short name on the strip.
-      final accentText = tester
-          .widgetList<Text>(find.descendant(
-              of: find.byType(DietPane), matching: find.byType(Text)))
-          .where((t) => t.style?.color == AppPalette.accentStrong)
-          .map((t) => t.data)
-          .toList();
-      expect(accentText, ['Wed']);
     });
   });
 
+  testWidgets('one accent meaning on the strip: only today\'s short name',
+      (tester) async {
+    await pump(
+        tester, host(target: 100, log: <DietLogEntry>[entry('soya')]));
+    await selectDay(tester, 0);
+
+    // Text in the accent: only today's short name on the strip.
+    final accentText = tester
+        .widgetList<Text>(find.descendant(
+            of: find.byType(DietPane), matching: find.byType(Text)))
+        .where((t) => t.style?.color == AppPalette.accentStrong)
+        .map((t) => t.data)
+        .toList();
+    expect(accentText, ['Wed']);
+  });
+
   testWidgets('copy ban across every diet state', (tester) async {
-    await tickStore.toggle(nov(2), MealSlot.lunch);
     await pump(
       tester,
       host(
         target: 30,
-        plan: planOf([
-          item('soya', weekday: 0, halves: 8),
-          item('paneer'),
-        ]),
-        ticks: {MealTick(date: nov(2), slot: MealSlot.lunch)},
+        log: <DietLogEntry>[
+          entry('soya', day: 2, halves: 8),
+          entry('paneer'),
+        ],
       ),
     );
     for (final d in <int>[0, 2, 4]) {
@@ -988,11 +848,9 @@ void main() {
       DietPane.targetNotSet,
       DietPane.targetValue(120),
       DietPane.setTargetLabel,
-      DietDayCard.plannedLegend,
-      DietDayCard.eatenLegend,
-      DietDayCard.eatenLine(28),
-      DietEatenTick.labelFor(MealSlot.lunch, ticked: true),
-      DietEatenTick.labelFor(MealSlot.lunch, ticked: false),
+      DietPane.remindersRowTitle,
+      DietPane.remindersRowSubtitle,
+      DietPane.nothingLoggedFor(2),
     ]) {
       expectNoBannedCopy(text);
     }

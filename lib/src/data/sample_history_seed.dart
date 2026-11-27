@@ -2,11 +2,10 @@ import 'package:drift/drift.dart' show Value;
 import 'package:uuid/uuid.dart';
 
 import 'app_database.dart';
-import 'diet_plan_store.dart';
+import 'diet_log_store.dart';
 import 'load_type.dart';
 import 'local_date.dart';
 import 'meal_slot.dart';
-import 'meal_ticks.dart';
 import 'personal_details_store.dart';
 import 'settings_store.dart';
 
@@ -202,19 +201,18 @@ Future<void> seedSampleHistoryIfEmpty(AppDatabase db) async {
   });
 }
 
-/// Writes a sample Diet into a database that has none: a daily target, a
-/// week planned with Repeat on, and one slot ticked today, so the Diet pane
-/// can be reviewed on a device with its target bar, meters and ticks showing.
+/// A week of sample Diet entries and a target, so the Diet log can be reviewed
+/// on a device with its target bar and meters showing.
 ///
 /// **Debug-only, and temporary, like [seedSampleHistoryIfEmpty].** `main.dart`
 /// calls it behind `kDebugMode`, and only from `main()`: the reboot after
-/// Delete all data never runs it, so a wiped app shows Diet's first-time
-/// state, debug or not. It does nothing if any plan, target or tick exists.
+/// Delete all data never runs it, so a wiped app shows an empty log, debug or
+/// not. It does nothing if any entry or target exists.
 ///
-/// **Through the stores, not a batch.** About ten writes, the way a user plans
-/// a week in the serving sheet (Repeat on), so the seed exercises the real
-/// copy-on-write path and lands in this week's version. Sunday dinner is left
-/// empty so an empty slot is on screen too.
+/// **Through the store, not a batch.** Every day from this week's Monday up to
+/// today gets a day of meals, the way a user logs them in the serving sheet,
+/// so the seed exercises the real write path. Today's dinner is left empty so
+/// an empty slot is on screen too.
 ///
 /// A bodyweight two weeks old is recorded when there is none, so the target
 /// screen shows its suggestion (1.6 g per kg of 72 kg, 115 g).
@@ -223,33 +221,42 @@ Future<void> seedSampleDietIfEmpty(
   LocalDate Function()? today,
 }) async {
   final clock = today ?? LocalDate.today;
-  final plan = DietPlanStore(db, today: clock);
-  final ticks = MealTickStore(db, today: clock);
+  final log = DietLogStore(db, today: clock);
   final settings = SettingsStore(db);
-  if ((await plan.readVersions()).isNotEmpty ||
-      await settings.readProteinTarget() != null ||
-      (await ticks.read()).isNotEmpty) {
+  if ((await log.readEntries()).isNotEmpty ||
+      await settings.readProteinTarget() != null) {
     return;
   }
 
-  const everyDay = <int>{0, 1, 2, 3, 4, 5, 6};
-  const weekdays = <int>{0, 1, 2, 3, 4};
-  const weekend = <int>{5, 6};
-  Future<void> add(Set<int> days, MealSlot slot, String foodId, int halves) =>
-      plan.addFood(weekdays: days, slot: slot, foodId: foodId, halves: halves);
+  final now = clock();
+  final monday = now.addDays(1 - now.weekday);
+  Future<void> add(
+    LocalDate date,
+    MealSlot slot,
+    String foodId,
+    int halves,
+  ) =>
+      log.addFood(date: date, slot: slot, foodId: foodId, halves: halves);
 
   await settings.writeProteinTarget(120);
-  await add(everyDay, MealSlot.breakfast, 'boiled-egg', 4);
-  await add(everyDay, MealSlot.breakfast, 'cow-milk', 2);
-  await add(weekdays, MealSlot.lunch, 'chicken-breast', 3);
-  await add(weekdays, MealSlot.lunch, 'roti', 4);
-  await add(weekend, MealSlot.lunch, 'rajma', 2);
-  await add(weekend, MealSlot.lunch, 'rice', 2);
-  await add(everyDay, MealSlot.snack, 'peanuts', 2);
-  await add(everyDay, MealSlot.snack, 'curd', 2);
-  await add(<int>{0, 1, 2, 3, 4, 5}, MealSlot.dinner, 'paneer', 4);
-  await add(<int>{0, 1, 2, 3, 4, 5}, MealSlot.dinner, 'toor-dal', 2);
-  await ticks.toggle(clock(), MealSlot.breakfast);
+  for (var d = monday; d <= now; d = d.addDays(1)) {
+    final weekend = d.weekday >= DateTime.saturday;
+    await add(d, MealSlot.breakfast, 'boiled-egg', 4);
+    await add(d, MealSlot.breakfast, 'cow-milk', 2);
+    if (weekend) {
+      await add(d, MealSlot.lunch, 'rajma', 2);
+      await add(d, MealSlot.lunch, 'rice', 2);
+    } else {
+      await add(d, MealSlot.lunch, 'chicken-breast', 3);
+      await add(d, MealSlot.lunch, 'roti', 4);
+    }
+    await add(d, MealSlot.snack, 'peanuts', 2);
+    await add(d, MealSlot.snack, 'curd', 2);
+    if (d != now) {
+      await add(d, MealSlot.dinner, 'paneer', 4);
+      await add(d, MealSlot.dinner, 'toor-dal', 2);
+    }
+  }
 
   final personal = PersonalDetailsStore(db);
   if ((await personal.readBodyweightEntries()).isEmpty) {

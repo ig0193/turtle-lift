@@ -193,7 +193,7 @@ bool isQuickLogSession(WorkoutSession session) =>
 
 /// What stands in for the calorie figure when no bodyweight was in effect on
 /// the session's day.
-const String kNoWeightKcalNote = 'Add your bodyweight in Profile to see kcal';
+const String kNoWeightKcalNote = 'Add your bodyweight in You, Profile to see kcal';
 
 /// The app's display name, as it appears on a card meant to be posted.
 const String kAppDisplayName = 'TurtleLift';

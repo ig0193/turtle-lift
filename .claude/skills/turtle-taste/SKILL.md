@@ -44,7 +44,8 @@ This runs `integration_test/taste_shots_test.dart` through `flutter drive`
 and writes `build/taste_shots/<device>/NN-<screen>.png`: every screen the app
 reaches (~38: tab roots, templates, picker, all four logging variants,
 exercise detail and history, summary, delete confirmation, Muscles lists and
-search, History detail, Profile, data screens, Schedule). Each section is
+search, Activity (the old History tab, now a You segment) and its detail,
+Analysis (an empty pane), You > Profile, the Diet tab, data screens). Each section is
 independent, so one broken step is logged as `skipped` and the rest still
 shoot. Read every PNG. Audit what is on screen, not what the widget code
 implies. To cover a screen it misses, add a section to that test.

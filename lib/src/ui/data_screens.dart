@@ -11,15 +11,13 @@ import '../data/custom_exercises.dart';
 import '../data/custom_templates.dart';
 import '../data/data_export.dart';
 import '../data/data_reset.dart';
-import '../data/diet_derived.dart' show versionInEffectOn;
-import '../data/diet_plan.dart';
+import '../data/diet_log.dart';
 import '../data/exercise_index.dart';
 import '../data/food_index.dart';
 import '../data/personal_details_store.dart';
 import '../data/reminder_prefs.dart';
 import '../data/reminder_scheduler.dart' show reminderSchedulerProvider;
 import '../data/settings_store.dart' show appDatabaseProvider;
-import '../data/training_plan.dart';
 import '../theme/app_palette.dart';
 import 'app_screen.dart';
 import 'destructive_confirmation.dart';
@@ -39,33 +37,23 @@ class _DataCounts {
     required this.weighIns,
     required this.templates,
     required this.exercises,
-    required this.foodsPlanned,
+    required this.foodsLogged,
     required this.hasDiet,
-    required this.trainingDays,
-    required this.hasSchedule,
     required this.hasReminders,
   });
 
   factory _DataCounts.read(WidgetRef ref) {
     final sessions =
         ref.watch(savedSessionsProvider).where((s) => !s.isOpen).toList();
-    final dietPlan = ref.watch(dietPlanLogProvider);
+    final dietLog = ref.watch(dietLogProvider);
     return _DataCounts(
       workouts: sessions.length,
       sets: sessions.fold(0, (n, s) => n + s.completedSets.length),
       weighIns: ref.watch(bodyweightLogProvider).length,
       templates: ref.watch(customTemplatesProvider).length,
       exercises: ref.watch(customExerciseListProvider).length,
-      // The plan the user is looking at: this week's version in effect.
-      foodsPlanned: versionInEffectOn(dietPlan, ref.watch(planTodayProvider))
-              ?.items
-              .length ??
-          0,
-      hasDiet:
-          dietPlan.isNotEmpty || ref.watch(proteinTargetProvider) != null,
-      // This week's plan, the one the Schedule pane shows (profile audit B9).
-      trainingDays: ref.watch(todayPlanWeekdaysProvider).length,
-      hasSchedule: ref.watch(trainingPlanLogProvider).isNotEmpty,
+      foodsLogged: dietLog.length,
+      hasDiet: dietLog.isNotEmpty || ref.watch(proteinTargetProvider) != null,
       hasReminders:
           ref.watch(reminderPrefsProvider) != ReminderPreferences.defaults,
     );
@@ -79,30 +67,23 @@ class _DataCounts {
   /// Exercises the user created (ADR 0009).
   final int exercises;
 
-  /// Items in this week's plan, every day and slot.
-  final int foodsPlanned;
+  /// Foods in the Diet log, every day and slot.
+  final int foodsLogged;
 
-  /// Any plan version or a target exists, even if this week is empty.
+  /// Anything in the log, or a target, exists.
   final bool hasDiet;
-
-  /// Days in this week's training plan.
-  final int trainingDays;
-
-  /// Any training plan was ever saved.
-  final bool hasSchedule;
 
   /// A reminder setting differs from the defaults.
   final bool hasReminders;
 
-  /// Nothing the user entered, so nothing to export (B9: a schedule or a
-  /// reminder setting alone is entered data and is in the file).
+  /// Nothing the user entered, so nothing to export (B9: a reminder setting
+  /// alone is entered data and is in the file).
   bool get isEmpty =>
       workouts == 0 &&
       weighIns == 0 &&
       templates == 0 &&
       exercises == 0 &&
       !hasDiet &&
-      !hasSchedule &&
       !hasReminders;
 
   /// Label and count. The label already names the unit, so the count stands
@@ -113,8 +94,7 @@ class _DataCounts {
         ('Bodyweight entries', '$weighIns'),
         ('Your templates', '$templates'),
         if (exercises > 0) ('Your exercises', '$exercises'),
-        ('Foods planned', '$foodsPlanned'),
-        ('Training days', trainingDays == 0 ? 'None' : '$trainingDays a week'),
+        ('Foods logged', '$foodsLogged'),
       ];
 }
 
@@ -199,11 +179,9 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
         bodyweight: ref.read(bodyweightLogProvider),
         customTemplates: ref.read(customTemplatesProvider),
         customExercises: ref.read(customExerciseListProvider),
-        trainingPlan: ref.read(trainingPlanLogProvider),
         gender: ref.read(bodyGenderProvider),
         index: ref.read(exerciseIndexProvider),
-        dietPlan: ref.read(dietPlanLogProvider),
-        mealTicks: ref.read(mealTicksProvider),
+        dietLog: ref.read(dietLogProvider),
         proteinTargetG: ref.read(proteinTargetProvider),
         foods: ref.read(foodIndexProvider),
         exportedAt: now,
@@ -262,7 +240,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
           const SizedBox(height: 8),
           const Text(
             'Saves every finished workout, set, bodyweight entry, template, '
-            'your schedule, your reminders and your diet plan as one JSON file, '
+            'your reminders and your diet log as one JSON file, '
             'plus a CSV of your sets for a spreadsheet. Choose where they go: '
             'Files, Mail, or another app.',
             style: _bodyStyle,
@@ -331,8 +309,8 @@ class _DeleteAllDataScreenState extends ConsumerState<DeleteAllDataScreen> {
     final confirmed = await confirmDestructive(
       context,
       title: 'Delete all data?',
-      message: 'Every workout, set, bodyweight entry, template, your '
-          'schedule and your diet plan will be removed from this phone. This '
+      message: 'Every workout, set, bodyweight entry, template, your diet '
+          'log and your reminders will be removed from this phone. This '
           'cannot be undone.',
       confirmLabel: 'Delete all',
     );

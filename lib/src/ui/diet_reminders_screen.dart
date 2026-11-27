@@ -17,19 +17,19 @@ Future<void> pushDietRemindersScreen(BuildContext context) =>
       MaterialPageRoute<void>(builder: (_) => const DietRemindersScreen()),
     );
 
-/// "Meal reminders": Diet's opt-in notifications (U17, R21, ADR 0007).
+/// "Meal reminders": Diet's opt-in notifications (R21, ADR 0007, ADR 0015).
 ///
-/// * **A master switch, a morning summary and one row per meal slot**, each
-///   with a time (A7 defaults from [ReminderPreferences.defaults]). The
-///   master switch silences the others without forgetting them; while it is
-///   off they are disabled and say why.
+/// * **A master switch and one row per meal slot**, each with a time (A7
+///   defaults from [ReminderPreferences.defaults]). The master switch
+///   silences the others without forgetting them; while it is off they are
+///   disabled and say why.
 /// * **Opt-in through [optInToReminders]**: the explain-first sheet before
 ///   any system prompt (A9). A refusal leaves the master off with
 ///   [kNotificationsOffCopy]; so does permission revoked later in system
-///   Settings, re-read on mount and on resume, as Schedule does.
+///   Settings, re-read on mount and on resume.
 /// * **The screen schedules nothing itself.** It stores preferences;
-///   `dietReminderSyncProvider` rebuilds the pending notifications from the
-///   plan and these switches.
+///   `dietReminderSyncProvider` rebuilds the pending notifications from
+///   these switches.
 class DietRemindersScreen extends ConsumerStatefulWidget {
   const DietRemindersScreen({super.key});
 
@@ -37,37 +37,25 @@ class DietRemindersScreen extends ConsumerStatefulWidget {
 
   static const String masterTitle = 'Remind me';
 
-  static const String masterSubtitle = 'Notifications built from your plan';
+  static const String masterSubtitle = 'A nudge at each meal you turn on';
 
-  static const String summaryTitle = 'Morning summary';
-
-  static const String summarySubtitle = "Today's plan in one notification";
-
-  static const String slotSubtitle = 'Only on days with food planned';
+  static const String slotSubtitle = 'Every day';
 
   /// Beside every child row while the master switch is off.
   static const String disabledReason = 'Turn on reminders to set times';
 
   static const String timesLabel = 'Times';
 
-  static const String explainTitle = 'Remind you about your plan?';
+  static const String explainTitle = 'Remind you to log meals?';
 
   /// The explain-first sheet's body: what will be sent, and what never will.
   static const String explainBody =
-      "TurtleLift will send a morning summary of the day's plan and a note at "
-      'each meal time you turn on, only for meals with food planned. Nothing '
-      'about what you ate. You can turn them off any time.';
+      'TurtleLift will send a note at each meal time you turn on, asking you '
+      'to log that meal. Nothing about what you ate. You can turn them off '
+      'any time.';
 
   @visibleForTesting
   static const Key masterKey = ValueKey<String>('diet-reminders-master');
-
-  @visibleForTesting
-  static const Key summarySwitchKey =
-      ValueKey<String>('diet-reminders-summary');
-
-  @visibleForTesting
-  static const Key summaryTimeKey =
-      ValueKey<String>('diet-reminders-summary-time');
 
   @visibleForTesting
   static Key slotSwitchKey(MealSlot slot) =>
@@ -126,7 +114,7 @@ class _DietRemindersScreenState extends ConsumerState<DietRemindersScreen> {
       ref.read(reminderPrefsProvider.notifier).save(next);
 
   /// On: the explain-first sheet (unless already permitted), the OS prompt,
-  /// then store. Off: store, and the sync cancels both diet ranges.
+  /// then store. Off: store, and the sync cancels the meal range.
   Future<void> _toggleMaster(bool showingOn) async {
     final prefs = ref.read(reminderPrefsProvider);
     if (showingOn) {
@@ -211,28 +199,8 @@ class _DietRemindersScreenState extends ConsumerState<DietRemindersScreen> {
                 ),
               ),
             ),
-          SwitchRow(
-            switchKey: DietRemindersScreen.summarySwitchKey,
-            title: DietRemindersScreen.summaryTitle,
-            subtitle: subtitle(DietRemindersScreen.summarySubtitle),
-            value: prefs.summaryOn,
-            onTap: masterOn
-                ? () => _save(prefs.copyWith(summaryOn: !prefs.summaryOn))
-                : null,
-          ),
-          TimeRow(
-            key: DietRemindersScreen.summaryTimeKey,
-            label: '${DietRemindersScreen.summaryTitle} time',
-            time: formatReminderMinute(context, prefs.summaryMinute),
-            onTap: masterOn
-                ? () => _pickTime(prefs.summaryMinute,
-                    (m) => ref.read(reminderPrefsProvider).copyWith(
-                          summaryMinute: m,
-                        ))
-                : null,
-          ),
           for (final slot in MealSlot.values) ...<Widget>[
-            const SizedBox(height: 12),
+            if (slot != MealSlot.values.first) const SizedBox(height: 12),
             SwitchRow(
               switchKey: DietRemindersScreen.slotSwitchKey(slot),
               title: slot.label,
@@ -259,8 +227,8 @@ class _DietRemindersScreenState extends ConsumerState<DietRemindersScreen> {
           const Padding(
             padding: EdgeInsets.fromLTRB(2, 16, 2, 0),
             child: Text(
-              "Reminders follow this week's plan and repeat every week. A "
-              'meal with nothing planned sends nothing.',
+              'Reminders repeat every week and never say what you did or did not '
+              'log.',
               style: TextStyle(
                 fontSize: 12,
                 height: 1.5,

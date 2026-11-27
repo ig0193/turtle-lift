@@ -7,7 +7,7 @@ tags: [data]
 ---
 - launchApp:
     clearState: true
-- tapOn: "Profile"
+- runFlow: ../subflows/open_profile_pane.yaml
 - tapOn: "Export everything"
 - assertVisible: "Nothing to export yet\\. Log a workout first\\."
 - assertVisible:
@@ -18,7 +18,7 @@ tags: [data]
 - tapOn: "Workout"
 - runFlow: ../subflows/log_bench_workout.yaml
 - tapOn: "Back"
-- tapOn: "Profile"
+- runFlow: ../subflows/open_profile_pane.yaml
 - tapOn: "Export everything"
 - assertNotVisible: "Nothing to export yet.*"
 - assertVisible: ".*Workouts.*1.*"

@@ -6,7 +6,7 @@ import '../data/derived.dart' show streakLinkedDays;
 import '../data/history_preview_data.dart';
 import '../data/history_stats.dart';
 import '../data/local_date.dart';
-import '../data/training_plan.dart' show planTodayProvider;
+import '../data/today.dart' show planTodayProvider;
 import '../theme/app_palette.dart';
 import 'history_session_row.dart';
 import 'motion.dart';

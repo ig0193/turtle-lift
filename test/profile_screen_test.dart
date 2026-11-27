@@ -12,7 +12,7 @@ import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/app_screen.dart';
 import 'package:turtle_lift/src/ui/divider_row.dart';
-import 'package:turtle_lift/src/ui/profile_root.dart';
+import 'package:turtle_lift/src/ui/you_root.dart';
 import 'package:turtle_lift/src/ui/profile_screen.dart';
 
 /// The destination behind the header avatar: four doors, and one rule about
@@ -58,11 +58,16 @@ void main() {
     WidgetBuilder? deleteAllDestination,
     ProviderObserver? observer,
     EdgeInsets windowPadding = EdgeInsets.zero,
+    // Host the Profile pane on its own, without the You root around it. The
+    // root also mounts the Activity pane, whose providers are not this
+    // screen's and would muddy a test about what *this* screen reads.
+    bool paneOnly = false,
   }) {
     return ProviderScope(
       observers: observer == null ? null : <ProviderObserver>[observer],
       overrides: [
         customTemplatesProvider.overrideWithValue(custom),
+        youSegmentProvider.overrideWith(_StartOnProfile.new),
         // The real template library derives each row's muscle line from the
         // exercise library; an empty one is enough for "a screen opens".
         exerciseIndexProvider.overrideWithValue(ExerciseIndex(const <Exercise>[])),
@@ -83,7 +88,17 @@ void main() {
         theme: buildAppTheme(),
         home: MediaQuery(
           data: MediaQueryData(padding: windowPadding),
-          child: AppScreen.root(title: 'Profile', body: const ProfileRoot()),
+          child: AppScreen.root(
+            title: 'You',
+            body: paneOnly
+                ? Builder(
+                    builder: (context) => ListView(
+                      padding: screenScrollPadding(context),
+                      children: const <Widget>[ProfilePersonalPane()],
+                    ),
+                  )
+                : const YouRoot(),
+          ),
         ),
       ),
     );
@@ -325,10 +340,9 @@ void main() {
       // The moment this screen watches a session provider, this set grows and
       // someone has to justify the new entry.
       final read = <Object>{};
-      await tester.pumpWidget(host(observer: _RecordingObserver(read)));
+      await tester.pumpWidget(
+          host(observer: _RecordingObserver(read), paneOnly: true));
 
-      // `profileSegmentProvider` is which pane is showing (KTD2): in-memory
-      // UI state that holds no content, so it is not a second source of truth.
       expect(
         read,
         // ADR 0014 (B12) added the two other authored values the Personal
@@ -336,7 +350,6 @@ void main() {
         // diagram they chose. Neither is computed from a session.
         <Object>{
           customTemplatesProvider,
-          profileSegmentProvider,
           bodyweightLogProvider,
           initialBodyweightLogProvider,
           bodyGenderProvider,
@@ -466,4 +479,11 @@ final class _RecordingObserver extends ProviderObserver {
   void didAddProvider(ProviderObserverContext context, Object? value) {
     seen.add(context.provider);
   }
+}
+
+/// The You tab opens on Activity (ADR 0016); these tests are about the Profile
+/// pane, so they start the segment there.
+class _StartOnProfile extends YouSegmentNotifier {
+  @override
+  YouSegment build() => YouSegment.profile;
 }

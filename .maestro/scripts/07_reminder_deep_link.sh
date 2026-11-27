@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Drives flow 07: a diet reminder tap opens Profile -> Diet, warm and cold,
-# and a training-day reminder tap opens the Workout tab (ADR 0008).
+# Drives flow 07: a diet reminder tap opens the Diet tab, warm and cold.
 #
 #   .maestro/scripts/07_reminder_deep_link.sh <udid> <out-dir>
 #
@@ -27,8 +26,7 @@ mkdir -p "$out/junit" "$out/artifacts/$name"
 
 # A localhost endpoint the tap sub-flow calls (Maestro JS http.post) to get
 # a notification at the moment it is ready to tap the banner.
-python3 -I .maestro/scripts/push_server.py "$udid" "$apns" 8765 \
-  .maestro/scripts/training_reminder.apns &
+python3 -I .maestro/scripts/push_server.py "$udid" "$apns" 8765 &
 server=$!
 trap 'kill $server 2>/dev/null' EXIT
 sleep 1
@@ -48,16 +46,14 @@ if [ -z "$failures" ]; then
   step warm .maestro/subflows/reminder_tap_banner.yaml || failures+="warm "
   step cold-prep .maestro/subflows/reminder_cold_prep.yaml || failures+="cold-prep "
   step cold .maestro/subflows/reminder_tap_banner.yaml || failures+="cold "
-  step training .maestro/subflows/reminder_training_tap.yaml || failures+="training "
 fi
 
 # One JUnit case per leg, so the report shows warm and cold separately.
 {
   echo '<?xml version="1.0" encoding="UTF-8"?>'
-  echo "<testsuite name=\"$name\" tests=\"3\">"
-  for leg in warm cold training; do
+  echo "<testsuite name=\"$name\" tests=\"2\">"
+  for leg in warm cold; do
     label="$leg start"
-    [ "$leg" = training ] && label="training reminder opens Workout"
     echo "  <testcase name=\"07 Reminder tap deep link ($label)\">"
     if [[ " $failures" == *" setup "* || " $failures" == *" $leg "* || ( $leg == cold && " $failures" == *" cold-prep "* ) ]]; then
       echo "    <failure message=\"failed: ${failures}see artifacts/$name/*.log\"/>"

@@ -1,21 +1,19 @@
 import 'dart:convert';
 
 import 'body_gender.dart';
-import 'diet_plan_store.dart';
+import 'diet_log_store.dart';
 import 'exercise.dart';
 import 'exercise_index.dart';
 import 'food_index.dart';
-import 'meal_ticks.dart';
 import 'meal_slot.dart';
 import 'personal_details_store.dart';
 import 'reminder_prefs.dart';
 import 'session_store.dart';
-import 'training_plan.dart';
 import 'workout_templates.dart';
 
 /// The version of the export file's shape. Bump it when a field is renamed or
 /// removed, so a future import can tell old files from new ones.
-const int kExportFormatVersion = 1;
+const int kExportFormatVersion = 2;
 
 /// Everything the user has entered, as one JSON document.
 ///
@@ -27,34 +25,31 @@ const int kExportFormatVersion = 1;
 /// Exercise names travel next to their ids, so the file is readable without
 /// the app's library; the ids are what an import would match on.
 ///
-/// **Diet** (KTD19, R25) is the top-level `diet` key: the target or null,
-/// every plan version (`effectiveFrom` and its items, servings as a decimal),
-/// and the eaten ticks as `date` + `slot`. Food names travel beside their ids
-/// the same way; an id the food list no longer knows exports its id with a
-/// null `name`, exactly as an unknown exercise does, rather than the "Unknown
-/// food" display string, which is UI copy and not data. No total, eaten sum,
-/// to-go figure or suggestion is written. Adding a key is not a rename, so
-/// [kExportFormatVersion] stays 1.
+/// **Diet** (KTD19, R25, `docs/adr/0015-diet-is-a-log.md`) is the top-level
+/// `diet` key: the target or null, and the `log`, one row per food eaten with
+/// its `date`, `slot` and servings as a decimal. Food names travel beside
+/// their ids the same way; an id the food list no longer knows exports its id
+/// with a null `name`, exactly as an unknown exercise does, rather than the
+/// "Unknown food" display string, which is UI copy and not data. No total,
+/// to-go figure or suggestion is written.
+///
+/// **Format 2.** The Schedule is gone and Diet stopped being a plan, so the
+/// top-level `schedule` key, the diet's `planVersions` and `eaten` keys and the
+/// reminders' `training` and `morningSummary` keys are no longer written. A key
+/// removed is a format change (see [kExportFormatVersion]).
 String buildExportJson({
   required List<WorkoutSession> sessions,
   required List<BodyweightEntry> bodyweight,
   required List<WorkoutTemplate> customTemplates,
-  required List<TrainingPlanEntry> trainingPlan,
   required BodyGender gender,
   required ExerciseIndex index,
-  required List<DietPlanVersion> dietPlan,
-  required Iterable<MealTick> mealTicks,
+  required List<DietLogEntry> dietLog,
   required int? proteinTargetG,
   required FoodIndex foods,
   required DateTime exportedAt,
   List<Exercise> customExercises = const <Exercise>[],
   ReminderPreferences? reminders,
 }) {
-  final ticks = mealTicks.toList()
-    ..sort((a, b) {
-      final byDate = a.date.compareTo(b.date);
-      return byDate != 0 ? byDate : a.slot.index.compareTo(b.slot.index);
-    });
   final document = <String, Object?>{
     'app': 'TurtleLift',
     'formatVersion': kExportFormatVersion,
@@ -121,37 +116,20 @@ String buildExportJson({
           if (exercise.hidden) 'hiddenFromPicker': true,
         },
     ],
-    'schedule': <Object?>[
-      for (final entry in trainingPlan)
-        <String, Object?>{
-          'effectiveFrom': entry.effectiveFrom.encode(),
-          'weekdays': (entry.weekdays.toList()..sort()),
-        },
-    ],
     // The reminder switches and times the user set (profile audit B10,
     // ADR 0014): entered data, so it is in "everything".
     if (reminders != null) 'reminders': _remindersJson(reminders),
     'diet': <String, Object?>{
       'proteinTargetG': proteinTargetG,
-      'planVersions': <Object?>[
-        for (final version in dietPlan)
+      'log': <Object?>[
+        for (final entry in dietLog)
           <String, Object?>{
-            'effectiveFrom': version.effectiveFrom.encode(),
-            'items': <Object?>[
-              for (final item in version.items)
-                <String, Object?>{
-                  'weekday': item.weekday,
-                  'slot': item.slot.name,
-                  'foodId': item.foodId,
-                  'name': foods.byId(item.foodId)?.name,
-                  'servings': item.servingsHalves / 2,
-                },
-            ],
+            'date': entry.date.encode(),
+            'slot': entry.slot.name,
+            'foodId': entry.foodId,
+            'name': foods.byId(entry.foodId)?.name,
+            'servings': entry.servingsHalves / 2,
           },
-      ],
-      'eaten': <Object?>[
-        for (final tick in ticks)
-          <String, Object?>{'date': tick.date.encode(), 'slot': tick.slot.name},
       ],
     },
   };
@@ -175,16 +153,8 @@ String _clock(int minute) =>
     '${(minute % 60).toString().padLeft(2, '0')}';
 
 Map<String, Object?> _remindersJson(ReminderPreferences p) => <String, Object?>{
-      'training': <String, Object?>{
-        'on': p.scheduleOn,
-        'time': _clock(p.scheduleMinute),
-      },
       'diet': <String, Object?>{
         'on': p.dietOn,
-        'morningSummary': <String, Object?>{
-          'on': p.summaryOn,
-          'time': _clock(p.summaryMinute),
-        },
         for (final slot in MealSlot.values)
           slot.name: <String, Object?>{
             'on': p.slot(slot).on,

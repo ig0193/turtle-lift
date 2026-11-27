@@ -41,7 +41,7 @@ tags: [templates, data]
 - tapOn: "Back"
 
 # --- History names it.
-- tapOn: "History"
+- runFlow: ../subflows/open_activity.yaml
 - assertVisible: "Ring dip station, quick log, Today · 1 exercise · 1 set"
 
 # --- Its page: the user's fields and a plain note, no reviewed content.
@@ -83,7 +83,7 @@ tags: [templates, data]
 - tapOn: "Back"
 
 # --- Export counts it.
-- tapOn: "Profile"
+- runFlow: ../subflows/open_profile_pane.yaml
 - tapOn: "Export everything"
 - assertVisible: ".*Your exercises.*1.*"
 - tapOn: "Back"

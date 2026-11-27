@@ -3,9 +3,9 @@
 ///
 /// **Every field is stored, none derived**, for the same reason as `Exercise`:
 /// this is read-only shipped content, and the JSON is its source of truth. The
-/// user's plan stores a food id and a serving count only (KTD9); protein per
+/// user's log stores a food id and a serving count only (KTD9); protein per
 /// serving is read from here on every total, so a corrected value flows into
-/// the plan rather than being snapshotted on its rows.
+/// the log rather than being snapshotted on its rows.
 library;
 
 export 'meal_slot.dart';

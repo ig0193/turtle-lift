@@ -2,25 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/diet_derived.dart';
-import '../data/diet_plan.dart';
+import '../data/diet_log.dart';
 import '../data/food_index.dart';
 import '../data/meal_slot.dart';
 import '../data/local_date.dart';
 import '../data/notification_permission.dart';
 import '../data/reminder_prefs.dart';
 import '../data/reminder_scheduler.dart' show reminderSchedulerProvider;
-import '../data/training_plan.dart' show planTodayProvider, startOfWeek;
+import '../data/today.dart' show planTodayProvider, startOfWeek;
 import '../theme/app_palette.dart';
 import '../theme/app_typography.dart' show kLandingSectionLabelStyle;
 import 'diet_day_card.dart';
 import 'diet_reminders_screen.dart';
 import 'diet_slot_card.dart';
-import 'empty_state.dart';
-import 'food_picker_screen.dart';
-import 'ghost_button.dart';
+import 'empty_state.dart' show kEmptyStateBodyStyle;
 import 'protein_target_screen.dart';
 import 'reminder_controls.dart' show formatReminderMinute;
-import 'week_day_chip.dart' show WeekDayMeter, kWeekdayLong;
+import 'week_day_meter.dart' show WeekDayMeter, kWeekdayLong;
 
 /// The day the Diet pane shows. **In memory, never stored**, and today by
 /// default.
@@ -29,7 +27,7 @@ import 'week_day_chip.dart' show WeekDayMeter, kWeekdayLong;
 /// (KTD13) the selection snaps to the new today rather than leaving the user
 /// on a day that is now "yesterday". A resume on the same date changes
 /// nothing downstream ([LocalDate] compares by value), so a picked day
-/// survives it. A diet reminder tap selects today through [select] (U17).
+/// survives it. A diet reminder tap selects today through [showDietDay].
 class DietSelectedDay extends Notifier<LocalDate> {
   @override
   LocalDate build() => ref.watch(planTodayProvider);
@@ -40,48 +38,80 @@ class DietSelectedDay extends Notifier<LocalDate> {
 final dietSelectedDayProvider =
     NotifierProvider<DietSelectedDay, LocalDate>(DietSelectedDay.new);
 
-/// The Diet pane of the Profile tab: one weekly protein plan
-/// (`docs/adr/0007-diet-in-profile.md`, layout `prototypes/diet.html`).
+/// How far back the strip can be slid, in days. Ten years, as the date
+/// picker's own swipe range (`DietCalendarSheet.pastMonths`).
+const int kDietStripLookbackDays = 3650;
+
+/// The first of the seven days the week strip shows. **In memory, never
+/// stored.**
 ///
-/// **A pane, not a screen.** [ProfileRoot] owns the one scroll view and the
-/// pinned "Profile" header; this is a child of that `ListView`, like
-/// `ProfilePersonalPane` and `SchedulePane`. Diet's controls live in the pane,
-/// never the header (KTD4): header actions are per tab, so a Diet button there
-/// would show on Personal and Schedule too.
+/// It opens on the Monday of this week and moves two ways: the user slides it
+/// one day at a time ([shift]), and picking a date jumps it to that date's
+/// Monday-to-Sunday week ([showWeekOf]). Like [DietSelectedDay] it rebuilds
+/// from [planTodayProvider], so a resume on a new date snaps back to this week.
 ///
-/// Three states, checked in order:
+/// **It never slides past this week's Monday.** The strip can show days that
+/// have not happened (they are inert), but sliding on into an empty future
+/// would be a way to get lost with nothing to find.
+class DietStripStart extends Notifier<LocalDate> {
+  @override
+  LocalDate build() => startOfWeek(ref.watch(planTodayProvider));
+
+  /// Moves the window by [days] (negative is earlier), inside its bounds.
+  void shift(int days) {
+    final today = ref.read(planTodayProvider);
+    final latest = startOfWeek(today);
+    final earliest = today.addDays(-kDietStripLookbackDays);
+    var next = state.addDays(days);
+    if (next > latest) next = latest;
+    if (next < earliest) next = earliest;
+    state = next;
+  }
+
+  /// Shows the Monday-to-Sunday week that contains [date].
+  void showWeekOf(LocalDate date) => state = startOfWeek(date);
+}
+
+final dietStripStartProvider =
+    NotifierProvider<DietStripStart, LocalDate>(DietStripStart.new);
+
+/// Selects [day] and brings its week into the strip. The one way to jump to a
+/// day: the date picker and a diet reminder tap both go through it.
+void showDietDay(WidgetRef ref, LocalDate day) {
+  ref.read(dietSelectedDayProvider.notifier).select(day);
+  ref.read(dietStripStartProvider.notifier).showWeekOf(day);
+}
+
+/// The Diet tab's pane: a protein log
+/// (`docs/adr/0015-diet-is-a-log.md`, layout `prototypes/diet.html`).
+///
+/// **A pane, not a screen.** [DietRoot] owns the one scroll view and the
+/// pinned "Diet" header; this is a child of that `ListView`. Diet's controls
+/// live in the pane, never the header (KTD4).
+///
+/// Two states, checked in order:
 ///
 /// 1. **Food list unavailable** (R26): plain copy, no button. Nothing a user
 ///    taps can bring a missing asset back, and every other tab keeps working.
-/// 2. **First time**: nothing planned in any week and no target. The bowl,
-///    one line, "Plan Monday", which opens the picker for Monday, Breakfast,
-///    and a ghost "Set a daily target" under it.
-/// 3. **The day**: the week strip (today selected, a meter per day once a
-///    target is set), the selected day's card, its four slot cards with an
-///    eaten tick where one is allowed (R18), and the "Plan settings" rows
-///    (the Target row, KTD4). Every figure comes from [dietDayProvider],
-///    computed on read (R24).
+/// 2. **The day**, always, however empty the log is: the week strip (today
+///    selected, a meter per day once a target is set), the selected day's
+///    card, its four slot cards, and the "Settings" rows. There is no
+///    first-time state to get past: the empty day already says what to do.
+///    Every figure comes from [dietDayProvider], computed on read (R24).
 class DietPane extends ConsumerWidget {
   const DietPane({super.key});
 
   static const String unavailableCopy =
       'Food list unavailable. Reinstall the app to restore it.';
 
-  static const String emptyHeading = "Plan your week's protein";
-
-  static const String emptyBody =
-      'Pick protein foods for each meal once, and the plan repeats every week.';
-
-  static const String planMondayLabel = 'Plan Monday';
-
   static const String setTargetLabel = 'Set a daily target';
 
-  static const String settingsLabel = 'Plan settings';
+  static const String settingsLabel = 'Settings';
 
   static const String targetRowTitle = 'Target';
 
   static const String targetRowSubtitle =
-      "Daily protein, measured against every day's plan";
+      'Daily protein, measured against what you log';
 
   static const String targetNotSet = 'Not set';
 
@@ -90,8 +120,7 @@ class DietPane extends ConsumerWidget {
 
   static const String remindersRowTitle = 'Reminders';
 
-  static const String remindersRowSubtitle =
-      'A morning summary and meal times from your plan';
+  static const String remindersRowSubtitle = 'A nudge to log each meal';
 
   /// "Off", "On" (master on, nothing chosen) or "4 a day".
   ///
@@ -102,30 +131,19 @@ class DietPane extends ConsumerWidget {
   static String remindersValue(ReminderPreferences prefs, {bool? permitted}) {
     if (!prefs.dietOn) return 'Off';
     if (permitted == false) return 'Off in Settings';
-    final count = (prefs.summaryOn ? 1 : 0) +
-        MealSlot.values.where((s) => prefs.slot(s).on).length;
+    final count = MealSlot.values.where((s) => prefs.slot(s).on).length;
     return count == 0 ? 'None chosen' : '$count a day';
   }
 
-  /// "Nothing planned for Thursday", above four empty slots.
-  static String nothingPlannedFor(int weekday) =>
-      'Nothing planned for ${kWeekdayLong[weekday]}';
+  /// "Nothing logged for Thursday", above four empty slots.
+  static String nothingLoggedFor(int weekday) =>
+      'Nothing logged for ${kWeekdayLong[weekday]}';
 
   @visibleForTesting
   static const Key unavailableKey = ValueKey<String>('diet-unavailable');
 
   @visibleForTesting
-  static const Key emptyStateKey = ValueKey<String>('diet-empty-state');
-
-  @visibleForTesting
-  static const Key planMondayKey = ValueKey<String>('diet-plan-monday');
-
-  @visibleForTesting
   static const Key dayViewKey = ValueKey<String>('diet-day-view');
-
-  /// The empty state's ghost "Set a daily target".
-  @visibleForTesting
-  static const Key setTargetKey = ValueKey<String>('diet-set-target');
 
   /// The in-pane Target row (KTD4).
   @visibleForTesting
@@ -136,9 +154,11 @@ class DietPane extends ConsumerWidget {
   @visibleForTesting
   static const Key remindersRowKey = ValueKey<String>('diet-reminders-row');
 
-  /// A day on the week strip, 0 = Monday.
+  /// A day on the week strip: the [position]th of its seven, 0 = the first.
+  /// On the strip's opening week that is the weekday, 0 = Monday.
   @visibleForTesting
-  static Key weekDayKey(int weekday) => DietWeekStrip.dayKey(weekday);
+  static Key weekDayKey(int position) => DietWeekStrip.dayKey(position);
+
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -154,53 +174,14 @@ class DietPane extends ConsumerWidget {
       );
     }
 
-    final versions = ref.watch(dietPlanLogProvider);
-    final target = ref.watch(proteinTargetProvider);
-    final nothingPlanned = versions.every((v) => v.items.isEmpty);
-    if (nothingPlanned && target == null) return const _DietEmptyState();
-
     return const _DietDayView();
   }
 }
 
-class _DietEmptyState extends StatelessWidget {
-  const _DietEmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      key: DietPane.emptyStateKey,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        const EmptyState(
-          glyph: EmptyStateGlyph.bowl,
-          heading: DietPane.emptyHeading,
-          body: DietPane.emptyBody,
-        ),
-        FilledButton(
-          key: DietPane.planMondayKey,
-          onPressed: () => pushFoodPicker(
-            context,
-            weekday: 0,
-            slot: MealSlot.breakfast,
-          ),
-          child: const Text(DietPane.planMondayLabel),
-        ),
-        const SizedBox(height: 8),
-        GhostButton(
-          buttonKey: DietPane.setTargetKey,
-          label: DietPane.setTargetLabel,
-          onTap: () => pushProteinTargetScreen(context),
-        ),
-      ],
-    );
-  }
-}
-
 /// The selected day: this week's strip, its [DietDayCard], its four
-/// [DietSlotCard]s and the plan settings. Every figure comes from
+/// [DietSlotCard]s and the settings. Every figure comes from
 /// [dietDayProvider], computed on read (R24); a write through the serving
-/// sheet, a tick or a new target moves them with no refresh.
+/// sheet or a new target moves them with no refresh.
 class _DietDayView extends ConsumerWidget {
   const _DietDayView();
 
@@ -208,8 +189,9 @@ class _DietDayView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final today = ref.watch(planTodayProvider);
     final selected = ref.watch(dietSelectedDayProvider);
+    final stripStart = ref.watch(dietStripStartProvider);
     final day = ref.watch(dietDayProvider(selected));
-    final week = ref.watch(dietWeekProvider);
+    final strip = ref.watch(dietStripProvider(stripStart));
     final weekday = selected.weekday - 1;
     final hasTarget = day.targetG != null;
 
@@ -219,23 +201,19 @@ class _DietDayView extends ConsumerWidget {
       children: <Widget>[
         const SizedBox(height: 4),
         DietWeekStrip(
-          monday: startOfWeek(today),
+          start: stripStart,
           today: today,
           selected: selected,
           onSelected: ref.read(dietSelectedDayProvider.notifier).select,
+          onShift: ref.read(dietStripStartProvider.notifier).shift,
           meters: hasTarget
               ? <Widget>[
-                  for (final d in week) WeekDayMeter(fraction: d.meter ?? 0),
+                  for (final d in strip) WeekDayMeter(fraction: d.meter ?? 0),
                 ]
               : null,
         ),
         DietDayCard(
           day: day,
-          // A future day has nothing eaten to count (R18, R19).
-          subLines: <String>[
-            if (day.tickable && day.eatenG > 0)
-              DietDayCard.eatenLine(day.eatenG),
-          ],
           footer: hasTarget
               ? DietTargetBar(day: day)
               : DietTextLink(
@@ -248,27 +226,17 @@ class _DietDayView extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(2, 0, 2, 12),
             child: Text(
-              DietPane.nothingPlannedFor(weekday),
+              DietPane.nothingLoggedFor(weekday),
               style: _metaStyle,
             ),
           ),
         for (final slot in day.slots)
           DietSlotCard(
             slotDay: slot,
-            weekday: weekday,
-            headerTrailing: slot.canTick
-                ? DietEatenTick(
-                    key: DietSlotCard.tickKey(slot.slot),
-                    slot: slot.slot,
-                    ticked: slot.ticked,
-                    onTap: () => ref
-                        .read(mealTicksProvider.notifier)
-                        .toggle(day.date, slot.slot),
-                  )
-                : null,
+            date: day.date,
             headerSubtitle: _reminderTime(context, ref, slot.slot),
           ),
-        const _PlanSettings(),
+        const _DietSettings(),
       ],
     );
   }
@@ -286,10 +254,10 @@ String? _reminderTime(BuildContext context, WidgetRef ref, MealSlot slot) {
   return formatReminderMinute(context, reminder.minute);
 }
 
-/// "Plan settings": Diet's controls, in the pane rather than the header
-/// (KTD4): the Target row, and Reminders under it (U17).
-class _PlanSettings extends ConsumerWidget {
-  const _PlanSettings();
+/// "Settings": Diet's controls, in the pane rather than the header (KTD4):
+/// the Target row, and Reminders under it.
+class _DietSettings extends ConsumerWidget {
+  const _DietSettings();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

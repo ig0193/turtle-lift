@@ -7,8 +7,7 @@ import '../data/exercise_index.dart';
 import '../data/glance_bridge.dart';
 import '../data/session_progress.dart';
 import '../data/session_store.dart';
-import '../data/training_plan.dart';
-import 'week_strip.dart';
+import 'last_workout_line.dart';
 
 /// When the Live Activity's clock counts from, or null when it must not show.
 ///
@@ -38,35 +37,27 @@ final sessionGlanceProvider = Provider<SessionGlance?>((ref) {
   );
 });
 
-/// This week and the last workout as the home-screen widget shows them, in the
-/// landing strip's own words.
+/// What the home-screen widget shows: the last workout, in the Workout
+/// landing's own words.
+///
+/// **The wire shape is the one the widget already decodes** (`headline`,
+/// `caption`, `days`, `lastWorkout`), from when it also showed the training
+/// week. The Schedule is gone (`docs/adr/0015-diet-is-a-log.md`), so the line
+/// goes in `headline`, the widget's one always-drawn text, and the rest is
+/// empty: no Swift change, and nothing for the widget to draw that the app no
+/// longer has.
 final weekGlanceProvider = Provider<WeekGlance>((ref) {
-  final week = ref.watch(thisWeekSummaryProvider);
   final last = ref.watch(lastWorkoutProvider)?.line;
-  if (week == null) {
-    final days = ref.watch(todayPlanWeekdaysProvider);
-    return WeekGlance(
-      headline: days.isEmpty
-          ? WeekStrip.pickDaysLabel
-          : planStartsLaterText(
-              ref.watch(planTodayProvider),
-              ref.watch(trainingPlanLogProvider),
-            ),
-      caption: '',
-      days: const <GlanceDay>[],
-      lastWorkout: last,
-    );
-  }
   return WeekGlance(
-    headline: '${week.hit} of ${week.planned} this week',
-    caption: weekCaption(week),
-    days: <GlanceDay>[
-      for (final day in week.days)
-        GlanceDay(kWeekdayShort[day.weekday], day.state.name),
-    ],
-    lastWorkout: last,
+    headline: last ?? kNoWorkoutsGlance,
+    caption: '',
+    days: const <GlanceDay>[],
+    lastWorkout: null,
   );
 });
+
+/// The widget's line before there is a saved workout.
+const String kNoWorkoutsGlance = 'No workouts yet';
 
 /// Keeps the Live Activity and the home-screen widget in step with the app.
 ///

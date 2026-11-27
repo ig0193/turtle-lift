@@ -13,8 +13,8 @@
 // It leaves no data behind: the workouts it opens are discarded, and the one
 // it finishes (to reach the summary) is deleted from the summary. The food the
 // Diet section adds is removed again (that is the undo shot). The very last
-// section runs Delete all data, to reach Diet's first-time state; a debug
-// build re-seeds its sample data on the next cold start.
+// section runs Delete all data, to reach Diet's empty log; a debug build
+// re-seeds its sample data on the next cold start.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -22,6 +22,7 @@ import 'package:turtle_lift/main.dart' as app;
 import 'package:turtle_lift/src/ui/data_screens.dart';
 import 'package:turtle_lift/src/data/meal_slot.dart';
 import 'package:turtle_lift/src/ui/destructive_confirmation.dart';
+import 'package:turtle_lift/src/ui/diet_day_card.dart';
 import 'package:turtle_lift/src/ui/diet_pane.dart';
 import 'package:turtle_lift/src/ui/diet_reminders_screen.dart';
 import 'package:turtle_lift/src/ui/diet_slot_card.dart';
@@ -34,15 +35,17 @@ import 'package:turtle_lift/src/ui/history_session_row.dart';
 import 'package:turtle_lift/src/ui/l0_shell.dart';
 import 'package:turtle_lift/src/ui/muscle_exercise_list_screen.dart';
 import 'package:turtle_lift/src/ui/muscle_search_field.dart';
-import 'package:turtle_lift/src/ui/profile_root.dart';
+import 'package:turtle_lift/src/ui/muscles_root.dart';
 import 'package:turtle_lift/src/ui/session_actions.dart';
 import 'package:turtle_lift/src/ui/session_overview_body.dart';
 import 'package:turtle_lift/src/ui/session_summary_screen.dart';
 import 'package:turtle_lift/src/ui/set_logging_screen.dart';
 import 'package:turtle_lift/src/ui/set_row.dart';
 import 'package:turtle_lift/src/ui/sub_group_row.dart';
+import 'package:turtle_lift/src/ui/tab_routes.dart';
 import 'package:turtle_lift/src/ui/template_preview_sheet.dart';
 import 'package:turtle_lift/src/ui/workout_root.dart';
+import 'package:turtle_lift/src/ui/you_root.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -63,6 +66,18 @@ void main() {
   }
 
   Finder scrollable() => find.byType(Scrollable).first;
+
+  /// The Muscles tab's index, read off the shell's own list like the others in
+  /// `tab_routes.dart`: Diet comes first now, so a bare number would be wrong.
+  final musclesTab = L0Shell.tabs.indexWhere((tab) => tab.body is MusclesRoot);
+
+  /// Opens one of the You tab's panes: the tab, then its segment.
+  Future<void> openYou(WidgetTester tester, YouSegment segment) async {
+    await tester.tap(find.byKey(GlassTabBar.itemKey(kYouTabIndex)));
+    await settle(tester);
+    await tester.tap(find.byKey(YouRoot.segmentKey(segment)));
+    await settle(tester);
+  }
 
   Future<void> tapIfPresent(WidgetTester tester, Finder finder) async {
     if (finder.evaluate().isEmpty) return;
@@ -107,7 +122,7 @@ void main() {
   }
 
   Future<void> discardOpenWorkout(WidgetTester tester) async {
-    await tester.tap(find.byKey(GlassTabBar.itemKey(0)));
+    await tester.tap(find.byKey(GlassTabBar.itemKey(kWorkoutTabIndex)));
     await settle(tester);
     if (find.byType(SessionOverviewBody).evaluate().isEmpty) return;
     await scrollToAndTap(tester, find.byKey(SessionActions.discardKey));
@@ -224,7 +239,7 @@ void main() {
 
     // --- Muscles tab.
     await section(tester, 'muscles', () async {
-      await tester.tap(find.byKey(GlassTabBar.itemKey(1)));
+      await tester.tap(find.byKey(GlassTabBar.itemKey(musclesTab)));
       await snap(tester, 'muscles');
       // The middle of the map is the abdominals on both diagrams.
       final size = tester.getSize(find.byType(L0Shell));
@@ -232,7 +247,7 @@ void main() {
       await snap(tester, 'muscle-segment');
     });
     await section(tester, 'muscle-list', () async {
-      await tester.tap(find.byKey(GlassTabBar.itemKey(1)));
+      await tester.tap(find.byKey(GlassTabBar.itemKey(musclesTab)));
       await settle(tester);
       await tester.drag(scrollable(), const Offset(0, -900));
       await snap(tester, 'muscles-list');
@@ -242,7 +257,7 @@ void main() {
       await snap(tester, 'exercise-detail-browse');
     });
     await section(tester, 'muscle-search', () async {
-      await tester.tap(find.byKey(GlassTabBar.itemKey(1)));
+      await tester.tap(find.byKey(GlassTabBar.itemKey(musclesTab)));
       await settle(tester);
       // The tab keeps its scroll offset from the list section above.
       await tester.drag(scrollable(), const Offset(0, 3000));
@@ -255,9 +270,10 @@ void main() {
       await snap(tester, 'search-empty');
     });
 
-    // --- History tab.
+    // --- Activity: the old History tab, now a segment of You. Shot names keep
+    // `history` so the screenshot set stays comparable across the move.
     await section(tester, 'history', () async {
-      await tester.tap(find.byKey(GlassTabBar.itemKey(2)));
+      await openYou(tester, YouSegment.activity);
       await snap(tester, 'history');
       await tester.tap(find.byType(HistorySessionRow).first);
       await snap(tester, 'history-session');
@@ -269,9 +285,15 @@ void main() {
       await snap(tester, 'all-sessions');
     });
 
-    // --- Profile tab.
+    // --- Analysis: an empty pane for now.
+    await section(tester, 'analysis', () async {
+      await openYou(tester, YouSegment.analysis);
+      await snap(tester, 'analysis');
+    });
+
+    // --- You, Profile pane (the old Profile tab's Personal segment).
     await section(tester, 'profile', () async {
-      await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
+      await openYou(tester, YouSegment.profile);
       await snap(tester, 'profile');
       await tester.tap(find.text('My workout templates'));
       await snap(tester, 'template-library');
@@ -293,42 +315,30 @@ void main() {
       await snap(tester, 'delete-all-confirm');
       await tapIfPresent(tester, find.byKey(confirmCancelKey));
     });
-    await section(tester, 'schedule', () async {
-      await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
-      await settle(tester);
-      await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.schedule)));
-      await snap(tester, 'schedule');
-      await tester.drag(scrollable(), const Offset(0, -1500));
-      await snap(tester, 'schedule-bottom');
-      await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.personal)));
-      await settle(tester);
-    });
-
-    // --- Profile, Diet. The debug seed gives it a target, a planned week and
-    // one tick today; the first-time state is shot last, after a wipe.
+    // --- The Diet tab. The debug seed gives it a target and this week's
+    // meals up to today; the empty log is shot last, after a wipe.
     Future<void> openDiet() async {
-      await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
+      await tester.tap(find.byKey(GlassTabBar.itemKey(kDietTabIndex)));
       await settle(tester);
-      // Profile keeps its scroll offset, and the segments scroll with it.
+      // The tab keeps its scroll offset from the last visit.
       await tester.drag(scrollable(), const Offset(0, 3000));
-      await settle(tester);
-      await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.diet)));
       await settle(tester);
     }
 
     await section(tester, 'diet', () async {
       await openDiet();
       await snap(tester, 'diet-today');
-      // Another day of the week: Wednesday, or Thursday when today is
-      // Wednesday, so the shot is never of the day already shown.
+      // Another day of the week: the day before today, since a day after it
+      // cannot be picked (Diet is a log). On a Monday there is none, and the
+      // tap is a no-op that shoots the same day again.
       final today = DateTime.now().weekday - 1;
-      await tester.tap(find.byKey(DietPane.weekDayKey(today == 2 ? 3 : 2)));
+      await tester.tap(find.byKey(DietPane.weekDayKey(today > 0 ? today - 1 : 0)));
       await snap(tester, 'diet-other-day');
       await tester.tap(find.byKey(DietPane.weekDayKey(today)));
       await settle(tester);
 
       // The picker for today's snack, a search with no match, then the add
-      // sheet with today preselected under Repeat on.
+      // sheet.
       await scrollToAndTap(
           tester, find.byKey(DietSlotCard.addFoodKey(MealSlot.snack)));
       await snap(tester, 'diet-picker');
@@ -381,14 +391,11 @@ void main() {
       await snap(tester, 'diet-bottom');
     });
 
-    // Last, because it wipes everything: Diet's first-time state, and the
-    // target screen with no bodyweight to suggest from.
+    // Last, because it wipes everything: Diet's empty log, and the target
+    // screen with no bodyweight to suggest from.
     await section(tester, 'diet-empty', () async {
-      await tester.tap(find.byKey(GlassTabBar.itemKey(3)));
-      await settle(tester);
+      await openYou(tester, YouSegment.profile);
       await tester.drag(scrollable(), const Offset(0, 3000));
-      await settle(tester);
-      await tester.tap(find.byKey(ProfileRoot.segmentKey(ProfileSegment.personal)));
       await settle(tester);
       await scrollToAndTap(tester, find.text('Delete all data'));
       await tester.tap(find.byKey(DeleteAllDataScreen.deleteKey));
@@ -401,13 +408,13 @@ void main() {
       await settle(tester);
       await openDiet();
       await snap(tester, 'diet-empty');
-      await tester.tap(find.byKey(DietPane.setTargetKey));
+      await tester.tap(find.byKey(DietDayCard.setTargetKey));
       await snap(tester, 'diet-target-no-bodyweight');
       await tester.pageBack();
       await settle(tester);
     });
 
-    await tester.tap(find.byKey(GlassTabBar.itemKey(0)));
+    await tester.tap(find.byKey(GlassTabBar.itemKey(kWorkoutTabIndex)));
     await settle(tester);
   });
 }

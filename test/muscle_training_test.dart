@@ -9,7 +9,7 @@ import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/muscle_training.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
-import 'package:turtle_lift/src/data/training_plan.dart';
+import 'package:turtle_lift/src/data/today.dart';
 import 'package:turtle_lift/src/theme/app_palette.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/body_diagram.dart';

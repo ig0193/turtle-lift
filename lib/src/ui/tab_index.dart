@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'tab_routes.dart' show kWorkoutTabIndex;
+
 /// How many L0 tabs there are.
 ///
 /// Lives here rather than being read off `GlassTabBar.labels`, because this is
@@ -23,9 +25,10 @@ const int kL0TabCount = 4;
 /// element. Keeping it here means that caller writes one line and the shell
 /// rebuilds itself.
 class TabIndex extends Notifier<int> {
-  /// Workout. The app opens on the tab you came to use.
+  /// Workout, which is no longer the first tab (Diet is). The app still opens
+  /// on the tab you came to use.
   @override
-  int build() => 0;
+  int build() => kWorkoutTabIndex;
 
   /// Show tab [index].
   ///

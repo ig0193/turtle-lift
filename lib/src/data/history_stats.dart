@@ -14,7 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'derived.dart';
 import 'history_preview_data.dart';
 import 'local_date.dart';
-import 'training_plan.dart' show planTodayProvider;
+import 'today.dart' show planTodayProvider;
 
 /// The stats line.
 class HistoryStats {

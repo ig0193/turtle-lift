@@ -5,16 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/main.dart' show RefreshTodayOnResume;
 import 'package:turtle_lift/src/data/app_database.dart';
-import 'package:turtle_lift/src/data/diet_plan.dart';
-import 'package:turtle_lift/src/data/diet_plan_store.dart';
+import 'package:turtle_lift/src/data/diet_log_store.dart';
 import 'package:turtle_lift/src/data/food_index.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/meal_slot.dart';
-import 'package:turtle_lift/src/data/meal_ticks.dart';
 import 'package:turtle_lift/src/data/reminder_prefs.dart';
 import 'package:turtle_lift/src/data/reminder_scheduler.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
-import 'package:turtle_lift/src/data/training_plan.dart';
+import 'package:turtle_lift/src/data/today.dart';
 import 'package:turtle_lift/src/theme/app_theme.dart';
 import 'package:turtle_lift/src/ui/app_screen.dart';
 import 'package:turtle_lift/src/ui/diet_pane.dart';
@@ -31,8 +29,8 @@ class _UnsupportedScheduler extends FakeReminderScheduler {
   bool get isSupported => false;
 }
 
-/// Diet's Reminders screen and its row on the pane (U17, R21, R23). "Today"
-/// is Wednesday 4 November 2026; Monday is the 2nd.
+/// Diet's Reminders screen and its row on the pane (R21, R23, ADR 0015).
+/// "Today" is Wednesday 4 November 2026.
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -53,73 +51,44 @@ void main() {
   }
   tearDown(() => database.close());
 
-  Map<String, Object?> food(String id, String name, double protein) =>
-      <String, Object?>{
-        'id': id,
-        'name': name,
-        'aliases': const <String>[],
-        'dietType': 'veg',
-        'servingLabel': '1 katori, 150 g',
-        'gramsPerServing': 150,
-        'proteinPerServingG': protein,
-        'proteinPer100g': protein,
-        'ifctCode': 'X001',
-        'reviewedBy': 'pending-owner-review',
-      };
-
   final foods = FoodIndex.fromJson(<Map<String, Object?>>[
-    food('rajma', 'Rajma', 9.0),
-    food('curd', 'Curd', 11.0),
+    <String, Object?>{
+      'id': 'rajma',
+      'name': 'Rajma',
+      'aliases': const <String>[],
+      'dietType': 'veg',
+      'servingLabel': '1 katori, 150 g',
+      'gramsPerServing': 150,
+      'proteinPerServingG': 9.0,
+      'proteinPer100g': 9.0,
+      'ifctCode': 'X001',
+      'reviewedBy': 'pending-owner-review',
+    },
   ]);
 
-  /// Wednesday lunch: Rajma, Curd.
-  final plan = <DietPlanVersion>[
-    DietPlanVersion(effectiveFrom: nov(2), items: const <DietPlanItem>[
-      DietPlanItem(
-          id: 'a',
-          weekday: 2,
-          slot: MealSlot.lunch,
-          foodId: 'rajma',
-          servingsHalves: 2,
-          position: 0),
-      DietPlanItem(
-          id: 'b',
-          weekday: 2,
-          slot: MealSlot.lunch,
-          foodId: 'curd',
-          servingsHalves: 2,
-          position: 1),
-    ]),
-  ];
-
   final allOn = ReminderPreferences.defaults
-      .copyWith(dietOn: true, summaryOn: true)
+      .copyWith(dietOn: true)
       .withSlot(MealSlot.breakfast,
           const SlotReminder(on: true, minute: 8 * 60))
       .withSlot(MealSlot.lunch, const SlotReminder(on: true, minute: 13 * 60))
       .withSlot(MealSlot.dinner,
           const SlotReminder(on: true, minute: 20 * 60 + 30));
 
-  /// The app's providers under [RefreshTodayOnResume], which holds both
-  /// reminder syncs, so a test sees what the OS would be asked.
+  /// The app's providers under [RefreshTodayOnResume], which holds the diet
+  /// reminder sync, so a test sees what the OS would be asked.
   Widget host(
     Widget home, {
     ReminderPreferences prefs = ReminderPreferences.defaults,
     ReminderScheduler? scheduler,
-    List<TrainingPlanEntry> training = const <TrainingPlanEntry>[],
   }) =>
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(database),
-          dietPlanStoreProvider
-              .overrideWithValue(DietPlanStore(database, today: () => nov(4))),
-          mealTickStoreProvider
-              .overrideWithValue(MealTickStore(database, today: () => nov(4))),
+          dietLogStoreProvider
+              .overrideWithValue(DietLogStore(database, today: () => nov(4))),
           foodIndexProvider.overrideWithValue(foods),
           planTodayProvider.overrideWithValue(nov(4)),
-          initialDietPlanProvider.overrideWithValue(plan),
           initialReminderPrefsProvider.overrideWithValue(prefs),
-          initialTrainingPlanProvider.overrideWithValue(training),
           reminderSchedulerProvider.overrideWithValue(scheduler ?? reminders),
         ],
         child: RefreshTodayOnResume(
@@ -147,17 +116,15 @@ void main() {
   }
 
   final childSwitches = <Key>[
-    DietRemindersScreen.summarySwitchKey,
     for (final s in MealSlot.values) DietRemindersScreen.slotSwitchKey(s),
   ];
   final childTimes = <Key>[
-    DietRemindersScreen.summaryTimeKey,
     for (final s in MealSlot.values) DietRemindersScreen.slotTimeKey(s),
   ];
 
   group('the screen', () {
-    testWidgets('a pushed screen: master, summary and four slots at the A7 '
-        'defaults', (tester) async {
+    testWidgets('a pushed screen: master and four slots at the A7 defaults, '
+        'and no morning summary', (tester) async {
       tallView(tester);
       await tester.pumpWidget(host(const DietRemindersScreen()));
       await tester.pumpAndSettle();
@@ -168,17 +135,24 @@ void main() {
       for (final k in <Key>[...childSwitches, ...childTimes]) {
         expect(find.byKey(k), findsOneWidget);
       }
-      expect(find.text('7:30 AM'), findsOneWidget);
+      expect(find.text('Morning summary'), findsNothing);
+      expect(find.text('7:30 AM'), findsNothing);
       expect(find.text('8:00 AM'), findsOneWidget);
       expect(find.text('1:00 PM'), findsOneWidget);
       expect(find.text('5:00 PM'), findsOneWidget);
       expect(find.text('8:30 PM'), findsOneWidget);
+      expect(find.text(DietRemindersScreen.masterSubtitle), findsOneWidget);
+      expect(find.text(DietRemindersScreen.slotSubtitle),
+          findsNWidgets(MealSlot.values.length));
+      expect(DietRemindersScreen.slotSubtitle, 'Every day');
+      expect(find.textContaining('never say what you did or did not log'),
+          findsOneWidget);
       expectNoBannedCopy(DietRemindersScreen.explainBody);
       expectNoBannedCopy(DietRemindersScreen.disabledReason);
     });
 
-    testWidgets('with the master off, the summary and slot rows are disabled '
-        'and say why', (tester) async {
+    testWidgets('with the master off, the slot rows are disabled and say why',
+        (tester) async {
       tallView(tester);
       await tester.pumpWidget(host(const DietRemindersScreen()));
       await tester.pumpAndSettle();
@@ -194,7 +168,8 @@ void main() {
         expect(tester.widget<TimeRow>(find.byKey(k)).onTap, isNull);
       }
 
-      await tester.tap(find.byKey(DietRemindersScreen.summarySwitchKey),
+      await tester.tap(
+          find.byKey(DietRemindersScreen.slotSwitchKey(MealSlot.lunch)),
           warnIfMissed: false);
       await tester.pumpAndSettle();
       expect(await ReminderPrefsStore(database).read(),
@@ -211,11 +186,13 @@ void main() {
 
       expect(find.byType(ExplainSheet), findsOneWidget);
       expect(find.text(DietRemindersScreen.explainTitle), findsOneWidget);
+      expect(DietRemindersScreen.explainTitle, 'Remind you to log meals?');
+      expect(find.text(DietRemindersScreen.explainBody), findsOneWidget);
       expect(reminders.calls, isNot(contains('request')));
     });
 
-    testWidgets('Allow, granted: stored on, children enabled, reminders '
-        'scheduled from the plan', (tester) async {
+    testWidgets('Allow, granted: stored on, children enabled, a reminder per '
+        'switched-on slot on every weekday', (tester) async {
       tallView(tester);
       await tester.pumpWidget(host(const DietRemindersScreen(),
           prefs: allOn.copyWith(dietOn: false)));
@@ -230,12 +207,11 @@ void main() {
       for (final k in childSwitches) {
         expect(switchRow(tester, k).onTap, isNotNull);
       }
-      expect(reminders.pending.keys.toSet(), <int>{
-        dietSummaryReminderId(2),
-        dietMealReminderId(2, MealSlot.lunch),
-      });
-      expect(reminders.pending[dietMealReminderId(2, MealSlot.lunch)]!.body,
-          'Rajma, 1 katori (9 g). Curd, 1 katori (11 g).');
+      // Breakfast, lunch and dinner are on in [allOn]; the snack is off.
+      expect(reminders.pending, hasLength(21));
+      final lunch = reminders.pending[dietMealReminderId(2, MealSlot.lunch)]!;
+      expect(lunch.title, 'Log your lunch');
+      expect(lunch.minute, 13 * 60);
     });
 
     testWidgets('denied: the master stays off with the Settings line',
@@ -277,21 +253,12 @@ void main() {
       expect(find.byType(TimePickerDialog), findsNothing);
     });
 
-    testWidgets('turning the master off cancels 200-206 and 300-363 and '
-        'nothing else', (tester) async {
+    testWidgets('turning the master off cancels the meal range and leaves '
+        'nothing pending', (tester) async {
       tallView(tester);
       reminders.permitted = true;
-      await tester.pumpWidget(host(
-        const DietRemindersScreen(),
-        prefs: allOn.copyWith(scheduleOn: true),
-        training: <TrainingPlanEntry>[
-          TrainingPlanEntry(
-              effectiveFrom: nov(2), weekdays: const <int>{0, 2, 4}),
-        ],
-      ));
+      await tester.pumpWidget(host(const DietRemindersScreen(), prefs: allOn));
       await tester.pumpAndSettle();
-      expect(reminders.pending.keys.where(kTrainingReminderIds.contains),
-          hasLength(3));
       expect(reminders.pending.keys.where(kDietMealReminderIds.contains),
           isNotEmpty);
 
@@ -299,7 +266,7 @@ void main() {
 
       expect(find.byType(ExplainSheet), findsNothing);
       expect((await ReminderPrefsStore(database).read()).dietOn, isFalse);
-      expect(reminders.pending.keys.toSet(), <int>{100, 102, 104});
+      expect(reminders.pending, isEmpty);
       expect(reminders.calls, isNot(contains('cancelAll')));
     });
 
@@ -356,7 +323,8 @@ void main() {
       expect(find.byType(DietRemindersScreen), findsOneWidget);
     });
 
-    testWidgets('the row counts the reminders a day while on', (tester) async {
+    testWidgets('the row counts the meal reminders a day while on',
+        (tester) async {
       tallView(tester);
       reminders.permitted = true;
       await tester.pumpWidget(host(pane(), prefs: allOn));
@@ -365,7 +333,7 @@ void main() {
       expect(
           find.descendant(
               of: find.byKey(DietPane.remindersRowKey),
-              matching: find.text('4 a day')),
+              matching: find.text('3 a day')),
           findsOneWidget);
     });
 

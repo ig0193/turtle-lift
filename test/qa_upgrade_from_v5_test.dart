@@ -5,7 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:turtle_lift/src/data/app_database.dart';
 import 'package:turtle_lift/src/data/custom_templates.dart';
-import 'package:turtle_lift/src/data/diet_plan_store.dart';
+import 'package:turtle_lift/src/data/diet_log_store.dart';
 import 'package:turtle_lift/src/data/load_type.dart';
 import 'package:turtle_lift/src/data/local_date.dart';
 import 'package:turtle_lift/src/data/meal_slot.dart';
@@ -13,7 +13,6 @@ import 'package:turtle_lift/src/data/personal_details_store.dart';
 import 'package:turtle_lift/src/data/reminder_prefs.dart';
 import 'package:turtle_lift/src/data/session_store.dart';
 import 'package:turtle_lift/src/data/settings_store.dart';
-import 'package:turtle_lift/src/data/training_plan.dart';
 
 /// QA (second pass, upgrade path): a real user's database, as the last
 /// published build (5fcae5f, schema 5) wrote it, opened by this build.
@@ -24,6 +23,10 @@ import 'package:turtle_lift/src/data/training_plan.dart';
 /// with an emoji in its name), a training plan, two weigh-ins and a body
 /// diagram choice. The same file was pushed into a simulator under the old
 /// app and the new app installed over it; this test keeps that proof.
+///
+/// The training plan is the one thing in it that is *meant* not to survive:
+/// the Schedule was removed at schema 10 (`docs/adr/0015-diet-is-a-log.md`).
+/// Everything else must.
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -42,9 +45,9 @@ void main() {
     await dir.delete(recursive: true);
   });
 
-  test('reaches schema 9', () async {
+  test('reaches schema 10', () async {
     final row = await db.customSelect('PRAGMA user_version').getSingle();
-    expect(row.data.values.single, 9);
+    expect(row.data.values.single, 10);
   });
 
   test('every saved workout survives with its numbers in the right columns',
@@ -80,7 +83,27 @@ void main() {
     expect(open.exercises.single.sets, hasLength(2));
   });
 
-  test('templates, plan, weigh-ins and diagram choice survive', () async {
+  test('the training plan goes with the Schedule, and only it', () async {
+    final names = (await db
+            .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
+            .get())
+        .map((r) => r.read<String>('name'))
+        .toSet();
+    expect(names, isNot(contains('training_plan_entries')));
+    expect(
+        names,
+        containsAll(<String>[
+          'sessions',
+          'session_exercises',
+          'set_entries',
+          'custom_templates',
+          'bodyweight_entries',
+          'settings',
+          'diet_log_entries',
+        ]));
+  });
+
+  test('templates, weigh-ins and diagram choice survive', () async {
     final templates = await CustomTemplateStore(db).readCustomTemplates();
     expect(templates.map((t) => t.name),
         containsAll(<String>['Arms \u{1F4AA} and core', 'Push day (mine)']));
@@ -88,16 +111,14 @@ void main() {
         templates.firstWhere((t) => t.id == 'tpl-mine').exerciseIds,
         'barbell-curl,plank,assisted-triceps-dip-machine');
 
-    final plan = await TrainingPlanStore(db).readEntries();
-    expect(plan.single.weekdayMask, 0x15);
-
     final people = PersonalDetailsStore(db);
     expect((await people.readBodyweightEntries()).map((e) => e.weightKg),
         <double>[64.5, 63]);
     expect(await people.readBodyGender(), 'female');
   });
 
-  test('Diet and reminders start empty and work', () async {
+  test('Diet starts as an empty log and reminders start empty, and both '
+      'work', () async {
     final settings = SettingsStore(db);
     expect(await settings.readProteinTarget(), isNull);
     await settings.writeProteinTarget(110);
@@ -105,11 +126,15 @@ void main() {
     expect(await PersonalDetailsStore(db).readBodyGender(), 'female',
         reason: 'the target shares the settings row and must not blank it');
 
-    final plan = DietPlanStore(db);
-    await plan.addFood(
-        weekdays: <int>{1, 3}, slot: MealSlot.lunch, foodId: 'paneer',
+    final log = DietLogStore(db, today: () => LocalDate(2026, 10, 21));
+    expect(await log.readEntries(), isEmpty,
+        reason: 'a v5 install never had a diet to convert');
+    await log.addFood(
+        date: LocalDate(2026, 10, 21),
+        slot: MealSlot.lunch,
+        foodId: 'paneer',
         halves: 2);
-    expect(await plan.readVersions(), hasLength(1));
+    expect(await log.readEntries(), hasLength(1));
 
     await ReminderPrefsStore(db).read();
   });
